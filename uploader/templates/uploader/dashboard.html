@@ -1,0 +1,568 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}Dashboard - Instagram Uploader{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Modern dashboard design */
+    .dashboard-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 16px;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .dashboard-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        transform: rotate(45deg);
+        z-index: 1;
+    }
+    
+    .dashboard-header .content {
+        position: relative;
+        z-index: 2;
+    }
+    
+    .modern-card {
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        border: 1px solid #e9ecef;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        height: 100%;
+    }
+    
+    .modern-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+    }
+    
+    .modern-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        z-index: 1;
+    }
+    
+    .quick-action-item {
+        text-decoration: none;
+        color: inherit;
+        display: block;
+        transition: all 0.3s ease;
+    }
+    
+    .quick-action-content {
+        text-align: center;
+        padding: 2rem 1rem;
+        background: #f8f9fa;
+        border-radius: 12px;
+        border: 1px solid #e9ecef;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .quick-action-item:hover .quick-action-content {
+        background: white;
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+        border-color: #667eea;
+    }
+    
+    .quick-action-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        color: #667eea;
+        transition: all 0.3s ease;
+    }
+    
+    .quick-action-item:hover .quick-action-icon {
+        color: #764ba2;
+        transform: scale(1.1);
+    }
+    
+    .quick-action-label {
+        font-weight: 600;
+        color: #2c3e50;
+        margin: 0;
+    }
+    
+    .stat-card {
+        text-align: center;
+        padding: 2rem 1rem;
+        background: #f8f9fa;
+        border-radius: 12px;
+        border: 1px solid #e9ecef;
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    
+    .stat-card:hover {
+        background: white;
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+    }
+    
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #667eea;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .warning-card {
+        background: linear-gradient(135deg, #ffc107 0%, #ff8f00 100%);
+        color: white;
+        border-radius: 16px;
+        padding: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .warning-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        transform: rotate(45deg);
+        z-index: 1;
+    }
+    
+    .warning-card .content {
+        position: relative;
+        z-index: 2;
+    }
+    
+    .activity-item {
+        padding: 1.5rem;
+        border-bottom: 1px solid #e9ecef;
+        transition: all 0.3s ease;
+    }
+    
+    .activity-item:hover {
+        background: #f8f9fa;
+        transform: translateX(8px);
+    }
+    
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+    
+    .status-badge {
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .badge-pending {
+        background: linear-gradient(135deg, #ffc107, #ff8f00);
+        color: white;
+    }
+    
+    .badge-running {
+        background: linear-gradient(135deg, #17a2b8, #0056b3);
+        color: white;
+        animation: pulse 2s infinite;
+    }
+    
+    .badge-completed {
+        background: linear-gradient(135deg, #28a745, #155724);
+        color: white;
+    }
+    
+    .badge-failed {
+        background: linear-gradient(135deg, #dc3545, #721c24);
+        color: white;
+    }
+    
+    .badge-active {
+        background: linear-gradient(135deg, #28a745, #155724);
+        color: white;
+    }
+    
+    .badge-blocked {
+        background: linear-gradient(135deg, #dc3545, #721c24);
+        color: white;
+    }
+    
+    .badge-limited {
+        background: linear-gradient(135deg, #ffc107, #ff8f00);
+        color: white;
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+    
+    .btn-modern {
+        padding: 0.6rem 1.5rem;
+        border-radius: 25px;
+        border: none;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .btn-modern::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: left 0.5s;
+    }
+    
+    .btn-modern:hover::before {
+        left: 100%;
+    }
+    
+    .btn-modern:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: #6c757d;
+    }
+    
+    .empty-state-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Dashboard Header -->
+<div class="dashboard-header">
+    <div class="content">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2 fw-bold">
+                    <i class="bi bi-grid me-2"></i>
+                    Instagram Uploader Dashboard
+                </h2>
+                <p class="mb-0 opacity-75">Manage and monitor your Instagram automation tasks</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'create_task' %}" class="btn btn-light btn-lg btn-modern" style="position: relative; z-index: 1;">
+                    <i class="bi bi-plus-circle me-2"></i> New Upload
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="modern-card">
+            <div class="card-body p-4">
+                <h5 class="card-title mb-4 fw-bold text-center">Quick Actions</h5>
+                <div class="row g-4">
+                    <div class="col-md-2 col-6">
+                        <a href="{% url 'create_task' %}" class="quick-action-item">
+                            <div class="quick-action-content">
+                                <i class="bi bi-cloud-upload quick-action-icon"></i>
+                                <div class="quick-action-label">Upload</div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-2 col-6">
+                        <a href="{% url 'bulk_upload_list' %}" class="quick-action-item">
+                            <div class="quick-action-content">
+                                <i class="bi bi-collection quick-action-icon"></i>
+                                <div class="quick-action-label">Bulk Upload</div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-2 col-6">
+                        <a href="{% url 'task_list' %}" class="quick-action-item">
+                            <div class="quick-action-content">
+                                <i class="bi bi-list-task quick-action-icon"></i>
+                                <div class="quick-action-label">All Tasks</div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-2 col-6">
+                        <a href="{% url 'account_list' %}" class="quick-action-item">
+                            <div class="quick-action-content">
+                                <i class="bi bi-person-circle quick-action-icon"></i>
+                                <div class="quick-action-label">Accounts</div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-2 col-6">
+                        <a href="{% url 'proxy_list' %}" class="quick-action-item">
+                            <div class="quick-action-content">
+                                <i class="bi bi-shield-lock quick-action-icon"></i>
+                                <div class="quick-action-label">Proxies</div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-2 col-6">
+                        <a href="{% url 'cookie_dashboard' %}" class="quick-action-item">
+                            <div class="quick-action-content">
+                                <i class="bi bi-journal-text quick-action-icon"></i>
+                                <div class="quick-action-label">Cookies</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Overview -->
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="modern-card">
+            <div class="card-body p-4">
+                <h5 class="card-title mb-4 fw-bold text-center">System Overview</h5>
+                <div class="row g-4">
+                    <div class="col-md-3 col-6">
+                        <div class="stat-card">
+                            <div class="stat-value">{{ tasks_count }}</div>
+                            <div class="stat-label">Total Tasks</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-card">
+                            <div class="stat-value">{{ accounts_count }}</div>
+                            <div class="stat-label">Accounts</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-card">
+                            <div class="stat-value">{{ active_proxies_count }}</div>
+                            <div class="stat-label">Active Proxies</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-card">
+                            <div class="stat-value">{{ completed_tasks_count }}</div>
+                            <div class="stat-label">Completed</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Inactive Proxies Warning -->
+{% if inactive_proxies_total > 0 %}
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="warning-card">
+            <div class="content">
+                <div class="d-flex align-items-start">
+                    <div class="me-3">
+                        <i class="bi bi-exclamation-triangle-fill fs-2"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="fw-bold mb-2">Inactive Proxies Detected</h6>
+                        <p class="mb-3 opacity-90">
+                            You have <strong>{{ inactive_proxies_total }}</strong> inactive proxies: 
+                            <strong>{{ inactive_proxies_assigned }}</strong> assigned to accounts, 
+                            <strong>{{ inactive_proxies_unassigned }}</strong> unassigned.
+                        </p>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <a href="{% url 'cleanup_inactive_proxies' %}" class="btn btn-light btn-modern">
+                                <i class="bi bi-trash"></i> Cleanup
+                            </a>
+                            <a href="{% url 'validate_all_proxies' %}" class="btn btn-outline-light btn-modern">
+                                <i class="bi bi-lightning"></i> Validate All
+                            </a>
+                            <a href="{% url 'proxy_list' %}" class="btn btn-outline-light btn-modern">
+                                <i class="bi bi-eye"></i> View Proxies
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Recent Activity -->
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="modern-card">
+            <div class="card-header bg-transparent border-0 pb-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold">Recent Tasks</h6>
+                    <a href="{% url 'task_list' %}" class="btn btn-sm btn-outline-primary btn-modern">View All</a>
+                </div>
+            </div>
+            <div class="card-body pt-3 p-0">
+                {% if tasks %}
+                <div class="list-group list-group-flush">
+                    {% for task in tasks %}
+                    <div class="activity-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-2">
+                                    <strong class="me-2">#{{ task.id }}</strong>
+                                    {% if task.status == 'PENDING' %}
+                                    <span class="status-badge badge-pending">Pending</span>
+                                    {% elif task.status == 'RUNNING' %}
+                                    <span class="status-badge badge-running">
+                                        Running <i class="bi bi-arrow-clockwise fa-spin ms-1"></i>
+                                    </span>
+                                    {% elif task.status == 'COMPLETED' %}
+                                    <span class="status-badge badge-completed">Completed</span>
+                                    {% elif task.status == 'FAILED' %}
+                                    <span class="status-badge badge-failed">Failed</span>
+                                    {% else %}
+                                    <span class="status-badge badge-pending">{{ task.status }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="text-muted small mb-1">{{ task.account.username }}</div>
+                                <div class="text-muted small">{{ task.created_at|date:"M d, H:i" }}</div>
+                            </div>
+                            <div class="ms-3">
+                                {% if "Cookie Robot" in task.log %}
+                                <a href="{% url 'cookie_task_detail' task_id=task.id %}" class="btn btn-sm btn-outline-primary btn-modern">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% else %}
+                                <a href="{% url 'task_detail' task_id=task.id %}" class="btn btn-sm btn-outline-primary btn-modern">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-clipboard-check empty-state-icon"></i>
+                    <p class="text-muted mb-3">No tasks yet</p>
+                    <a href="{% url 'create_task' %}" class="btn btn-primary btn-modern">Create First Task</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6 mb-4">
+        <div class="modern-card">
+            <div class="card-header bg-transparent border-0 pb-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold">Account Status</h6>
+                    <a href="{% url 'account_list' %}" class="btn btn-sm btn-outline-primary btn-modern">View All</a>
+                </div>
+            </div>
+            <div class="card-body pt-3 p-0">
+                {% if accounts %}
+                <div class="list-group list-group-flush">
+                    {% for account in accounts %}
+                    <div class="activity-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-2">
+                                    <strong class="me-2">{{ account.username }}</strong>
+                                    {% if account.status == 'ACTIVE' %}
+                                    <span class="status-badge badge-active">Active</span>
+                                    {% elif account.status == 'BLOCKED' %}
+                                    <span class="status-badge badge-blocked">Blocked</span>
+                                    {% elif account.status == 'LIMITED' %}
+                                    <span class="status-badge badge-limited">Limited</span>
+                                    {% else %}
+                                    <span class="status-badge badge-pending">{{ account.status }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="text-muted small">
+                                    {% if account.last_used %}
+                                    Last used: {{ account.last_used|date:"M d, H:i" }}
+                                    {% else %}
+                                    Never used
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="ms-3">
+                                <a href="{% url 'account_detail' account_id=account.id %}" class="btn btn-sm btn-outline-primary btn-modern">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-person-x empty-state-icon"></i>
+                    <p class="text-muted mb-3">No accounts yet</p>
+                    <a href="{% url 'create_account' %}" class="btn btn-primary btn-modern">Add First Account</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Check if there are any running tasks on the page
+const runningTasks = document.querySelectorAll('.badge-running');
+let hasRunningTasks = runningTasks.length > 0;
+
+if (hasRunningTasks) {
+    // Auto-refresh the page every 30 seconds if there are running tasks
+    let refreshInterval = setInterval(() => {
+        window.location.reload();
+    }, 30000); // 30 seconds
+
+    // Stop auto-refresh when user navigates away
+    window.addEventListener('beforeunload', () => {
+        clearInterval(refreshInterval);
+    });
+}
+</script>
+{% endblock %} 

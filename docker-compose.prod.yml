@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    restart: always
+    volumes:
+      - ./media:/app/media
+      - ./db.sqlite3:/app/db.sqlite3
+      - ./static:/app/static
+      - ./uploader/static:/app/uploader/static
+      - ./staticfiles:/app/staticfiles
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY}
+      - ALLOWED_HOSTS=localhost,127.0.0.1,212.113.109.49 

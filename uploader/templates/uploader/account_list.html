@@ -1,0 +1,195 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}Instagram Accounts - Instagram Uploader{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h2 class="mb-4 fw-bold">Instagram Accounts</h2>
+    </div>
+    <div class="col-md-6 text-end">
+        <div class="btn-group me-2" role="group">
+            <a href="{% url 'bulk_change_proxy' %}" class="btn btn-outline-warning" title="Bulk Change Proxy">
+                <i class="bi bi-shield-lock"></i> Bulk Proxy
+            </a>
+            <a href="{% url 'refresh_dolphin_proxies' %}" class="btn btn-outline-info" title="Refresh Dolphin Proxies">
+                <i class="bi bi-arrow-clockwise"></i> Refresh Dolphin
+            </a>
+        </div>
+        <div class="btn-group" role="group">
+            <a href="{% url 'import_accounts' %}" class="btn btn-warning">
+                <i class="bi bi-file-earmark-arrow-up"></i> Import
+            </a>
+            <a href="{% url 'create_account' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> New Account
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-funnel"></i> Filters</h5>
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+            <i class="bi bi-sliders"></i>
+        </button>
+    </div>
+    <div class="collapse" id="filterCollapse">
+        <div class="card-body">
+            <form method="get" action="{% url 'account_list' %}">
+                <div class="row">
+                    <div class="col-md-5 mb-3">
+                        <label for="search" class="form-label">Search</label>
+                        <input type="text" name="q" id="search" class="form-control" value="{{ search_query }}" placeholder="Search by username or email">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select name="status" id="status" class="form-select">
+                            <option value="">All Statuses</option>
+                            <option value="ACTIVE" {% if status_filter == 'ACTIVE' %}selected{% endif %}>Active</option>
+                            <option value="BLOCKED" {% if status_filter == 'BLOCKED' %}selected{% endif %}>Blocked</option>
+                            <option value="LIMITED" {% if status_filter == 'LIMITED' %}selected{% endif %}>Limited</option>
+                            <option value="INACTIVE" {% if status_filter == 'INACTIVE' %}selected{% endif %}>Inactive</option>
+                            <option value="PHONE_VERIFICATION_REQUIRED" {% if status_filter == 'PHONE_VERIFICATION_REQUIRED' %}selected{% endif %}>Phone Verification Required</option>
+                            <option value="HUMAN_VERIFICATION_REQUIRED" {% if status_filter == 'HUMAN_VERIFICATION_REQUIRED' %}selected{% endif %}>Human Verification Required</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Status</th>
+                        <th>Dolphin Profile</th>
+                        <th>Proxy</th>
+                        <th>Last Used</th>
+                        <th>Last Warmed</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for account in accounts %}
+                    <tr>
+                        <td>{{ account.username }}</td>
+                        <td>
+                            {% if account.status == 'ACTIVE' %}
+                            <span class="badge badge-active">Active</span>
+                            {% elif account.status == 'BLOCKED' %}
+                            <span class="badge badge-blocked">Blocked</span>
+                            {% elif account.status == 'LIMITED' %}
+                            <span class="badge badge-limited">Limited</span>
+                            {% elif account.status == 'INACTIVE' %}
+                            <span class="badge badge-inactive">Inactive</span>
+                            {% elif account.status == 'PHONE_VERIFICATION_REQUIRED' %}
+                            <span class="badge badge-phone-verification-required">📱 Phone Verification</span>
+                            {% elif account.status == 'HUMAN_VERIFICATION_REQUIRED' %}
+                            <span class="badge badge-human-verification-required">🤖 Human Verification</span>
+                            {% else %}
+                            <span class="badge badge-inactive">Unknown</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if account.dolphin_profile_id %}
+                            <span class="badge bg-success">✓ Configured</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Not Set</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if account.proxy %}
+                            <span class="text-nowrap">{{ account.proxy }}</span>
+                            {% else %}
+                            <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if account.last_used %}
+                            {{ account.last_used|date:"Y-m-d H:i" }}
+                            {% else %}
+                            <span class="text-muted">Never</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if account.last_warmed %}
+                            {{ account.last_warmed|date:"Y-m-d H:i" }}
+                            {% else %}
+                            <span class="text-muted">Never</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{% url 'account_detail' account_id=account.id %}" class="btn btn-sm btn-info" title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'edit_account' account_id=account.id %}" class="btn btn-sm btn-primary" title="Edit Account">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{% url 'change_account_proxy' account_id=account.id %}" class="btn btn-sm btn-secondary" title="Change Proxy">
+                                    <i class="bi bi-shield-lock"></i>
+                                </a>
+                                <a href="{% url 'warm_account' account_id=account.id %}" class="btn btn-sm btn-warning" title="Warm Up Account">
+                                    <i class="bi bi-fire"></i>
+                                </a>
+                                <a href="{% url 'delete_account' account_id=account.id %}" class="btn btn-sm btn-danger" title="Delete Account">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <i class="bi bi-person-x fs-1 text-muted mb-3 d-block"></i>
+                            <p class="text-muted">No accounts found</p>
+                            <a href="{% url 'create_account' %}" class="btn btn-primary btn-sm">Create New Account</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="text-muted small">
+                Showing {{ accounts|length }} of {{ total_accounts }} accounts
+            </div>
+            
+            <div>
+                {% if accounts.has_previous %}
+                <a href="?page={{ accounts.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                {% else %}
+                <button class="btn btn-sm btn-outline-secondary disabled">
+                    <i class="bi bi-arrow-left"></i>
+                </button>
+                {% endif %}
+                
+                <span class="mx-2">Page {{ accounts.number }} of {{ accounts.paginator.num_pages }}</span>
+                
+                {% if accounts.has_next %}
+                <a href="?page={{ accounts.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+                {% else %}
+                <button class="btn btn-sm btn-outline-secondary disabled">
+                    <i class="bi bi-arrow-right"></i>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

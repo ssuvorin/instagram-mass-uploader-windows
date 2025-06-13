@@ -1,0 +1,107 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}Add Titles - Bulk Upload - Instagram Uploader{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="mb-4 fw-bold">Add Titles to "{{ task.name }}"</h2>
+        <p class="text-muted">Upload a text file with titles/captions for your videos (one per line).</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'bulk_upload_detail' task_id=task.id %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Task Details
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-7">
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0"><i class="bi bi-file-text"></i> Upload Titles</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <label for="id_titles_file" class="form-label fw-bold">{{ form.titles_file.label }}</label>
+                        <input type="file" name="titles_file" class="form-control form-control-lg" id="id_titles_file" required>
+                        <div class="form-text text-muted">{{ form.titles_file.help_text }}</div>
+                    </div>
+                    
+                    <div class="alert alert-info d-flex">
+                        <i class="bi bi-info-circle-fill me-2 fs-4 flex-shrink-0"></i>
+                        <div>
+                            Each line in the text file will be used as a caption for one video. 
+                            If there are more videos than titles, some videos will have empty captions.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4 bg-light p-3 rounded border">
+                        <h6 class="fw-bold"><i class="bi bi-card-text"></i> Example Format:</h6>
+                        <pre class="bg-white p-3 rounded border mb-0" style="font-size: 0.9rem;">This is title for video 1 #trending #viral
+This is title for video 2 with some hashtags #instagram
+Another caption for video 3
+And so on...</pre>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg px-5">
+                            <i class="bi bi-upload me-2"></i> Upload Titles
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0"><i class="bi bi-card-heading"></i> Current Titles ({{ task.titles.count }})</h5>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if task.titles.exists %}
+                <div class="list-group list-group-flush">
+                    {% for title in task.titles.all %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between align-items-center">
+                            <span class="badge bg-secondary">{{ forloop.counter }}</span>
+                            <small class="text-muted">
+                                {% if title.used %}
+                                <span class="badge bg-success">Assigned</span>
+                                {% else %}
+                                <span class="badge bg-warning">Unassigned</span>
+                                {% endif %}
+                            </small>
+                        </div>
+                        <p class="mb-1 mt-2 text-break">{{ title.title }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-file-text fs-1 text-muted mb-3 d-block"></i>
+                    <p class="text-muted">No titles uploaded yet</p>
+                    <p class="small text-muted">Upload a text file with captions using the form on the left.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between mt-4">
+    <a href="{% url 'add_bulk_videos' task_id=task.id %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Videos
+    </a>
+    
+    <a href="{% url 'bulk_upload_detail' task_id=task.id %}" class="btn btn-primary">
+        Next: Review and Start <i class="bi bi-arrow-right"></i>
+    </a>
+</div>
+{% endblock %} 

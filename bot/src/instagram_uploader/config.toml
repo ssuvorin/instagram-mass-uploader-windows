@@ -1,0 +1,88 @@
+DEBUG = 1 # 0 - disabled, 1 - enabled
+
+
+implicitly_wait = 4.5
+explicit_wait = 180
+upload_wait = 180
+
+[delays]
+# Delay ranges for different types of actions (in seconds)
+action_min = 1.0
+action_max = 3.0
+# Longer delay between major actions
+major_action_min = 3.0
+major_action_max = 7.0
+# Typing simulation delay range (in seconds)
+typing_min = 0.1
+typing_max = 0.3
+
+[paths]
+main = "https://www.instagram.com/"
+login = "https://www.instagram.com/"
+upload = 0
+
+signup_email = "https://www.instagram.com/accounts/emailsignup/"
+
+[selectors]
+
+    [selectors.register]
+
+    accept_cookies = "//button[text()='Allow all cookies']"
+    alternate_accept_cookies = "//div[text()='Allow all cookies' and @tabindex='0']"
+
+    email_field = "//input[@name=\"emailOrPhone\"]"
+    password_field = "//input[@name='password']"
+    full_name_field = "//input[@name='fullName']"
+    username_field = "//input[@name='username']"
+
+    next_button = "//button[text()='Next']"
+
+    [selectors.login]
+    username_field = "//input[@name='username']"
+    password_field = "//input[@name='password']"
+    login_button = "//button[@type='submit']"
+    alternate_login_button = "//div[contains(@class, 'eiCW-')]//*[text()='Log in']"
+    log_in_btn = "//div[text()='Log in']"
+    alternate_log_in_btn = "//span[text()='Log in']"
+    incorrect_password = "//div[text()='Sorry, your password was incorrect. Please double-check your password.']"
+    email_code_field = "//input[@name='email']"
+    continue_button = "//span[text()='Continue']/../../../../.."
+
+    alternate_continue_button = "//div[text()='Continue']"
+    alternate_email_code_field = "//div[@aria-label='Security code']"
+    alternate_submit_button = "//div[text()='Submit']"
+
+    save_session_button = "//button[text()='Save info']"
+    alternate_save_session_button = "//span[text()='Save']/../../../../.."
+    not_now_button = "//button[text()='Not Now']"
+
+    2fa_link = "https://www.instagram.com/accounts/onetap/?next=%2F"
+
+    cookie_of_interest = "sessionid"
+
+    [selectors.upload]
+    new_post_button = "//*[text()='Create']/../../../../../.."
+    alternate_post_button = "//span[text()='Post']/../.."
+
+    upload_path = "//input[@type='file']"
+
+    OK = '//button[text()="OK"]'
+
+    next = "//div[text()='Next']"
+
+    select_crop = "//*[text()='Select crop']/../.."
+    original_crop = "//*[text()='Original']/../../.."
+
+    description_field = "//div[@aria-label='Write a caption...']"
+    location_field = "//input[@placeholder='Add location']"
+    mentions_field = "//input[@placeholder='Add collaborators']"
+
+    first_location = "//div[@role='dialog']/div/div/div/div/div/div/button"
+    first_mention = "//div[text()='{}']/../../div/label/div/input"
+    done_mentions = "//div[text()='Done']"
+
+    post_video = "//div[text()='Share']"
+
+    is_posted = "//div[text()='Reel shared']"
+
+

@@ -1,0 +1,45 @@
+server {
+    listen 80;
+    server_name your-server-domain.com;
+
+    location /static/ {
+        alias /path/to/playwright_instagram_uploader/static/;
+    }
+
+    location /media/ {
+        alias /path/to/playwright_instagram_uploader/media/;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# HTTPS configuration (uncomment after setting up SSL)
+# server {
+#     listen 443 ssl;
+#     server_name your-server-domain.com;
+#
+#     ssl_certificate /path/to/fullchain.pem;
+#     ssl_certificate_key /path/to/privkey.pem;
+#
+#     location /static/ {
+#         alias /path/to/playwright_instagram_uploader/static/;
+#     }
+#
+#     location /media/ {
+#         alias /path/to/playwright_instagram_uploader/media/;
+#     }
+#
+#     location / {
+#         proxy_pass http://127.0.0.1:8000;
+#         proxy_set_header Host $host;
+#         proxy_set_header X-Real-IP $remote_addr;
+#         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#         proxy_set_header X-Forwarded-Proto $scheme;
+#     }
+# } 

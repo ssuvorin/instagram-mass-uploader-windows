@@ -1,0 +1,12 @@
+Django==5.1.5
+pillow==11.2.1
+playwright==1.35.0
+pyotp==2.8.0
+python-dotenv==1.0.0
+requests==2.30.0
+toml==0.10.2
+tomli==2.0.1
+gunicorn==21.2.0
+whitenoise==6.5.0
+psutil==6.1.1
+PySocks==1.7.1

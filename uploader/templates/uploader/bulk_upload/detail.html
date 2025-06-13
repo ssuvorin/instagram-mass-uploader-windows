@@ -1,0 +1,1323 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}{{ task.name }} - Bulk Upload - Instagram Uploader{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Main dashboard styling */
+    .task-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .task-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 200px;
+        height: 200px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 50%;
+        transform: translate(50px, -50px);
+    }
+    
+    .task-title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .task-meta {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .status-pending { background: rgba(255, 193, 7, 0.2); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.3); }
+    .status-running { background: rgba(23, 162, 184, 0.2); color: #17a2b8; border: 1px solid rgba(23, 162, 184, 0.3); }
+    .status-completed { background: rgba(40, 167, 69, 0.2); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.3); }
+    .status-failed { background: rgba(220, 53, 69, 0.2); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.3); }
+    .status-partial { background: rgba(102, 126, 234, 0.2); color: #667eea; border: 1px solid rgba(102, 126, 234, 0.3); }
+    
+    .progress-container {
+        background: rgba(255,255,255,0.15);
+        border-radius: 10px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .progress-enhanced {
+        height: 12px;
+        border-radius: 6px;
+        background: rgba(255,255,255,0.2);
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .progress-bar-enhanced {
+        height: 100%;
+        background: linear-gradient(90deg, #28a745, #34ce57);
+        border-radius: 6px;
+        transition: width 0.5s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .progress-bar-enhanced::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+        animation: shimmer 2s infinite;
+    }
+    
+    @keyframes shimmer {
+        0% { left: -100%; }
+        100% { left: 100%; }
+    }
+    
+    .progress-text {
+        color: white;
+        font-weight: 600;
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    /* Stats cards */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        border: 1px solid #e9ecef;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        min-height: 200px;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+    
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--accent-color);
+    }
+    
+    .stat-card.accounts { --accent-color: #667eea; }
+    .stat-card.videos { --accent-color: #f093fb; }
+    .stat-card.titles { --accent-color: #ffecd2; }
+    .stat-card.location { --accent-color: #ff9a56; }
+    .stat-card.progress { --accent-color: #a8edea; }
+    
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-card.accounts .stat-icon { background: rgba(102, 126, 234, 0.1); color: #667eea; }
+    .stat-card.videos .stat-icon { background: rgba(240, 147, 251, 0.1); color: #f093fb; }
+    .stat-card.titles .stat-icon { background: rgba(255, 236, 210, 0.3); color: #ff9a56; }
+    .stat-card.location .stat-icon { background: rgba(255, 154, 86, 0.1); color: #ff9a56; }
+    .stat-card.progress .stat-icon { background: rgba(168, 237, 234, 0.3); color: #4facfe; }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #2d3748;
+        line-height: 1;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stat-label {
+        color: #718096;
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+    
+    .stat-change {
+        font-size: 0.8rem;
+        margin-top: auto;
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-weight: 500;
+    }
+    
+    .stat-change.positive { background: rgba(40, 167, 69, 0.1); color: #28a745; }
+    .stat-change.neutral { background: rgba(108, 117, 125, 0.1); color: #6c757d; }
+    
+    /* Action panel */
+    .action-panel {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        border: 1px solid #e9ecef;
+        margin-bottom: 2rem;
+    }
+    
+    .action-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #2d3748;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    
+    .btn-enhanced {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .btn-start {
+        background: linear-gradient(135deg, #28a745, #34ce57);
+        border: none;
+        color: white;
+        font-size: 1.1rem;
+        padding: 1rem 2rem;
+    }
+    
+    .btn-start:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+        color: white;
+    }
+    
+    .btn-start:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+    
+    /* Data tables */
+    .data-section {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        border: 1px solid #e9ecef;
+        margin-bottom: 1.5rem;
+    }
+    
+    .data-header {
+        background: #f8f9fa;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e9ecef;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .data-title {
+        font-weight: 600;
+        color: #2d3748;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .data-count {
+        background: #667eea;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .table-enhanced {
+        margin: 0;
+        font-size: 0.9rem;
+    }
+    
+    .table-enhanced th {
+        background: #f8f9fa;
+        border: none;
+        padding: 1rem;
+        font-weight: 600;
+        color: #495057;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .table-enhanced td {
+        padding: 1rem;
+        border: none;
+        border-bottom: 1px solid #f8f9fa;
+        vertical-align: middle;
+    }
+    
+    .table-enhanced tbody tr:hover {
+        background: #f8f9fb;
+    }
+    
+    .account-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        text-decoration: none;
+        color: #495057;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .account-badge:hover {
+        background: #667eea;
+        color: white;
+        text-decoration: none;
+    }
+    
+    .status-mini {
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border: 1px solid;
+    }
+    
+    .video-filename {
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        background: #f8f9fa;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+    }
+    
+    .title-preview {
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        cursor: help;
+    }
+    
+    /* Logs section */
+    .logs-section {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        border: 1px solid #e9ecef;
+    }
+    
+    .logs-nav {
+        background: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        padding: 0 1.5rem;
+    }
+    
+    .logs-nav .nav-link {
+        border: none;
+        padding: 1rem 1.5rem;
+        color: #495057;
+        font-weight: 500;
+        position: relative;
+        transition: all 0.3s ease;
+    }
+    
+    .logs-nav .nav-link.active {
+        background: none;
+        color: #667eea;
+        border-bottom: 3px solid #667eea;
+    }
+    
+    .logs-nav .nav-link:hover {
+        background: rgba(102, 126, 234, 0.05);
+        color: #667eea;
+    }
+    
+    .log-container {
+        background: #1e1e1e;
+        color: #f8f8f8;
+        font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+        padding: 1.5rem;
+        max-height: 500px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        line-height: 1.6;
+        font-size: 0.85rem;
+    }
+    
+    /* Enhanced log entry styling */
+    .log-entry {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        transition: background-color 0.2s ease;
+    }
+    
+    .log-entry:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+    
+    .log-timestamp {
+        color: #569cd6;
+        font-weight: 600;
+        font-size: 0.8rem;
+        min-width: 60px;
+        flex-shrink: 0;
+    }
+    
+    .log-level {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-weight: 600;
+        font-size: 0.75rem;
+        min-width: 80px;
+        flex-shrink: 0;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+    }
+    
+    .log-level-error {
+        background: rgba(244, 76, 76, 0.2);
+        color: #f44c4c;
+        border: 1px solid rgba(244, 76, 76, 0.3);
+    }
+    
+    .log-level-warning {
+        background: rgba(255, 193, 7, 0.2);
+        color: #ffc107;
+        border: 1px solid rgba(255, 193, 7, 0.3);
+    }
+    
+    .log-level-success {
+        background: rgba(40, 167, 69, 0.2);
+        color: #28a745;
+        border: 1px solid rgba(40, 167, 69, 0.3);
+    }
+    
+    .log-level-info {
+        background: rgba(23, 162, 184, 0.2);
+        color: #17a2b8;
+        border: 1px solid rgba(23, 162, 184, 0.3);
+    }
+    
+    .log-category {
+        font-size: 0.7rem;
+        font-weight: 500;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        min-width: 70px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+    
+    .category-task {
+        background: rgba(102, 126, 234, 0.2);
+        color: #667eea;
+    }
+    
+    .category-login {
+        background: rgba(186, 85, 211, 0.2);
+        color: #ba55d3;
+    }
+    
+    .category-upload {
+        background: rgba(255, 154, 86, 0.2);
+        color: #ff9a56;
+    }
+    
+    .category-human {
+        background: rgba(255, 105, 180, 0.2);
+        color: #ff69b4;
+    }
+    
+    .category-dolphin {
+        background: rgba(64, 224, 208, 0.2);
+        color: #40e0d0;
+    }
+    
+    .category-proxy {
+        background: rgba(255, 215, 0, 0.2);
+        color: #ffd700;
+    }
+    
+    .category-general {
+        background: rgba(108, 117, 125, 0.2);
+        color: #6c757d;
+    }
+    
+    .log-message {
+        flex: 1;
+        line-height: 1.4;
+    }
+    
+    /* Emoji styling */
+    .emoji-error { color: #ff6b6b; font-size: 1.1em; }
+    .emoji-warning { color: #ffa726; font-size: 1.1em; }
+    .emoji-success { color: #66bb6a; font-size: 1.1em; }
+    .emoji-info { color: #42a5f5; font-size: 1.1em; }
+    .emoji-action { color: #ffca28; font-size: 1.1em; }
+    .emoji-input { color: #ec407a; font-size: 1.1em; }
+    .emoji-important { color: #ff5722; font-size: 1.2em; font-weight: bold; }
+    
+    /* Keyword highlighting */
+    .keyword-error { color: #f44c4c; font-weight: bold; }
+    .keyword-warning { color: #ffc107; font-weight: bold; }
+    .keyword-success { color: #28a745; font-weight: bold; }
+    .keyword-auth { color: #ba55d3; font-weight: 500; }
+    
+    /* Legacy log styling (fallback) */
+    .log-container .log-time { color: #569cd6; font-weight: bold; }
+    .log-container .log-info { color: #4fc1ff; }
+    .log-container .log-success { color: #6a9955; }
+    .log-container .log-warning { color: #d7ba7d; }
+    .log-container .log-error { color: #f14c4c; }
+    
+    .account-log-header {
+        background: #f8f9fa;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e9ecef;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .account-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .proxy-info {
+        background: rgba(102, 126, 234, 0.1);
+        color: #667eea;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    
+    .assigned-videos {
+        margin-top: 1rem;
+        padding: 1rem 1.5rem;
+        background: #f8f9fb;
+    }
+    
+    .video-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        background: white;
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    .video-item:last-child {
+        margin-bottom: 0;
+    }
+    
+    /* Empty states */
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #6c757d;
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    
+    /* Responsive design */
+    @media (max-width: 768px) {
+        .task-header {
+            padding: 1.5rem;
+        }
+        
+        .task-title {
+            font-size: 1.5rem;
+        }
+        
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .action-buttons {
+            flex-direction: column;
+            width: 100%;
+        }
+        
+        .btn-enhanced {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .stat-card {
+            min-height: 160px;
+        }
+    }
+    
+    /* Animations */
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+    
+    .status-running .status-badge {
+        animation: pulse 2s infinite;
+    }
+    
+    /* Confirmation modal styling */
+    .modal-content {
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    }
+    
+    .modal-header {
+        border-bottom: 1px solid #e9ecef;
+        padding: 1.5rem;
+    }
+    
+    .modal-body {
+        padding: 1.5rem;
+    }
+    
+    .modal-footer {
+        border-top: 1px solid #e9ecef;
+        padding: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Task Header -->
+<div class="task-header">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h1 class="task-title">{{ task.name }}</h1>
+            <div class="task-meta">
+                <div class="status-badge status-{{ task.status|lower }}">
+                    {% if task.status == 'PENDING' %}
+                        <i class="bi bi-clock"></i> Pending
+                    {% elif task.status == 'RUNNING' %}
+                        <i class="bi bi-play-circle"></i> Running
+                    {% elif task.status == 'COMPLETED' %}
+                        <i class="bi bi-check-circle"></i> Completed
+                    {% elif task.status == 'PARTIALLY_COMPLETED' %}
+                        <i class="bi bi-check-circle-fill"></i> Partially Completed
+                    {% elif task.status == 'FAILED' %}
+                        <i class="bi bi-x-circle"></i> Failed
+                    {% endif %}
+                </div>
+                <div class="text-white-50">
+                    <i class="bi bi-calendar3"></i> Created {{ task.created_at|date:"M d, Y H:i" }}
+                </div>
+                {% if task.updated_at != task.created_at %}
+                <div class="text-white-50">
+                    <i class="bi bi-arrow-clockwise"></i> Updated {{ task.updated_at|timesince }} ago
+                </div>
+                {% endif %}
+            </div>
+            
+            {% if task.status == 'RUNNING' or task.status == 'PARTIALLY_COMPLETED' %}
+            <div class="progress-container">
+                <div class="progress-enhanced">
+                    <div class="progress-bar-enhanced" id="progressBar"></div>
+                </div>
+                <div class="progress-text">
+                    <span id="progressText">{{ task.get_completed_count }} of {{ task.get_total_count }} accounts completed ({{ task.get_completion_percentage }}%)</span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'bulk_upload_list' %}" class="btn btn-light">
+                <i class="bi bi-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Grid -->
+<div class="stats-grid">
+    <div class="stat-card accounts">
+        <div class="stat-icon">
+            <i class="bi bi-people"></i>
+        </div>
+        <div class="stat-number">{{ accounts|length }}</div>
+        <div class="stat-label">Selected Accounts</div>
+        {% if task.status != 'PENDING' %}
+        <div class="stat-change positive">
+            <i class="bi bi-check-circle"></i>
+            {{ task.get_completed_count }} completed
+        </div>
+        {% else %}
+        <div class="stat-change neutral">
+            <i class="bi bi-clock"></i>
+            Ready to start
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="stat-card videos">
+        <div class="stat-icon">
+            <i class="bi bi-camera-video"></i>
+        </div>
+        <div class="stat-number">{{ videos|length }}</div>
+        <div class="stat-label">Videos to Upload</div>
+        <div class="stat-change neutral">
+            <i class="bi bi-distribute-horizontal"></i>
+            Distributed among accounts
+        </div>
+    </div>
+    
+    <div class="stat-card titles">
+        <div class="stat-icon">
+            <i class="bi bi-file-text"></i>
+        </div>
+        <div class="stat-number">{{ titles|length }}</div>
+        <div class="stat-label">Captions/Titles</div>
+        {% if titles|length >= videos|length %}
+        <div class="stat-change positive">
+            <i class="bi bi-check-circle"></i>
+            All videos have captions
+        </div>
+        {% elif titles|length > 0 %}
+        <div class="stat-change neutral">
+            <i class="bi bi-exclamation-triangle"></i>
+            Some videos without captions
+        </div>
+        {% else %}
+        <div class="stat-change neutral">
+            <i class="bi bi-info-circle"></i>
+            No captions added
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="stat-card location">
+        <div class="stat-icon">
+            <i class="fas fa-map-marker-alt"></i>
+        </div>
+        <div class="stat-number">
+            {% if task.default_location or task.default_mentions %}
+                <i class="bi bi-check-circle text-success"></i>
+            {% else %}
+                <i class="bi bi-dash-circle text-muted"></i>
+            {% endif %}
+        </div>
+        <div class="stat-label">Location & Mentions</div>
+        {% if task.default_location and task.default_mentions %}
+        <div class="stat-change positive">
+            <i class="bi bi-check-circle"></i>
+            Both configured
+        </div>
+        {% elif task.default_location %}
+        <div class="stat-change neutral">
+            <i class="bi bi-geo-alt"></i>
+            Location only
+        </div>
+        {% elif task.default_mentions %}
+        <div class="stat-change neutral">
+            <i class="bi bi-at"></i>
+            Mentions only
+        </div>
+        {% else %}
+        <div class="stat-change neutral">
+            <i class="bi bi-info-circle"></i>
+            Not configured
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="stat-card progress">
+        <div class="stat-icon">
+            <i class="bi bi-speedometer2"></i>
+        </div>
+        <div class="stat-number">{{ task.get_completion_percentage }}%</div>
+        <div class="stat-label">Completion Progress</div>
+        {% if task.status == 'RUNNING' %}
+        <div class="stat-change positive">
+            <i class="bi bi-play-circle"></i>
+            Currently uploading
+        </div>
+        {% elif task.status == 'COMPLETED' %}
+        <div class="stat-change positive">
+            <i class="bi bi-check-circle"></i>
+            Upload finished
+        </div>
+        {% else %}
+        <div class="stat-change neutral">
+            <i class="bi bi-pause-circle"></i>
+            Not started
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Action Panel -->
+{% if task.status == 'PENDING' %}
+<div class="action-panel">
+    <div class="action-title">
+        <i class="bi bi-gear"></i>
+        Task Actions
+    </div>
+    <div class="action-buttons">
+        {% if videos|length == 0 %}
+        <a href="{% url 'add_bulk_videos' task_id=task.id %}" class="btn btn-warning btn-enhanced">
+            <i class="bi bi-camera-video"></i> Add Videos First
+        </a>
+        <div class="text-muted">You need to add videos before starting the upload</div>
+        {% elif accounts|length == 0 %}
+        <a href="{% url 'create_bulk_upload' %}" class="btn btn-warning btn-enhanced">
+            <i class="bi bi-people"></i> Add Accounts First
+        </a>
+        <div class="text-muted">You need to select accounts before starting the upload</div>
+        {% else %}
+        <a href="{% url 'start_bulk_upload' task_id=task.id %}" class="btn btn-start btn-enhanced" id="startUploadBtn">
+            <i class="bi bi-rocket-takeoff"></i> Start Bulk Upload
+        </a>
+        <a href="{% url 'add_bulk_videos' task_id=task.id %}" class="btn btn-outline-primary btn-enhanced">
+            <i class="bi bi-plus-circle"></i> Add More Videos
+        </a>
+        <a href="{% url 'add_bulk_titles' task_id=task.id %}" class="btn btn-outline-info btn-enhanced">
+            <i class="bi bi-file-text"></i> {{ titles|length|yesno:"Update,Add" }} Captions
+        </a>
+        <a href="{% url 'bulk_edit_location_mentions' task_id=task.id %}" class="btn btn-outline-warning btn-enhanced">
+            <i class="fas fa-map-marker-alt"></i> Edit Location & Mentions
+        </a>
+        {% endif %}
+        
+        <button type="button" class="btn btn-outline-danger btn-enhanced" data-bs-toggle="modal" data-bs-target="#deleteTaskModal">
+            <i class="bi bi-trash3"></i> Delete Task
+        </button>
+    </div>
+    
+    {% if videos|length > 0 and accounts|length > 0 %}
+    <div class="mt-3 p-3 bg-light rounded">
+        <div class="row text-center">
+            <div class="col-md-4">
+                <div class="text-muted small">Ready to upload</div>
+                <div class="fw-bold text-success">{{ videos|length }} videos</div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-muted small">Using accounts</div>
+                <div class="fw-bold text-primary">{{ accounts|length }} accounts</div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-muted small">With captions</div>
+                <div class="fw-bold text-info">{{ titles|length }} captions</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Data Tables -->
+<div class="row">
+    <div class="col-lg-6">
+        <div class="data-section">
+            <div class="data-header">
+                <h5 class="data-title">
+                    <i class="bi bi-people"></i>
+                    Selected Accounts
+                    <span class="data-count">{{ accounts|length }}</span>
+                </h5>
+            </div>
+            {% if accounts %}
+            <div class="table-responsive">
+                <table class="table table-enhanced">
+                    <thead>
+                        <tr>
+                            <th>Account</th>
+                            <th>Videos</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for account_task in accounts %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'account_detail' account_id=account_task.account.id %}" class="account-badge">
+                                    <i class="bi bi-person-circle"></i>
+                                    {{ account_task.account.username }}
+                                </a>
+                                {% if account_task.proxy %}
+                                <div class="mt-1">
+                                    <small class="proxy-info">
+                                        <i class="bi bi-shield-check"></i>
+                                        {{ account_task.proxy.host }}:{{ account_task.proxy.port }}
+                                    </small>
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ account_task.assigned_videos.count }}</span>
+                            </td>
+                            <td>
+                                <span class="status-mini status-{{ account_task.status|lower }}">
+                                    {% if account_task.status == 'PENDING' %}
+                                        <i class="bi bi-clock"></i> Pending
+                                    {% elif account_task.status == 'RUNNING' %}
+                                        <i class="bi bi-play-circle"></i> Running
+                                    {% elif account_task.status == 'COMPLETED' %}
+                                        <i class="bi bi-check-circle"></i> Completed
+                                    {% elif account_task.status == 'FAILED' %}
+                                        <i class="bi bi-x-circle"></i> Failed
+                                    {% endif %}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="bi bi-people"></i>
+                <h6>No accounts selected</h6>
+                <p>Add accounts to start uploading videos</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="data-section">
+            <div class="data-header">
+                <h5 class="data-title">
+                    <i class="bi bi-camera-video"></i>
+                    Videos
+                    <span class="data-count">{{ videos|length }}</span>
+                </h5>
+            </div>
+            {% if videos %}
+            <div class="table-responsive">
+                <table class="table table-enhanced">
+                    <thead>
+                        <tr>
+                            <th>Filename</th>
+                            <th>Assigned To</th>
+                            <th>Caption</th>
+                            <th>Location</th>
+                            <th>Mentions</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for video in videos %}
+                        <tr>
+                            <td>
+                                <span class="video-filename">
+                                    {{ video.video_file.name|slice:"14:" }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if video.assigned_to %}
+                                <span class="badge bg-primary">{{ video.assigned_to.account.username }}</span>
+                                {% else %}
+                                <span class="text-muted">Not assigned</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if video.title_data %}
+                                <span class="title-preview" title="{{ video.title_data.title }}">
+                                    {{ video.title_data.title|truncatechars:30 }}
+                                </span>
+                                {% else %}
+                                <span class="text-muted">No caption</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if video.location %}
+                                    <span class="badge bg-info">{{ video.location }}</span>
+                                {% else %}
+                                    <span class="text-muted">Not set</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if video.mentions %}
+                                    {% for mention in video.get_effective_mentions_list %}
+                                        <span class="badge bg-success me-1">{{ mention }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-muted">Not set</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if task.status == 'PENDING' %}
+                                    <a href="{% url 'edit_video_location_mentions' video.id %}" 
+                                       class="btn btn-sm btn-outline-primary" title="Edit location and mentions">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="bi bi-camera-video"></i>
+                <h6>No videos added</h6>
+                <p>Upload videos to get started</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Logs Section -->
+{% if task.status != 'PENDING' %}
+<div class="logs-section">
+    <div class="data-header">
+        <h5 class="data-title">
+            <i class="bi bi-terminal"></i>
+            Execution Logs
+        </h5>
+    </div>
+    
+    <div class="logs-nav">
+        <ul class="nav nav-tabs border-0" id="logTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="main-log-tab" data-bs-toggle="tab" data-bs-target="#main-log" 
+                        type="button" role="tab" aria-controls="main-log" aria-selected="true">
+                    <i class="bi bi-list-ul"></i> Main Log
+                </button>
+            </li>
+            {% for account_task in accounts %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="account-{{ account_task.id }}-tab" data-bs-toggle="tab" 
+                        data-bs-target="#account-{{ account_task.id }}" type="button" role="tab" 
+                        aria-controls="account-{{ account_task.id }}" aria-selected="false">
+                    <i class="bi bi-person"></i> {{ account_task.account.username }}
+                    <span class="status-mini status-{{ account_task.status|lower }}">
+                        {% if account_task.status == 'RUNNING' %}
+                            <i class="bi bi-play-circle"></i>
+                        {% elif account_task.status == 'COMPLETED' %}
+                            <i class="bi bi-check-circle"></i>
+                        {% elif account_task.status == 'FAILED' %}
+                            <i class="bi bi-x-circle"></i>
+                        {% endif %}
+                    </span>
+                </button>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    
+    <div class="tab-content" id="logTabsContent">
+        <div class="tab-pane fade show active" id="main-log" role="tabpanel" aria-labelledby="main-log-tab">
+            <div class="log-container">
+                <div id="logs">{{ task.log|default:"No logs available yet..." }}</div>
+            </div>
+        </div>
+        
+        {% for account_task in accounts %}
+        <div class="tab-pane fade" id="account-{{ account_task.id }}" role="tabpanel" aria-labelledby="account-{{ account_task.id }}-tab">
+            <div class="account-log-header">
+                <div class="account-info">
+                    <strong>
+                        <i class="bi bi-person-circle"></i>
+                        {{ account_task.account.username }}
+                    </strong>
+                    {% if account_task.proxy %}
+                    <span class="proxy-info">
+                        <i class="bi bi-shield-check"></i>
+                        Proxy: {{ account_task.proxy.host }}:{{ account_task.proxy.port }}
+                    </span>
+                    {% endif %}
+                    <span class="status-mini status-{{ account_task.status|lower }}">
+                        {{ account_task.status }}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="log-container">
+                <div id="account-logs-{{ account_task.id }}">{{ account_task.log|default:"No logs for this account yet..." }}</div>
+            </div>
+            
+            {% if account_task.assigned_videos.exists %}
+            <div class="assigned-videos">
+                <h6><i class="bi bi-camera-video"></i> Assigned Videos ({{ account_task.assigned_videos.count }})</h6>
+                {% for video in account_task.assigned_videos.all %}
+                <div class="video-item">
+                    <div>
+                        <span class="video-filename">{{ video.video_file.name|slice:"14:" }}</span>
+                        {% if video.title_data %}
+                        <div class="text-muted small mt-1">{{ video.title_data.title|truncatechars:60 }}</div>
+                        {% endif %}
+                    </div>
+                    {% if video.title_data %}
+                    <span class="badge bg-success">Has Caption</span>
+                    {% else %}
+                    <span class="badge bg-secondary">No Caption</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteTaskModal" tabindex="-1" aria-labelledby="deleteTaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteTaskModalLabel">
+                    <i class="bi bi-exclamation-triangle text-danger"></i>
+                    Confirm Deletion
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete task <strong>{{ task.name }}</strong>?</p>
+                
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>This action cannot be undone!</strong><br>
+                    This will permanently delete:
+                    <ul class="mt-2 mb-0">
+                        <li>{{ videos|length }} uploaded videos</li>
+                        <li>{{ titles|length }} captions/titles</li>
+                        <li>{{ accounts|length }} account assignments</li>
+                        <li>All execution logs</li>
+                    </ul>
+                </div>
+                
+                {% if task.status == 'RUNNING' %}
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>Warning:</strong> This task is currently running. Deleting it will immediately stop all upload processes.
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </button>
+                <a href="{% url 'delete_bulk_upload' task_id=task.id %}" class="btn btn-danger">
+                    <i class="bi bi-trash3"></i> Delete Permanently
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Include logs formatting script -->
+<script src="/static/uploader/js/logs.js"></script>
+
+<!-- Generate account IDs array using JSON -->
+{{ accounts|length|json_script:"account-task-ids" }}
+<script>
+const accountTaskIds = JSON.parse(document.getElementById('account-task-ids').textContent);
+// Convert to actual account IDs
+window.accountTaskIds = [
+    {% for account_task in accounts %}{{ account_task.id }}{% if not forloop.last %},{% endif %}{% endfor %}
+];
+</script>
+
+{% if task.status == 'RUNNING' or task.status == 'PENDING' %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get account IDs from global variable
+    const accountTaskIds = window.accountTaskIds || [];
+    
+    // Set initial progress bar width
+    const progressBar = document.getElementById('progressBar');
+    if (progressBar) {
+        progressBar.style.width = '{{ task.get_completion_percentage }}%';
+    }
+    
+    // Setup automatic log updating for main task log
+    setupLogUpdater('{% url "bulk_task_logs" task_id=task.id %}', 2000);
+    
+    // Progress update function
+    function updateTaskProgress() {
+        fetch('{% url "bulk_task_logs" task_id=task.id %}')
+            .then(response => response.json())
+            .then(data => {
+                // Update progress bar
+                if (data.completion_percentage !== undefined) {
+                    const progressBar = document.getElementById('progressBar');
+                    const progressText = document.getElementById('progressText');
+                    
+                    if (progressBar) {
+                        progressBar.style.width = data.completion_percentage + '%';
+                    }
+                    
+                    if (progressText && data.completed_count !== undefined && data.total_count !== undefined) {
+                        progressText.textContent = `${data.completed_count} of ${data.total_count} accounts completed (${data.completion_percentage}%)`;
+                    }
+                }
+                
+                // Update status badge
+                if (data.status) {
+                    const statusBadge = document.querySelector('.status-badge');
+                    if (statusBadge) {
+                        // Remove all status classes
+                        statusBadge.classList.remove('status-pending', 'status-running', 'status-completed', 'status-failed', 'status-partial');
+                        
+                        // Add appropriate class and update content
+                        statusBadge.classList.add('status-' + data.status.toLowerCase());
+                        
+                        let icon = '';
+                        let text = '';
+                        switch(data.status) {
+                            case 'PENDING':
+                                icon = 'bi-clock';
+                                text = 'Pending';
+                                break;
+                            case 'RUNNING':
+                                icon = 'bi-play-circle';
+                                text = 'Running';
+                                break;
+                            case 'COMPLETED':
+                                icon = 'bi-check-circle';
+                                text = 'Completed';
+                                break;
+                            case 'PARTIALLY_COMPLETED':
+                                icon = 'bi-check-circle-fill';
+                                text = 'Partially Completed';
+                                statusBadge.classList.add('status-partial');
+                                break;
+                            case 'FAILED':
+                                icon = 'bi-x-circle';
+                                text = 'Failed';
+                                break;
+                        }
+                        
+                        statusBadge.innerHTML = `<i class="bi ${icon}"></i> ${text}`;
+                    }
+                }
+                
+                // If task is completed or failed, reload page to get final state
+                if (data.status && ['COMPLETED', 'FAILED', 'PARTIALLY_COMPLETED'].includes(data.status)) {
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 3000);
+                }
+            })
+            .catch(error => {
+                console.error('Error updating progress:', error);
+            });
+    }
+    
+    // Update progress every 3 seconds
+    const progressInterval = setInterval(updateTaskProgress, 3000);
+    
+    // Setup log updaters for each account tab when clicked
+    accountTaskIds.forEach(function(accountId) {
+        const tabElement = document.getElementById('account-' + accountId + '-tab');
+        if (tabElement) {
+            tabElement.addEventListener('click', function() {
+                setupLogUpdater('{% url "bulk_task_logs" task_id=task.id %}?account_id=' + accountId, 2000, 'account-logs-' + accountId);
+            });
+        }
+    });
+});
+</script>
+{% else %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get account IDs from global variable
+    const accountTaskIds = window.accountTaskIds || [];
+    
+    // For completed tasks, just format the logs
+    const logsDiv = document.getElementById('logs');
+    if (logsDiv && logsDiv.textContent) {
+        logsDiv.innerHTML = renderLog(logsDiv.textContent);
+    }
+    
+    // Format each account log
+    accountTaskIds.forEach(function(accountId) {
+        const accountLogsDiv = document.getElementById('account-logs-' + accountId);
+        if (accountLogsDiv && accountLogsDiv.textContent) {
+            accountLogsDiv.innerHTML = renderLog(accountLogsDiv.textContent);
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %} 

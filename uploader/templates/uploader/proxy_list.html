@@ -1,0 +1,321 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}Proxies - Instagram Uploader{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Custom modal that won't have backdrop issues */
+    .custom-modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 2000;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .custom-modal-container {
+        background: white;
+        border-radius: 5px;
+        width: 90%;
+        max-width: 500px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        z-index: 2001;
+    }
+    
+    .custom-modal-header {
+        padding: 1rem;
+        border-bottom: 1px solid #dee2e6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .custom-modal-body {
+        padding: 1rem;
+    }
+    
+    .custom-modal-footer {
+        padding: 1rem;
+        border-top: 1px solid #dee2e6;
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="mb-4 fw-bold">Proxy Servers</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <div class="btn-group me-2" role="group">
+            <a href="{% url 'cleanup_inactive_proxies' %}" class="btn btn-outline-danger" title="Cleanup Inactive Proxies">
+                <i class="bi bi-trash"></i> Cleanup
+            </a>
+            <a href="{% url 'validate_all_proxies' %}" class="btn btn-outline-warning" title="Validate All Proxies">
+                <i class="bi bi-lightning"></i> Validate
+            </a>
+        </div>
+        <div class="btn-group" role="group">
+            <a href="{% url 'import_proxies' %}" class="btn btn-warning">
+                <i class="bi bi-file-earmark-arrow-up"></i> Import
+            </a>
+            <a href="{% url 'create_proxy' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> New Proxy
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-funnel"></i> Filters</h5>
+        <div>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+                <i class="bi bi-sliders"></i> Toggle Filters
+            </button>
+        </div>
+    </div>
+    <div class="collapse" id="filterCollapse">
+        <div class="card-body">
+            <form method="get" action="{% url 'proxy_list' %}">
+                <div class="row">
+                    <div class="col-md-5 mb-3">
+                        <label for="search" class="form-label">Search</label>
+                        <input type="text" name="q" id="search" class="form-control" value="{{ search_query }}" placeholder="Search by host or username">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select name="status" id="status" class="form-select">
+                            <option value="">All Statuses</option>
+                            <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                            <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Host:Port</th>
+                        <th>Country</th>
+                        <th>Authentication</th>
+                        <th>Status</th>
+                        <th>Accounts</th>
+                        <th>Last Verified</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for proxy in proxies %}
+                    <tr>
+                        <td>{{ proxy.host }}:{{ proxy.port }}</td>
+                        <td>
+                            {% if proxy.country %}
+                            <span class="badge bg-info text-dark">{{ proxy.country }}</span>
+                            {% if proxy.city %}
+                            <small class="text-muted d-block">{{ proxy.city }}</small>
+                            {% endif %}
+                            {% else %}
+                            <span class="text-muted">Unknown</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if proxy.username %}
+                            <span class="text-truncate d-inline-block" style="max-width: 150px;" title="{{ proxy.username }}">
+                                {{ proxy.username }}
+                            </span>
+                            {% else %}
+                            <span class="text-muted">None</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if proxy.is_active %}
+                            <span class="badge badge-active">Active</span>
+                            {% else %}
+                            <span class="badge badge-inactive">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ proxy.accounts.count }}</td>
+                        <td>
+                            {% if proxy.last_verified %}
+                            {{ proxy.last_verified|date:"Y-m-d H:i" }}
+                            {% else %}
+                            <span class="text-muted">Never</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'edit_proxy' proxy_id=proxy.id %}" class="btn btn-sm btn-info" title="Edit Proxy">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="{% url 'test_proxy' proxy_id=proxy.id %}" class="btn btn-sm btn-warning" title="Test Proxy">
+                                <i class="bi bi-lightning"></i>
+                            </a>
+                            <button type="button" class="btn btn-sm btn-danger delete-proxy-btn" title="Delete Proxy" data-proxy-id="{{ proxy.id }}" data-proxy-name="{{ proxy }}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4">
+                            <i class="bi bi-hdd-network fs-1 text-muted mb-3 d-block"></i>
+                            <p class="text-muted">No proxies found</p>
+                            <a href="{% url 'create_proxy' %}" class="btn btn-primary btn-sm">Add New Proxy</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="text-muted small">
+                Showing {{ proxies|length }} of {{ total_proxies }} proxies
+            </div>
+            
+            <div>
+                {% if proxies.has_previous %}
+                <a href="?page={{ proxies.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                {% else %}
+                <button class="btn btn-sm btn-outline-secondary disabled">
+                    <i class="bi bi-arrow-left"></i>
+                </button>
+                {% endif %}
+                
+                <span class="mx-2">Page {{ proxies.number }} of {{ proxies.paginator.num_pages }}</span>
+                
+                {% if proxies.has_next %}
+                <a href="?page={{ proxies.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+                {% else %}
+                <button class="btn btn-sm btn-outline-secondary disabled">
+                    <i class="bi bi-arrow-right"></i>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Delete Confirmation Modal -->
+<div class="custom-modal-overlay" id="deleteConfirmationModal">
+    <div class="custom-modal-container">
+        <div class="custom-modal-header">
+            <h5>Confirm Deletion</h5>
+            <button type="button" class="btn-close" id="closeModal"></button>
+        </div>
+        <div class="custom-modal-body">
+            <p>Are you sure you want to delete proxy <strong id="proxyNameText"></strong>?</p>
+            <div class="alert alert-warning" id="proxyWarning" style="display: none;">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <span id="proxyWarningText"></span>
+            </div>
+        </div>
+        <div class="custom-modal-footer">
+            <button type="button" class="btn btn-secondary" id="cancelDelete">Cancel</button>
+            <button type="button" class="btn btn-danger" id="confirmDelete">Delete</button>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden form for delete action -->
+<form id="deleteProxyForm" method="get" action="" style="display: none;"></form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get modal elements
+        const modal = document.getElementById('deleteConfirmationModal');
+        const closeBtn = document.getElementById('closeModal');
+        const cancelBtn = document.getElementById('cancelDelete');
+        const confirmBtn = document.getElementById('confirmDelete');
+        const proxyNameText = document.getElementById('proxyNameText');
+        const proxyWarning = document.getElementById('proxyWarning');
+        const proxyWarningText = document.getElementById('proxyWarningText');
+        const deleteForm = document.getElementById('deleteProxyForm');
+        
+        // Get all delete buttons
+        const deleteButtons = document.querySelectorAll('.delete-proxy-btn');
+        
+        // Function to close modal
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+        
+        // Add click event to all delete buttons
+        deleteButtons.forEach(function(button) {
+            button.addEventListener('click', function() {
+                const proxyId = this.getAttribute('data-proxy-id');
+                const proxyName = this.getAttribute('data-proxy-name');
+                const proxyRow = this.closest('tr');
+                const accountsCount = proxyRow.querySelector('td:nth-child(5)').textContent.trim();
+                
+                // Set the proxy name in the modal
+                proxyNameText.textContent = proxyName;
+                
+                // Set the delete URL for form submission
+                deleteForm.action = "{% url 'proxy_list' %}".replace('proxies/', 'proxies/' + proxyId + '/delete/');
+                
+                // Check if proxy has accounts
+                if (accountsCount > 0) {
+                    proxyWarningText.textContent = `This proxy is being used by ${accountsCount} account(s). Deleting it will remove the association.`;
+                    proxyWarning.style.display = 'block';
+                } else {
+                    proxyWarning.style.display = 'none';
+                }
+                
+                // Show the modal
+                modal.style.display = 'flex';
+            });
+        });
+        
+        // Close modal on Close button click
+        closeBtn.addEventListener('click', closeModal);
+        
+        // Close modal on Cancel button click
+        cancelBtn.addEventListener('click', closeModal);
+        
+        // Submit the delete form on Confirm Delete click
+        confirmBtn.addEventListener('click', function() {
+            // Get current proxy ID from the form action URL
+            const url = deleteForm.action;
+            
+            // Log for debugging
+            console.log("Submitting deletion request to: " + url);
+            
+            // Redirect to the delete URL directly
+            window.location.href = url;
+        });
+        
+        // Close modal on clicking outside
+        window.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
+    });
+</script>
+{% endblock %} 

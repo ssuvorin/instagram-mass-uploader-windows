@@ -1,0 +1,13 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0071E3" />
+      <stop offset="100%" stop-color="#BF5AF2" />
+    </linearGradient>
+  </defs>
+  <rect width="180" height="180" rx="40" fill="white"/>
+  <rect x="10" y="10" width="160" height="160" rx="36" fill="url(#gradient)" fill-opacity="0.1"/>
+  <path d="M90 52C77.3333 52 73 52 68.6667 54C61.3333 57.3333 57.3333 61.3333 54 68.6667C52 73 52 77.3333 52 90C52 102.667 52 107 54 111.333C57.3333 118.667 61.3333 122.667 68.6667 126C73 128 77.3333 128 90 128C102.667 128 107 128 111.333 126C118.667 122.667 122.667 118.667 126 111.333C128 107 128 102.667 128 90C128 77.3333 128 73 126 68.6667C122.667 61.3333 118.667 57.3333 111.333 54C107 52 102.667 52 90 52Z" stroke="url(#gradient)" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="112" cy="68" r="8" fill="url(#gradient)"/>
+  <circle cx="90" cy="90" r="20" stroke="url(#gradient)" stroke-width="7"/>
+</svg> 

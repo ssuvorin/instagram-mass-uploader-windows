@@ -1,0 +1,287 @@
+{% extends 'uploader/base.html' %}
+{% load static %}
+
+{% block title %}Массовое редактирование локации и упоминаний - {{ task.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="h3 mb-0">Массовое редактирование локации и упоминаний</h1>
+                    <p class="text-muted">Задача: {{ task.name }}</p>
+                </div>
+                <div>
+                    <a href="{% url 'bulk_upload_detail' task.id %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Назад к задаче
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-edit text-primary"></i>
+                                Настройки локации и упоминаний
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" id="bulkEditForm">
+                                {% csrf_token %}
+                                
+                                <div class="mb-3">
+                                    <label for="location" class="form-label">Локация</label>
+                                    <input type="text" class="form-control" id="location" name="location" 
+                                           placeholder="Например: Москва, Россия">
+                                    <div class="form-text">Локация для выбранных видео</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="mentions" class="form-label">Упоминания</label>
+                                    <textarea class="form-control" id="mentions" name="mentions" rows="3" 
+                                              placeholder="@username1&#10;@username2&#10;@username3"></textarea>
+                                    <div class="form-text">Упоминания для выбранных видео, по одному на строку</div>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label class="form-label">Применить к:</label>
+                                    <div class="d-flex gap-3">
+                                        <button type="submit" name="action" value="apply_to_all" class="btn btn-primary">
+                                            <i class="fas fa-globe"></i> Применить ко всем видео
+                                        </button>
+                                        <button type="submit" name="action" value="apply_to_selected" class="btn btn-warning" id="applyToSelectedBtn" disabled>
+                                            <i class="fas fa-check-square"></i> Применить к выбранным (<span id="selectedCount">0</span>)
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="card mt-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-video text-success"></i>
+                                Видео в задаче ({{ videos.count }})
+                            </h5>
+                            <div>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="selectAllBtn">
+                                    Выбрать все
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="deselectAllBtn">
+                                    Снять выбор
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th width="50">
+                                                <input type="checkbox" id="selectAllCheckbox" class="form-check-input">
+                                            </th>
+                                            <th>Видео</th>
+                                            <th>Текущая локация</th>
+                                            <th>Текущие упоминания</th>
+                                            <th>Назначено</th>
+                                            <th width="100">Действия</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for video in videos %}
+                                        <tr>
+                                            <td>
+                                                <input type="checkbox" name="selected_videos" value="{{ video.id }}" 
+                                                       class="form-check-input video-checkbox" form="bulkEditForm">
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-video text-primary me-2"></i>
+                                                    <div>
+                                                        <div class="fw-medium">{{ video.video_file.name|truncatechars:30 }}</div>
+                                                        <small class="text-muted">Порядок: {{ video.order }}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {% if video.location %}
+                                                    <span class="badge bg-info">{{ video.location }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">Not set</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if video.mentions %}
+                                                    {% for mention in video.get_effective_mentions_list %}
+                                                        <span class="badge bg-success me-1">{{ mention }}</span>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <span class="text-muted">Not set</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if video.assigned_to %}
+                                                    <span class="badge bg-primary">{{ video.assigned_to.account.username }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">Не назначено</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="{% url 'edit_video_location_mentions' video.id %}" 
+                                                   class="btn btn-sm btn-outline-primary" title="Редактировать">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted py-4">
+                                                <i class="fas fa-video fa-2x mb-2"></i>
+                                                <p>Видео не найдены</p>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">
+                                <i class="fas fa-info-circle text-info"></i>
+                                Текущие настройки по умолчанию
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <strong>Шаблон локации:</strong>
+                                <p class="text-muted mb-0">
+                                    {% if task.default_location %}
+                                        {{ task.default_location }}
+                                        <small class="d-block text-info">Можно скопировать в поле слева</small>
+                                    {% else %}
+                                        <em>Не задан</em>
+                                    {% endif %}
+                                </p>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <strong>Шаблон упоминаний:</strong>
+                                {% if task.default_mentions %}
+                                    <ul class="list-unstyled text-muted mb-0">
+                                        {% for mention in task.get_default_mentions_list %}
+                                            <li>{{ mention }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                    <small class="text-info">Можно скопировать в поле слева</small>
+                                {% else %}
+                                    <p class="text-muted mb-0"><em>Не заданы</em></p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">
+                                <i class="fas fa-lightbulb text-warning"></i>
+                                Подсказки
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled mb-0">
+                                <li class="mb-2">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    <small>Выберите видео и нажмите "Применить к выбранным"</small>
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-globe text-primary me-2"></i>
+                                    <small>Или нажмите "Применить ко всем видео" для массового изменения</small>
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-edit text-info me-2"></i>
+                                    <small>Используйте кнопку редактирования для индивидуальных настроек</small>
+                                </li>
+                                <li>
+                                    <i class="fas fa-eraser text-warning me-2"></i>
+                                    <small>Оставьте поля пустыми, чтобы очистить настройки</small>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    const videoCheckboxes = document.querySelectorAll('.video-checkbox');
+    const selectedCountSpan = document.getElementById('selectedCount');
+    const applyToSelectedBtn = document.getElementById('applyToSelectedBtn');
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    const deselectAllBtn = document.getElementById('deselectAllBtn');
+
+    function updateSelectedCount() {
+        const checkedBoxes = document.querySelectorAll('.video-checkbox:checked');
+        const count = checkedBoxes.length;
+        selectedCountSpan.textContent = count;
+        applyToSelectedBtn.disabled = count === 0;
+        
+        // Update select all checkbox state
+        if (count === 0) {
+            selectAllCheckbox.indeterminate = false;
+            selectAllCheckbox.checked = false;
+        } else if (count === videoCheckboxes.length) {
+            selectAllCheckbox.indeterminate = false;
+            selectAllCheckbox.checked = true;
+        } else {
+            selectAllCheckbox.indeterminate = true;
+        }
+    }
+
+    // Handle individual checkbox changes
+    videoCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedCount);
+    });
+
+    // Handle select all checkbox
+    selectAllCheckbox.addEventListener('change', function() {
+        const isChecked = this.checked;
+        videoCheckboxes.forEach(checkbox => {
+            checkbox.checked = isChecked;
+        });
+        updateSelectedCount();
+    });
+
+    // Handle select all button
+    selectAllBtn.addEventListener('click', function() {
+        videoCheckboxes.forEach(checkbox => {
+            checkbox.checked = true;
+        });
+        updateSelectedCount();
+    });
+
+    // Handle deselect all button
+    deselectAllBtn.addEventListener('click', function() {
+        videoCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        updateSelectedCount();
+    });
+
+    // Initial count update
+    updateSelectedCount();
+});
+</script>
+{% endblock %} 
