@@ -110,6 +110,17 @@ ENV/
 env.bak/
 venv.bak/
 
+# Environment files (ALL variations)
+.env*
+!.env.example
+*.env
+env.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.staging
+
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -137,12 +148,6 @@ local_settings.py
 db.sqlite3
 media/
 staticfiles/
-
-# Environment variables
-.env
-.env.local
-.env.production
-.env.staging
 
 # IDE specific files
 .vscode/
