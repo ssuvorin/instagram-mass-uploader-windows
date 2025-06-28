@@ -99,13 +99,15 @@ def handle_verification_error(account_task, account_details, error_type, error_m
     # Map error types to status
     status_map = {
         'PHONE': TaskStatus.PHONE_VERIFICATION_REQUIRED,
-        'HUMAN': TaskStatus.HUMAN_VERIFICATION_REQUIRED
+        'HUMAN': TaskStatus.HUMAN_VERIFICATION_REQUIRED,
+        'SUSPENDED': TaskStatus.SUSPENDED
     }
     
     # Map error types to emoji and messages
     display_map = {
         'PHONE': ('📱', 'Phone verification required'),
-        'HUMAN': ('🤖', 'Human verification required')  
+        'HUMAN': ('🤖', 'Human verification required'),
+        'SUSPENDED': ('🚫', 'Account suspended by Instagram')
     }
     
     status = status_map.get(error_type, TaskStatus.FAILED)
@@ -212,7 +214,44 @@ def process_browser_result(result, account_task, task):
                 completed_at=timezone.now(),
                 log_message=f"[{timestamp_str}] {emoji} {message}\n"
             )
+            
+            # Update Instagram account status in database
+            try:
+                account = get_account_from_task(account_task)
+                if account:
+                    account.status = status
+                    account.save(update_fields=['status'])
+                    log_info(f"Updated Instagram account {account.username} status to {status}")
+                else:
+                    log_error("Could not get account from account_task to update status")
+            except Exception as status_error:
+                log_error(f"Error updating Instagram account status to {status}: {str(status_error)}")
+            
             log_error(f"Verification required: {message}")
+            return 'failed', 0, 1
+            
+        elif status == "SUSPENDED":
+            emoji = '🚫'
+            update_account_task(
+                account_task,
+                status=status,
+                completed_at=timezone.now(),
+                log_message=f"[{timestamp_str}] {emoji} {message}\n"
+            )
+            
+            # Update Instagram account status in database
+            try:
+                account = get_account_from_task(account_task)
+                if account:
+                    account.status = 'SUSPENDED'
+                    account.save(update_fields=['status'])
+                    log_info(f"Updated Instagram account {account.username} status to SUSPENDED")
+                else:
+                    log_error("Could not get account from account_task to update status")
+            except Exception as status_error:
+                log_error(f"Error updating Instagram account status to SUSPENDED: {str(status_error)}")
+            
+            log_error(f"Account suspended: {message}")
             return 'failed', 0, 1
             
         else:

@@ -857,16 +857,6 @@ class DolphinAnty:
                 if dialog_elements_found:
                     log_action(f"❌ Human verification dialog confirmed! Found elements: {dialog_elements_found[:3]}", "error")
                     
-                    # Делаем скриншот для документации
-                    try:
-                        import time
-                        timestamp = int(time.time())
-                        screenshot_path = f"human_verification_cookie_robot_{timestamp}.png"
-                        await page.screenshot(path=screenshot_path)
-                        log_action(f"📸 Screenshot saved: {screenshot_path}", "info")
-                    except Exception as e:
-                        log_action(f"⚠️ Could not take screenshot: {str(e)}", "warning")
-                    
                     # Логируем образец текста для отладки
                     verification_text_sample = page_text[:500] if page_text else "No text found"
                     log_action(f"🔍 Verification dialog text sample: {verification_text_sample}", "error")

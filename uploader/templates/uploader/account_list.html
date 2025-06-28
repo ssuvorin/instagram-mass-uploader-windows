@@ -52,6 +52,7 @@
                             <option value="INACTIVE" {% if status_filter == 'INACTIVE' %}selected{% endif %}>Inactive</option>
                             <option value="PHONE_VERIFICATION_REQUIRED" {% if status_filter == 'PHONE_VERIFICATION_REQUIRED' %}selected{% endif %}>Phone Verification Required</option>
                             <option value="HUMAN_VERIFICATION_REQUIRED" {% if status_filter == 'HUMAN_VERIFICATION_REQUIRED' %}selected{% endif %}>Human Verification Required</option>
+                            <option value="SUSPENDED" {% if status_filter == 'SUSPENDED' %}selected{% endif %}>Suspended</option>
                         </select>
                     </div>
                     <div class="col-md-3 mb-3 d-flex align-items-end">
@@ -95,6 +96,8 @@
                             <span class="badge badge-phone-verification-required">📱 Phone Verification</span>
                             {% elif account.status == 'HUMAN_VERIFICATION_REQUIRED' %}
                             <span class="badge badge-human-verification-required">🤖 Human Verification</span>
+                            {% elif account.status == 'SUSPENDED' %}
+                            <span class="badge badge-suspended">🚫 Suspended</span>
                             {% else %}
                             <span class="badge badge-inactive">Unknown</span>
                             {% endif %}

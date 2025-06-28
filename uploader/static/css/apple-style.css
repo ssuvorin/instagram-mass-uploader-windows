@@ -291,6 +291,12 @@ footer {
   color: white;
 }
 
+.badge-suspended {
+  background-color: var(--apple-red);
+  color: white;
+  border: 2px solid darkred;
+}
+
 .badge-pending {
   background-color: var(--apple-yellow);
   color: var(--apple-text);

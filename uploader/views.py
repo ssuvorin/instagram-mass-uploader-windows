@@ -1433,6 +1433,25 @@ def assign_titles_to_videos(task):
             title.used = True
             title.save(update_fields=['assigned_to', 'used'])
 
+def assign_videos_to_accounts(task):
+    """Assign ALL videos to ALL accounts in a bulk upload task (each video goes to every account)"""
+    videos = task.videos.all()
+    accounts = list(task.accounts.all())
+    
+    if not videos or not accounts:
+        return
+        
+    # Assign each video to ALL accounts (not distribute)
+    for video in videos:
+        if video.assigned_to is None:  # Only assign if not already assigned
+            # For now, we'll assign to the first account to maintain the current database structure
+            # But the actual upload logic will handle uploading to all accounts
+            video.assigned_to = accounts[0]
+            video.save(update_fields=['assigned_to'])
+            
+    # Note: The actual upload logic in process_account_videos() already uses all_videos
+    # which means each account will get all videos regardless of assigned_to field
+
 def all_videos_assigned(task):
     """Check if all videos in a task have been assigned to accounts"""
     videos = task.videos.all()
@@ -1442,21 +1461,6 @@ def all_titles_assigned(task):
     """Check if all videos in a task have titles assigned"""
     videos = task.videos.all()
     return all(hasattr(video, 'title_data') and video.title_data is not None for video in videos)
-
-def assign_videos_to_accounts(task):
-    """Assign videos to accounts in a bulk upload task"""
-    videos = task.videos.all()
-    accounts = list(task.accounts.all())
-    
-    if not videos or not accounts:
-        return
-        
-    # Distribute videos among accounts
-    for i, video in enumerate(videos):
-        if video.assigned_to is None:  # Only assign if not already assigned
-            account_idx = i % len(accounts)
-            video.assigned_to = accounts[account_idx]
-            video.save(update_fields=['assigned_to'])
 
 @login_required
 def start_bulk_upload(request, task_id):
@@ -1496,22 +1500,39 @@ def start_bulk_upload(request, task_id):
     task.status = 'RUNNING'
     task.save()
     
+    # Check for async mode preference (from request parameters or settings)
+    use_async_mode = request.GET.get('async', 'false').lower() == 'true'
+    
     # Wrapper function to run the task
-    def run_async_task(task_id):
-        print(f"[TASK] Starting task run for task {task_id}")
-        run_bulk_upload_task(task_id)
-        print(f"[TASK] Task run completed for task {task_id}")
+    def run_task_wrapper(task_id, use_async):
+        print(f"[TASK] Starting task run for task {task_id} (async={use_async})")
+        
+        if use_async:
+            # Use async version
+            try:
+                from .async_bulk_tasks import run_async_bulk_upload_task_sync
+                result = run_async_bulk_upload_task_sync(task_id)
+                print(f"[TASK] Async task run completed for task {task_id}: {result}")
+            except ImportError as e:
+                print(f"[TASK] Async mode not available: {str(e)}, falling back to sync mode")
+                run_bulk_upload_task(task_id)
+            except Exception as e:
+                print(f"[TASK] Async task run failed for task {task_id}: {str(e)}, falling back to sync mode")
+                run_bulk_upload_task(task_id)
+        else:
+            # Use sync version
+            run_bulk_upload_task(task_id)
+            print(f"[TASK] Sync task run completed for task {task_id}")
     
     # Start task in background
-    print(f"[TASK] Starting background thread for task {task.id}: {task.name}")
-    thread = threading.Thread(
-        target=run_async_task,
-        args=(task.id,)
-    )
-    thread.daemon = True
-    thread.start()
+    print(f"[TASK] Starting background thread for task {task.id}: {task.name} (async={use_async_mode})")
+    task_thread = threading.Thread(target=run_task_wrapper, args=(task.id, use_async_mode))
+    task_thread.daemon = True
+    task_thread.start()
     
-    messages.success(request, f'Bulk upload task "{task.name}" started!')
+    # Success message with mode info
+    mode_text = "ASYNC" if use_async_mode else "SYNC"
+    messages.success(request, f'Bulk upload task "{task.name}" started successfully in {mode_text} mode!')
     return redirect('bulk_upload_detail', task_id=task.id)
 
 @login_required
@@ -2949,4 +2970,142 @@ def cleanup_inactive_proxies(request):
         'active_tab': 'proxies'
     }
     return render(request, 'uploader/cleanup_inactive_proxies.html', context)
+
+def bulk_upload_logs(request, task_id):
+    """Get logs for a bulk upload task as JSON with real-time updates and enhanced monitoring"""
+    try:
+        # Get task to verify it exists
+        task = get_object_or_404(BulkUploadTask, id=task_id)
+        
+        # Get basic logs from cache
+        cache_key = f"task_logs_{task_id}"
+        logs = cache.get(cache_key, [])
+        
+        # Get critical events
+        critical_cache_key = f"task_critical_{task_id}"
+        critical_events = cache.get(critical_cache_key, [])
+        
+        # Get account-specific logs if requested
+        account_id = request.GET.get('account_id')
+        if account_id:
+            account_cache_key = f"task_logs_{task_id}_account_{account_id}"
+            account_logs = cache.get(account_cache_key, [])
+            logs.extend(account_logs)
+        
+        # Generate enhanced statistics
+        stats = {
+            'total_logs': len(logs),
+            'critical_events': len(critical_events),
+            'by_level': {},
+            'by_category': {},
+            'recent_activity': [],
+            'account_health': {},
+            'verification_issues': []
+        }
+        
+        # Process logs for statistics
+        verification_keywords = ['verification', 'верификация', 'phone', 'телефон', 'human', 'captcha']
+        
+        for log_entry in logs:
+            level = log_entry.get('level', 'INFO')
+            category = log_entry.get('category', 'GENERAL')
+            message = log_entry.get('message', '')
+            
+            # Count by level
+            stats['by_level'][level] = stats['by_level'].get(level, 0) + 1
+            
+            # Count by category  
+            stats['by_category'][category] = stats['by_category'].get(category, 0) + 1
+            
+            # Track verification issues
+            if any(keyword in message.lower() for keyword in verification_keywords):
+                stats['verification_issues'].append({
+                    'timestamp': log_entry.get('timestamp'),
+                    'message': message[:200],
+                    'level': level
+                })
+        
+        # Get recent activity (last 10 significant events)
+        significant_levels = ['ERROR', 'WARNING', 'SUCCESS']
+        recent_significant = [
+            log for log in logs[-50:] 
+            if log.get('level') in significant_levels
+        ][-10:]
+        
+        stats['recent_activity'] = recent_significant
+        
+        # Get account health information
+        account_tasks = task.bulkuploadaccount_set.all()
+        for account_task in account_tasks:
+            account = account_task.account
+            stats['account_health'][account.username] = {
+                'status': account.status,
+                'task_status': account_task.status,
+                'last_used': account.last_used.isoformat() if account.last_used else None,
+                'verification_issues': account.status in ['PHONE_VERIFICATION_REQUIRED', 'HUMAN_VERIFICATION_REQUIRED']
+            }
+        
+        # Get task progress information
+        total_accounts = account_tasks.count()
+        completed_accounts = account_tasks.filter(status__in=['COMPLETED', 'PARTIALLY_COMPLETED']).count()
+        failed_accounts = account_tasks.filter(status='FAILED').count()
+        verification_accounts = account_tasks.filter(
+            status__in=['PHONE_VERIFICATION_REQUIRED', 'HUMAN_VERIFICATION_REQUIRED']
+        ).count()
+        
+        progress = {
+            'total_accounts': total_accounts,
+            'completed_accounts': completed_accounts,
+            'failed_accounts': failed_accounts,
+            'verification_accounts': verification_accounts,
+            'completion_percentage': (completed_accounts / total_accounts * 100) if total_accounts > 0 else 0
+        }
+        
+        # Determine overall task health
+        health_status = 'HEALTHY'
+        health_message = 'All systems operational'
+        
+        if verification_accounts > 0:
+            health_status = 'WARNING'
+            health_message = f'{verification_accounts} accounts need verification'
+        
+        if failed_accounts >= total_accounts / 2:  # More than half failed
+            health_status = 'CRITICAL'
+            health_message = f'High failure rate: {failed_accounts}/{total_accounts} accounts failed'
+        
+        # Prepare response data
+        response_data = {
+            'logs': logs[-100:],  # Return last 100 logs to avoid overwhelming the frontend
+            'critical_events': critical_events[-20:],  # Last 20 critical events
+            'stats': stats,
+            'progress': progress,
+            'health': {
+                'status': health_status,
+                'message': health_message
+            },
+            'task_info': {
+                'id': task.id,
+                'name': task.name,
+                'status': task.status,
+                'created_at': task.created_at.isoformat(),
+                'updated_at': task.updated_at.isoformat()
+            },
+            'timestamp': timezone.now().isoformat()
+        }
+        
+        return JsonResponse(response_data)
+        
+    except BulkUploadTask.DoesNotExist:
+        return JsonResponse({
+            'error': 'Task not found',
+            'logs': [],
+            'stats': {'total_logs': 0, 'critical_events': 0}
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error getting bulk upload logs for task {task_id}: {str(e)}")
+        return JsonResponse({
+            'error': str(e),
+            'logs': [],
+            'stats': {'total_logs': 0, 'critical_events': 0}
+        }, status=500)
 

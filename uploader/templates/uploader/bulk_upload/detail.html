@@ -56,6 +56,9 @@
     .status-completed { background: rgba(40, 167, 69, 0.2); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.3); }
     .status-failed { background: rgba(220, 53, 69, 0.2); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.3); }
     .status-partial { background: rgba(102, 126, 234, 0.2); color: #667eea; border: 1px solid rgba(102, 126, 234, 0.3); }
+    .status-suspended { background: rgba(108, 117, 125, 0.2); color: #6c757d; border: 1px solid rgba(108, 117, 125, 0.3); }
+    .status-phone_verification_required { background: rgba(255, 102, 0, 0.2); color: #ff6600; border: 1px solid rgba(255, 102, 0, 0.3); }
+    .status-human_verification_required { background: rgba(255, 193, 7, 0.2); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.3); }
     
     .progress-container {
         background: rgba(255,255,255,0.15);
@@ -220,12 +223,23 @@
         padding: 0.75rem 1.5rem;
         border-radius: 8px;
         font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
         transition: all 0.3s ease;
+        border: none;
         position: relative;
         overflow: hidden;
+        margin: 0.25rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .btn-enhanced:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .btn-enhanced i {
+        font-size: 1.1rem;
     }
     
     .btn-start {
@@ -237,9 +251,9 @@
     }
     
     .btn-start:hover {
+        background: linear-gradient(135deg, #28a745, #20c997);
         transform: translateY(-2px);
         box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
-        color: white;
     }
     
     .btn-start:disabled {
@@ -247,6 +261,75 @@
         cursor: not-allowed;
         transform: none;
         box-shadow: none;
+    }
+    
+    /* Async button specific styling */
+    #startAsyncUploadBtn {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        position: relative;
+    }
+    
+    #startAsyncUploadBtn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: left 0.5s;
+    }
+    
+    #startAsyncUploadBtn:hover::before {
+        left: 100%;
+    }
+    
+    #startAsyncUploadBtn:hover {
+        background: linear-gradient(135deg, #20c997, #17a2b8);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+    }
+    
+    /* Mode comparison info */
+    .mode-info {
+        background: linear-gradient(135deg, #e3f2fd, #f8f9fa);
+        border: 1px solid #bbdefb;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .mode-comparison {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-top: 0.5rem;
+    }
+    
+    .mode-card {
+        background: white;
+        border-radius: 6px;
+        padding: 0.75rem;
+        border: 1px solid #e9ecef;
+    }
+    
+    .mode-card.sync {
+        border-left: 4px solid #007bff;
+    }
+    
+    .mode-card.async {
+        border-left: 4px solid #28a745;
+    }
+    
+    .mode-title {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    
+    .mode-desc {
+        font-size: 0.85rem;
+        color: #6c757d;
     }
     
     /* Data tables */
@@ -734,7 +817,7 @@
         <div class="stat-icon">
             <i class="bi bi-camera-video"></i>
         </div>
-        <div class="stat-number">{{ videos|length }}</div>
+        <div class="stat-number">{{ task.videos.count }}</div>
         <div class="stat-label">Videos to Upload</div>
         <div class="stat-change neutral">
             <i class="bi bi-distribute-horizontal"></i>
@@ -748,7 +831,7 @@
         </div>
         <div class="stat-number">{{ titles|length }}</div>
         <div class="stat-label">Captions/Titles</div>
-        {% if titles|length >= videos|length %}
+        {% if titles|length >= task.videos.count %}
         <div class="stat-change positive">
             <i class="bi bi-check-circle"></i>
             All videos have captions
@@ -834,7 +917,7 @@
         Task Actions
     </div>
     <div class="action-buttons">
-        {% if videos|length == 0 %}
+        {% if task.videos.count == 0 %}
         <a href="{% url 'add_bulk_videos' task_id=task.id %}" class="btn btn-warning btn-enhanced">
             <i class="bi bi-camera-video"></i> Add Videos First
         </a>
@@ -848,6 +931,9 @@
         <a href="{% url 'start_bulk_upload' task_id=task.id %}" class="btn btn-start btn-enhanced" id="startUploadBtn">
             <i class="bi bi-rocket-takeoff"></i> Start Bulk Upload
         </a>
+        <a href="{% url 'start_bulk_upload' task_id=task.id %}?async=true" class="btn btn-success btn-enhanced" id="startAsyncUploadBtn" title="Start with parallel account processing">
+            <i class="bi bi-lightning-charge"></i> Start ASYNC Upload
+        </a>
         <a href="{% url 'add_bulk_videos' task_id=task.id %}" class="btn btn-outline-primary btn-enhanced">
             <i class="bi bi-plus-circle"></i> Add More Videos
         </a>
@@ -859,17 +945,46 @@
         </a>
         {% endif %}
         
+        {% if task.videos.count > 0 and accounts|length > 0 and accounts|length > 1 %}
+        <div class="mode-info">
+            <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-info-circle text-primary me-2"></i>
+                <strong>Choose Upload Mode</strong>
+            </div>
+            <div class="mode-comparison">
+                <div class="mode-card sync">
+                    <div class="mode-title text-primary">
+                        <i class="bi bi-arrow-right"></i> Standard Mode
+                    </div>
+                    <div class="mode-desc">
+                        Accounts processed one by one.<br>
+                        Reliable but slower for multiple accounts.
+                    </div>
+                </div>
+                <div class="mode-card async">
+                    <div class="mode-title text-success">
+                        <i class="bi bi-lightning-charge"></i> Async Mode
+                    </div>
+                    <div class="mode-desc">
+                        Up to {{ accounts|length|add:0|floatformat:0 }} accounts in parallel.<br>
+                        3-5x faster, recommended for 2+ accounts.
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
         <button type="button" class="btn btn-outline-danger btn-enhanced" data-bs-toggle="modal" data-bs-target="#deleteTaskModal">
             <i class="bi bi-trash3"></i> Delete Task
         </button>
     </div>
     
-    {% if videos|length > 0 and accounts|length > 0 %}
+    {% if task.videos.count > 0 and accounts|length > 0 %}
     <div class="mt-3 p-3 bg-light rounded">
         <div class="row text-center">
             <div class="col-md-4">
                 <div class="text-muted small">Ready to upload</div>
-                <div class="fw-bold text-success">{{ videos|length }} videos</div>
+                <div class="fw-bold text-success">{{ task.videos.count }} videos</div>
             </div>
             <div class="col-md-4">
                 <div class="text-muted small">Using accounts</div>
@@ -924,18 +1039,24 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <span class="badge bg-secondary">{{ account_task.assigned_videos.count }}</span>
+                                <span class="badge bg-secondary">{{ task.videos.count }}</span>
                             </td>
                             <td>
                                 <span class="status-mini status-{{ account_task.status|lower }}">
-                                    {% if account_task.status == 'PENDING' %}
-                                        <i class="bi bi-clock"></i> Pending
-                                    {% elif account_task.status == 'RUNNING' %}
-                                        <i class="bi bi-play-circle"></i> Running
+                                    {% if account_task.status == 'RUNNING' %}
+                                        <i class="bi bi-play-circle"></i>
                                     {% elif account_task.status == 'COMPLETED' %}
-                                        <i class="bi bi-check-circle"></i> Completed
+                                        <i class="bi bi-check-circle"></i>
                                     {% elif account_task.status == 'FAILED' %}
-                                        <i class="bi bi-x-circle"></i> Failed
+                                        <i class="bi bi-x-circle"></i>
+                                    {% elif account_task.status == 'SUSPENDED' %}
+                                        <i class="bi bi-ban"></i>
+                                    {% elif account_task.status == 'PHONE_VERIFICATION_REQUIRED' %}
+                                        <i class="bi bi-phone"></i>
+                                    {% elif account_task.status == 'HUMAN_VERIFICATION_REQUIRED' %}
+                                        <i class="bi bi-person-check"></i>
+                                    {% elif account_task.status == 'PENDING' %}
+                                        <i class="bi bi-clock"></i>
                                     {% endif %}
                                 </span>
                             </td>
@@ -960,10 +1081,10 @@
                 <h5 class="data-title">
                     <i class="bi bi-camera-video"></i>
                     Videos
-                    <span class="data-count">{{ videos|length }}</span>
+                    <span class="data-count">{{ task.videos.count }}</span>
                 </h5>
             </div>
-            {% if videos %}
+            {% if task.videos %}
             <div class="table-responsive">
                 <table class="table table-enhanced">
                     <thead>
@@ -977,7 +1098,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for video in videos %}
+                        {% for video in task.videos.all %}
                         <tr>
                             <td>
                                 <span class="video-filename">
@@ -1073,6 +1194,14 @@
                             <i class="bi bi-check-circle"></i>
                         {% elif account_task.status == 'FAILED' %}
                             <i class="bi bi-x-circle"></i>
+                        {% elif account_task.status == 'SUSPENDED' %}
+                            <i class="bi bi-ban"></i>
+                        {% elif account_task.status == 'PHONE_VERIFICATION_REQUIRED' %}
+                            <i class="bi bi-phone"></i>
+                        {% elif account_task.status == 'HUMAN_VERIFICATION_REQUIRED' %}
+                            <i class="bi bi-person-check"></i>
+                        {% elif account_task.status == 'PENDING' %}
+                            <i class="bi bi-clock"></i>
                         {% endif %}
                     </span>
                 </button>
@@ -1103,7 +1232,21 @@
                     </span>
                     {% endif %}
                     <span class="status-mini status-{{ account_task.status|lower }}">
-                        {{ account_task.status }}
+                        {% if account_task.status == 'RUNNING' %}
+                            <i class="bi bi-play-circle"></i>
+                        {% elif account_task.status == 'COMPLETED' %}
+                            <i class="bi bi-check-circle"></i>
+                        {% elif account_task.status == 'FAILED' %}
+                            <i class="bi bi-x-circle"></i>
+                        {% elif account_task.status == 'SUSPENDED' %}
+                            <i class="bi bi-ban"></i>
+                        {% elif account_task.status == 'PHONE_VERIFICATION_REQUIRED' %}
+                            <i class="bi bi-phone"></i>
+                        {% elif account_task.status == 'HUMAN_VERIFICATION_REQUIRED' %}
+                            <i class="bi bi-person-check"></i>
+                        {% elif account_task.status == 'PENDING' %}
+                            <i class="bi bi-clock"></i>
+                        {% endif %}
                     </span>
                 </div>
             </div>
@@ -1114,7 +1257,7 @@
             
             {% if account_task.assigned_videos.exists %}
             <div class="assigned-videos">
-                <h6><i class="bi bi-camera-video"></i> Assigned Videos ({{ account_task.assigned_videos.count }})</h6>
+                <h6><i class="bi bi-camera-video"></i> All Task Videos ({{ task.videos.count }})</h6>
                 {% for video in account_task.assigned_videos.all %}
                 <div class="video-item">
                     <div>
@@ -1157,7 +1300,7 @@
                     <strong>This action cannot be undone!</strong><br>
                     This will permanently delete:
                     <ul class="mt-2 mb-0">
-                        <li>{{ videos|length }} uploaded videos</li>
+                        <li>{{ task.videos.count }} uploaded videos</li>
                         <li>{{ titles|length }} captions/titles</li>
                         <li>{{ accounts|length }} account assignments</li>
                         <li>All execution logs</li>

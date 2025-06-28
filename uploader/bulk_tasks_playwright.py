@@ -1,3 +1,7 @@
+"""
+Bulk upload tasks using Playwright for Instagram automation
+"""
+
 import os
 import psutil
 import json
@@ -50,33 +54,18 @@ from .browser_support import (
 from .instagram_automation import InstagramNavigator, InstagramUploader, InstagramLoginHandler
 from .browser_utils import BrowserManager, PageUtils, ErrorHandler, NetworkUtils, FileUtils, DebugUtils
 from .crop_handler import CropHandler, handle_crop_and_aspect_ratio
-from .login_optimized import perform_instagram_login_optimized
+from .login_optimized import perform_instagram_login_optimized, _check_if_already_logged_in, _fill_login_credentials, _submit_login_form, _handle_login_completion, _handle_2fa_verification, _enter_verification_code
 from .logging_utils import log_info, log_error, log_debug, log_warning
 from .human_behavior import AdvancedHumanBehavior, init_human_behavior, get_human_behavior
 from .captcha_solver import solve_recaptcha_if_present, detect_recaptcha_on_page, RuCaptchaSolver, solve_recaptcha_if_present_sync
 
-# Helper function for finding elements
-def _find_element(page, selectors):
-    """Find the first visible element matching any of the given selectors"""
-    for selector in selectors:
-        try:
-            if selector.startswith('//'):
-                element = page.query_selector(f"xpath={selector}")
-            else:
-                element = page.query_selector(selector)
-            
-            if element and element.is_visible():
-                return element
-        except Exception:
-            continue
-    return None
+# Disable verbose Playwright logging
+logging.getLogger('playwright').setLevel(logging.ERROR)
+logging.getLogger('playwright._impl').setLevel(logging.ERROR)
 
-# Configure logging to suppress verbose Playwright logs
-logging.getLogger('playwright').setLevel(logging.CRITICAL)
-logging.getLogger('urllib3').setLevel(logging.CRITICAL)
-logging.getLogger('requests').setLevel(logging.CRITICAL)
-logging.getLogger('asyncio').setLevel(logging.CRITICAL)
-logging.getLogger('websockets').setLevel(logging.CRITICAL)
+# Suppress other verbose loggers
+for logger_name in ['urllib3', 'requests', 'asyncio']:
+    logging.getLogger(logger_name).setLevel(logging.WARNING)
 
 # Apply browser environment configuration
 for env_var, value in BrowserConfig.ENV_VARS.items():
@@ -137,12 +126,13 @@ from datetime import datetime
 from django.core.cache import cache
 
 class WebLogger:
-    """Enhanced logger that sends logs to web interface in real-time"""
+    """Enhanced logger that sends logs to web interface in real-time with improved categorization"""
     
     def __init__(self, task_id, account_id=None):
         self.task_id = task_id
         self.account_id = account_id
         self.log_buffer = []
+        self.critical_events = []  # Track critical events separately
         
     def log(self, level, message, category=None):
         """Log message with enhanced formatting for web interface"""
@@ -153,16 +143,29 @@ class WebLogger:
         if any(keyword in message_lower for keyword in VerboseFilters.PLAYWRIGHT_VERBOSE_KEYWORDS):
             return  # Skip these verbose logs
         
+        # Determine if this is a critical event
+        is_critical = self._is_critical_event(level, message, category)
+        
+        # Enhanced formatting based on category and level
+        formatted_message = self._format_message(message, level, category)
+        
         # Create formatted log entry
         log_entry = {
             'timestamp': timestamp,
             'level': level,
-            'message': message,
-            'category': category or 'GENERAL'
+            'message': formatted_message,
+            'category': category or 'GENERAL',
+            'is_critical': is_critical,
+            'task_id': self.task_id,
+            'account_id': self.account_id
         }
         
         # Add to buffer
         self.log_buffer.append(log_entry)
+        
+        # Track critical events
+        if is_critical:
+            self.critical_events.append(log_entry)
         
         # Store in cache for real-time updates
         cache_key = f"task_logs_{self.task_id}"
@@ -178,9 +181,103 @@ class WebLogger:
             
         cache.set(cache_key, existing_logs, timeout=3600)
         
-        # Also log to console for debugging (but filtered)
-        if level in ['ERROR', 'WARNING', 'SUCCESS']:
-            print(f"[{timestamp}] [{level}] {message}")
+        # Also store summary for critical events
+        if is_critical:
+            critical_cache_key = f"task_critical_{self.task_id}"
+            existing_critical = cache.get(critical_cache_key, [])
+            existing_critical.append(log_entry)
+            if len(existing_critical) > 50:  # Keep last 50 critical events
+                existing_critical = existing_critical[-50:]
+            cache.set(critical_cache_key, existing_critical, timeout=7200)  # 2 hours
+        
+        # Enhanced console output for important events
+        if level in ['ERROR', 'WARNING', 'SUCCESS'] or is_critical:
+            console_prefix = self._get_console_prefix(level, category)
+            print(f"[{timestamp}] {console_prefix} {formatted_message}")
+
+    def _is_critical_event(self, level, message, category):
+        """Determine if an event is critical and needs special attention"""
+        critical_keywords = [
+            'verification', 'верификация', 'phone', 'телефон', 'captcha', 'human',
+            'blocked', 'заблокирован', 'suspended', 'disabled', 'failed login',
+            'error uploading', 'browser error', 'dolphin error'
+        ]
+        
+        critical_categories = [
+            LogCategories.VERIFICATION, LogCategories.CAPTCHA, 
+            LogCategories.LOGIN, LogCategories.DOLPHIN
+        ]
+        
+        return (
+            level in ['ERROR', 'WARNING'] or 
+            category in critical_categories or
+            any(keyword in message.lower() for keyword in critical_keywords)
+        )
+
+    def _format_message(self, message, level, category):
+        """Enhanced message formatting based on category and level"""
+        # Add emoji prefixes based on category
+        category_emojis = {
+            LogCategories.VERIFICATION: '🔐',
+            LogCategories.CAPTCHA: '🤖',
+            LogCategories.LOGIN: '🔑',
+            LogCategories.UPLOAD: '📤',
+            LogCategories.DOLPHIN: '🐬',
+            LogCategories.NAVIGATION: '🧭',
+            LogCategories.HUMAN: '👤',
+            LogCategories.CLEANUP: '🧹',
+            LogCategories.DATABASE: '💾'
+        }
+        
+        emoji = category_emojis.get(category, '📋')
+        
+        # Add level indicators
+        level_indicators = {
+            'ERROR': '❌',
+            'WARNING': '⚠️',
+            'SUCCESS': '✅',
+            'INFO': 'ℹ️'
+        }
+        
+        level_emoji = level_indicators.get(level, 'ℹ️')
+        
+        return f"{level_emoji} {emoji} {message}"
+
+    def _get_console_prefix(self, level, category):
+        """Get console prefix for different log levels and categories"""
+        prefixes = {
+            'ERROR': '[🔴 ERROR]',
+            'WARNING': '[🟡 WARNING]',
+            'SUCCESS': '[🟢 SUCCESS]',
+            'INFO': '[🔵 INFO]'
+        }
+        
+        prefix = prefixes.get(level, '[INFO]')
+        if category:
+            prefix += f'[{category}]'
+        return prefix
+
+    def get_summary(self):
+        """Get summary of logged events"""
+        if not self.log_buffer:
+            return {'total': 0, 'by_level': {}, 'by_category': {}, 'critical_count': 0}
+        
+        summary = {
+            'total': len(self.log_buffer),
+            'by_level': {},
+            'by_category': {},
+            'critical_count': len(self.critical_events),
+            'latest_critical': self.critical_events[-5:] if self.critical_events else []
+        }
+        
+        for entry in self.log_buffer:
+            level = entry['level']
+            category = entry['category']
+            
+            summary['by_level'][level] = summary['by_level'].get(level, 0) + 1
+            summary['by_category'][category] = summary['by_category'].get(category, 0) + 1
+        
+        return summary
 
 # Global web logger instance
 web_logger = None
@@ -244,15 +341,16 @@ def get_2fa_code(tfa_secret):
         log_error(f"Error getting 2FA code: {str(e)}")
         return None
 
-def get_email_verification_code(email_login, email_password):
-    """Get verification code from email using the Email class with enhanced logging"""
+def get_email_verification_code(email_login, email_password, max_retries=3):
+    """Get verification code from email using the Email class with enhanced logging and retry logic"""
     if not email_login or not email_password:
         log_warning("📧 Email credentials not provided for verification code retrieval")
         return None
         
     try:
-        log_info(f"📧 [EMAIL_CODE] Starting email check for verification code")
+        log_info(f"📧 [EMAIL_CODE] Starting email verification code retrieval")
         log_info(f"📧 [EMAIL_CODE] Email: {email_login}")
+        log_info(f"📧 [EMAIL_CODE] Max retries: {max_retries}")
         
         email_client = Email(email_login, email_password)
         log_info(f"📧 [EMAIL_CODE] Email client initialized successfully")
@@ -272,42 +370,119 @@ def get_email_verification_code(email_login, email_password):
         
         log_info(f"📧 [EMAIL_CODE] ✅ Email connection test successful")
         
-        # Now try to get verification code
-        verification_code = email_client.get_verification_code()
+        # Now try to get verification code with retry logic
+        verification_code = email_client.get_verification_code(max_retries=max_retries, retry_delay=30)
         
         if verification_code:
             log_info(f"📧 [EMAIL_CODE] ✅ Successfully retrieved email verification code: {verification_code}")
-            return verification_code
+            
+            # Validate the code format (Instagram codes are 6 digits)
+            if len(verification_code) == 6 and verification_code.isdigit():
+                log_info(f"📧 [EMAIL_CODE] ✅ Code format validation passed")
+                return verification_code
+            else:
+                log_warning(f"📧 [EMAIL_CODE] ⚠️ Invalid code format: {verification_code} (expected 6 digits)")
+                return None
         else:
-            log_warning("📧 [EMAIL_CODE] ❌ No verification code found in email")
+            log_warning("📧 [EMAIL_CODE] ❌ No verification code found in email after all retries")
             log_warning("📧 [EMAIL_CODE] Possible reasons:")
-            log_warning("📧 [EMAIL_CODE] - Email not received yet (try waiting)")
+            log_warning("📧 [EMAIL_CODE] - Email not received yet (Instagram delays)")
             log_warning("📧 [EMAIL_CODE] - Code is in a different email format")
             log_warning("📧 [EMAIL_CODE] - Email was already read/deleted")
+            log_warning("📧 [EMAIL_CODE] - Email provider has connectivity issues")
             return None
             
     except Exception as e:
         log_error(f"📧 [EMAIL_CODE] ❌ Error getting email verification code: {str(e)}")
+        log_error(f"📧 [EMAIL_CODE] Exception type: {type(e).__name__}")
         return None
 
 def navigate_to_upload_with_human_behavior(page):
-    """Navigate to upload page with advanced human behavior - Optimized version"""
+    """Navigate to upload page with advanced human behavior - Handles both menu and direct file dialog scenarios"""
     try:
+        log_info("[UPLOAD] 🚀 Starting enhanced navigation to upload interface", LogCategories.NAVIGATION)
+        
         # Initialize human behavior
         init_human_behavior(page)
         
-        # Use the new InstagramNavigator class
+        # Use the new InstagramNavigator class with improved logic
         navigator = InstagramNavigator(page, get_human_behavior())
-        return navigator.navigate_to_upload()
+        
+        # Debug: Log current page state
+        try:
+            current_url = page.url
+            page_title = page.title()
+            log_info(f"[UPLOAD] 📍 Current page: {current_url}", LogCategories.NAVIGATION)
+            log_info(f"[UPLOAD] 📄 Page title: {page_title}", LogCategories.NAVIGATION)
+        except Exception as debug_error:
+            log_warning(f"[UPLOAD] Could not get page info: {str(debug_error)}", LogCategories.NAVIGATION)
+        
+        # This now handles multiple scenarios:
+        # 1. Menu appears -> select "Публикация" option
+        # 2. File dialog opens directly -> proceed immediately
+        # 3. Alternative navigation via direct URL
+        success = navigator.navigate_to_upload()
+        
+        if success:
+            log_success("[UPLOAD] ✅ Successfully navigated to upload interface", LogCategories.NAVIGATION)
+            
+            # Additional verification - check for file input immediately
+            try:
+                final_url = page.url
+                log_info(f"[UPLOAD] 📍 Final URL: {final_url}", LogCategories.NAVIGATION)
+                
+                # Check if we can see file input elements immediately
+                file_inputs = page.query_selector_all('input[type="file"]')
+                log_info(f"[UPLOAD] 📁 Found {len(file_inputs)} file input elements", LogCategories.NAVIGATION)
+                
+                # Also check for semantic file input selectors (не зависящие от динамических CSS-классов)
+                semantic_file_inputs = []
+                semantic_selectors = [
+                    'input[accept*="video"]',
+                    'input[accept*="image"]', 
+                    'input[multiple]',
+                    'button:has-text("Выбрать на компьютере")',
+                    'button:has-text("Select from computer")',
+                ]
+                
+                for selector in semantic_selectors:
+                    try:
+                        elements = page.query_selector_all(selector)
+                        semantic_file_inputs.extend(elements)
+                    except:
+                        continue
+                        
+                log_info(f"[UPLOAD] 📁 Found {len(semantic_file_inputs)} semantic file input elements", LogCategories.NAVIGATION)
+                
+                if len(file_inputs) > 0 or len(semantic_file_inputs) > 0:
+                    for i, inp in enumerate(file_inputs + semantic_file_inputs):
+                        try:
+                            inp_accept = inp.get_attribute('accept') or 'any'
+                            inp_visible = inp.is_visible()
+                            inp_class = inp.get_attribute('class') or 'no-class'
+                            log_info(f"[UPLOAD] Input {i+1}: accept='{inp_accept}', visible={inp_visible}, class='{inp_class[:30]}'", LogCategories.NAVIGATION)
+                        except:
+                            pass
+                    
+                    log_success("[UPLOAD] ✅ File input elements are ready for upload", LogCategories.NAVIGATION)
+                else:
+                    log_warning("[UPLOAD] ⚠️ No file input elements found after navigation", LogCategories.NAVIGATION)
+                            
+            except Exception as verify_error:
+                log_warning(f"[UPLOAD] Could not verify upload interface: {str(verify_error)}", LogCategories.NAVIGATION)
+        else:
+            log_error("[UPLOAD] ❌ Failed to navigate to upload interface", LogCategories.NAVIGATION)
+        
+        return success
         
     except Exception as e:
-        log_error(f"[UPLOAD] ❌ Navigation failed: {str(e)}")
+        log_error(f"[UPLOAD] ❌ Navigation failed: {str(e)}", LogCategories.NAVIGATION)
         return False
 
 def upload_video_with_human_behavior(page, video_file_path, video_obj):
-    """Upload video with advanced human behavior - Optimized version"""
+    """Upload video with advanced human behavior - Now follows exact Selenium pipeline"""
     try:
-        log_info(f"[UPLOAD] 🎬 Starting advanced upload of: {os.path.basename(video_file_path)}")
+        log_info(f"[UPLOAD] 🎬 Starting video upload following exact Selenium pipeline: {os.path.basename(video_file_path)}")
         
         # Ensure human behavior is initialized
         human_behavior = get_human_behavior()
@@ -315,186 +490,32 @@ def upload_video_with_human_behavior(page, video_file_path, video_obj):
             init_human_behavior(page)
             human_behavior = get_human_behavior()
         
-        # Use the new InstagramUploader class
+        # Use the new InstagramUploader class with Selenium-style pipeline
         uploader = InstagramUploader(page, human_behavior)
+        
+        # This now follows the exact Selenium pipeline:
+        # 1. Select video file (upload_button.send_keys)
+        # 2. Handle OK button
+        # 3. Crop handling (select_crop -> original_crop -> select_crop)
+        # 4. Click Next twice (for _ in range(2): _next_page)
+        # 5. Set description (character by character with 0.05s delay)
+        # 6. Set location (with suggestion selection)
+        # 7. Set mentions (with suggestion selection and done button)
+        # 8. Post video (share button)
+        # 9. Verify success (wait for success message)
         return uploader.upload_video(video_file_path, video_obj)
         
     except Exception as e:
         log_error(f"[UPLOAD] ❌ Upload failed: {str(e)}")
         return False
 
-def handle_location_and_mentions_advanced(page, video_obj):
-    """Handle location and mentions with advanced human behavior"""
-    try:
-        # Get human behavior instance
-        human_behavior = get_human_behavior()
-        if not human_behavior:
-            log_warning("[UPLOAD] Human behavior not initialized, skipping location and mentions")
-            return
-        
-        # Debug: log video object information
-        log_info(f"[UPLOAD] 🔍 Debug: video_obj type: {type(video_obj)}")
-        log_info(f"[UPLOAD] 🔍 Debug: video_obj attributes: {dir(video_obj)}")
-        if hasattr(video_obj, 'id'):
-            log_info(f"[UPLOAD] 🔍 Debug: video_obj.id: {video_obj.id}")
-        
-        # Handle location with advanced behavior - use get_effective_location() method if available
-        location = None
-        if hasattr(video_obj, 'get_effective_location'):
-            location = video_obj.get_effective_location()
-            log_info(f"[UPLOAD] 🔍 Debug: get_effective_location() returned: '{location}'")
-        else:
-            location = getattr(video_obj, 'location', None)
-            log_info(f"[UPLOAD] 🔍 Debug: direct location attribute: '{location}'")
-            
-        if location and location.strip():  # Only use location if explicitly set and not empty
-            log_info(f"[UPLOAD] 📍 Setting location with advanced behavior: {location}")
-            
-            location_field = None
-            for selector in InstagramSelectors.LOCATION_FIELDS:
-                try:
-                    if selector.startswith('//'):
-                        location_field = page.query_selector(f"xpath={selector}")
-                    else:
-                        location_field = page.query_selector(selector)
-                    
-                    if location_field and location_field.is_visible():
-                        log_info(f"[UPLOAD] ✅ Found location field with selector: {selector}")
-                        break
-                        
-                except Exception as e:
-                    log_warning(f"[UPLOAD] Error with location selector {selector}: {str(e)}")
-                    continue
-            
-            if location_field:
-                human_behavior.advanced_element_interaction(location_field, 'click')
-                human_behavior.human_typing(location_field, location, simulate_mistakes=False)
-                
-                # Wait for suggestions with human behavior - increased time
-                suggestion_wait = human_behavior.get_human_delay(3.0, 1.0)  # Increased from 2.0, 0.5
-                log_info(f"[UPLOAD] ⏳ Waiting {suggestion_wait:.1f}s for location suggestions...")
-                time.sleep(suggestion_wait)
-                
-                # Click first suggestion with comprehensive selectors
-                for selector in InstagramSelectors.LOCATION_SUGGESTIONS:
-                    try:
-                        if selector.startswith('//'):
-                            first_suggestion = page.query_selector(f"xpath={selector}")
-                        else:
-                            first_suggestion = page.query_selector(selector)
-                        
-                        if first_suggestion and first_suggestion.is_visible():
-                            log_info(f"[UPLOAD] ✅ Clicking location suggestion")
-                            human_behavior.advanced_element_interaction(first_suggestion, 'click')
-                            break
-                            
-                    except Exception as e:
-                        continue
-            else:
-                log_warning("[UPLOAD] ⚠️ Location field not found")
-        else:
-            log_info("[UPLOAD] 📍 No location specified for this video, skipping location setting")
-        
-        # Handle mentions with advanced behavior - use get_effective_mentions_list() method if available
-        mentions_list = []
-        if hasattr(video_obj, 'get_effective_mentions_list'):
-            mentions_list = video_obj.get_effective_mentions_list()
-            log_info(f"[UPLOAD] 🔍 Debug: get_effective_mentions_list() returned: {mentions_list}")
-        else:
-            mentions = getattr(video_obj, 'mentions', None)
-            log_info(f"[UPLOAD] 🔍 Debug: direct mentions attribute: '{mentions}'")
-            if mentions and mentions.strip():
-                mentions_list = [mention.strip() for mention in mentions.split('\n') if mention.strip()]
-                log_info(f"[UPLOAD] 🔍 Debug: parsed mentions_list: {mentions_list}")
-            
-        if mentions_list and len(mentions_list) > 0:
-            log_info(f"[UPLOAD] 👥 Setting {len(mentions_list)} mentions with advanced behavior...")
-            
-            for mention_index, mention in enumerate(mentions_list):
-                if not mention.strip():  # Skip empty mentions
-                    continue
-                
-                # Add pause between mentions processing (except for the first one)
-                if mention_index > 0:
-                    mention_pause = random.uniform(2, 4)
-                    log_info(f"[UPLOAD] ⏳ Pause between mentions processing: {mention_pause:.1f}s...")
-                    time.sleep(mention_pause)
-                
-                log_info(f"[UPLOAD] 👤 Processing mention {mention_index + 1}/{len(mentions_list)}: {mention}")
-                    
-                mention_field = None
-                for selector in InstagramSelectors.MENTION_FIELDS:
-                    try:
-                        if selector.startswith('//'):
-                            mention_field = page.query_selector(f"xpath={selector}")
-                        else:
-                            mention_field = page.query_selector(selector)
-                        
-                        if mention_field and mention_field.is_visible():
-                            log_info(f"[UPLOAD] ✅ Found mention field with selector: {selector}")
-                            break
-                            
-                    except Exception as e:
-                        log_warning(f"[UPLOAD] Error with mention selector {selector}: {str(e)}")
-                        continue
-                
-                if mention_field:
-                    human_behavior.advanced_element_interaction(mention_field, 'click')
-                    human_behavior.human_typing(mention_field, mention, simulate_mistakes=False)
-                    
-                    # Wait and select first suggestion - increased time
-                    suggestion_wait = human_behavior.get_human_delay(3.0, 1.0)  # Increased from 2.0, 0.5
-                    log_info(f"[UPLOAD] ⏳ Waiting {suggestion_wait:.1f}s for mention suggestions...")
-                    time.sleep(suggestion_wait)
-                    
-                    # Click first mention suggestion
-                    for selector in InstagramSelectors.MENTION_SUGGESTIONS:
-                        try:
-                            if selector.startswith('//'):
-                                first_mention = page.query_selector(f"xpath={selector}")
-                            else:
-                                first_mention = page.query_selector(selector)
-                            
-                            if first_mention and first_mention.is_visible():
-                                log_info(f"[UPLOAD] ✅ Clicking mention suggestion for: {mention}")
-                                human_behavior.advanced_element_interaction(first_mention, 'click')
-                                break
-                                
-                        except Exception as e:
-                            continue
-                else:
-                    log_warning(f"[UPLOAD] ⚠️ Mention field not found for: {mention}")
-            
-            # Click done button with comprehensive selectors
-            for selector in InstagramSelectors.DONE_BUTTONS:
-                try:
-                    if selector.startswith('//'):
-                        done_button = page.query_selector(f"xpath={selector}")
-                    else:
-                        done_button = page.query_selector(selector)
-                    
-                    if done_button and done_button.is_visible():
-                        log_info(f"[UPLOAD] ✅ Clicking done button for mentions")
-                        human_behavior.advanced_element_interaction(done_button, 'click')
-                        break
-                        
-                except Exception as e:
-                    continue
-        else:
-            log_info("[UPLOAD] 👥 No mentions specified for this video, skipping mentions setting")
-        
-    except Exception as e:
-        log_error(f"[UPLOAD] ❌ Error handling location and mentions: {str(e)}")
-        import traceback
-        log_error(f"[UPLOAD] Stack trace: {traceback.format_exc()}")
-
 def click_next_button(page, step_number):
     """Click next button with human-like behavior (like Selenium version)"""
     try:
         log_info(f"[UPLOAD] Clicking next button for step {step_number}...")
         
-        # Human-like delay before clicking
-        time.sleep(random.uniform(2, 4))
+        # Human-like delay before clicking - увеличено
+        time.sleep(random.uniform(3, 5))  # Увеличено с 2, 4
         
         # Look for next button with comprehensive Russian localization and Instagram-specific selectors
         next_button = None
@@ -513,7 +534,7 @@ def click_next_button(page, step_number):
                     # Verify this is actually a next/далее button
                     button_text = next_button.text_content() or ""
                     if any(keyword in button_text.lower() for keyword in ['далее', 'next', 'продолжить', 'continue']):
-                        log_info(f"[UPLOAD] ✅ Found next button for step {step_number}: '{button_text.strip()}' with selector: {selector}")
+                        log_info(f"[UPLOAD] 🎯 Found text-based next button: '{button_text.strip()}' with selector: {selector}")
                         used_selector = selector
                         break
                     elif selector.startswith('div[class*="x1i10hfl"]') and button_text.strip():
@@ -531,17 +552,17 @@ def click_next_button(page, step_number):
             try:
                 # Scroll button into view if needed
                 next_button.scroll_into_view_if_needed()
-                time.sleep(random.uniform(0.5, 1.0))
+                time.sleep(random.uniform(1.0, 2.0))  # Увеличено с 0.5, 1.0
                 
                 # Hover over button
                 next_button.hover()
-                time.sleep(random.uniform(0.5, 1.0))
+                time.sleep(random.uniform(1.0, 2.0))  # Увеличено с 0.5, 1.0
                 
-                # Use JavaScript click like Selenium version for better reliability
-                page.evaluate('arguments[0].click()', next_button)
+                # Use JavaScript click like Selenium version for better reliability - FIXED SYNTAX
+                page.evaluate('(element) => element.click()', next_button)
                 
-                # Wait after click
-                time.sleep(random.uniform(2, 3))
+                # Wait longer after click
+                time.sleep(random.uniform(4, 6))  # Увеличено с 2, 3
                 
                 log_info(f"[UPLOAD] ✅ Successfully clicked next button for step {step_number}")
                 return True
@@ -552,7 +573,7 @@ def click_next_button(page, step_number):
                 # Fallback: try direct click
                 try:
                     next_button.click()
-                    time.sleep(random.uniform(2, 3))
+                    time.sleep(random.uniform(4, 6))  # Увеличено с 2, 3
                     log_info(f"[UPLOAD] ✅ Successfully clicked next button (fallback) for step {step_number}")
                     return True
                 except Exception as fallback_error:
@@ -561,20 +582,20 @@ def click_next_button(page, step_number):
         else:
             log_warning(f"[UPLOAD] ⚠️ Next button not found for step {step_number}")
             
-            # Debug: log available buttons with Instagram-specific classes
+            # Debug: log available buttons with semantic selectors instead of Instagram-specific classes
             try:
-                all_buttons = page.query_selector_all('button, div[role="button"], div[class*="x1i10hfl"], div[tabindex="0"]')
+                all_buttons = page.query_selector_all('button, div[role="button"], [role="button"], div[tabindex="0"]')
                 log_info(f"[UPLOAD] 🔍 Available clickable elements on page for step {step_number}:")
                 for i, btn in enumerate(all_buttons[:15]):  # Show first 15 elements
                     try:
                         btn_text = btn.text_content() or "no-text"
                         btn_aria = btn.get_attribute('aria-label') or "no-aria"
                         btn_role = btn.get_attribute('role') or "no-role"
-                        btn_classes = btn.get_attribute('class') or "no-classes"
+                        btn_tabindex = btn.get_attribute('tabindex') or "no-tabindex"
                         
-                        # Show only elements that might be buttons
-                        if btn_text.strip() or btn_role == "button" or "x1i10hfl" in btn_classes:
-                            log_info(f"[UPLOAD] Element {i+1}: '{btn_text.strip()}' (role: '{btn_role}', aria: '{btn_aria}', classes: '{btn_classes[:50]}...')")
+                        # Show only elements that might be buttons (using semantic attributes)
+                        if btn_text.strip() or btn_role == "button" or btn_tabindex == "0":
+                            log_info(f"[UPLOAD] Element {i+1}: '{btn_text.strip()}' (role: '{btn_role}', aria: '{btn_aria}', tabindex: '{btn_tabindex}')")
                     except Exception as debug_error:
                         log_warning(f"[UPLOAD] Error debugging element {i+1}: {str(debug_error)}")
                         continue
@@ -647,7 +668,7 @@ def simulate_normal_browsing_behavior(page):
         time.sleep(random.uniform(5, 10))  # Fallback delay
 
 def detect_and_fill_email_field(page, email_login):
-    """Detect email verification page and auto-fill email field"""
+    """Detect email verification page and auto-fill email field with improved logic"""
     if not email_login:
         log_warning("📧 [EMAIL_FIELD] No email login provided")
         return False
@@ -658,55 +679,143 @@ def detect_and_fill_email_field(page, email_login):
         # Get page content for analysis
         try:
             page_text = page.inner_text('body') or ""
+            page_html = page.content() or ""
         except Exception:
             page_text = ""
+            page_html = ""
         
-        # Check if this is email verification page
-        is_email_verification = any(keyword in page_text.lower() for keyword in InstagramTexts.EMAIL_VERIFICATION_KEYWORDS)
-        is_code_entry = any(keyword in page_text.lower() for keyword in InstagramTexts.CODE_ENTRY_KEYWORDS)
+        log_info(f"📧 [EMAIL_FIELD] Page content length: {len(page_text)} chars")
         
-        log_info(f"📧 [EMAIL_FIELD] Email verification: {is_email_verification}, Code entry: {is_code_entry}")
+        # Check if this is email verification page using improved logic
+        verification_type = determine_verification_type(page)
+        log_info(f"📧 [EMAIL_FIELD] Verification type detected: {verification_type}")
         
-        if is_code_entry:
-            log_info("📧 [EMAIL_FIELD] Code entry page detected - skipping email fill")
+        if verification_type not in ["email_field", "email_code"]:
+            log_info(f"📧 [EMAIL_FIELD] Page is not email verification type: {verification_type}")
             return False
         
-        if not is_code_entry and is_email_verification:
-            email_field = _find_element(page, InstagramSelectors.EMAIL_FIELDS)
+        # Enhanced email field selectors - UPDATED
+        email_field_selectors = [
+            # Current Instagram selectors
+            'input[name="email"]',
+            'input[name="emailOrPhone"]',
             
-            if email_field and email_field.is_visible():
-                current_value = email_field.input_value() or ""
-                
-                if current_value.strip() == email_login.strip():
-                    log_info(f"📧 [EMAIL_FIELD] ✅ Email field already contains correct email")
-                    return True
-                
-                # Fill email with human-like behavior
-                email_field.click()
-                time.sleep(random.uniform(0.5, 1.0))
-                
-                if current_value:
-                    email_field.fill('')
-                    time.sleep(random.uniform(0.3, 0.7))
-                
-                for char in email_login:
-                    email_field.type(char)
-                    time.sleep(random.uniform(0.1, 0.2))
-                
-                time.sleep(random.uniform(0.5, 1.0))
-                final_value = email_field.input_value() or ""
-                
-                if final_value.strip() == email_login.strip():
-                    log_info(f"📧 [EMAIL_FIELD] ✅ Successfully filled email field")
-                    return True
-                else:
-                    log_error(f"📧 [EMAIL_FIELD] ❌ Email field fill verification failed")
-                    return False
+            # Type-based selectors
+            'input[type="email"]',
+            'input[autocomplete="email"]',
+            'input[inputmode="email"]',
+            
+            # Aria-label selectors (excluding code fields)
+            'input[aria-label*="email" i]:not([aria-label*="code" i]):not([aria-label*="код" i]):not([aria-label*="verification" i])',
+            'input[aria-label*="Email" i]:not([aria-label*="code" i]):not([aria-label*="код" i]):not([aria-label*="verification" i])',
+            'input[aria-label*="почт" i]:not([aria-label*="код" i]):not([aria-label*="verification" i])',
+            'input[aria-label*="Почт" i]:not([aria-label*="код" i]):not([aria-label*="verification" i])',
+            'input[aria-label*="электронная почта" i]:not([aria-label*="код" i])',
+            'input[aria-label*="адрес" i]:not([aria-label*="код" i])',
+            
+            # Placeholder selectors (excluding code fields)
+            'input[placeholder*="email" i]:not([placeholder*="code" i]):not([placeholder*="код" i]):not([placeholder*="verification" i])',
+            'input[placeholder*="Email" i]:not([placeholder*="code" i]):not([placeholder*="код" i]):not([placeholder*="verification" i])',
+            'input[placeholder*="почт" i]:not([placeholder*="код" i]):not([placeholder*="verification" i])',
+            'input[placeholder*="Почт" i]:not([placeholder*="код" i]):not([placeholder*="verification" i])',
+            'input[placeholder*="электронная почта" i]:not([placeholder*="код" i])',
+            'input[placeholder*="укажите email" i]',
+            'input[placeholder*="введите email" i]',
+            
+            # ID selectors (excluding code and verification)
+            'input[id*="email"]:not([id*="code"]):not([id*="verification"]):not([id*="confirm"])',
+            'input[id*="Email"]:not([id*="code"]):not([id*="verification"]):not([id*="confirm"])',
+        ]
+        
+        email_field = None
+        used_selector = None
+        
+        # Try to find email field
+        for selector in email_field_selectors:
+            try:
+                element = page.query_selector(selector)
+                if element and element.is_visible() and not element.is_disabled():
+                    # Additional validation - check if this is really an email field
+                    field_name = element.get_attribute('name') or ""
+                    field_type = element.get_attribute('type') or ""
+                    field_aria = element.get_attribute('aria-label') or ""
+                    field_placeholder = element.get_attribute('placeholder') or ""
+                    
+                    log_info(f"📧 [EMAIL_FIELD] Found potential field: name='{field_name}', type='{field_type}'")
+                    log_info(f"📧 [EMAIL_FIELD] Field attributes: aria-label='{field_aria}', placeholder='{field_placeholder}'")
+                    
+                    # Validate it's not a code field
+                    is_code_field = any(keyword in (field_name + field_aria + field_placeholder).lower() 
+                                      for keyword in ['code', 'код', 'verification', 'верификация', 'confirm'])
+                    
+                    if not is_code_field:
+                        email_field = element
+                        used_selector = selector
+                        log_info(f"📧 [EMAIL_FIELD] ✅ Selected email field: {selector}")
+                        break
+                    else:
+                        log_info(f"📧 [EMAIL_FIELD] Skipped code/verification field: {selector}")
+                        
+            except Exception as e:
+                log_warning(f"📧 [EMAIL_FIELD] Error checking selector {selector}: {str(e)}")
+                continue
+        
+        if not email_field:
+            log_warning("📧 [EMAIL_FIELD] ❌ No suitable email field found")
+            return False
+        
+        # Fill the email field
+        log_info(f"📧 [EMAIL_FIELD] Filling email field with: {email_login}")
+        
+        try:
+            # Clear field first
+            email_field.click()
+            time.sleep(random.uniform(0.3, 0.7))
+            email_field.fill('')
+            time.sleep(random.uniform(0.2, 0.5))
+            
+            # Type email with human-like behavior
+            for char in email_login:
+                email_field.type(char)
+                time.sleep(random.uniform(0.05, 0.12))
+            
+            log_info("📧 [EMAIL_FIELD] ✅ Email field filled successfully")
+            
+            # Try to submit if there's a submit button
+            submit_selectors = [
+                'button[type="submit"]',
+                'button:has-text("Continue")',
+                'button:has-text("Продолжить")',
+                'button:has-text("Submit")',
+                'button:has-text("Отправить")',
+                'div[role="button"]:has-text("Continue")',
+                'div[role="button"]:has-text("Продолжить")',
+            ]
+            
+            submit_button = None
+            for selector in submit_selectors:
+                try:
+                    submit_button = page.query_selector(selector)
+                    if submit_button and submit_button.is_visible() and not submit_button.is_disabled():
+                        log_info(f"📧 [EMAIL_FIELD] Found submit button: {selector}")
+                        break
+                except:
+                    continue
+            
+            if submit_button:
+                time.sleep(random.uniform(1.0, 2.0))
+                submit_button.click()
+                log_info("📧 [EMAIL_FIELD] ✅ Submit button clicked")
+                time.sleep(random.uniform(2, 4))
             else:
-                log_warning(f"📧 [EMAIL_FIELD] ❌ No visible email field found")
-                return False
-        else:
-            log_info(f"📧 [EMAIL_FIELD] Skipping email field fill")
+                log_info("📧 [EMAIL_FIELD] No submit button found, trying Enter key")
+                email_field.press("Enter")
+                time.sleep(random.uniform(2, 4))
+            
+            return True
+            
+        except Exception as e:
+            log_error(f"📧 [EMAIL_FIELD] ❌ Error filling email field: {str(e)}")
             return False
             
     except Exception as e:
@@ -826,124 +935,143 @@ def handle_save_login_info_dialog(page):
         return False
 
 def check_video_posted_successfully(page, video_file_path):
-    """Check if video was posted successfully"""
+    """Check if video was posted successfully - STRICT verification only"""
     try:
         log_info("[UPLOAD] Checking if video was posted successfully...")
         time.sleep(random.uniform(5, 8))
         
-        # Check for success indicators
+        # Check for explicit success indicators ONLY
         success_element = _find_element(page, InstagramSelectors.SUCCESS_INDICATORS)
         if success_element:
             element_text = success_element.text_content() or ""
-            log_info(f"[UPLOAD] ✅ Success indicator found: '{element_text.strip()}'")
-            log_info(f"[UPLOAD] ✅ Video {os.path.basename(video_file_path)} successfully posted")
+            log_success(f"[UPLOAD] ✅ SUCCESS CONFIRMED: Found explicit success indicator: '{element_text.strip()}'")
+            log_success(f"[UPLOAD] ✅ Video {os.path.basename(video_file_path)} successfully posted")
             return True
         
-        # Check if we're no longer on upload page
-        log_info("[UPLOAD] No explicit success message found, checking upload page status...")
+        # Additional wait and second check for success indicators
+        log_info("[UPLOAD] No immediate success indicators found, waiting and checking again...")
+        time.sleep(random.uniform(3, 5))
         
+        success_element = _find_element(page, InstagramSelectors.SUCCESS_INDICATORS)
+        if success_element:
+            element_text = success_element.text_content() or ""
+            log_success(f"[UPLOAD] ✅ SUCCESS CONFIRMED (delayed): Found explicit success indicator: '{element_text.strip()}'")
+            log_success(f"[UPLOAD] ✅ Video {os.path.basename(video_file_path)} successfully posted")
+            return True
+        
+        # Check for explicit error messages
+        error_element = _find_element(page, InstagramSelectors.ERROR_INDICATORS)
+        if error_element:
+            error_text = error_element.text_content() or ""
+            log_error(f"[UPLOAD] ❌ ERROR DETECTED: '{error_text.strip()}'")
+            log_error(f"[UPLOAD] ❌ Video {os.path.basename(video_file_path)} failed to post")
+            return False
+        
+        # Check if still on upload page (indicates failure)
         upload_element = _find_element(page, InstagramSelectors.UPLOAD_PAGE_INDICATORS)
-        if not upload_element:
-            log_info(f"[UPLOAD] ✅ No upload page indicators found - video {os.path.basename(video_file_path)} posted successfully")
-            return True
-        else:
-            log_warning(f"[UPLOAD] ⚠️ Still on upload page - video {os.path.basename(video_file_path)} may not have been posted")
-            
-            # Check for error messages
-            error_element = _find_element(page, InstagramSelectors.ERROR_INDICATORS)
-            if error_element:
-                error_text = error_element.text_content() or ""
-                log_error(f"[UPLOAD] ❌ Error message found: '{error_text.strip()}'")
-                return False
-            else:
-                log_info(f"[UPLOAD] ⏳ No error messages found, video might still be processing...")
-                return True
+        if upload_element:
+            log_error(f"[UPLOAD] ❌ UPLOAD FAILED: Still on upload page - video {os.path.basename(video_file_path)} was NOT posted")
+            return False
+        
+        # STRICT POLICY: If no explicit success indicators found, consider it a failure
+        # This ensures COMPLETED status is only set when we can CONFIRM successful upload
+        log_error(f"[UPLOAD] ❌ UPLOAD FAILED: No explicit success indicators found - cannot confirm video {os.path.basename(video_file_path)} was posted")
+        log_info(f"[UPLOAD] 🔍 Current page URL: {page.url}")
+        
+        return False
                 
     except Exception as e:
         log_error(f"[UPLOAD] Error checking if video was posted: {str(e)}")
         return False
 
 def handle_success_dialog_and_close(page, video_file_path):
-    """Handle success dialog after video posting and close it naturally"""
+    """Handle success dialog after video posting and close it naturally - STRICT verification only"""
     try:
-        log_info("[SUCCESS] 🎉 Handling success dialog after video posting...")
+        log_info("[SUCCESS] Looking for success confirmation dialog...")
+        time.sleep(random.uniform(3, 5))
         
-        # Wait for video processing and success dialog
-        initial_wait = random.uniform(20, 30)
-        log_info(f"[SUCCESS] ⏳ Waiting {initial_wait:.1f}s for video processing and success dialog...")
-        time.sleep(initial_wait)
+        # Look for explicit success dialog elements
+        success_dialog_selectors = [
+            'div[role="dialog"]:has-text("Ваша публикация опубликована")',
+            'div[role="dialog"]:has-text("Your post has been shared")',
+            'div[role="dialog"]:has-text("Опубликовано")',
+            'div[role="dialog"]:has-text("Posted")',
+            'div[role="dialog"]:has-text("Shared")',
+            '[data-testid="success-dialog"]',
+            'div:has-text("Ваша публикация опубликована")',
+            'div:has-text("Your post has been shared")',
+        ]
         
-        # Look for success dialog
-        success_dialog = _find_element(page, InstagramSelectors.SUCCESS_DIALOGS)
-        found_success_message = bool(success_dialog)
+        success_dialog = None
+        for selector in success_dialog_selectors:
+            try:
+                success_dialog = page.query_selector(selector)
+                if success_dialog and success_dialog.is_visible():
+                    dialog_text = success_dialog.text_content() or ""
+                    log_success(f"[SUCCESS] ✅ SUCCESS CONFIRMED: Found success dialog: '{dialog_text.strip()}'")
+                    break
+            except:
+                continue
         
-        if found_success_message:
-            element_text = success_dialog.text_content() or ""
-            log_info(f"[SUCCESS] ✅ Found success message: '{element_text.strip()}'")
+        # If we found a success dialog, close it naturally
+        if success_dialog:
+            # Look for close button in dialog
+            close_button_selectors = [
+                'button[aria-label*="Закрыть" i]',
+                'button[aria-label*="Close" i]',
+                'svg[aria-label*="Закрыть" i]',
+                'svg[aria-label*="Close" i]',
+                'button:has-text("OK")',
+                'button:has-text("Готово")',
+                'button:has-text("Done")',
+            ]
             
-            # Human reaction to success
-            reaction_time = random.uniform(2, 4)
-            log_info(f"[SUCCESS] 😊 Reading success message for {reaction_time:.1f}s...")
-            time.sleep(reaction_time)
-            
-            # Look for close button
-            close_button = _find_element(page, InstagramSelectors.CLOSE_BUTTONS)
+            close_button = None
+            for selector in close_button_selectors:
+                try:
+                    close_button = success_dialog.query_selector(selector)
+                    if not close_button:
+                        close_button = page.query_selector(selector)
+                    if close_button and close_button.is_visible():
+                        break
+                except:
+                    continue
             
             if close_button:
-                try:
-                    bounding_box = close_button.bounding_box()
-                    if bounding_box:
-                        log_info(f"[SUCCESS] 🎯 Found close button")
-                        
-                        time.sleep(random.uniform(1, 2))
-                        human_behavior = get_human_behavior()
-                        if human_behavior:
-                            human_behavior.advanced_element_interaction(close_button, 'click')
-                        else:
-                            close_button.click()
-                        
-                        close_wait = random.uniform(1.5, 3)
-                        log_info(f"[SUCCESS] ⏳ Waiting {close_wait:.1f}s for dialog to close...")
-                        time.sleep(close_wait)
-                        log_info("[SUCCESS] ✅ Success dialog closed successfully!")
-                        
-                except Exception as e:
-                    log_warning(f"[SUCCESS] Error getting close button details: {str(e)}")
+                log_info("[SUCCESS] Closing success dialog naturally...")
+                _human_click_with_timeout(page, close_button, "SUCCESS_CLOSE")
+                time.sleep(random.uniform(2, 3))
+            else:
+                # Try clicking outside the dialog
+                log_info("[SUCCESS] No close button found, clicking outside dialog...")
+                page.click('body', position={'x': 50, 'y': 50})
+                time.sleep(random.uniform(2, 3))
             
-            if not close_button:
-                # Try alternative methods
-                log_info("[SUCCESS] 🔍 No close button found, trying alternative methods...")
-                
-                try:
-                    log_info("[SUCCESS] ⌨️ Trying Escape key...")
-                    page.keyboard.press('Escape')
-                    time.sleep(random.uniform(1, 2))
-                except Exception as e:
-                    log_warning(f"[SUCCESS] ⚠️ Escape key failed: {str(e)}")
-                
-                try:
-                    log_info("[SUCCESS] 🖱️ Trying to click outside dialog...")
-                    page.mouse.click(50, 50)
-                    time.sleep(random.uniform(1, 2))
-                except Exception as e:
-                    log_warning(f"[SUCCESS] ⚠️ Click outside failed: {str(e)}")
-        else:
-            log_info("[SUCCESS] ℹ️ No explicit success dialog found, checking main interface...")
-            
-            # Check if back to main interface
-            main_element = _find_element(page, InstagramSelectors.MAIN_INTERFACE_INDICATORS)
-            if main_element:
-                log_info(f"[SUCCESS] ✅ Back to main interface - video likely posted successfully")
-                return True
-        
-        # Final verification
-        upload_element = _find_element(page, InstagramSelectors.UPLOAD_PAGE_INDICATORS)
-        if not upload_element:
-            log_info(f"[SUCCESS] ✅ Video {os.path.basename(video_file_path)} posted successfully!")
+            log_success(f"[SUCCESS] ✅ Video {os.path.basename(video_file_path)} posted successfully!")
             return True
-        else:
-            log_warning(f"[SUCCESS] ⚠️ Still on upload page - video may not have posted")
-            return False
+        
+        # If no success dialog found, check for other success indicators
+        success_element = _find_element(page, InstagramSelectors.SUCCESS_INDICATORS)
+        if success_element:
+            element_text = success_element.text_content() or ""
+            log_success(f"[SUCCESS] ✅ SUCCESS CONFIRMED: Found success indicator: '{element_text.strip()}'")
+            log_success(f"[SUCCESS] ✅ Video {os.path.basename(video_file_path)} posted successfully!")
+            return True
+        
+        # STRICT POLICY: If no explicit success indicators found, consider it a failure
+        log_error(f"[SUCCESS] ❌ UPLOAD FAILED: No success dialog or indicators found - cannot confirm video {os.path.basename(video_file_path)} was posted")
+        
+        # Check if back to main interface (but this alone is not enough for success confirmation)
+        main_element = _find_element(page, InstagramSelectors.MAIN_INTERFACE_INDICATORS)
+        if main_element:
+            log_info("[SUCCESS] ℹ️ Back to main interface, but no explicit success confirmation found")
+        
+        # Check if still on upload page (indicates failure)
+        upload_element = _find_element(page, InstagramSelectors.UPLOAD_PAGE_INDICATORS)
+        if upload_element:
+            log_error(f"[SUCCESS] ❌ UPLOAD FAILED: Still on upload page - video {os.path.basename(video_file_path)} was NOT posted")
+            
+        return False
             
     except Exception as e:
         log_error(f"[SUCCESS] ❌ Error handling success dialog: {str(e)}")
@@ -1013,107 +1141,217 @@ def simulate_extended_human_rest_behavior(page, total_duration):
         time.sleep(total_duration)
 
 def run_bulk_upload_task(task_id):
-    """Optimized bulk upload task runner with modular architecture"""
-    # Initialize web logger for real-time log updates
-    init_web_logger(task_id)
-    
-    log_info(f"Starting bulk upload task with ID: {task_id}", LogCategories.TASK_START)
-    task = get_task_with_accounts(task_id)
-    
+    """Enhanced bulk upload task with comprehensive monitoring and error recovery"""
     try:
-        # Update task status with colorful emojis for better visibility in logs
-        timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
-        log_info(f"Task name: {task.name}", LogCategories.TASK_INFO)
-        update_task_log(task, f"[{timestamp}] 🚀 Starting bulk upload task '{task.name}'\n")
+        # Set current task ID for global access
+        set_current_task_id(task_id)
         
-        # Get all account tasks
-        account_tasks = get_account_tasks(task)
+        # Get task object
+        task = BulkUploadTask.objects.get(id=task_id)
         
-        log_info(f"Found {len(account_tasks)} accounts to process")
-        update_task_log(task, f"[{timestamp}] 👥 Found {len(account_tasks)} accounts to process\n")
+        # Initialize web logger for this task
+        web_logger = init_web_logger(task_id)
         
-        completed_count = 0
-        failed_count = 0
+        # Task initialization
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        update_task_status(task, TaskStatus.RUNNING, f"[{timestamp}] 🚀 Starting enhanced bulk upload task '{task.name}'\\n")
         
-        for account_index, account_task in enumerate(account_tasks):
+        log_info(f"📋 [TASK_INFO] Task '{task.name}' - Processing {task.accounts.count()} accounts", LogCategories.TASK_INFO)
+        
+        # Get all videos and titles for the task
+        all_videos = get_all_task_videos(task)  # ✅ ВСЕ видео - будут переданы каждому аккаунту
+        all_titles = get_all_task_titles(task)
+        
+        log_info(f"📹 [TASK_INFO] Found {len(all_videos)} videos and {len(all_titles)} titles", LogCategories.TASK_INFO)
+        
+        if not all_videos:
+            error_msg = "No videos found for this task"
+            log_error(error_msg, LogCategories.TASK_INFO)
+            update_task_status(task, TaskStatus.FAILED, f"[{timestamp}] ❌ {error_msg}\n")
+            return False
+        
+        # Enhanced account processing with health monitoring
+        processed_accounts = 0
+        successful_accounts = 0
+        failed_accounts = 0
+        verification_required_accounts = 0
+        account_health_issues = []
+        
+        # Get accounts sorted by status (ACTIVE accounts first)
+        account_tasks = task.accounts.all().order_by('account__status')
+        
+        for i, account_task in enumerate(account_tasks, 1):
+            account = account_task.account
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            
+            log_info(f"🔄 [ACCOUNT_PROCESS] Processing account {i}/{len(account_tasks)}: {account.username}", LogCategories.TASK_INFO)
+            
+            # Pre-flight account health check
+            if account.status != 'ACTIVE':
+                log_message = f"[{timestamp}] ⚠️ Account {account.username} skipped - Status: {account.status} (Only ACTIVE accounts allowed for bulk upload)\n"
+                log_warning(f"Account {account.username} has non-ACTIVE status: {account.status}", LogCategories.VERIFICATION)
+                update_task_log(task, log_message)
+                
+                if account.status in ['PHONE_VERIFICATION_REQUIRED', 'HUMAN_VERIFICATION_REQUIRED']:
+                    verification_required_accounts += 1
+                    account_health_issues.append({
+                        'username': account.username,
+                        'issue': account.status,
+                        'severity': 'HIGH'
+                    })
+                else:
+                    failed_accounts += 1
+                
+                continue
+            
+            # # Human-like delay between accounts - УЛУЧШЕННАЯ ВЕРСИЯ
+            # if i > 1:  # Skip delay for first account
+            #     # Получаем улучшенную задержку с учетом всех факторов
+            #     account_delay = get_enhanced_account_delay(i, len(account_tasks), processed_accounts, failed_accounts)
+            #     log_info(f"⏰ [ENHANCED_DELAY] Waiting {account_delay:.1f} seconds before processing next account (factors applied)", LogCategories.HUMAN)
+            #     update_task_log(task, f"[{timestamp}] ⏰ Enhanced delay: {account_delay:.1f}s with adaptive factors\n")
+            #     time.sleep(account_delay)
+            
+            # Process account with enhanced error handling
             try:
-                # Check account status before processing
-                account = get_account_from_task(account_task)
-                username = get_account_username(account_task)
+                account_result = process_account_videos(account_task, task, all_videos, all_titles, task_id)
+                processed_accounts += 1
                 
-                # Skip non-active accounts
-                if account.status != 'ACTIVE':
-                    timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
-                    log_warning(f"Skipping account {username} - Status: {account.status} (Only ACTIVE accounts are processed)")
-                    update_account_task(
-                        account_task,
-                        status=TaskStatus.FAILED,
-                        completed_at=timezone.now(),
-                        log_message=f"[{timestamp}] ⚠️ Account skipped - Status: {account.status} (Only ACTIVE accounts allowed for bulk upload)\n"
-                    )
-                    failed_count += 1
-                    continue
+                if account_result:
+                    successful_accounts += 1
+                    log_success(f"✅ [ACCOUNT_SUCCESS] Account {account.username} processed successfully", LogCategories.TASK_INFO)
+                else:
+                    failed_accounts += 1
+                    log_error(f"❌ [ACCOUNT_FAILED] Account {account.username} processing failed", LogCategories.TASK_INFO)
+                    
+                    # Check if it's a verification issue
+                    if account_task.status in ['PHONE_VERIFICATION_REQUIRED', 'HUMAN_VERIFICATION_REQUIRED']:
+                        verification_required_accounts += 1
+                        account_health_issues.append({
+                            'username': account.username,
+                            'issue': account_task.status,
+                            'severity': 'HIGH'
+                        })
+            
+            except Exception as account_error:
+                processed_accounts += 1
+                failed_accounts += 1
+                error_msg = str(account_error)
                 
-                # Add human-like delay between accounts (except first one)
-                if account_index > 0:
-                    account_delay = random.uniform(TimeConstants.ACCOUNT_DELAY_MIN, TimeConstants.ACCOUNT_DELAY_MAX)
-                    timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
-                    log_info(f"Waiting {account_delay:.1f} seconds before processing next account (human behavior)")
-                    update_task_log(task, f"[{timestamp}] ⏰ Waiting {account_delay:.1f}s between accounts for human behavior\n")
-                    time.sleep(account_delay)
+                log_error(f"❌ [ACCOUNT_ERROR] Exception processing account {account.username}: {error_msg}", LogCategories.TASK_INFO)
                 
-                # Mark as running
-                timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
-                log_info(f"Starting upload for account: {username}")
-                update_account_task(
-                    account_task,
-                    status=TaskStatus.RUNNING,
-                    started_at=timezone.now(),
-                    log_message=f"[{timestamp}] 🔄 Starting upload for account: {username}\n"
-                )
+                # Categorize the error
+                if "PHONE_VERIFICATION_REQUIRED" in error_msg:
+                    verification_required_accounts += 1
+                    account_health_issues.append({
+                        'username': account.username,
+                        'issue': 'PHONE_VERIFICATION_REQUIRED',
+                        'severity': 'HIGH'
+                    })
+                elif "HUMAN_VERIFICATION_REQUIRED" in error_msg:
+                    verification_required_accounts += 1
+                    account_health_issues.append({
+                        'username': account.username,
+                        'issue': 'HUMAN_VERIFICATION_REQUIRED',
+                        'severity': 'HIGH'
+                    })
+                else:
+                    account_health_issues.append({
+                        'username': account.username,
+                        'issue': f"Error: {error_msg[:100]}",
+                        'severity': 'MEDIUM'
+                    })
                 
-                # Get ALL videos from the task for random distribution
-                all_videos = get_all_task_videos(task)
-                all_titles = get_all_task_titles(task)
-                
-                if not all_videos:
-                    timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
-                    log_info(f"No videos found in task for account: {username}")
-                    update_account_task(
-                        account_task,
-                        status=TaskStatus.COMPLETED,
-                        completed_at=timezone.now(),
-                        log_message=f"[{timestamp}] ⚠️ No videos in task to upload\n"
-                    )
-                    completed_count += 1
-                    continue
-                
-                # Process account with optimized logic
-                result_type, completed_inc, failed_inc = process_account_videos(
-                    account_task, task, all_videos, all_titles, task_id
-                )
-                
-                completed_count += completed_inc
-                failed_count += failed_inc
-                
-                # Mark account as used
-                account = get_account_from_task(account_task)
-                mark_account_as_used(account)
-                
-            except Exception as e:
-                handle_account_task_error(account_task, task, e)
-                failed_count += 1
+                # Update account task status
+                update_account_task(account_task, TaskStatus.FAILED, error_msg)
+                update_task_log(task, f"[{timestamp}] ❌ Account {account.username} failed: {error_msg}\n")
         
-        # Update main task status based on individual tasks
-        handle_task_completion(task, completed_count, failed_count, len(account_tasks))
+        # Final task summary and status determination
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Generate comprehensive summary
+        summary = {
+            'total_accounts': len(account_tasks),
+            'processed_accounts': processed_accounts,
+            'successful_accounts': successful_accounts,
+            'failed_accounts': failed_accounts,
+            'verification_required_accounts': verification_required_accounts,
+            'health_issues': account_health_issues
+        }
+        
+        log_info(f"📊 [TASK_SUMMARY] Task completion summary:", LogCategories.TASK_INFO)
+        log_info(f"📊 [TASK_SUMMARY] Total accounts: {summary['total_accounts']}", LogCategories.TASK_INFO)
+        log_info(f"📊 [TASK_SUMMARY] Successful: {summary['successful_accounts']}", LogCategories.TASK_INFO)
+        log_info(f"📊 [TASK_SUMMARY] Failed: {summary['failed_accounts']}", LogCategories.TASK_INFO)
+        log_info(f"📊 [TASK_SUMMARY] Verification required: {summary['verification_required_accounts']}", LogCategories.TASK_INFO)
+        
+        # Determine final task status based on results
+        if successful_accounts == 0:
+            final_status = TaskStatus.FAILED
+            status_emoji = "❌"
+            status_message = "All accounts failed"
+        elif successful_accounts == len(account_tasks):
+            final_status = TaskStatus.COMPLETED
+            status_emoji = "✅"
+            status_message = "All accounts completed successfully"
+        else:
+            final_status = TaskStatus.PARTIALLY_COMPLETED
+            status_emoji = "⚠️"
+            status_message = f"Partial completion: {successful_accounts}/{len(account_tasks)} accounts succeeded"
+        
+        # Generate health report for critical issues
+        if account_health_issues:
+            log_warning(f"🏥 [HEALTH_REPORT] Detected {len(account_health_issues)} account health issues:", LogCategories.VERIFICATION)
+            for issue in account_health_issues[:5]:  # Show first 5 issues
+                log_warning(f"🏥 [HEALTH_REPORT] {issue['username']}: {issue['issue']} (Severity: {issue['severity']})", LogCategories.VERIFICATION)
+        
+        # Generate final log message first
+        final_log_message = (
+            f"[{timestamp}] {status_emoji} Task '{task.name}' completed\n"
+            f"[{timestamp}] 📊 Summary: {successful_accounts} successful, {failed_accounts} failed, "
+            f"{verification_required_accounts} need verification\n"
+        )
+        
+        if account_health_issues:
+            final_log_message += f"[{timestamp}] 🏥 Health issues detected in {len(account_health_issues)} accounts\n"
+        
+        # Update task with final status and log message
+        update_task_status(task, final_status, final_log_message)
+        
+        log_success(f"🎉 [TASK_COMPLETE] Task {task_id} completed with status: {final_status}", LogCategories.TASK_INFO)
+        
+        # Generate web logger summary
+        if web_logger:
+            logger_summary = web_logger.get_summary()
+            log_info(f"📈 [LOG_SUMMARY] Generated {logger_summary['total']} log entries, {logger_summary['critical_count']} critical events", LogCategories.TASK_INFO)
+        
+        return final_status in [TaskStatus.COMPLETED, TaskStatus.PARTIALLY_COMPLETED]
         
     except Exception as e:
-        handle_critical_task_error(task, task_id, e)
-        logger.error(f"Error processing bulk upload task {task_id}: {str(e)}")
+        error_message = str(e)
+        error_trace = traceback.format_exc()
+        
+        log_error(f"💥 [TASK_CRITICAL] Critical error in bulk upload task {task_id}: {error_message}", LogCategories.TASK_INFO)
+        log_error(f"💥 [TASK_CRITICAL] Stack trace: {error_trace}", LogCategories.TASK_INFO)
+        
+        if task:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            update_task_status(task, TaskStatus.FAILED, f"[{timestamp}] 💥 Critical task error: {error_message}\n")
+        
+        return False
+    
+    finally:
+        # Cleanup any hanging processes
+        try:
+            cleanup_hanging_browser_processes()
+            log_info("🧹 [CLEANUP] Browser cleanup completed", LogCategories.CLEANUP)
+        except Exception as cleanup_error:
+            log_warning(f"⚠️ [CLEANUP] Browser cleanup had issues: {str(cleanup_error)}", LogCategories.CLEANUP)
 
 def process_account_videos(account_task, task, all_videos, all_titles, task_id):
     """Process videos for a single account"""
-    # Convert QuerySet to list and randomize videos and titles
+    # ✅ ВАЖНО: Каждый аккаунт получает ВСЕ видео задачи, а не только назначенные ему
+    # Это означает, что одно видео будет загружено на все аккаунты
     videos_for_account = list(all_videos)
     random.shuffle(videos_for_account)
     
@@ -1223,7 +1461,7 @@ def cleanup_temp_files(temp_files):
                 log_error(f"Error deleting temporary file {file_path}: {str(e)}")
 
 def run_dolphin_browser(account_details, videos, video_files_to_upload, result_queue, task_id, account_task_id):
-    """Optimized Dolphin browser runner"""
+    """Enhanced Dolphin browser runner with comprehensive error handling and monitoring"""
     dolphin = None
     dolphin_browser = None
     page = None
@@ -1233,13 +1471,22 @@ def run_dolphin_browser(account_details, videos, video_files_to_upload, result_q
         init_web_logger(task_id, account_task_id)
         
         username = account_details['username']
-        log_info(f"Starting Dolphin Anty browser for account: {username}", LogCategories.DOLPHIN)
+        log_info(f"🐬 [DOLPHIN_START] Starting Dolphin Anty browser for account: {username}", LogCategories.DOLPHIN)
         
-        # Initialize Dolphin
+        # Pre-flight checks
+        if not video_files_to_upload:
+            error_msg = "No video files provided for upload"
+            log_error(f"❌ [DOLPHIN_ERROR] {error_msg}", LogCategories.DOLPHIN)
+            result_queue.put(("ERROR", error_msg))
+            return
+        
+        # Initialize Dolphin with enhanced error handling
         dolphin_token = os.environ.get("DOLPHIN_API_TOKEN")
         if not dolphin_token:
-            log_error("No Dolphin API token found", LogCategories.DOLPHIN)
-            result_queue.put(("DOLPHIN_ERROR", "Dolphin API token not configured"))
+            error_msg = "No Dolphin API token found in environment variables"
+            log_error(f"❌ [DOLPHIN_ERROR] {error_msg}", LogCategories.DOLPHIN)
+            send_critical_notification(task_id, f"Dolphin API token missing for task {task_id}", 'ERROR')
+            result_queue.put(("DOLPHIN_ERROR", error_msg))
             return
             
         from bot.src.instagram_uploader.dolphin_anty import DolphinAnty
@@ -1247,69 +1494,175 @@ def run_dolphin_browser(account_details, videos, video_files_to_upload, result_q
         
         dolphin = DolphinAnty(api_key=dolphin_token)
         
-        # Authenticate
-        if not authenticate_dolphin(dolphin):
-            result_queue.put(("DOLPHIN_ERROR", "Failed to authenticate with Dolphin Anty API"))
-            return
+        # Enhanced authentication with retry logic
+        log_info(f"🔐 [DOLPHIN_AUTH] Authenticating with Dolphin Anty API...", LogCategories.DOLPHIN)
+        auth_attempts = 0
+        max_auth_attempts = 3
         
-        # Get profile
+        while auth_attempts < max_auth_attempts:
+            if authenticate_dolphin(dolphin):
+                log_success(f"✅ [DOLPHIN_AUTH] Authentication successful on attempt {auth_attempts + 1}", LogCategories.DOLPHIN)
+                break
+            else:
+                auth_attempts += 1
+                if auth_attempts < max_auth_attempts:
+                    log_warning(f"⚠️ [DOLPHIN_AUTH] Authentication failed, retrying... (attempt {auth_attempts}/{max_auth_attempts})", LogCategories.DOLPHIN)
+                    time.sleep(random.uniform(2, 5))
+                else:
+                    error_msg = "Failed to authenticate with Dolphin Anty API after multiple attempts"
+                    log_error(f"❌ [DOLPHIN_AUTH] {error_msg}", LogCategories.DOLPHIN)
+                    send_critical_notification(task_id, f"Dolphin authentication failed for account {username}", 'ERROR')
+                    result_queue.put(("DOLPHIN_ERROR", error_msg))
+                    return
+        
+        # Get profile with validation
+        log_info(f"📋 [DOLPHIN_PROFILE] Retrieving Dolphin profile for account: {username}", LogCategories.DOLPHIN)
         dolphin_profile_id = get_dolphin_profile_id(username)
         if not dolphin_profile_id:
-            result_queue.put(("PROFILE_ERROR", f"No Dolphin profile found for account: {username}"))
+            error_msg = f"No Dolphin profile found for account: {username}"
+            log_error(f"❌ [DOLPHIN_PROFILE] {error_msg}", LogCategories.DOLPHIN)
+            send_critical_notification(task_id, f"Missing Dolphin profile for account {username}", 'ERROR')
+            result_queue.put(("PROFILE_ERROR", error_msg))
             return
         
-        # Connect to browser
+        log_info(f"🔗 [DOLPHIN_PROFILE] Found profile ID: {dolphin_profile_id}", LogCategories.DOLPHIN)
+        
+        # Connect to browser with enhanced error handling
+        log_info(f"🌐 [DOLPHIN_BROWSER] Connecting to browser profile...", LogCategories.DOLPHIN)
         dolphin_browser = DolphinBrowser(dolphin_api_token=dolphin_token)
-        page = dolphin_browser.connect_to_profile(dolphin_profile_id, headless=False)
         
-        if not page:
-            result_queue.put(("PROFILE_ERROR", f"Profile {dolphin_profile_id} is not available"))
-            return
+        # Browser connection with timeout and retry
+        connection_attempts = 0
+        max_connection_attempts = 2
         
-        log_success(f"Successfully connected to Dolphin profile: {dolphin_profile_id}", LogCategories.DOLPHIN)
+        while connection_attempts < max_connection_attempts:
+            try:
+                page = dolphin_browser.connect_to_profile(dolphin_profile_id, headless=False)
+                if page:
+                    log_success(f"✅ [DOLPHIN_BROWSER] Successfully connected to profile: {dolphin_profile_id}", LogCategories.DOLPHIN)
+                    break
+                else:
+                    raise Exception("Page object is None")
+            except Exception as connect_error:
+                connection_attempts += 1
+                if connection_attempts < max_connection_attempts:
+                    log_warning(f"⚠️ [DOLPHIN_BROWSER] Connection failed, retrying... (attempt {connection_attempts}/{max_connection_attempts}): {str(connect_error)}", LogCategories.DOLPHIN)
+                    time.sleep(random.uniform(3, 7))
+                else:
+                    error_msg = f"Failed to connect to profile {dolphin_profile_id} after {max_connection_attempts} attempts: {str(connect_error)}"
+                    log_error(f"❌ [DOLPHIN_BROWSER] {error_msg}", LogCategories.DOLPHIN)
+                    send_critical_notification(task_id, f"Browser connection failed for account {username}", 'ERROR')
+                    result_queue.put(("PROFILE_ERROR", error_msg))
+                    return
         
-        # Perform Instagram operations
-        if not perform_instagram_operations(page, account_details, videos, video_files_to_upload):
-            result_queue.put(("LOGIN_ERROR", "Failed Instagram operations"))
-            return
+        # Pre-operation validation
+        log_info(f"🔍 [INSTAGRAM_PREP] Preparing Instagram operations for {len(video_files_to_upload)} videos", LogCategories.UPLOAD)
         
-        # Success
-        uploaded_count = len([v for v in videos if getattr(v, 'uploaded', False)])
-        success_message = f"Uploaded {uploaded_count}/{len(video_files_to_upload)} videos successfully"
-        log_info(f"[COMPLETE] {success_message}")
-        result_queue.put(("SUCCESS", success_message))
+        # Perform Instagram operations with comprehensive monitoring
+        operation_start_time = time.time()
+        operation_success = perform_instagram_operations(page, account_details, videos, video_files_to_upload)
+        operation_duration = time.time() - operation_start_time
+        
+        if operation_success:
+            # Success metrics
+            uploaded_count = len([v for v in videos if getattr(v, 'uploaded', False)])
+            success_rate = (uploaded_count / len(video_files_to_upload)) * 100 if video_files_to_upload else 0
+            
+            success_message = f"Successfully completed operations for account {username}: {uploaded_count}/{len(video_files_to_upload)} videos uploaded ({success_rate:.1f}% success rate) in {operation_duration:.1f}s"
+            log_success(f"🎉 [INSTAGRAM_SUCCESS] {success_message}", LogCategories.UPLOAD)
+            
+            result_queue.put(("SUCCESS", success_message))
+        else:
+            error_msg = f"Instagram operations failed for account {username} after {operation_duration:.1f}s"
+            log_error(f"❌ [INSTAGRAM_FAILED] {error_msg}", LogCategories.UPLOAD)
+            result_queue.put(("LOGIN_ERROR", error_msg))
         
     except Exception as e:
         error_message = str(e)
         
-        # Handle specific verification errors
+        log_error(f"💥 [DOLPHIN_EXCEPTION] Critical error in Dolphin browser for account {username}: {error_message}", LogCategories.DOLPHIN)
+        
+        # Enhanced error categorization and handling
         if "PHONE_VERIFICATION_REQUIRED" in error_message:
-            log_error(f"📱 Phone verification required for account: {username}", LogCategories.VERIFICATION)
+            log_error(f"📱 [VERIFICATION_PHONE] Phone verification required for account: {username}", LogCategories.VERIFICATION)
+            send_critical_notification(task_id, f"Phone verification required for account {username} - manual intervention needed", 'VERIFICATION')
             result_queue.put(("PHONE_VERIFICATION_REQUIRED", f"Phone verification required for account: {username}"))
             
             # Update Instagram account status in database
             try:
-                from .models import InstagramAccount
+                from uploader.models import InstagramAccount, BulkUploadAccount
                 instagram_account = InstagramAccount.objects.get(username=username)
-                instagram_account.status = TaskStatus.PHONE_VERIFICATION_REQUIRED
-                instagram_account.save()
-                log_info(f"Updated account {username} status to PHONE_VERIFICATION_REQUIRED", LogCategories.DATABASE)
+                instagram_account.status = 'PHONE_VERIFICATION_REQUIRED'
+                instagram_account.save(update_fields=['status'])
+                log_info(f"💾 [DATABASE] Updated account {username} status to PHONE_VERIFICATION_REQUIRED", LogCategories.DATABASE)
+                
+                # Also update BulkUploadAccount status for dashboard display
+                try:
+                    bulk_account = BulkUploadAccount.objects.get(id=account_task_id)
+                    bulk_account.status = 'PHONE_VERIFICATION_REQUIRED'
+                    bulk_account.save(update_fields=['status'])
+                    log_info(f"💾 [DATABASE] Updated bulk account task {account_task_id} status to PHONE_VERIFICATION_REQUIRED", LogCategories.DATABASE)
+                except BulkUploadAccount.DoesNotExist:
+                    log_warning(f"💾 [DATABASE] BulkUploadAccount with ID {account_task_id} not found", LogCategories.DATABASE)
+                except Exception as bulk_error:
+                    log_error(f"💾 [DATABASE_ERROR] Failed to update bulk account status: {str(bulk_error)}", LogCategories.DATABASE)
+                    
             except Exception as db_error:
-                log_error(f"Failed to update account status in database: {str(db_error)}", LogCategories.DATABASE)
+                log_error(f"💾 [DATABASE_ERROR] Failed to update account status: {str(db_error)}", LogCategories.DATABASE)
                 
         elif "HUMAN_VERIFICATION_REQUIRED" in error_message:
-            log_error(f"🤖 Human verification required for account: {username}", LogCategories.VERIFICATION)
+            log_error(f"🤖 [VERIFICATION_HUMAN] Human verification required for account: {username}", LogCategories.VERIFICATION)
+            send_critical_notification(task_id, f"Human verification required for account {username} - manual intervention needed", 'VERIFICATION')
             result_queue.put(("HUMAN_VERIFICATION_REQUIRED", f"Human verification required for account: {username}"))
             
             # Update Instagram account status in database
             try:
-                from .models import InstagramAccount
+                from uploader.models import InstagramAccount, BulkUploadAccount
                 instagram_account = InstagramAccount.objects.get(username=username)
-                instagram_account.status = TaskStatus.HUMAN_VERIFICATION_REQUIRED
-                instagram_account.save()
-                log_info(f"Updated account {username} status to HUMAN_VERIFICATION_REQUIRED", LogCategories.DATABASE)
+                instagram_account.status = 'HUMAN_VERIFICATION_REQUIRED'
+                instagram_account.save(update_fields=['status'])
+                log_info(f"💾 [DATABASE] Updated account {username} status to HUMAN_VERIFICATION_REQUIRED", LogCategories.DATABASE)
+                
+                # Also update BulkUploadAccount status for dashboard display
+                try:
+                    bulk_account = BulkUploadAccount.objects.get(id=account_task_id)
+                    bulk_account.status = 'HUMAN_VERIFICATION_REQUIRED'
+                    bulk_account.save(update_fields=['status'])
+                    log_info(f"💾 [DATABASE] Updated bulk account task {account_task_id} status to HUMAN_VERIFICATION_REQUIRED", LogCategories.DATABASE)
+                except BulkUploadAccount.DoesNotExist:
+                    log_warning(f"💾 [DATABASE] BulkUploadAccount with ID {account_task_id} not found", LogCategories.DATABASE)
+                except Exception as bulk_error:
+                    log_error(f"💾 [DATABASE_ERROR] Failed to update bulk account status: {str(bulk_error)}", LogCategories.DATABASE)
+                    
             except Exception as db_error:
-                log_error(f"Failed to update account status in database: {str(db_error)}", LogCategories.DATABASE)
+                log_error(f"💾 [DATABASE_ERROR] Failed to update account status: {str(db_error)}", LogCategories.DATABASE)
+                
+        elif "SUSPENDED" in error_message:
+            log_error(f"🚫 [VERIFICATION_SUSPENDED] Account suspended for account: {username}", LogCategories.VERIFICATION)
+            send_critical_notification(task_id, f"Account {username} has been suspended by Instagram - manual review needed", 'VERIFICATION')
+            result_queue.put(("SUSPENDED", f"Account suspended: {username}"))
+            
+            # Update Instagram account status in database
+            try:
+                from uploader.models import InstagramAccount, BulkUploadAccount
+                instagram_account = InstagramAccount.objects.get(username=username)
+                instagram_account.status = 'SUSPENDED'
+                instagram_account.save(update_fields=['status'])
+                log_info(f"💾 [DATABASE] Updated account {username} status to SUSPENDED", LogCategories.DATABASE)
+                
+                # Also update BulkUploadAccount status for dashboard display
+                try:
+                    bulk_account = BulkUploadAccount.objects.get(id=account_task_id)
+                    bulk_account.status = 'SUSPENDED'
+                    bulk_account.save(update_fields=['status'])
+                    log_info(f"💾 [DATABASE] Updated bulk account task {account_task_id} status to SUSPENDED", LogCategories.DATABASE)
+                except BulkUploadAccount.DoesNotExist:
+                    log_warning(f"💾 [DATABASE] BulkUploadAccount with ID {account_task_id} not found", LogCategories.DATABASE)
+                except Exception as bulk_error:
+                    log_error(f"💾 [DATABASE_ERROR] Failed to update bulk account status: {str(bulk_error)}", LogCategories.DATABASE)
+                    
+            except Exception as db_error:
+                log_error(f"💾 [DATABASE_ERROR] Failed to update account status: {str(db_error)}", LogCategories.DATABASE)
                 
         else:
             log_error(f"[FAIL] Browser error: {error_message}")
@@ -1352,30 +1705,43 @@ def get_dolphin_profile_id(username):
         return None
 
 def perform_instagram_operations(page, account_details, videos, video_files_to_upload):
-    """Perform all Instagram operations"""
+    """Perform Instagram operations with enhanced error handling and monitoring"""
     try:
-        # Navigate to Instagram
-        log_info(f"Navigating to Instagram.com", LogCategories.NAVIGATION)
-        page.goto("https://www.instagram.com/", wait_until="domcontentloaded", timeout=TimeConstants.PAGE_LOAD_TIMEOUT)
-        log_success(f"Successfully loaded Instagram.com", LogCategories.NAVIGATION)
+        log_info("🌐 [NAVIGATION] Navigating to Instagram.com", LogCategories.NAVIGATION)
         
-        # Initialize human behavior
+        # Navigate to Instagram with extended timeout
+        page.goto("https://www.instagram.com/", wait_until="domcontentloaded", timeout=60000)
+        
+        # CRITICAL: Wait for page to fully load before proceeding
+        log_info("⏳ [NAVIGATION] Waiting for page to fully load...", LogCategories.NAVIGATION)
+        time.sleep(8)  # Increased from immediate to 8 seconds
+        
+        # Additional wait for network idle (all resources loaded)
+        try:
+            page.wait_for_load_state("networkidle", timeout=15000)
+            log_info("✅ [NAVIGATION] Network idle state reached", LogCategories.NAVIGATION)
+        except Exception as e:
+            log_warning(f"⚠️ [NAVIGATION] Network idle timeout, continuing: {str(e)}", LogCategories.NAVIGATION)
+        
+        # Wait for DOM to be interactive
+        try:
+            page.wait_for_function("document.readyState === 'complete'", timeout=10000)
+            log_info("✅ [NAVIGATION] Document ready state complete", LogCategories.NAVIGATION)
+        except Exception as e:
+            log_warning(f"⚠️ [NAVIGATION] Document ready timeout, continuing: {str(e)}", LogCategories.NAVIGATION)
+        
+        # Additional safety wait
+        time.sleep(3)
+        
+        log_success("✅ [NAVIGATION] Successfully loaded Instagram.com", LogCategories.NAVIGATION)
+        
+        # Initialize human behavior after page is fully loaded
         init_human_behavior(page)
-        human_behavior = get_human_behavior()
-        
-        # Human-like delay
-        human_delay = human_behavior.get_human_delay(2.0, 1.0)
-        log_info(f"Taking a moment to look at the page ({human_delay:.1f}s)", LogCategories.HUMAN)
-        time.sleep(human_delay)
-        
-        # Check for phone verification requirement immediately after page load
-        log_info("🔍 Checking for phone verification requirement...", LogCategories.VERIFICATION)
-        if check_for_phone_verification_page(page):
-            raise Exception("PHONE_VERIFICATION_REQUIRED")
+        log_info("Human behavior initialized")
         
         # Check login status and login if needed
         if not handle_login_flow(page, account_details):
-            return False
+            return False, "LOGIN_FAILED"
         
         # Upload videos
         uploaded_videos = 0
@@ -1409,7 +1775,7 @@ def perform_instagram_operations(page, account_details, videos, video_files_to_u
         
         # Final cleanup
         perform_final_cleanup(page, account_details['username'])
-        return True
+        return True, "UPLOAD_SUCCESS"
         
     except Exception as e:
         error_message = str(e)
@@ -1419,9 +1785,12 @@ def perform_instagram_operations(page, account_details, videos, video_files_to_u
         elif "HUMAN_VERIFICATION_REQUIRED" in error_message:
             log_error(f"Human verification required: {error_message}", LogCategories.VERIFICATION)
             raise e  # Re-raise to be caught by run_dolphin_browser
+        elif "SUSPENDED" in error_message:
+            log_error(f"Account suspended: {error_message}", LogCategories.VERIFICATION)
+            raise e  # Re-raise to be caught by run_dolphin_browser
         else:
             log_error(f"Error in Instagram operations: {error_message}")
-            return False
+            return False, "UPLOAD_FAILED"
 
 def cleanup_browser_session(page, dolphin_browser, dolphin_profile_id, dolphin):
     """Clean up browser session safely"""
@@ -1436,63 +1805,77 @@ def cleanup_browser_session(page, dolphin_browser, dolphin_profile_id, dolphin):
         log_error(f"[CLEANUP] Emergency cleanup failed: {str(cleanup_error)}")
 
 def handle_login_flow(page, account_details):
-    """Handle the complete login flow with verification checks"""
+    """Handle Instagram login flow with comprehensive verification checks"""
     try:
-        # Check for human verification dialog first
-        if check_for_human_verification_dialog(page, account_details):
-            log_error("Human verification dialog detected", LogCategories.LOGIN)
-            raise Exception("HUMAN_VERIFICATION_REQUIRED")
+        log_info("🔑 Need to login to Instagram", LogCategories.LOGIN)
         
-        # Check for phone verification requirement
-        if check_for_phone_verification_page(page):
-            log_error("Phone verification requirement detected in login flow", LogCategories.VERIFICATION)
-            raise Exception("PHONE_VERIFICATION_REQUIRED")
+        # Wait for page to be fully interactive before checking login status
+        log_info("⏳ [LOGIN] Ensuring page is fully loaded before login check...", LogCategories.LOGIN)
+        time.sleep(3)  # Additional wait for page stability
         
-        # Look for login indicators
-        login_form = page.query_selector('form[id*="loginForm"]')
-        username_input = page.query_selector('input[name="username"]')
-        logged_in_indicator = page.query_selector('svg[aria-label*="Home"]') or page.query_selector('[aria-label*="Home"]')
+        # Only check for reCAPTCHA before attempting login (it can appear on login page)
+        log_info("🔍 Checking for reCAPTCHA on login page...", LogCategories.CAPTCHA)
+        handle_recaptcha_if_present(page)
+        log_success("✅ reCAPTCHA handling completed", LogCategories.CAPTCHA)
         
-        if logged_in_indicator and not username_input:
-            log_success("Already logged in to Instagram", LogCategories.LOGIN)
+        # Perform login FIRST
+        login_result = perform_instagram_login_optimized(page, account_details)
+        
+        if login_result == "SUSPENDED":
+            log_error("🚫 Account suspended detected during login check", LogCategories.VERIFICATION)
+            raise Exception(f"SUSPENDED: Account suspended by Instagram")
+        elif not login_result:
+            log_error("❌ Failed to login to Instagram", LogCategories.LOGIN)
+            return False
+        
+        log_success("✅ Login completed successfully", LogCategories.LOGIN)
+        
+        # NOW check for post-login verification requirements
+        log_info("🔍 Checking for phone verification requirement...", LogCategories.VERIFICATION)
+        phone_verification_result = check_for_phone_verification_page(page)
+        
+        if phone_verification_result.get('requires_phone_verification', False):
+            log_error(f"📱 Phone verification required after login: {phone_verification_result.get('message', 'Unknown reason')}", LogCategories.VERIFICATION)
+            raise Exception(f"PHONE_VERIFICATION_REQUIRED: {phone_verification_result.get('message', 'Phone verification required')}")
+        
+        # Check for human verification after login
+        log_info("🔍 Checking for human verification requirement...", LogCategories.VERIFICATION)
+        human_verification_result = check_for_human_verification_dialog(page, account_details)
+        
+        if human_verification_result.get('requires_human_verification', False):
+            log_error(f"🤖 Human verification required after login: {human_verification_result.get('message', 'Unknown reason')}", LogCategories.VERIFICATION)
+            raise Exception(f"HUMAN_VERIFICATION_REQUIRED: {human_verification_result.get('message', 'Human verification required')}")
+        
+        # Check for account suspension after login
+        log_info("🔍 Checking for account suspension...", LogCategories.VERIFICATION)
+        suspension_result = check_for_account_suspension(page)
+        
+        if suspension_result.get('account_suspended', False):
+            suspension_message = suspension_result.get('message', 'Account suspended by Instagram')
+            log_error(f"🚫 Account suspension detected after login: {suspension_message}", LogCategories.VERIFICATION)
             
-            # Check again for verification dialogs after login
-            if check_for_human_verification_dialog(page, account_details):
-                log_error("Human verification dialog detected after login check", LogCategories.LOGIN)
-                raise Exception("HUMAN_VERIFICATION_REQUIRED")
-                
-            if check_for_phone_verification_page(page):
-                log_error("Phone verification requirement detected after login check", LogCategories.VERIFICATION)
-                raise Exception("PHONE_VERIFICATION_REQUIRED")
-                
-            return True
-        else:
-            log_info("Need to login to Instagram", LogCategories.LOGIN)
-            
-            # Perform login
-            success = perform_instagram_login(page, account_details)
-            if not success:
-                log_error("Failed to login to Instagram", LogCategories.LOGIN)
-                return False
-            
-            log_success("Successfully logged in to Instagram", LogCategories.LOGIN)
-            return True
-            
+            # Raise exception to trigger account status update
+            raise Exception(f"SUSPENDED: {suspension_message}")
+        
+        # Post-login reCAPTCHA check
+        log_info("🔍 Checking for post-login reCAPTCHA...", LogCategories.CAPTCHA)
+        handle_recaptcha_if_present(page)
+        
+        log_success("✅ Login flow completed successfully", LogCategories.LOGIN)
+        return True
+        
     except Exception as e:
         error_message = str(e)
-        if "PHONE_VERIFICATION_REQUIRED" not in error_message and "HUMAN_VERIFICATION_REQUIRED" not in error_message:
-            # Check for verification requirements after failed login
-            if check_for_phone_verification_page(page):
-                log_error("Phone verification requirement detected after failed login", LogCategories.VERIFICATION)
-                raise Exception("PHONE_VERIFICATION_REQUIRED")
         
-        log_error(f"[LOGIN] Login process failed: {str(e)}")
-        
-        # Re-raise verification exceptions
-        if "PHONE_VERIFICATION_REQUIRED" in error_message or "HUMAN_VERIFICATION_REQUIRED" in error_message:
-            raise e
-            
-        return False
+        # Re-raise verification-related exceptions so they can be handled by run_dolphin_browser
+        if ("SUSPENDED:" in error_message or 
+            "PHONE_VERIFICATION_REQUIRED:" in error_message or 
+            "HUMAN_VERIFICATION_REQUIRED:" in error_message):
+            log_error(f"❌ Error in login flow (re-raising for status update): {error_message}", LogCategories.LOGIN)
+            raise e  # Re-raise the exception so it reaches run_dolphin_browser
+        else:
+            log_error(f"❌ Error in login flow: {error_message}", LogCategories.LOGIN)
+            return False
 
 def log_video_info(video_index, total_videos, video_file_path, video_obj):
     """Log information about the video being uploaded"""
@@ -1504,98 +1887,58 @@ def log_video_info(video_index, total_videos, video_file_path, video_obj):
     else:
         log_info(f"[UPLOAD {video_index}/{total_videos}] Video: {os.path.basename(video_file_path)} | No caption")
 
-def add_human_delay_between_uploads(page, video_index):
-    """Add human-like delay between video uploads"""
-    # Calculate delay with fatigue simulation
-    base_delay = random.uniform(TimeConstants.VIDEO_DELAY_MIN, TimeConstants.VIDEO_DELAY_MAX)
-    fatigue_multiplier = 1 + (video_index * 0.1)  # 10% more delay per video
-    total_delay = base_delay * fatigue_multiplier
-    variance = random.uniform(0.8, 1.3)
-    final_delay = min(total_delay * variance, 900)  # Cap at 15 minutes
+def add_human_delay_between_uploads(page, video_index, total_videos=None, account_fatigue=1.0):
+    """Улучшенная функция задержки между загрузками видео"""
     
-    log_info(f"[HUMAN_BREAK] Extended break between uploads: {final_delay:.1f}s ({final_delay/60:.1f} minutes)")
-    log_info(f"[HUMAN_BREAK] Video {video_index} fatigue factor: {fatigue_multiplier:.2f}x")
+    # Используем новую улучшенную функцию расчета задержки
+    if total_videos is None:
+        total_videos = 10  # Значение по умолчанию
     
+    final_delay = get_enhanced_video_delay(video_index, total_videos, account_fatigue)
+    
+    log_info(f"[ENHANCED_VIDEO_BREAK] Video {video_index + 1}/{total_videos}: "
+             f"Taking enhanced break for {final_delay:.1f}s ({final_delay/60:.1f} minutes)")
+    
+    # Проверяем, нужен ли интеллектуальный перерыв
+    session_duration = (datetime.now() - session_start_time).total_seconds() / 60 if session_start_time else 0
+    
+    if simulate_smart_break(video_index, total_videos, session_duration):
+        log_info(f"[SMART_BREAK] Additional smart break was taken during video processing")
+    
+    # Основная задержка с улучшенным поведением
     simulate_extended_human_rest_behavior(page, final_delay)
 
 def perform_final_cleanup(page, username):
-    """Perform final cleanup and browsing simulation"""
-    # Take final screenshot
-    screenshot_path = f"instagram_final_{username}.png"
-    log_info(f"Taking final screenshot: {screenshot_path}")
-    page.screenshot(path=screenshot_path)
-    log_info(f"Saved final screenshot to {screenshot_path}")
-
-    # Human-like browsing before closing
-    log_info("Simulating normal browsing behavior")
-    simulate_normal_browsing_behavior(page)
-
-def perform_instagram_login(page, account_details):
-    """Wrapper function for login with reCAPTCHA handling"""
+    """Perform final cleanup activities"""
     try:
-        # Check for human verification dialog first
-        if check_for_human_verification_dialog(page, account_details):
-            log_error("Human verification dialog detected", LogCategories.LOGIN)
-            raise Exception("HUMAN_VERIFICATION_REQUIRED")
+        log_info(f"🧹 [CLEANUP] Starting final cleanup for user: {username}")
         
-        # Check for phone verification before login
-        if check_for_phone_verification_page(page):
-            log_error("Phone verification requirement detected before login", LogCategories.VERIFICATION)
-            raise Exception("PHONE_VERIFICATION_REQUIRED")
+        # Try to navigate away from any sensitive pages
+        try:
+            # Go to main Instagram page
+            page.goto('https://www.instagram.com/', wait_until='load', timeout=15000)
+            log_info("🧹 [CLEANUP] Navigated to main page")
+        except Exception as e:
+            log_warning(f"🧹 [CLEANUP] Could not navigate to main page: {str(e)}")
         
-        # Check for reCAPTCHA and solve it
-        log_info("🔍 Checking for reCAPTCHA on login page...", LogCategories.CAPTCHA)
-        captcha_solved = solve_recaptcha_if_present_sync(page, account_details)
-        
-        if not captcha_solved:
-            log_error("❌ Failed to solve reCAPTCHA on login page", LogCategories.CAPTCHA)
-        else:
-            log_success("✅ reCAPTCHA handling completed", LogCategories.CAPTCHA)
-        
-        # Use optimized login function
-        result = perform_instagram_login_optimized(page, account_details)
-        
-        # Check for phone verification after login attempt
-        if check_for_phone_verification_page(page):
-            log_error("Phone verification requirement detected after login", LogCategories.VERIFICATION)
-            raise Exception("PHONE_VERIFICATION_REQUIRED")
-        
-        # Check again after login
-        if check_for_human_verification_dialog(page, account_details):
-            log_error("Human verification dialog detected after login", LogCategories.LOGIN)
-            raise Exception("HUMAN_VERIFICATION_REQUIRED")
-        
-        # Final check for post-login captcha
-        log_info("🔍 Checking for post-login reCAPTCHA...", LogCategories.CAPTCHA)
-        solve_recaptcha_if_present_sync(page, account_details)
-        
-        return result
+        # Wait a moment
+        time.sleep(random.uniform(1, 3))
+        log_info("🧹 [CLEANUP] Final cleanup completed")
         
     except Exception as e:
-        error_message = str(e)
-        
-        # Before returning False, check if it's a verification issue
-        if "PHONE_VERIFICATION_REQUIRED" not in error_message and "HUMAN_VERIFICATION_REQUIRED" not in error_message:
-            # Check for verification requirements after failed login
-            if check_for_phone_verification_page(page):
-                log_error("Phone verification requirement detected after failed login", LogCategories.VERIFICATION)
-                raise Exception("PHONE_VERIFICATION_REQUIRED")
-        
-        log_error(f"[LOGIN] Login process failed: {str(e)}")
-        
-        # Re-raise verification exceptions
-        if "PHONE_VERIFICATION_REQUIRED" in error_message or "HUMAN_VERIFICATION_REQUIRED" in error_message:
-            raise e
-            
-        return False
+        log_warning(f"🧹 [CLEANUP] Error during final cleanup: {str(e)}")
+
+def perform_instagram_login(page, account_details):
+    """Redirect to optimized login function"""
+    return perform_instagram_login_optimized(page, account_details)
 
 def check_for_phone_verification_page(page):
-    """Check if Instagram is showing phone verification page"""
+    """Check if Instagram is showing phone verification page - Enhanced version"""
     try:
-        log_info("🔍 Checking for phone verification requirement...", LogCategories.VERIFICATION)
+        log_info("🔍 [PHONE_VERIFY] Starting phone verification check...", LogCategories.VERIFICATION)
         time.sleep(random.uniform(1, 2))
         
-        # Get page text
+        # Get page text for analysis
         try:
             page_text = page.inner_text('body') or ""
         except Exception:
@@ -1604,122 +1947,184 @@ def check_for_phone_verification_page(page):
         # Check for phone verification keywords
         phone_verification_keywords = [
             'введите свой номер мобильного телефона',
-            'enter your mobile phone number',
-            'confirm your phone number',
-            'подтвердите номер телефона',
-            'номер мобильного телефона',
-            'mobile phone number',
-            'вам необходимо подтвердить этот номер',
-            'you need to confirm this phone number',
-            'добавьте номер телефона',
+            'подтвердите номер телефона', 
             'add phone number',
-            'phone verification required'
+            'verify your phone number'
         ]
         
-        phone_verification_detected = any(keyword.lower() in page_text.lower() for keyword in phone_verification_keywords)
+        detected_keywords = []
+        for keyword in phone_verification_keywords:
+            if keyword.lower() in page_text.lower():
+                detected_keywords.append(keyword)
+        
+        phone_verification_detected = len(detected_keywords) > 0
         
         if phone_verification_detected:
-            log_error("📱 Phone verification requirement detected!", LogCategories.VERIFICATION)
-            log_info(f"🔍 Page text sample: '{page_text[:200]}...'", LogCategories.VERIFICATION)
-            
-            # Take screenshot for documentation
-            try:
-                timestamp = int(time.time())
-                screenshot_path = f"phone_verification_detected_{timestamp}.png"
-                page.screenshot(path=screenshot_path)
-                log_info(f"Screenshot saved: {screenshot_path}", LogCategories.VERIFICATION)
-            except Exception as e:
-                log_warning(f"Could not take screenshot: {str(e)}", LogCategories.VERIFICATION)
-            
-            return True
+            log_error(f"📱 [PHONE_VERIFY] Phone verification requirement detected!", LogCategories.VERIFICATION)
+            return {
+                'requires_phone_verification': True,
+                'message': f"Phone verification required",
+                'detected_keywords': detected_keywords[:3]
+            }
         else:
-            log_info("✅ No phone verification requirement detected", LogCategories.VERIFICATION)
-            return False
+            log_info(f"✅ [PHONE_VERIFY] No phone verification requirement detected", LogCategories.VERIFICATION)
+            return {
+                'requires_phone_verification': False,
+                'message': f"No phone verification required"
+            }
             
     except Exception as e:
-        log_warning(f"Error checking for phone verification: {str(e)}", LogCategories.VERIFICATION)
-        return False
+        log_warning(f"❌ [PHONE_VERIFY] Error checking for phone verification: {str(e)}", LogCategories.VERIFICATION)
+        return {
+            'requires_phone_verification': False,
+            'message': f"Error checking phone verification: {str(e)}"
+        }
 
 def check_for_human_verification_dialog(page, account_details=None):
-    """Check if Instagram is showing the human verification dialog"""
+    """Check if Instagram is showing the human verification dialog - Enhanced version"""
     try:
-        log_info("Checking for human verification dialog...", LogCategories.VERIFICATION)
+        log_info("🔍 [HUMAN_VERIFY] Starting human verification check...", LogCategories.VERIFICATION)
         time.sleep(random.uniform(1, 2))
         
-        # Get page text
+        # Get page text for analysis
         try:
             page_text = page.inner_text('body') or ""
         except Exception:
             page_text = ""
         
-        # Check for verification keywords
-        verification_detected = any(keyword.lower() in page_text.lower() for keyword in InstagramTexts.VERIFICATION_KEYWORDS)
+        # Check for human verification keywords
+        human_verification_keywords = [
+            'подтвердите, что это вы',
+            'подтвердите свою личность',
+            'confirm that this is you',
+            'verify your identity'
+        ]
         
-        if verification_detected:
-            log_warning("Human verification keywords found", LogCategories.VERIFICATION)
-            
-            # Special handling for reCAPTCHA verification
-            if any(keyword in page_text.lower() for keyword in ['подтвердите, что это вы', 'подтвердите что это вы']):
-                log_info("🤖 Detected verification dialog - checking for reCAPTCHA...", LogCategories.CAPTCHA)
-                
-                try:
-                    captcha_params = detect_recaptcha_on_page(page)
-                    if captcha_params:
-                        log_info("🔍 reCAPTCHA detected, attempting to solve...", LogCategories.CAPTCHA)
-                        captcha_solved = solve_recaptcha_if_present_sync(page, account_details)
-                        
-                        if captcha_solved:
-                            log_success("✅ reCAPTCHA solved", LogCategories.CAPTCHA)
-                            time.sleep(random.uniform(2, 4))
-                            
-                            # Recheck if verification dialog is still present
-                            try:
-                                updated_page_text = page.inner_text('body') or ""
-                                still_verification = any(keyword.lower() in updated_page_text.lower() for keyword in InstagramTexts.VERIFICATION_KEYWORDS)
-                                
-                                if not still_verification:
-                                    log_success("✅ Verification dialog resolved", LogCategories.CAPTCHA)
-                                    return False
-                            except:
-                                pass
-                        else:
-                            log_error("❌ Failed to solve reCAPTCHA", LogCategories.CAPTCHA)
-                except Exception as e:
-                    log_error(f"❌ Error handling reCAPTCHA: {str(e)}", LogCategories.CAPTCHA)
-            
-            # Check for verification dialog elements
-            dialog_elements_found = []
-            for selector in InstagramSelectors.HUMAN_VERIFICATION_DIALOGS:
-                try:
-                    element = page.query_selector(selector)
-                    if element and element.is_visible():
-                        dialog_elements_found.append(selector)
-                except Exception:
-                    continue
-            
-            if dialog_elements_found:
-                log_error(f"Human verification dialog confirmed!", LogCategories.VERIFICATION)
-                
-                # Take screenshot for documentation
-                try:
-                    timestamp = int(time.time())
-                    screenshot_path = f"human_verification_detected_{timestamp}.png"
-                    page.screenshot(path=screenshot_path)
-                    log_info(f"Screenshot saved: {screenshot_path}", LogCategories.VERIFICATION)
-                except Exception as e:
-                    log_warning(f"Could not take screenshot: {str(e)}", LogCategories.VERIFICATION)
-                
-                return True
-            else:
-                log_info("Verification keywords found but no dialog elements", LogCategories.VERIFICATION)
-                return False
+        detected_keywords = []
+        for keyword in human_verification_keywords:
+            if keyword.lower() in page_text.lower():
+                detected_keywords.append(keyword)
+        
+        human_verification_detected = len(detected_keywords) > 0
+        
+        if human_verification_detected:
+            log_error(f"🤖 [HUMAN_VERIFY] Human verification requirement detected!", LogCategories.VERIFICATION)
+            return {
+                'requires_human_verification': True,
+                'message': f"Human verification required",
+                'detected_keywords': detected_keywords[:3]
+            }
         else:
-            log_info("No human verification dialog detected", LogCategories.VERIFICATION)
-            return False
+            log_info(f"✅ [HUMAN_VERIFY] No human verification requirement detected", LogCategories.VERIFICATION)
+            return {
+                'requires_human_verification': False,
+                'message': f"No human verification required"
+            }
             
     except Exception as e:
-        log_warning(f"Error checking for human verification dialog: {str(e)}", LogCategories.VERIFICATION)
-        return False
+        log_warning(f"❌ [HUMAN_VERIFY] Error checking for human verification: {str(e)}", LogCategories.VERIFICATION)
+        return {
+            'requires_human_verification': False,
+            'message': f"Error checking human verification: {str(e)}"
+        }
+
+def check_for_account_suspension(page):
+    """Check if Instagram is showing account suspension message - Enhanced version with Russian and English detection"""
+    try:
+        log_info("🔍 [SUSPENSION_CHECK] Starting account suspension check...", LogCategories.VERIFICATION)
+        time.sleep(random.uniform(1, 2))
+        
+        # Get page text for analysis
+        try:
+            page_text = page.inner_text('body') or ""
+            page_title = page.title() or ""
+        except Exception:
+            page_text = ""
+            page_title = ""
+        
+        log_info(f"🔍 [SUSPENSION_CHECK] Page title: '{page_title}'")
+        
+        # Comprehensive suspension keywords in Russian and English
+        suspension_keywords = [
+            # Russian suspension messages
+            'мы приостановили ваш аккаунт',
+            'ваш аккаунт приостановлен',
+            'приостановили ваш аккаунт',
+            'аккаунт был приостановлен',
+            'временно приостановлен',
+            'нарушение условий',
+            'действие заблокировано',
+            'аккаунт заблокирован',
+            'ваш аккаунт заблокирован',
+            'доступ ограничен',
+            
+            # English suspension messages  
+            'we suspended your account',
+            'your account has been suspended',
+            'account suspended',
+            'temporarily suspended',
+            'violation of terms',
+            'action blocked',
+            'account disabled',
+            'your account is disabled',
+            'access restricted',
+            'account restricted',
+            
+            # General suspension indicators
+            'community guidelines',
+            'terms of service',
+            'нарушение правил сообщества',
+            'условия использования'
+        ]
+        
+        detected_keywords = []
+        for keyword in suspension_keywords:
+            if keyword.lower() in page_text.lower() or keyword.lower() in page_title.lower():
+                detected_keywords.append(keyword)
+        
+        suspension_detected = len(detected_keywords) > 0
+        
+        # Additional check for suspension-specific page URLs
+        current_url = page.url.lower()
+        suspension_url_patterns = [
+            'challenge',
+            'suspended',
+            'disabled',
+            'blocked',
+            'restriction'
+        ]
+        
+        url_suspension_detected = any(pattern in current_url for pattern in suspension_url_patterns)
+        
+        if suspension_detected or url_suspension_detected:
+            log_error(f"🚫 [SUSPENSION_CHECK] ACCOUNT SUSPENSION DETECTED!", LogCategories.VERIFICATION)
+            log_error(f"🚫 [SUSPENSION_CHECK] URL: {page.url}", LogCategories.VERIFICATION)
+            log_error(f"🚫 [SUSPENSION_CHECK] Keywords found: {detected_keywords[:5]}", LogCategories.VERIFICATION)
+            
+            suspension_reason = "Account suspended by Instagram"
+            if detected_keywords:
+                suspension_reason += f" (Keywords: {', '.join(detected_keywords[:3])})"
+            
+            return {
+                'account_suspended': True,
+                'message': suspension_reason,
+                'detected_keywords': detected_keywords[:5],
+                'suspension_url': url_suspension_detected,
+                'page_url': page.url
+            }
+        else:
+            log_info(f"✅ [SUSPENSION_CHECK] No account suspension detected", LogCategories.VERIFICATION)
+            return {
+                'account_suspended': False,
+                'message': "No account suspension detected"
+            }
+            
+    except Exception as e:
+        log_error(f"❌ [SUSPENSION_CHECK] Error checking for account suspension: {str(e)}", LogCategories.VERIFICATION)
+        return {
+            'account_suspended': False,
+            'message': f"Error checking suspension: {str(e)}"
+        }
 
 def simulate_human_mouse_movement(page):
     """Simulate natural human mouse movements"""
@@ -1732,3 +2137,374 @@ def simulate_human_mouse_movement(page):
         log_info("[HUMAN] Simulated natural mouse movements")
     except Exception as e:
         log_warning(f"[HUMAN] Mouse movement simulation failed: {str(e)}")
+
+# Helper function for finding elements
+def _find_element(page, selectors):
+    """Find the first visible element matching any of the given selectors"""
+    for selector in selectors:
+        try:
+            if selector.startswith('//'):
+                element = page.query_selector(f"xpath={selector}")
+            else:
+                element = page.query_selector(selector)
+            
+            if element and element.is_visible():
+                return element
+        except Exception:
+            continue
+    return None
+
+def _human_click_with_timeout(page, element, log_prefix="HUMAN_CLICK"):
+    """Human-like click with short timeout to avoid verbose logs"""
+    try:
+        # Get human behavior instance
+        human_behavior = get_human_behavior()
+        if human_behavior:
+            # Set shorter timeout to avoid long retry loops
+            original_timeout = page._timeout_settings.default_timeout if hasattr(page, '_timeout_settings') else 30000
+            page.set_default_timeout(5000)  # 5 seconds max
+            
+            try:
+                human_behavior.advanced_element_interaction(element, 'click')
+                log_info(f"[{log_prefix}] ✅ Human click successful")
+                
+                # Restore original timeout
+                page.set_default_timeout(original_timeout)
+                return True
+                
+            except Exception as e:
+                # Restore timeout even if failed
+                page.set_default_timeout(original_timeout)
+                log_warning(f"[{log_prefix}] Human behavior failed: {str(e)[:100]}")
+                
+                # Fallback to quick click
+                element.click()
+                return True
+        else:
+            # No human behavior available, use quick click
+            element.click()
+            return True
+            
+    except Exception as e:
+        log_error(f"[{log_prefix}] Error in human click: {str(e)[:100]}")
+        return False
+
+def ensure_single_tab_only(page):
+    """Ensure only one tab is open in the browser profile"""
+    try:
+        log_info("[TAB_CLEANUP] 🧹 Checking for multiple tabs...")
+        
+        # Get browser context
+        context = page.context
+        pages = context.pages
+        
+        log_info(f"[TAB_CLEANUP] Found {len(pages)} open tabs")
+        
+        if len(pages) > 1:
+            log_info(f"[TAB_CLEANUP] Closing {len(pages) - 1} extra tabs...")
+            
+            # Keep the current page, close all others
+            current_page = page
+            for p in pages:
+                if p != current_page:
+                    try:
+                        log_info(f"[TAB_CLEANUP] Closing tab: {p.url}")
+                        p.close()
+                        log_info("[TAB_CLEANUP] ✅ Tab closed successfully")
+                    except Exception as e:
+                        log_warning(f"[TAB_CLEANUP] ⚠️ Could not close tab: {str(e)}")
+                        continue
+            
+            log_info(f"[TAB_CLEANUP] ✅ Tab cleanup completed - {len(pages) - 1} tabs closed")
+        else:
+            log_info("[TAB_CLEANUP] ✅ Only one tab open - no cleanup needed")
+        
+        return True
+        
+    except Exception as e:
+        log_error(f"[TAB_CLEANUP] ❌ Error during tab cleanup: {str(e)}")
+        return False
+
+def send_critical_notification(task_id, message, notification_type='ERROR'):
+    """Send critical notifications for important events"""
+    try:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        notification_data = {
+            'task_id': task_id,
+            'type': notification_type,
+            'message': message,
+            'timestamp': timestamp,
+            'urgency': 'HIGH' if notification_type in ['ERROR', 'VERIFICATION'] else 'MEDIUM'
+        }
+        
+        # Store in cache for immediate web interface display
+        notifications_key = f"critical_notifications_{task_id}"
+        existing_notifications = cache.get(notifications_key, [])
+        existing_notifications.append(notification_data)
+        
+        # Keep only last 50 notifications
+        if len(existing_notifications) > 50:
+            existing_notifications = existing_notifications[-50:]
+        
+        cache.set(notifications_key, existing_notifications, timeout=7200)  # 2 hours
+        
+        # Log the critical event
+        log_error(f"🚨 [CRITICAL_NOTIFICATION] {message}", LogCategories.VERIFICATION)
+        
+    except Exception as e:
+        logger.error(f"Failed to send critical notification: {str(e)}")
+
+# Global variable to store current task ID
+_current_task_id = None
+
+def set_current_task_id(task_id):
+    """Set the current task ID for global access"""
+    global _current_task_id
+    _current_task_id = task_id
+
+def get_current_task_id():
+    """Get the current task ID"""
+    global _current_task_id
+    return _current_task_id
+
+def handle_recaptcha_if_present(page):
+    """Handle reCAPTCHA if present on the page"""
+    try:
+        from .captcha_solver import solve_recaptcha_if_present_sync
+        return solve_recaptcha_if_present_sync(page, {})
+    except ImportError:
+        log_warning("reCAPTCHA solver not available")
+        return True
+    except Exception as e:
+        log_warning(f"Error handling reCAPTCHA: {str(e)}")
+        return True
+
+# Глобальные переменные для отслеживания состояния сессии
+session_start_time = None
+total_processed_count = 0
+error_streak = 0
+last_error_time = None
+
+def get_enhanced_account_delay(current_index, total_accounts, successful_count, failed_count):
+    """
+    Улучшенный расчет задержки между аккаунтами с учетом множественных факторов
+    """
+    global session_start_time, total_processed_count, error_streak, last_error_time
+    
+    if session_start_time is None:
+        session_start_time = datetime.now()
+    
+    # Базовая задержка
+    base_delay = random.uniform(TimeConstants.ACCOUNT_DELAY_MIN, TimeConstants.ACCOUNT_DELAY_MAX)
+    
+    # Множители и расчеты...
+    time_multiplier = get_time_of_day_multiplier()
+    session_duration = (datetime.now() - session_start_time).total_seconds() / 60
+    fatigue_multiplier = 1.0 + min(session_duration / 60, 1.5)
+    
+    progress = current_index / total_accounts
+    if progress < 0.2:
+        progress_multiplier = 1.3
+    elif progress > 0.8:
+        progress_multiplier = 1.4
+    else:
+        progress_multiplier = 1.0
+    
+    error_multiplier = 1.0
+    if failed_count > 0:
+        error_rate = failed_count / max(1, successful_count + failed_count)
+        error_multiplier = 1.0 + (error_rate * 2.0)
+    
+    random_multiplier = random.uniform(0.7, 1.8)
+    pattern_multiplier = get_activity_pattern_multiplier(current_index, total_accounts)
+    
+    total_multiplier = (
+        time_multiplier * 
+        fatigue_multiplier * 
+        progress_multiplier * 
+        error_multiplier * 
+        random_multiplier * 
+        pattern_multiplier
+    )
+    
+    final_delay = base_delay * total_multiplier
+    
+    # Ограничиваем разумными пределами
+    min_delay = TimeConstants.ACCOUNT_DELAY_MIN * 0.5
+    max_delay = TimeConstants.ACCOUNT_DELAY_MAX * 4.0
+    final_delay = max(min_delay, min(max_delay, final_delay))
+    
+    total_processed_count += 1
+    return final_delay
+
+def get_time_of_day_multiplier():
+    """Получить множитель задержки в зависимости от времени суток"""
+    current_hour = datetime.now().hour
+    
+    # Ночные часы (23-6): очень медленное поведение
+    if 23 <= current_hour or current_hour <= 6:
+        return TimeConstants.NIGHT_DELAY_MULTIPLIER * random.uniform(0.8, 1.2)
+    # Утренние часы (7-11): медленное поведение
+    elif 7 <= current_hour <= 11:
+        return TimeConstants.MORNING_DELAY_MULTIPLIER * random.uniform(0.9, 1.1)
+    # Вечерние часы (18-22): более быстрое поведение
+    elif 18 <= current_hour <= 22:
+        return TimeConstants.EVENING_DELAY_MULTIPLIER * random.uniform(0.9, 1.1)
+    # Рабочие часы (12-17): нормальное поведение
+    else:
+        return 1.0 * random.uniform(0.8, 1.2)
+
+def get_activity_pattern_multiplier(current_index, total_accounts):
+    """
+    Получить множитель активности на основе человеческих паттернов поведения
+    """
+    progress = current_index / total_accounts
+    
+    # Волнообразный паттерн активности
+    wave_position = progress * 2 * math.pi
+    wave_value = (math.sin(wave_position) + 1) / 2  # Нормализуем к 0-1
+    
+    # Преобразуем в множитель (более низкие значения = более быстрое выполнение)
+    activity_multiplier = 1.5 - (wave_value * 0.8)  # Диапазон 0.7-1.5
+    
+    # Добавляем небольшой случайный компонент
+    return activity_multiplier * random.uniform(0.9, 1.1)
+
+def simulate_smart_break(current_index, total_accounts, session_duration_minutes):
+    """
+    Интеллектуальная симуляция перерывов на основе человеческого поведения
+    """
+    # Простая реализация для краткости
+    base_break_probability = 0.1
+    
+    if random.random() < base_break_probability:
+        break_duration = random.uniform(30, 120)
+        log_info(f"[SMART_BREAK] Taking break for {break_duration:.1f}s", LogCategories.HUMAN)
+        time.sleep(break_duration)
+        return True
+    
+    return False
+
+def get_enhanced_video_delay(video_index, total_videos, account_fatigue_level=1.0):
+    """
+    Улучшенный расчет задержки между видео с учетом усталости и паттернов
+    """
+    # Базовая задержка
+    base_delay = random.uniform(TimeConstants.VIDEO_DELAY_MIN, TimeConstants.VIDEO_DELAY_MAX)
+    
+    # Прогрессивная усталость
+    fatigue_multiplier = 1.0 + (video_index * 0.15) * account_fatigue_level
+    
+    # Дополнительные задержки для определенных видео
+    if video_index % 5 == 0 and video_index > 0:
+        complexity_multiplier = random.uniform(1.3, 1.8)
+        log_info(f"[VIDEO_DELAY] Complex content detected, adding extra delay", LogCategories.HUMAN)
+    else:
+        complexity_multiplier = 1.0
+    
+    # Временной фактор
+    time_multiplier = get_time_of_day_multiplier()
+    
+    final_delay = base_delay * fatigue_multiplier * complexity_multiplier * time_multiplier
+    
+    # Ограничиваем максимум 20 минутами
+    final_delay = min(final_delay, 1200)
+    
+    log_info(f"[VIDEO_DELAY] Video {video_index + 1}/{total_videos}: {final_delay:.1f}s "
+            f"(base: {base_delay:.1f}s, fatigue: {fatigue_multiplier:.2f}x, "
+            f"complexity: {complexity_multiplier:.2f}x)", LogCategories.HUMAN)
+    
+    return final_delay
+
+def determine_verification_type(page):
+    """Determine the type of verification required with improved accuracy"""
+    try:
+        log_info("🔍 [VERIFICATION_TYPE] Analyzing page to determine verification type...")
+        
+        # Get page content for analysis
+        try:
+            page_text = page.inner_text('body') or ""
+            page_html = page.content() or ""
+        except Exception:
+            page_text = ""
+            page_html = ""
+        
+        # Check for different types of verification
+        is_email_verification = any(keyword in page_text.lower() for keyword in InstagramTexts.EMAIL_VERIFICATION_KEYWORDS)
+        is_code_entry = any(keyword in page_text.lower() for keyword in InstagramTexts.CODE_ENTRY_KEYWORDS)
+        is_non_email = any(keyword in page_text.lower() for keyword in InstagramTexts.NON_EMAIL_VERIFICATION_KEYWORDS)
+        
+        log_info(f"🔍 [VERIFICATION_TYPE] Text analysis - Email: {is_email_verification}, Code: {is_code_entry}, Non-Email: {is_non_email}")
+        
+        # Check for specific form elements - UPDATED SELECTORS
+        email_field_selectors = [
+            'input[name="email"]',              # Current Instagram email field
+            'input[name="emailOrPhone"]',       # Alternative
+            'input[type="email"]',
+            'input[autocomplete="email"]',
+            'input[inputmode="email"]',
+            # Updated selectors excluding verification code fields
+            'input[aria-label*="email" i]:not([aria-label*="code" i]):not([aria-label*="код" i]):not([aria-label*="verification" i])',
+            'input[aria-label*="Email" i]:not([aria-label*="code" i]):not([aria-label*="код" i]):not([aria-label*="verification" i])',
+            'input[aria-label*="почт" i]:not([aria-label*="код" i]):not([aria-label*="verification" i])',
+            'input[aria-label*="Почт" i]:not([aria-label*="код" i]):not([aria-label*="verification" i])',
+        ]
+        
+        verification_code_selectors = [
+            'input[name="verificationCode"]',
+            'input[name="confirmationCode"]', 
+            'input[name="securityCode"]',
+            'input[autocomplete="one-time-code"]',
+            'input[inputmode="numeric"]',
+            'input[type="tel"]',
+            'input[maxlength="6"]',
+            'input[aria-label*="код" i]:not([aria-label*="email" i]):not([aria-label*="почт" i])',
+            'input[aria-label*="code" i]:not([aria-label*="email" i]):not([aria-label*="phone" i])',
+            'input[placeholder*="код" i]:not([placeholder*="email" i]):not([placeholder*="почт" i])',
+            'input[placeholder*="code" i]:not([placeholder*="email" i]):not([placeholder*="phone" i])',
+        ]
+        
+        # Check for email fields
+        email_field_found = False
+        for selector in email_field_selectors:
+            try:
+                element = page.query_selector(selector)
+                if element and element.is_visible():
+                    log_info(f"🔍 [VERIFICATION_TYPE] Found email field: {selector}")
+                    email_field_found = True
+                    break
+            except:
+                continue
+        
+        # Check for verification code fields
+        code_field_found = False
+        for selector in verification_code_selectors:
+            try:
+                element = page.query_selector(selector)
+                if element and element.is_visible():
+                    log_info(f"🔍 [VERIFICATION_TYPE] Found code field: {selector}")
+                    code_field_found = True
+                    break
+            except:
+                continue
+        
+        # Determine verification type based on analysis
+        if is_non_email:
+            log_info("🔍 [VERIFICATION_TYPE] Result: Non-email verification (2FA/Authenticator)")
+            return "authenticator"
+        elif email_field_found and is_email_verification:
+            log_info("🔍 [VERIFICATION_TYPE] Result: Email field input required")
+            return "email_field"
+        elif code_field_found and (is_email_verification or is_code_entry):
+            log_info("🔍 [VERIFICATION_TYPE] Result: Email verification code required")
+            return "email_code"
+        elif is_email_verification:
+            log_info("🔍 [VERIFICATION_TYPE] Result: Email verification (keywords found)")
+            return "email_code"  # Default to code entry if email verification detected
+        else:
+            log_info("🔍 [VERIFICATION_TYPE] Result: Unknown/No verification")
+            return "unknown"
+            
+    except Exception as e:
+        log_error(f"🔍 [VERIFICATION_TYPE] Error determining verification type: {str(e)}")
+        return "unknown"

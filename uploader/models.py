@@ -64,6 +64,7 @@ class InstagramAccount(models.Model):
         ('INACTIVE', 'Inactive'),
         ('PHONE_VERIFICATION_REQUIRED', 'Phone Verification Required'),
         ('HUMAN_VERIFICATION_REQUIRED', 'Human Verification Required'),
+        ('SUSPENDED', 'Suspended'),
     ]
     
     username = models.CharField(max_length=100, unique=True)
@@ -263,6 +264,7 @@ class BulkUploadAccount(models.Model):
         ('FAILED', 'Failed'),
         ('PHONE_VERIFICATION_REQUIRED', 'Phone Verification Required'),
         ('HUMAN_VERIFICATION_REQUIRED', 'Human Verification Required'),
+        ('SUSPENDED', 'Suspended'),
     ]
     
     bulk_task = models.ForeignKey(

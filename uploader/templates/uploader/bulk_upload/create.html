@@ -741,6 +741,9 @@
                                                         {% elif account.status == 'HUMAN_VERIFICATION_REQUIRED' %}
                                                             <i class="bi bi-person-check-fill text-warning me-1"></i>
                                                             <span class="text-warning fw-medium">Human Verification Required</span>
+                                                        {% elif account.status == 'SUSPENDED' %}
+                                                            <i class="bi bi-x-circle-fill text-danger me-1"></i>
+                                                            <span class="text-danger fw-medium">Account Suspended</span>
                                                         {% elif account.status == 'BLOCKED' %}
                                                             <i class="bi bi-x-circle-fill text-danger me-1"></i>
                                                             <span class="text-danger fw-medium">Blocked Account</span>
@@ -774,6 +777,10 @@
                                                         {% elif account.status == 'HUMAN_VERIFICATION_REQUIRED' %}
                                                         <span class="badge-custom" style="background: rgba(245, 158, 11, 0.1); color: #d97706; border-color: rgba(245, 158, 11, 0.3);">
                                                             <i class="bi bi-person-check me-1"></i>Human Verification
+                                                        </span>
+                                                        {% elif account.status == 'SUSPENDED' %}
+                                                        <span class="badge-custom" style="background: rgba(239, 68, 68, 0.1); color: #dc2626; border-color: rgba(239, 68, 68, 0.3);">
+                                                            <i class="bi bi-x-circle me-1"></i>Suspended
                                                         </span>
                                                         {% elif account.status == 'BLOCKED' %}
                                                         <span class="badge-custom" style="background: rgba(239, 68, 68, 0.1); color: #dc2626; border-color: rgba(239, 68, 68, 0.3);">
@@ -811,7 +818,7 @@
                                                         {% endif %}
                                                         
                                                         <!-- Warning badge for problematic accounts -->
-                                                        {% if account.status in 'BLOCKED,LIMITED,PHONE_VERIFICATION_REQUIRED,HUMAN_VERIFICATION_REQUIRED' %}
+                                                        {% if account.status in 'BLOCKED,LIMITED,PHONE_VERIFICATION_REQUIRED,HUMAN_VERIFICATION_REQUIRED,SUSPENDED' %}
                                                         <span class="badge-custom" style="background: rgba(239, 68, 68, 0.1); color: #dc2626; border-color: rgba(239, 68, 68, 0.3);">
                                                             <i class="bi bi-exclamation-triangle me-1"></i>Needs Attention
                                                         </span>

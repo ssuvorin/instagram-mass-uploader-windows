@@ -71,6 +71,8 @@
                                 <span class="badge badge-phone-verification-required">📱 Phone Verification Required</span>
                                 {% elif account.status == 'HUMAN_VERIFICATION_REQUIRED' %}
                                 <span class="badge badge-human-verification-required">🤖 Human Verification Required</span>
+                                {% elif account.status == 'SUSPENDED' %}
+                                <span class="badge badge-suspended">🚫 Suspended</span>
                                 {% else %}
                                 <span class="badge badge-inactive">Unknown</span>
                                 {% endif %}

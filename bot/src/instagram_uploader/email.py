@@ -2,6 +2,8 @@ import email
 import imaplib
 import poplib
 import re
+import time
+from datetime import datetime, timedelta
 from email.header import decode_header
 from email.policy import default
 
@@ -49,6 +51,28 @@ class Email:
         # Add more email providers as needed
     }
 
+    # Improved Instagram-specific verification code patterns
+    INSTAGRAM_CODE_PATTERNS = [
+        # Most specific patterns first
+        r"(\d{6})\s+is your Instagram verification code",
+        r"(\d{6})\s+is your verification code for Instagram",
+        r"Instagram.*?verification.*?code.*?(\d{6})",
+        r"verification.*?code.*?Instagram.*?(\d{6})",
+        r"код подтверждения.*?Instagram.*?(\d{6})",
+        r"Instagram.*?код подтверждения.*?(\d{6})",
+        r"Instagram.*?(\d{6})",
+        # HTML patterns for Instagram emails
+        r'<font size="6">(\d{6})</font>',
+        r'<font size=3D"6">(\d{6})</font>',
+        r'<span[^>]*>(\d{6})</span>',
+        r'<div[^>]*>(\d{6})</div>',
+        # Generic patterns (use as last resort)
+        r"verification code[:\s]*(\d{6})",
+        r"код подтверждения[:\s]*(\d{6})",
+        r"security code[:\s]*(\d{6})",
+        r"(\d{6})",  # Last resort - 6 digit code only
+    ]
+
     def __init__(self, login, password):
         self.login = login
         self.password = password
@@ -78,9 +102,25 @@ class Email:
             print(f"📧 [EMAIL_CLIENT] ⚠️ No specific config for {self.domain}, will try common servers")
             return None
 
-    def get_verification_code(self):
+    def get_verification_code(self, max_retries=3, retry_delay=30):
+        """Get verification code with retry logic and time filtering"""
         print(f"📧 [EMAIL_CLIENT] Starting verification code retrieval for: {self.login}")
         
+        for retry in range(max_retries):
+            if retry > 0:
+                print(f"📧 [EMAIL_CLIENT] Retry attempt {retry + 1}/{max_retries}")
+                time.sleep(retry_delay)
+            
+            code = self._attempt_get_verification_code()
+            if code:
+                print(f"📧 [EMAIL_CLIENT] ✅ Successfully retrieved code: {code}")
+                return code
+        
+        print(f'📧 [EMAIL_CLIENT] ❌ Failed to get verification code after {max_retries} attempts')
+        return None
+
+    def _attempt_get_verification_code(self):
+        """Single attempt to get verification code"""
         # If we have a specific server config, try it first
         if self.server_config:
             print(f"📧 [EMAIL_CLIENT] Using specific server for {self.domain}")
@@ -91,7 +131,6 @@ class Email:
                     self.server_config['port']
                 )
                 if code:
-                    print(f"📧 [EMAIL_CLIENT] ✅ Successfully got code from {self.domain}: {code}")
                     return code
             elif self.server_config['type'] == 'pop3':
                 code = self._get_verification_pop3(
@@ -99,45 +138,72 @@ class Email:
                     self.server_config['port']
                 )
                 if code:
-                    print(f"📧 [EMAIL_CLIENT] ✅ Successfully got code from {self.domain}: {code}")
                     return code
         
         # Fallback: try common servers if specific config failed or not found
         print(f"📧 [EMAIL_CLIENT] Trying fallback servers...")
         
-        # Try notletters.com first (common for temp emails)
-        print(f"📧 [EMAIL_CLIENT] Trying notletters.com IMAP server...")
-        res = self.get_verification_imap_notletters()
-        if res:
-            print(f"📧 [EMAIL_CLIENT] ✅ Successfully got code from notletters.com: {res}")
-            return res
+        fallback_servers = [
+            ('imap.notletters.com', 993, 'imap'),
+            ('imap-mail.outlook.com', 993, 'imap'),
+            ('imap.firstmail.ltd', 995, 'pop3'),
+            ('imap.rambler.ru', 993, 'imap'),
+        ]
+        
+        for server, port, server_type in fallback_servers:
+            print(f"📧 [EMAIL_CLIENT] Trying {server_type.upper()}: {server}:{port}")
+            try:
+                if server_type == 'imap':
+                    code = self._get_verification_imap(server, port)
+                else:
+                    code = self._get_verification_pop3(server, port)
+                
+                if code:
+                    return code
+            except Exception as e:
+                print(f"📧 [EMAIL_CLIENT] ❌ {server} failed: {str(e)}")
+                continue
+        
+        return None
+
+    def _is_recent_email(self, date_str):
+        """Check if email is recent (within last 15 minutes)"""
+        try:
+            # Parse email date
+            email_date = email.utils.parsedate_to_datetime(date_str)
+            current_time = datetime.now(email_date.tzinfo)
+            time_diff = current_time - email_date
             
-        # Try hotmail next
-        print(f"📧 [EMAIL_CLIENT] Trying Hotmail/Outlook IMAP server...")
-        res = self.get_verification_code_hotmail()
-        if res:
-            print(f"📧 [EMAIL_CLIENT] ✅ Successfully got code from Hotmail: {res}")
-            return res
-            
-        # Try POP3 server
-        print(f"📧 [EMAIL_CLIENT] Trying POP3 server...")
-        res = self.get_verification_code_pop3()
-        if res:
-            print(f"📧 [EMAIL_CLIENT] ✅ Successfully got code from POP3: {res}")
-            return res
-            
-        # Try IMAP rambler as fallback
-        print(f"📧 [EMAIL_CLIENT] Trying Rambler IMAP server as fallback...")
-        res = self.get_verification_imap()
-        if res:
-            print(f"📧 [EMAIL_CLIENT] ✅ Successfully got code from Rambler: {res}")
-            return res
-            
-        print('📧 [EMAIL_CLIENT] ❌ Failed to get verification code from all email servers')
+            # Consider email recent if it's within 15 minutes
+            return time_diff.total_seconds() <= 900  # 15 minutes
+        except Exception as e:
+            print(f"📧 [DATE_CHECK] Could not parse date {date_str}: {str(e)}")
+            return True  # If we can't parse date, assume it's recent
+
+    def _extract_code_with_patterns(self, text, source="unknown"):
+        """Extract verification code using improved patterns"""
+        print(f"📧 [CODE_EXTRACT] Searching for code in {source}")
+        
+        for i, pattern in enumerate(self.INSTAGRAM_CODE_PATTERNS):
+            try:
+                match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+                if match:
+                    code = match.group(1)
+                    # Validate code (should be 6 digits for Instagram)
+                    if len(code) == 6 and code.isdigit():
+                        print(f"📧 [CODE_EXTRACT] ✅ Found valid code with pattern {i+1}: {code}")
+                        return code
+                    else:
+                        print(f"📧 [CODE_EXTRACT] Invalid code format: {code} (pattern {i+1})")
+            except Exception as e:
+                print(f"📧 [CODE_EXTRACT] Pattern {i+1} failed: {str(e)}")
+                continue
+        
+        print(f"📧 [CODE_EXTRACT] ❌ No valid code found in {source}")
         return None
 
     def _get_verification_imap(self, server, port):
-        """Generic IMAP verification code retrieval"""
+        """Generic IMAP verification code retrieval with improved filtering"""
         print(f"📧 [IMAP] Connecting to IMAP server: {server}:{port}")
         try:
             # Подключение к IMAP
@@ -152,93 +218,80 @@ class Email:
             print(f"📧 [IMAP] Selecting inbox...")
             mail.select("inbox")
 
-            # Поиск последнего письма
-            print(f"📧 [IMAP] Searching for emails...")
-            status, messages = mail.search(None, "ALL")
+            # Search for recent emails from Instagram
+            print(f"📧 [IMAP] Searching for recent emails...")
+            
+            # Search for emails from the last hour
+            since_date = (datetime.now() - timedelta(hours=1)).strftime("%d-%b-%Y")
+            status, messages = mail.search(None, f'(SINCE "{since_date}")')
+            
             if status != "OK":
                 print(f"📧 [IMAP] ❌ Search failed with status: {status}")
                 return None
 
-            # Получаем ID последнего письма
             message_ids = messages[0].split()
             if not message_ids:
-                print(f"📧 [IMAP] ❌ No emails found in inbox")
+                print(f"📧 [IMAP] ❌ No recent emails found")
                 return None
 
-            print(f"📧 [IMAP] Found {len(message_ids)} emails in inbox")
-            latest_email_id = message_ids[-1]
-            print(f"📧 [IMAP] Processing latest email ID: {latest_email_id}")
-
-            # Получаем письмо
-            status, msg_data = mail.fetch(latest_email_id, "(RFC822)")
-            if status != "OK":
-                print(f"📧 [IMAP] ❌ Failed to fetch email with status: {status}")
-                return None
-
-            print(f"📧 [IMAP] Email fetched successfully, parsing...")
-            # Парсим письмо
-            raw_email = msg_data[0][1]
-            msg = email.message_from_bytes(raw_email)
-
-            # Декодируем заголовок
-            subject = decode_header(msg["Subject"])[0][0]
-            if isinstance(subject, bytes):
-                subject = subject.decode()
-            print(f"📧 [IMAP] Email subject: '{subject}'")
+            print(f"📧 [IMAP] Found {len(message_ids)} recent emails")
             
-            # Ищем код с помощью регулярного выражения в заголовке
-            print(f"📧 [IMAP] Searching for verification code in subject...")
-            
-            # Multiple patterns for verification codes in subject
-            subject_patterns = [
-                r"(\d+) is your verification code",
-                r"verification code[:\s]*(\d+)",
-                r"код подтверждения[:\s]*(\d+)",
-                r"(\d{4,8})",  # Generic 4-8 digit code
-            ]
-            
-            for pattern in subject_patterns:
-                match = re.search(pattern, subject, re.IGNORECASE)
-                if match:
-                    code = match.group(1)
-                    print(f"📧 [IMAP] ✅ Found verification code in subject: {code}")
+            # Process emails from newest to oldest
+            for email_id in reversed(message_ids[-10:]):  # Check last 10 emails
+                print(f"📧 [IMAP] Processing email ID: {email_id}")
+                
+                # Получаем письмо
+                status, msg_data = mail.fetch(email_id, "(RFC822)")
+                if status != "OK":
+                    continue
+
+                # Парсим письмо
+                raw_email = msg_data[0][1]
+                msg = email.message_from_bytes(raw_email)
+
+                # Check email date
+                date_str = msg.get("Date", "")
+                if not self._is_recent_email(date_str):
+                    print(f"📧 [IMAP] Skipping old email: {date_str}")
+                    continue
+
+                # Check if email is from Instagram
+                from_address = msg.get("From", "").lower()
+                subject = decode_header(msg["Subject"])[0][0]
+                if isinstance(subject, bytes):
+                    subject = subject.decode()
+                
+                print(f"📧 [IMAP] Email from: {from_address}")
+                print(f"📧 [IMAP] Subject: {subject}")
+                
+                # Check if this looks like an Instagram email
+                if not any(keyword in from_address for keyword in ['instagram', 'facebook', 'meta']) and \
+                   not any(keyword in subject.lower() for keyword in ['instagram', 'verification', 'код']):
+                    print(f"📧 [IMAP] Skipping non-Instagram email")
+                    continue
+                
+                # Try to extract code from subject first
+                code = self._extract_code_with_patterns(subject, "subject")
+                if code:
+                    return code
+                
+                # Extract email body content
+                body = ""
+                if msg.is_multipart():
+                    for part in msg.walk():
+                        if part.get_content_type() == "text/plain":
+                            body += part.get_payload(decode=True).decode('utf-8', errors='ignore')
+                        elif part.get_content_type() == "text/html":
+                            body += part.get_payload(decode=True).decode('utf-8', errors='ignore')
+                else:
+                    body = msg.get_payload(decode=True).decode('utf-8', errors='ignore')
+                
+                # Try to extract code from body
+                code = self._extract_code_with_patterns(body, "body")
+                if code:
                     return code
             
-            print(f"📧 [IMAP] No verification code found in subject, checking email body...")
-            
-            # Extract email body content
-            body = ""
-            if msg.is_multipart():
-                print(f"📧 [IMAP] Email is multipart, extracting text content...")
-                for part in msg.walk():
-                    if part.get_content_type() == "text/plain":
-                        body += part.get_payload(decode=True).decode('utf-8', errors='ignore')
-                    elif part.get_content_type() == "text/html":
-                        body += part.get_payload(decode=True).decode('utf-8', errors='ignore')
-            else:
-                print(f"📧 [IMAP] Email is single part")
-                body = msg.get_payload(decode=True).decode('utf-8', errors='ignore')
-            
-            print(f"📧 [IMAP] Body content length: {len(body)} characters")
-            
-            # Search for verification code patterns in body
-            print(f"📧 [IMAP] Searching for verification code patterns in body...")
-            body_patterns = [
-                r'<font size="6">(\d+)</font>',
-                r'<font size=3D"6">(\d+)</font>',
-                r'verification code[:\s]*(\d+)',
-                r'код подтверждения[:\s]*(\d+)',
-                r'(\d{4,8})',  # Generic 4-8 digit code
-            ]
-            
-            for pattern in body_patterns:
-                result = re.search(pattern, body, re.IGNORECASE)
-                if result:
-                    code = result.group(1)
-                    print(f"📧 [IMAP] ✅ Found verification code in body: {code}")
-                    return code
-            
-            print(f"📧 [IMAP] ❌ No verification code pattern found in email")
+            print(f"📧 [IMAP] ❌ No verification code found in recent emails")
             return None
 
         except Exception as e:
@@ -253,7 +306,7 @@ class Email:
                 pass
 
     def _get_verification_pop3(self, server, port):
-        """Generic POP3 verification code retrieval"""
+        """Generic POP3 verification code retrieval with improved filtering"""
         print(f"📧 [POP3] Connecting to POP3 server: {server}:{port}")
         try:
             # Подключение к серверу
@@ -277,56 +330,64 @@ class Email:
                 mail.quit()
                 return None
 
-            # Получаем последнее письмо (с наибольшим номером)
-            print(f"📧 [POP3] Retrieving latest message (#{num_messages})...")
-            response, lines, octets = mail.retr(num_messages)
-            print(f"📧 [POP3] Message retrieved, size: {octets} bytes")
+            # Check last few messages (up to 5)
+            messages_to_check = min(5, num_messages)
+            for i in range(messages_to_check):
+                message_num = num_messages - i  # Start from newest
+                
+                print(f"📧 [POP3] Retrieving message #{message_num}...")
+                response, lines, octets = mail.retr(message_num)
+                
+                # Преобразуем строки в байты и парсим письмо
+                raw_email = b'\r\n'.join(lines)
+                msg = email.message_from_bytes(raw_email, policy=default)
 
-            # Преобразуем строки в байты и парсим письмо
-            print(f"📧 [POP3] Parsing email message...")
-            raw_email = b'\r\n'.join(lines)
-            msg = email.message_from_bytes(raw_email, policy=default)
+                # Check email date
+                date_str = msg.get("Date", "")
+                if not self._is_recent_email(date_str):
+                    print(f"📧 [POP3] Skipping old email: {date_str}")
+                    continue
 
-            # Декодирование заголовков
-            subject, encoding = decode_header(msg["Subject"])[0]
-            if isinstance(subject, bytes):
-                subject = subject.decode(encoding or "utf-8")
-            print(f"📧 [POP3] Email subject: '{subject}'")
+                # Check if email is from Instagram
+                from_address = msg.get("From", "").lower()
+                subject, encoding = decode_header(msg["Subject"])[0]
+                if isinstance(subject, bytes):
+                    subject = subject.decode(encoding or "utf-8")
+                
+                print(f"📧 [POP3] Email from: {from_address}")
+                print(f"📧 [POP3] Subject: {subject}")
+                
+                # Check if this looks like an Instagram email
+                if not any(keyword in from_address for keyword in ['instagram', 'facebook', 'meta']) and \
+                   not any(keyword in subject.lower() for keyword in ['instagram', 'verification', 'код']):
+                    print(f"📧 [POP3] Skipping non-Instagram email")
+                    continue
 
-            from_, encoding = decode_header(msg.get("From"))[0]
-            if isinstance(from_, bytes):
-                from_ = from_.decode(encoding or "utf-8")
-            print(f"📧 [POP3] Email from: '{from_}'")
+                # Try to extract code from subject first
+                code = self._extract_code_with_patterns(subject, "subject")
+                if code:
+                    mail.quit()
+                    return code
+                
+                # Извлечение текстового содержимого
+                body = ""
+                if msg.is_multipart():
+                    for part in msg.walk():
+                        if part.get_content_type() == "text/plain":
+                            body = part.get_content()
+                            break
+                else:
+                    body = msg.get_content()
 
-            # Извлечение текстового содержимого
-            print(f"📧 [POP3] Extracting email body content...")
-            body = ""
-            if msg.is_multipart():
-                print(f"📧 [POP3] Email is multipart, searching for text/plain part...")
-                for part in msg.walk():
-                    if part.get_content_type() == "text/plain":
-                        body = part.get_content()
-                        print(f"📧 [POP3] Found text/plain part")
-                        break
-            else:
-                print(f"📧 [POP3] Email is single part")
-                body = msg.get_content()
+                # Try to extract code from body
+                code = self._extract_code_with_patterns(body, "body")
+                if code:
+                    mail.quit()
+                    return code
 
-            print(f"📧 [POP3] Body content length: {len(body)} characters")
             mail.quit()
-            print(f"📧 [POP3] Disconnected from server")
-            
-            # Search for verification code pattern
-            print(f"📧 [POP3] Searching for verification code pattern in body...")
-            pattern = r'<font size="6">(\d+)</font>'
-            result = re.search(pattern, body)
-            if result:
-                code = result.group(1)
-                print(f"📧 [POP3] ✅ Found verification code: {code}")
-                return code
-            else:
-                print(f"📧 [POP3] ❌ No verification code pattern found in email body")
-                return None
+            print(f"📧 [POP3] ❌ No verification code found in recent messages")
+            return None
 
         except Exception as e:
             print(f"📧 [POP3] ❌ Error: {str(e)}")
@@ -337,22 +398,6 @@ class Email:
                 except:
                     print(f"📧 [POP3] Warning: Could not clean up connection")
             return None
-
-    def get_verification_code_pop3(self):
-        """Legacy method for FirstMail POP3 - now uses generic method"""
-        return self._get_verification_pop3('imap.firstmail.ltd', 995)
-
-    def get_verification_code_hotmail(self):
-        """Legacy method for Hotmail IMAP - now uses generic method"""
-        return self._get_verification_imap('imap-mail.outlook.com', 993)
-
-    def get_verification_imap_notletters(self):
-        """Legacy method for NotLetters IMAP - now uses generic method"""
-        return self._get_verification_imap('imap.notletters.com', 993)
-
-    def get_verification_imap(self):
-        """Legacy method for Rambler IMAP - now uses generic method"""
-        return self._get_verification_imap('imap.rambler.ru', 993)
 
     def test_connection(self):
         """Test email connection without retrieving verification code"""

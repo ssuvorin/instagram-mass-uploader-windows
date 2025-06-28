@@ -1,0 +1,34 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+1. Mimic Human Behavior
+
+Randomized Delays and Pauses: Introduce small variable time intervals (e.g., using random.uniform) between actions (clicks, scrolling, typing) to simulate natural reaction times.
+
+Smooth Cursor Movements: Use Bézier curves or linear interpolation to move the cursor instead of instant jumps.
+
+Pseudo-Element Scanning: Perform a brief hover or scan of the screen before interacting to emulate a human searching for the right element.
+
+2. Work with Dynamic Tags and Selectors
+
+Robust Locators: Rely on XPath or CSS selectors with unique attributes (data-*, aria-*, role) rather than brittle id values or nth-child indexes.
+
+Selector Fallbacks: Maintain a map of possible selector variations and implement fallback mechanisms if the DOM structure changes.
+
+Text-Based Queries: Enhance selectors by verifying visible text inside the target element.
+
+3. Write Clean, Modular Code
+
+Project Structure: Separate logic into layers (Page Objects, Services, Utils). Each module should have a single responsibility.
+
+Configuration Management: Store all constants, URLs, delay settings, and other parameters in external JSON/YAML configuration files.
+
+Coding Principles: Follow SOLID, DRY, and KISS principles. Avoid code duplication and use descriptive names for functions and classes.
+
+4. Error Handling and Resilience
+
+Retry Mechanisms: On action failures (e.g., click or element not found), retry several times with exponential backoff.
+
+Logging and Monitoring: Implement centralized logging (console + file). Logs must include timestamps, actions performed, selectors used, and outcomes.

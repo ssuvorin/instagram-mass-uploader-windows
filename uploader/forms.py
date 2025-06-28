@@ -64,7 +64,7 @@ class VideoUploadForm(forms.Form):
 
 class BulkUploadTaskForm(forms.ModelForm):
     selected_accounts = forms.ModelMultipleChoiceField(
-        queryset=InstagramAccount.objects.all().order_by('status', 'username'),
+        queryset=None,  # Will be set in __init__
         widget=forms.CheckboxSelectMultiple,
         required=True,
         label="Select Instagram accounts to use"
@@ -91,6 +91,11 @@ class BulkUploadTaskForm(forms.ModelForm):
         label="Упоминания по умолчанию",
         help_text="Упоминания для копирования в отдельные видео (не применяются автоматически)"
     )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set queryset dynamically to get fresh data from database
+        self.fields['selected_accounts'].queryset = InstagramAccount.objects.all().order_by('status', 'username')
     
     class Meta:
         model = BulkUploadTask

@@ -24,13 +24,22 @@ def perform_instagram_login_optimized(page, account_details):
         log_info(f"Starting login process for: {username}")
         
         # Enhanced check if already logged in
-        if _check_if_already_logged_in(page, selectors):
+        logged_in_status = _check_if_already_logged_in(page, selectors)
+        
+        if logged_in_status == "SUSPENDED":
+            log_error(f"🚫 Account {username} is SUSPENDED - cannot proceed with login")
+            return "SUSPENDED"
+        elif logged_in_status:
             log_info(f"✅ Already logged in! Skipping login process for user: {username}")
             return True
         
         # Perform login steps
         if not _fill_login_credentials(page, username, password):
             return False
+        
+        # ✅ ДОПОЛНИТЕЛЬНАЯ ПАУЗА: Ждем после заполнения полей перед отправкой
+        log_info("⏳ Waiting after filling credentials before form submission...")
+        time.sleep(random.uniform(3, 6))  # Дополнительная пауза для человекоподобного поведения
         
         # Submit login form
         if not _submit_login_form(page):
@@ -54,6 +63,52 @@ def _check_if_already_logged_in(page, selectors):
     # Get current URL for context
     current_url = page.url
     log_info(f"🔍 Current URL: {current_url}")
+    
+    # Check for account suspension first - this is critical
+    log_info("🚫 Checking for account suspension...")
+    
+    # Check page text for suspension keywords (PRIMARY METHOD)
+    try:
+        page_text = page.inner_text('body') or ""
+        suspension_keywords = [
+            'мы приостановили ваш аккаунт',
+            'приостановили ваш аккаунт',
+            'аккаунт приостановлен',
+            'ваш аккаунт приостановлен',
+            'account suspended',
+            'account has been suspended',
+            'we suspended your account',
+            'your account is suspended',
+            'your account has been disabled',
+            'account disabled',
+            'аккаунт заблокирован',
+            'ваш аккаунт заблокирован',
+            'временно приостановлен',
+            'temporarily suspended',
+            'осталось',  # "Осталось X дней, чтобы обжаловать"
+            'days left'  # "X days left to appeal"
+        ]
+        
+        for keyword in suspension_keywords:
+            if keyword in page_text.lower():
+                log_error(f"🚫 Account suspension detected from text: '{keyword}'")
+                log_error(f"🚫 Page text sample: '{page_text[:200]}...'")
+                return "SUSPENDED"
+                
+    except Exception as e:
+        log_warning(f"🚫 Could not check page text for suspension: {str(e)}")
+    
+    # Optional secondary check for URL patterns (as backup only)
+    suspension_url_patterns = [
+        '/accounts/suspended',
+        '/challenge/suspended',
+        '/suspended'
+    ]
+    
+    url_indicates_suspension = any(pattern in current_url.lower() for pattern in suspension_url_patterns)
+    if url_indicates_suspension:
+        log_error(f"🚫 Account suspension also detected from URL: {current_url}")
+        return "SUSPENDED"
     
     # First check if we see login form elements
     login_form_present = False
@@ -80,21 +135,41 @@ def _check_if_already_logged_in(page, selectors):
         try:
             element = page.query_selector(indicator)
             if element and element.is_visible():
-                logged_in_found = True
-                found_indicators.append(indicator)
-                log_info(f"✅ Found logged-in indicator {i+1}: {indicator}")
-                
-                # Get element text for additional context
+                # ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: анализируем текст элемента
                 try:
                     element_text = element.text_content() or ""
+                    element_aria_label = element.get_attribute('aria-label') or ""
+                    combined_text = (element_text + " " + element_aria_label).lower()
+                    
+                    # Исключаем элементы связанные с созданием аккаунта
+                    exclusion_keywords = [
+                        'новый аккаунт', 'new account', 
+                        'создать аккаунт', 'create account',
+                        'регистрация', 'sign up', 'signup',
+                        'зарегистрироваться', 'register'
+                    ]
+                    
+                    if any(keyword in combined_text for keyword in exclusion_keywords):
+                        log_info(f"🔍 Skipping element {i+1} (contains account creation text): '{element_text.strip()}'")
+                        continue
+                    
+                    logged_in_found = True
+                    found_indicators.append(indicator)
+                    log_info(f"✅ Found logged-in indicator {i+1}: {indicator}")
+                    
                     if element_text.strip():
                         log_info(f"✅ Element text: '{element_text.strip()}'")
-                except:
-                    pass
+                    
+                except Exception as e:
+                    # Если не можем получить текст, продолжаем как раньше
+                    logged_in_found = True
+                    found_indicators.append(indicator)
+                    log_info(f"✅ Found logged-in indicator {i+1}: {indicator}")
+                    log_warning(f"🔍 Could not analyze element text: {str(e)}")
                 
                 # If we found a strong indicator, we can be confident
                 if any(strong_keyword in indicator.lower() for strong_keyword in [
-                    'главная', 'home', 'создать', 'create', 'профиль', 'profile'
+                    'главная', 'home', 'профиль', 'profile', 'поиск', 'search', 'сообщения', 'messages'
                 ]):
                     log_info(f"✅ Strong logged-in indicator found: {indicator}")
                     break
@@ -145,14 +220,6 @@ def _check_if_already_logged_in(page, selectors):
             
         except Exception as e:
             log_warning(f"🔍 Could not analyze page text: {str(e)}")
-        
-        # Take a screenshot for debugging
-        try:
-            screenshot_path = f"login_check_debug_{int(time.time())}.png"
-            page.screenshot(path=screenshot_path)
-            log_info(f"🔍 Debug screenshot saved: {screenshot_path}")
-        except Exception as e:
-            log_warning(f"🔍 Could not take debug screenshot: {str(e)}")
     
     return False
 
@@ -161,72 +228,272 @@ def _fill_login_credentials(page, username, password):
     """Fill login credentials with human-like behavior"""
     log_info("Not logged in, proceeding with login process...")
     
-    # Wait for and find username input
+    # ✅ УЛУЧШЕННОЕ ЧЕЛОВЕКОПОДОБНОЕ ПОВЕДЕНИЕ: Инициализируем human behavior
+    from .human_behavior import get_human_behavior, init_human_behavior
+    human_behavior = get_human_behavior()
+    if not human_behavior:
+        init_human_behavior(page)
+        human_behavior = get_human_behavior()
+    
+    # ✅ Симулируем сканирование страницы перед началом
+    log_info("👁️ Scanning login page...")
+    human_behavior.simulate_page_scanning()
+    
+    # Wait for and find username input - UPDATED SELECTORS
     try:
-        username_input = page.wait_for_selector('input[name="username"]', timeout=10000)
+        # Try multiple selectors for username field
+        username_selectors = [
+            'input[name="email"]',              # Current Instagram selector  
+            'input[name="username"]',           # Legacy selector
+            'input[name="emailOrPhone"]',       # Alternative selector
+            'input[type="text"]:not([name="pass"])',  # Any text input that's not password
+            'input[aria-label*="Имя пользователя"]',
+            'input[aria-label*="номер мобильного телефона"]',
+            'input[aria-label*="электронный адрес"]',
+            'input[placeholder*="Имя пользователя"]',
+            'input[placeholder*="номер мобильного телефона"]',
+            'input[placeholder*="электронный адрес"]',
+        ]
+        
+        username_input = None
+        used_selector = None
+        
+        for selector in username_selectors:
+            try:
+                username_input = page.wait_for_selector(selector, timeout=3000)
+                if username_input and username_input.is_visible():
+                    used_selector = selector
+                    log_info(f"Found username field with selector: {selector}")
+                    break
+            except:
+                continue
+                
         if not username_input:
-            log_error("Username input not found")
+            log_error("Username input not found with any selector")
             return False
-    except:
-        log_error("Username input not found")
+            
+    except Exception as e:
+        log_error(f"Username input not found: {str(e)}")
         return False
     
-    # Human-like typing for username
+    # ✅ УЛУЧШЕННОЕ ЧЕЛОВЕКОПОДОБНОЕ ПОВЕДЕНИЕ: Ввод имени пользователя
     log_info("Entering username")
-    username_input.click()
-    time.sleep(random.uniform(0.5, 1.0))
     
-    # Clear any existing content and type username character by character
-    username_input.fill('')
-    time.sleep(random.uniform(0.3, 0.7))
+    # Симулируем небольшое раздумье перед вводом
+    human_behavior.simulate_decision_making(options_count=1)
     
-    for char in username:
-        username_input.type(char)
-        time.sleep(random.uniform(0.05, 0.15))
+    # Продвинутое взаимодействие с элементом (движение мыши + клик)
+    human_behavior.advanced_element_interaction(username_input, 'click')
     
-    # Small delay before password
-    time.sleep(random.uniform(0.8, 1.5))
+    # Естественная пауза после клика
+    time.sleep(human_behavior.get_advanced_human_delay(0.3, 0.2, 'thinking'))
     
-    # Find password input
-    password_input = page.query_selector('input[name="password"]')
+    # ✅ Человекоподобная печать с возможными ошибками
+    human_behavior.human_typing(username_input, username, simulate_mistakes=True)
+    
+    # ✅ Симулируем проверку введенного текста (перечитываем)
+    log_info("👁️ Reviewing entered username...")
+    reading_time = human_behavior.simulate_reading_time(len(username))
+    time.sleep(reading_time)
+    
+    # ✅ Естественная пауза между полями
+    transition_delay = human_behavior.get_advanced_human_delay(0.8, 0.4, 'thinking')
+    time.sleep(transition_delay)
+    
+    # ✅ Случайное отвлечение (10% вероятность)
+    human_behavior.simulate_distraction()
+    
+    # Find password input - UPDATED SELECTORS
+    password_selectors = [
+        'input[name="pass"]',               # Current Instagram selector
+        'input[name="password"]',           # Legacy selector  
+        'input[type="password"]',           # Any password input
+        'input[aria-label*="Пароль"]',
+        'input[placeholder*="Пароль"]',
+    ]
+    
+    password_input = None
+    
+    for selector in password_selectors:
+        try:
+            password_input = page.query_selector(selector)
+            if password_input and password_input.is_visible():
+                log_info(f"Found password field with selector: {selector}")
+                break
+        except:
+            continue
+            
     if not password_input:
-        log_error("Password input not found")
+        log_error("Password input not found with any selector")
         return False
     
-    # Human-like typing for password
+    # ✅ УЛУЧШЕННОЕ ЧЕЛОВЕКОПОДОБНОЕ ПОВЕДЕНИЕ: Ввод пароля
     log_info("Entering password")
-    password_input.click()
-    time.sleep(random.uniform(0.3, 0.7))
     
-    # Clear any existing content and type password character by character
-    password_input.fill('')
-    time.sleep(random.uniform(0.3, 0.7))
+    # Симулируем мысленную подготовку пароля
+    human_behavior.simulate_decision_making(options_count=1)
     
-    for char in password:
-        password_input.type(char)
-        time.sleep(random.uniform(0.05, 0.12))
+    # Продвинутое взаимодействие с полем пароля
+    human_behavior.advanced_element_interaction(password_input, 'click')
     
+    # Естественная пауза после клика
+    time.sleep(human_behavior.get_advanced_human_delay(0.2, 0.1, 'thinking'))
+    
+    # ✅ Человекоподобная печать пароля (без ошибок - люди осторожнее с паролями)
+    human_behavior.human_typing(password_input, password, simulate_mistakes=False)
+    
+    # ✅ Небольшая пауза после ввода пароля (проверка)
+    log_info("👁️ Reviewing password field...")
+    time.sleep(human_behavior.get_advanced_human_delay(0.5, 0.3, 'thinking'))
+    
+    # ✅ Симулируем естественный перерыв если нужно
+    human_behavior.simulate_break_pattern()
+    
+    log_info("✅ Login credentials filled with human-like behavior")
     return True
 
 
 def _submit_login_form(page):
     """Submit the login form"""
-    # Human delay before clicking login
-    time.sleep(random.uniform(1.0, 2.0))
+    # ✅ УЛУЧШЕННОЕ ЧЕЛОВЕКОПОДОБНОЕ ПОВЕДЕНИЕ: Получаем human behavior
+    from .human_behavior import get_human_behavior
+    human_behavior = get_human_behavior()
     
-    # Click login button
-    log_info("Clicking login button")
-    login_button = page.query_selector('button[type="submit"]') or page.query_selector('button:has-text("Log in")')
-    if login_button:
-        login_button.click()
+    # ✅ Симулируем время на размышления перед отправкой формы
+    log_info("🤔 Reviewing form before submission...")
+    human_behavior.simulate_decision_making(options_count=2)  # Решение "отправить" или "проверить еще раз"
+    
+    # UPDATED LOGIN BUTTON SELECTORS AND LOGIC
+    log_info("Looking for login button...")
+    
+    # Try multiple selectors for login button
+    login_button_selectors = [
+        # Main submit button selectors
+        'button[type="submit"]',
+        'button:has-text("Войти")',
+        'button:has-text("Log in")',
+        'div[role="button"]:has-text("Войти")',
+        'div[role="button"]:has-text("Log in")',
+        
+        # More specific selectors for Instagram's current structure
+        'button:not([aria-disabled="true"]):has-text("Войти")',
+        'div[role="button"]:not([aria-disabled="true"]):has-text("Войти")',
+        'button:not([aria-disabled="true"]):has-text("Log in")',
+        'div[role="button"]:not([aria-disabled="true"]):has-text("Log in")',
+        
+        # XPath selectors for better targeting
+        '//button[contains(text(), "Войти") and not(@aria-disabled="true")]',
+        '//button[contains(text(), "Log in") and not(@aria-disabled="true")]',
+        '//div[@role="button" and contains(text(), "Войти") and not(@aria-disabled="true")]',
+        '//div[@role="button" and contains(text(), "Log in") and not(@aria-disabled="true")]',
+        
+        # Fallback selectors (may be disabled initially)
+        'button[aria-disabled="true"]:has-text("Войти")',
+        'button[aria-disabled="true"]:has-text("Log in")',
+        'div[role="button"][aria-disabled="true"]:has-text("Войти")',
+        'div[role="button"][aria-disabled="true"]:has-text("Log in")',
+    ]
+    
+    login_button = None
+    used_selector = None
+    
+    # Wait for login button to become enabled (sometimes it's disabled initially)
+    max_wait_time = 10  # seconds
+    wait_interval = 0.5  # seconds
+    waited_time = 0
+    
+    while waited_time < max_wait_time:
+        for selector in login_button_selectors:
+            try:
+                if selector.startswith('//'):
+                    login_button = page.query_selector(f"xpath={selector}")
+                else:
+                    login_button = page.query_selector(selector)
+                
+                if login_button and login_button.is_visible():
+                    # Check if button is enabled
+                    is_disabled = login_button.get_attribute('aria-disabled')
+                    if is_disabled != 'true':
+                        used_selector = selector
+                        log_info(f"Found enabled login button with selector: {selector}")
+                        break
+                    else:
+                        log_info(f"Found login button but it's disabled: {selector}")
+                        
+            except Exception as e:
+                log_warning(f"Error checking selector {selector}: {str(e)}")
+                continue
+        
+        if login_button and used_selector:
+            break
+            
+        # ✅ ЧЕЛОВЕКОПОДОБНОЕ ПОВЕДЕНИЕ: Используем продвинутую задержку вместо простого sleep
+        wait_delay = human_behavior.get_advanced_human_delay(wait_interval, 0.2, 'thinking')
+        time.sleep(wait_delay)
+        waited_time += wait_delay
+        log_info(f"Waiting for login button to become enabled... ({waited_time:.1f}s)")
+    
+    # Try to click the login button
+    if login_button and used_selector:
+        try:
+            log_info(f"Clicking login button with selector: {used_selector}")
+            
+            # ✅ УЛУЧШЕННОЕ ЧЕЛОВЕКОПОДОБНОЕ ПОВЕДЕНИЕ: Продвинутое взаимодействие с кнопкой
+            # 1. Симулируем небольшое колебание перед кликом
+            hesitation_delay = human_behavior.get_advanced_human_delay(0.5, 0.3, 'thinking')
+            time.sleep(hesitation_delay)
+            
+            # 2. Продвинутое взаимодействие (движение мыши + клик)
+            human_behavior.advanced_element_interaction(login_button, 'click')
+            
+            log_info("Login button clicked successfully")
+        except Exception as e:
+            log_warning(f"Error clicking login button: {str(e)}")
+            # Fallback: try pressing Enter on password field
+            log_info("Trying fallback: pressing Enter on password field")
+            password_input = page.query_selector('input[name="pass"]') or page.query_selector('input[type="password"]')
+            if password_input:
+                # ✅ Человекоподобное нажатие Enter
+                human_behavior.advanced_element_interaction(password_input, 'click')
+                time.sleep(human_behavior.get_advanced_human_delay(0.2, 0.1, 'thinking'))
+                password_input.press("Enter")
+            else:
+                log_error("No password field found for Enter fallback")
+                return False
     else:
-        # Fallback: press Enter
-        password_input = page.query_selector('input[name="password"]')
+        log_warning("Login button not found or not enabled, trying Enter key fallback")
+        # Fallback: press Enter on password field
+        password_input = page.query_selector('input[name="pass"]') or page.query_selector('input[type="password"]')
         if password_input:
+            # ✅ Человекоподобное нажатие Enter
+            human_behavior.advanced_element_interaction(password_input, 'click')
+            time.sleep(human_behavior.get_advanced_human_delay(0.2, 0.1, 'thinking'))
             password_input.press("Enter")
+            log_info("Pressed Enter on password field as fallback")
+        else:
+            log_error("No password field found for Enter fallback")
+            return False
     
-    # Wait for navigation or 2FA
-    time.sleep(random.uniform(3, 5))
+    # ✅ УЛУЧШЕННОЕ ОЖИДАНИЕ: Используем продвинутые человекоподобные задержки
+    log_info("⏳ Waiting for page to load after login submission...")
+    
+    # ✅ Симулируем естественное ожидание человека после клика
+    post_click_delay = human_behavior.get_advanced_human_delay(8, 3, 'resting')
+    time.sleep(post_click_delay)
+    
+    # Дополнительно ждем стабилизации DOM
+    try:
+        page.wait_for_load_state("domcontentloaded", timeout=15000)
+        log_info("✅ DOM content loaded")
+    except Exception as e:
+        log_warning(f"⚠️ DOM load timeout: {str(e)}")
+    
+    # ✅ Еще одна естественная пауза с симуляцией ожидания
+    final_wait = human_behavior.get_advanced_human_delay(3, 2, 'resting')
+    time.sleep(final_wait)
+    
+    log_info("✅ Login form submission completed, page should be loaded")
+    
     return True
 
 
@@ -328,14 +595,6 @@ def _check_for_human_verification_dialog(page):
                 log_error("🤖 ❌ This account requires manual human verification")
                 log_error("🤖 ❌ The account cannot be used for automation until verified")
                 
-                # Take a screenshot for debugging
-                try:
-                    screenshot_path = f"human_verification_dialog_{int(time.time())}.png"
-                    page.screenshot(path=screenshot_path)
-                    log_warning(f"🤖 Screenshot saved: {screenshot_path}")
-                except Exception as e:
-                    log_warning(f"🤖 Could not take screenshot: {str(e)}")
-                
                 return True
             else:
                 log_info("🤖 Human verification keywords found in text but no dialog elements detected")
@@ -354,8 +613,34 @@ def _handle_login_completion(page, account_details, selectors):
     """Handle login completion including 2FA and human verification checks"""
     log_info("Checking for 2FA requirement and other post-login dialogs...")
     
-    # Wait a bit more for the page to fully load after login attempt
-    time.sleep(random.uniform(5, 8))
+    # ✅ УЛУЧШЕННОЕ ЧЕЛОВЕКОПОДОБНОЕ ПОВЕДЕНИЕ: Получаем human behavior
+    from .human_behavior import get_human_behavior
+    human_behavior = get_human_behavior()
+    
+    # ✅ УВЕЛИЧЕННОЕ ОЖИДАНИЕ: Больше времени для полной загрузки страницы после логина
+    log_info("⏳ Waiting for page to fully stabilize after login...")
+    
+    # ✅ Симулируем естественное ожидание с движениями мыши
+    initial_wait = human_behavior.get_advanced_human_delay(8, 3, 'resting')
+    human_behavior.simulate_idle_mouse_movement(page, duration=initial_wait)
+    
+    # Дополнительное ожидание загрузки DOM
+    try:
+        page.wait_for_load_state("domcontentloaded", timeout=15000)
+        log_info("✅ DOM content loaded in login completion")
+    except Exception as e:
+        log_warning(f"⚠️ DOM load timeout in login completion: {str(e)}")
+    
+    # ✅ Симулируем естественное изучение страницы после загрузки
+    log_info("👁️ Naturally exploring the page after login...")
+    human_behavior.simulate_ui_exploration(page)
+    
+    # ✅ Еще одна пауза для стабилизации с переключениями внимания
+    stabilization_time = human_behavior.get_advanced_human_delay(3, 2, 'reading')
+    human_behavior.simulate_attention_shifts(page)
+    time.sleep(stabilization_time)
+    
+    log_info("✅ Login completion waiting phase finished")
     
     # First check for human verification dialog
     if _check_for_human_verification_dialog(page):
@@ -369,6 +654,15 @@ def _handle_login_completion(page, account_details, selectors):
     for attempt in range(max_attempts):
         log_info(f"Verification check attempt {attempt + 1}/{max_attempts}")
         
+        # ✅ Симулируем естественное поведение между попытками
+        if attempt > 0:
+            log_info("👁️ Looking around while waiting for page to load...")
+            human_behavior.simulate_attention_shifts(page)
+            
+            # Возможно небольшой скролл для поиска элементов
+            if random.random() < 0.3:  # 30% вероятность
+                human_behavior.simulate_natural_scroll(page, direction='down', amount='small')
+        
         # Use the comprehensive function to find verification code input
         from .bulk_tasks_playwright import find_verification_code_input
         tfa_input = find_verification_code_input(page)
@@ -379,19 +673,38 @@ def _handle_login_completion(page, account_details, selectors):
         else:
             # Check if we're already logged in (successful login without 2FA)
             for indicator in selectors.LOGGED_IN_INDICATORS:
-                element = page.query_selector(indicator)
-                if element and element.is_visible():
-                    log_info(f"✅ Login successful! Found indicator: {indicator}")
-                    
-                    # Handle save login info dialog after successful login
-                    from .bulk_tasks_playwright import handle_save_login_info_dialog
-                    handle_save_login_info_dialog(page)
-                    
-                    return True
+                try:
+                    element = page.query_selector(indicator)
+                    if element and element.is_visible():
+                        # Дополнительная проверка содержимого для исключения false positive
+                        element_text = element.text_content() or ""
+                        exclude_keywords = ['новый аккаунт', 'create account', 'регистр', 'sign up']
+                        if any(keyword in element_text.lower() for keyword in exclude_keywords):
+                            log_warning(f"⚠️ Skipping login indicator with registration text: '{element_text.strip()}'")
+                            continue
+                        
+                        log_info(f"✅ Login successful! Found indicator: {indicator}")
+                        log_info(f"✅ Element text: '{element_text.strip()}'")
+                        
+                        # ✅ Симулируем естественное поведение после успешного входа
+                        log_info("🎉 Login successful! Exploring main page...")
+                        human_behavior.simulate_page_scanning()
+                        
+                        # Handle save login info dialog after successful login
+                        from .bulk_tasks_playwright import handle_save_login_info_dialog
+                        handle_save_login_info_dialog(page)
+                        
+                        return True
+                except Exception as e:
+                    log_warning(f"Error checking login indicator {indicator}: {str(e)}")
+                    continue
             
             if attempt < max_attempts - 1:  # Don't wait on the last attempt
-                log_info("No verification input found, waiting 5 seconds before retry...")
-                time.sleep(5)
+                log_info("No verification input found, waiting before retry...")
+                
+                # ✅ Человекоподобное ожидание между попытками
+                retry_wait = human_behavior.get_advanced_human_delay(5, 2, 'thinking')
+                human_behavior.simulate_idle_mouse_movement(page, duration=retry_wait)
     
     if tfa_input:
         return _handle_2fa_verification(page, account_details, tfa_input)
@@ -421,7 +734,7 @@ def _handle_2fa_verification(page, account_details, tfa_input):
 
 
 def _handle_email_verification(page, account_details, tfa_input):
-    """Handle email verification"""
+    """Handle email verification with improved retry logic and error handling"""
     from .bulk_tasks_playwright import get_email_verification_code
     
     email_login = account_details.get('email_login')
@@ -431,13 +744,52 @@ def _handle_email_verification(page, account_details, tfa_input):
         log_error("📧 Email credentials not provided for verification")
         return False
     
-    verification_code = get_email_verification_code(email_login, email_password)
+    log_info(f"📧 Starting email verification for: {email_login}")
+    
+    # Try to get verification code with retries
+    max_retries = 3
+    verification_code = get_email_verification_code(email_login, email_password, max_retries)
     
     if verification_code:
         log_info(f"📧 Got email verification code: {verification_code}")
-        return _enter_verification_code(page, tfa_input, verification_code)
+        
+        # Additional validation before entering code
+        if len(verification_code) == 6 and verification_code.isdigit():
+            success = _enter_verification_code(page, tfa_input, verification_code)
+            if success:
+                log_info("📧 ✅ Email verification completed successfully")
+                return True
+            else:
+                log_error("📧 ❌ Failed to enter verification code")
+                
+                # Try one more time if code entry failed
+                log_info("📧 Attempting one more code retrieval...")
+                retry_code = get_email_verification_code(email_login, email_password, max_retries=1)
+                if retry_code and retry_code != verification_code:
+                    log_info(f"📧 Got new verification code: {retry_code}")
+                    return _enter_verification_code(page, tfa_input, retry_code)
+                
+                return False
+        else:
+            log_error(f"📧 Invalid verification code format: {verification_code}")
+            return False
     else:
-        log_error("📧 Failed to get email verification code")
+        log_error("📧 Failed to get email verification code after all attempts")
+        
+        # Check if the email field needs to be filled
+        log_info("📧 Checking if email field needs to be filled...")
+        from .bulk_tasks_playwright import detect_and_fill_email_field
+        email_filled = detect_and_fill_email_field(page, email_login)
+        
+        if email_filled:
+            log_info("📧 Email field filled, trying to get code again...")
+            # Wait a bit for email to arrive
+            import time
+            time.sleep(10)
+            final_code = get_email_verification_code(email_login, email_password, max_retries=2)
+            if final_code:
+                return _enter_verification_code(page, tfa_input, final_code)
+        
         return False
 
 
@@ -466,49 +818,138 @@ def _enter_verification_code(page, tfa_input, verification_code):
     import time
     import random
     
+    # ✅ УЛУЧШЕННОЕ ЧЕЛОВЕКОПОДОБНОЕ ПОВЕДЕНИЕ: Получаем human behavior
+    from .human_behavior import get_human_behavior
+    human_behavior = get_human_behavior()
+    
     log_info("Entering verification code...")
-    tfa_input.click()
-    time.sleep(random.uniform(0.5, 1.0))
     
-    # Clear and enter code character by character
-    tfa_input.fill('')
-    time.sleep(random.uniform(0.3, 0.7))
+    # ✅ Симулируем время на чтение/запоминание кода
+    log_info("👁️ Reading verification code...")
+    code_reading_time = human_behavior.simulate_reading_time(len(verification_code))
+    time.sleep(code_reading_time)
     
-    for char in verification_code:
-        tfa_input.type(char)
-        time.sleep(random.uniform(0.1, 0.3))
+    # Проверяем, что элемент все еще в DOM
+    try:
+        if not tfa_input.is_attached():
+            log_warning("TFA input element detached, re-finding...")
+            # Пытаемся найти элемент снова
+            from .bulk_tasks_playwright import find_verification_code_input
+            tfa_input = find_verification_code_input(page)
+            if not tfa_input:
+                log_error("❌ Could not re-find verification code input")
+                return False
+    except Exception as e:
+        log_warning(f"Error checking element attachment: {str(e)}")
     
-    # Submit the code
-    time.sleep(random.uniform(1.0, 2.0))
+    try:
+        # ✅ УЛУЧШЕННОЕ ЧЕЛОВЕКОПОДОБНОЕ ПОВЕДЕНИЕ: Продвинутое взаимодействие
+        # 1. Симулируем небольшое колебание перед вводом
+        log_info("🤔 Preparing to enter verification code...")
+        human_behavior.simulate_decision_making(options_count=1)
+        
+        # 2. Продвинутое взаимодействие с полем (движение мыши + клик)
+        human_behavior.advanced_element_interaction(tfa_input, 'click')
+        
+        # 3. Естественная пауза после клика
+        time.sleep(human_behavior.get_advanced_human_delay(0.3, 0.2, 'thinking'))
+        
+        # ✅ Человекоподобная печать кода с естественными паузами
+        log_info("⌨️ Typing verification code with human-like behavior...")
+        human_behavior.human_typing(tfa_input, verification_code, simulate_mistakes=False)  # Коды обычно вводят аккуратно
+        
+        # ✅ Симулируем проверку введенного кода
+        log_info("👁️ Reviewing entered code...")
+        review_time = human_behavior.get_advanced_human_delay(0.8, 0.4, 'thinking')
+        time.sleep(review_time)
+        
+        # ✅ Симулируем небольшое колебание перед отправкой
+        log_info("🤔 Double-checking before submission...")
+        hesitation_time = human_behavior.get_advanced_human_delay(0.5, 0.3, 'thinking')
+        time.sleep(hesitation_time)
+        
+        # Try to find and click submit button
+        from .bulk_tasks_playwright import find_submit_button
+        submit_button = find_submit_button(page)
+        
+        if submit_button:
+            try:
+                log_info("🖱️ Clicking submit button...")
+                # ✅ Продвинутое взаимодействие с кнопкой подтверждения
+                human_behavior.advanced_element_interaction(submit_button, 'click')
+                log_info("✅ Submit button clicked")
+            except Exception as e:
+                log_warning(f"Submit button click failed: {str(e)}, trying Enter key")
+                # ✅ Человекоподобное нажатие Enter
+                time.sleep(human_behavior.get_advanced_human_delay(0.2, 0.1, 'thinking'))
+                tfa_input.press("Enter")
+        else:
+            log_info("No submit button found, pressing Enter")
+            # ✅ Человекоподобное нажатие Enter
+            time.sleep(human_behavior.get_advanced_human_delay(0.2, 0.1, 'thinking'))
+            tfa_input.press("Enter")
     
-    # Try to find and click submit button
-    from .bulk_tasks_playwright import find_submit_button
-    submit_button = find_submit_button(page)
+    except Exception as e:
+        log_error(f"Error entering verification code: {str(e)}")
+        if "not attached to the DOM" in str(e):
+            log_warning("Element detached during input, this usually means page is changing")
+        return False
     
-    if submit_button:
-        submit_button.click()
-    else:
-        tfa_input.press("Enter")
+    # ✅ УЛУЧШЕННОЕ ОЖИДАНИЕ: Используем продвинутые человекоподобные задержки
+    log_info("⏳ Waiting for verification code processing...")
     
-    # Wait for verification
-    time.sleep(random.uniform(5, 8))
+    # ✅ Симулируем естественное ожидание после отправки кода
+    processing_wait = human_behavior.get_advanced_human_delay(10, 4, 'resting')
+    time.sleep(processing_wait)
+    
+    # Дополнительно ждем стабилизации DOM после ввода кода
+    try:
+        page.wait_for_load_state("domcontentloaded", timeout=20000)  # 20 секунд
+        log_info("✅ DOM content loaded after verification")
+    except Exception as e:
+        log_warning(f"⚠️ DOM load timeout after verification: {str(e)}")
+    
+    # ✅ Еще одна естественная пауза для полной обработки
+    final_processing_wait = human_behavior.get_advanced_human_delay(5, 3, 'resting')
+    time.sleep(final_processing_wait)
+    
+    log_info("✅ Verification code processing completed")
     
     # Check if login was successful
     from .selectors_config import InstagramSelectors
     selectors = InstagramSelectors()
     
     for indicator in selectors.LOGGED_IN_INDICATORS:
-        element = page.query_selector(indicator)
-        if element and element.is_visible():
-            log_info(f"✅ 2FA verification successful! Found indicator: {indicator}")
-            
-            # Handle save login info dialog
-            from .bulk_tasks_playwright import handle_save_login_info_dialog
-            handle_save_login_info_dialog(page)
-            
-            return True
+        try:
+            element = page.query_selector(indicator)
+            if element and element.is_visible():
+                # Дополнительная проверка содержимого элемента
+                element_text = element.text_content() or ""
+                log_info(f"✅ Found logged-in indicator: {indicator}")
+                log_info(f"✅ Element text: '{element_text.strip()}'")
+                
+                # Исключаем элементы, которые содержат текст о создании аккаунта
+                exclude_keywords = ['новый аккаунт', 'create account', 'регистр', 'sign up']
+                if any(keyword in element_text.lower() for keyword in exclude_keywords):
+                    log_warning(f"⚠️ Skipping element with registration text: '{element_text.strip()}'")
+                    continue
+                
+                log_info(f"✅ 2FA verification successful! Found valid indicator: {indicator}")
+                
+                # ✅ Симулируем естественное поведение после успешного входа
+                log_info("🎉 Login successful! Simulating post-login behavior...")
+                human_behavior.simulate_page_scanning()  # Осматриваемся на главной странице
+                
+                # Handle save login info dialog
+                from .bulk_tasks_playwright import handle_save_login_info_dialog
+                handle_save_login_info_dialog(page)
+                
+                return True
+        except Exception as e:
+            log_warning(f"Error checking indicator {indicator}: {str(e)}")
+            continue
     
-    log_error("❌ 2FA verification failed")
+    log_error("❌ 2FA verification failed - no valid login indicators found")
     return False
 
 
@@ -655,8 +1096,6 @@ def handle_post_login_checks(page, account_details):
             return True
         else:
             log_warning("[LOGIN] ⚠️ May not have reached main page properly")
-            # Take screenshot for debugging
-            PageUtils.take_screenshot(page, "login_final_state")
             return True  # Continue anyway
             
     except Exception as e:

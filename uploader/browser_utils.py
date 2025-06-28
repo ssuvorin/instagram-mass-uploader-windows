@@ -131,35 +131,6 @@ class PageUtils:
             return False
     
     @staticmethod
-    def take_screenshot(page, filename_prefix="screenshot"):
-        """Take screenshot for debugging"""
-        try:
-            timestamp = int(time.time())
-            filename = f"{filename_prefix}_{timestamp}.png"
-            page.screenshot(path=filename)
-            log_info(f"[DEBUG] 📸 Screenshot saved: {filename}")
-            return filename
-        except Exception as e:
-            log_warning(f"[DEBUG] Failed to take screenshot: {str(e)}")
-            return None
-    
-    @staticmethod
-    def get_page_info(page):
-        """Get basic page information for debugging"""
-        try:
-            info = {
-                'url': page.url,
-                'title': page.title(),
-                'viewport': page.viewport_size,
-                'is_closed': page.is_closed()
-            }
-            log_info(f"[DEBUG] 📄 Page info: {info}")
-            return info
-        except Exception as e:
-            log_warning(f"[DEBUG] Failed to get page info: {str(e)}")
-            return {}
-    
-    @staticmethod
     def scroll_page(page, direction="down", amount=500):
         """Scroll page in specified direction"""
         try:
@@ -208,8 +179,6 @@ class ErrorHandler:
     def _handle_captcha(page):
         """Handle CAPTCHA challenges"""
         log_warning("[ERROR] 🤖 CAPTCHA detected")
-        # Take screenshot for manual review
-        PageUtils.take_screenshot(page, "captcha")
         return "manual_intervention"
     
     @staticmethod
@@ -236,7 +205,6 @@ class ErrorHandler:
     def _handle_generic_error(page):
         """Handle generic errors"""
         log_warning("[ERROR] ❓ Generic error occurred")
-        PageUtils.take_screenshot(page, "error")
         return "unknown_error"
 
 
@@ -370,4 +338,20 @@ class DebugUtils:
                 log_warning(f"[NETWORK] Error response: {response.status} {response.url}")
         
         page.on("request", handle_request)
-        page.on("response", handle_response) 
+        page.on("response", handle_response)
+
+    @staticmethod
+    def get_page_info(page):
+        """Get basic page information for debugging"""
+        try:
+            info = {
+                'url': page.url,
+                'title': page.title(),
+                'viewport': page.viewport_size,
+                'is_closed': page.is_closed()
+            }
+            log_info(f"[DEBUG] 📄 Page info: {info}")
+            return info
+        except Exception as e:
+            log_warning(f"[DEBUG] Failed to get page info: {str(e)}")
+            return {} 
