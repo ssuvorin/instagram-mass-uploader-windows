@@ -329,4 +329,5 @@ dolphin_profiles/
 dolphin_data/
 
 # Browser cache
-*.crdownload 
+*.crdownload
+staticfiles/
