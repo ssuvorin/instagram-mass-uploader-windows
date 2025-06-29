@@ -1492,7 +1492,14 @@ def run_dolphin_browser(account_details, videos, video_files_to_upload, result_q
         from bot.src.instagram_uploader.dolphin_anty import DolphinAnty
         from bot.src.instagram_uploader.browser_dolphin import DolphinBrowser
         
-        dolphin = DolphinAnty(api_key=dolphin_token)
+        # Get Dolphin API host from environment (critical for Docker Windows deployment)
+        dolphin_api_host = os.environ.get("DOLPHIN_API_HOST", "http://localhost:3001/v1.0")
+        if not dolphin_api_host.endswith("/v1.0"):
+            dolphin_api_host = dolphin_api_host.rstrip("/") + "/v1.0"
+        
+        log_info(f"🐬 [DOLPHIN_CONFIG] Using Dolphin API host: {dolphin_api_host}", LogCategories.DOLPHIN)
+        
+        dolphin = DolphinAnty(api_key=dolphin_token, local_api_base=dolphin_api_host)
         
         # Enhanced authentication with retry logic
         log_info(f"🔐 [DOLPHIN_AUTH] Authenticating with Dolphin Anty API...", LogCategories.DOLPHIN)

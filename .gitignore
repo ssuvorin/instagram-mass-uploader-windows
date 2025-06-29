@@ -1,3 +1,130 @@
+# =============================================================================
+# GITIGNORE ДЛЯ INSTAGRAM UPLOADER PROJECT
+# =============================================================================
+
+# Django
+*.log
+*.pot
+*.pyc
+__pycache__/
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# Environment variables
+.env
+.env.local
+.env.production
+*.env
+windows_deployment.env
+
+# Virtual environment
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Python
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Docker
+*.tar
+docker-compose.override.yml
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+
+# Video files (can be large)
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.wmv
+*.flv
+
+# Backup files
+*.bak
+*.backup
+
+# Windows specific
+*.lnk
+
+# Dolphin Anty profiles backup
+profiles_backup/
+
+# Secrets and tokens
+*token*
+*secret*
+*key*
+*password*
+
+# But keep example files
+!*.example
+!*_example.*
+
+# Keep important deployment files
+!deploy_windows.ps1
+!WINDOWS_DEPLOYMENT.md
+!docker-compose.windows.yml
+!Dockerfile.windows
+!build_for_windows.sh
+!test_build_mac.sh
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -55,12 +182,6 @@ coverage.xml
 *.mo
 *.pot
 
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-
 # Flask stuff:
 instance/
 .webassets-cache
@@ -73,9 +194,6 @@ docs/_build/
 
 # PyBuilder
 target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
 
 # IPython
 profile_default/
@@ -138,16 +256,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-
-# Django specific
-*.log
-*.pot
-*.pyc
-__pycache__/
-local_settings.py
-db.sqlite3
-media/
-staticfiles/
 
 # IDE specific files
 .vscode/

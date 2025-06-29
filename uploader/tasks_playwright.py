@@ -223,10 +223,16 @@ def run_cookie_robot_task(task_id):
             return
         
         log_message = f"Initializing Dolphin API client..."
-        task.log += log_message + "\n"
         logger.info(log_message)
+        task.log_message = log_message
+        task.save(update_fields=['log_message'])
+
+        # Get Dolphin API host from environment (critical for Docker Windows deployment)
+        dolphin_api_host = os.environ.get("DOLPHIN_API_HOST", "http://localhost:3001/v1.0")
+        if not dolphin_api_host.endswith("/v1.0"):
+            dolphin_api_host = dolphin_api_host.rstrip("/") + "/v1.0"
         
-        dolphin = DolphinAnty(api_key=api_key)
+        dolphin = DolphinAnty(api_key=api_key, local_api_base=dolphin_api_host)
         
         # Run the cookie robot
         log_message = f"🚀 Starting Cookie Robot on Dolphin profile {account.dolphin_profile_id}..."

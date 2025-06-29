@@ -59,7 +59,12 @@ class BrowserManager:
                     
                     dolphin_token = os.environ.get("DOLPHIN_API_TOKEN")
                     if dolphin_token:
-                        dolphin = DolphinAnty(api_key=dolphin_token)
+                        # Get Dolphin API host from environment (critical for Docker Windows deployment)
+                        dolphin_api_host = os.environ.get("DOLPHIN_API_HOST", "http://localhost:3001/v1.0")
+                        if not dolphin_api_host.endswith("/v1.0"):
+                            dolphin_api_host = dolphin_api_host.rstrip("/") + "/v1.0"
+                        
+                        dolphin = DolphinAnty(api_key=dolphin_token, local_api_base=dolphin_api_host)
                         stop_result = dolphin.stop_profile(dolphin_profile_id)
                         
                         if stop_result:

@@ -247,7 +247,12 @@ def delete_account(request, account_id):
                     logger.info(f"[DELETE ACCOUNT] Attempting to delete Dolphin profile {dolphin_profile_id} for account {account_name}")
                     api_key = os.environ.get("DOLPHIN_API_TOKEN", "")
                     if api_key:
-                        dolphin = DolphinAnty(api_key=api_key)
+                        # Get Dolphin API host from environment (critical for Docker Windows deployment)
+                        dolphin_api_host = os.environ.get("DOLPHIN_API_HOST", "http://localhost:3001/v1.0")
+                        if not dolphin_api_host.endswith("/v1.0"):
+                            dolphin_api_host = dolphin_api_host.rstrip("/") + "/v1.0"
+                        
+                        dolphin = DolphinAnty(api_key=api_key, local_api_base=dolphin_api_host)
                         if dolphin.authenticate():
                             delete_result = dolphin.delete_profile(dolphin_profile_id)
                             if delete_result:
@@ -333,7 +338,12 @@ def create_account(request):
                         messages.warning(request, f'Account {account.username} created and proxy assigned, but Dolphin API token not configured.')
                         return redirect('account_detail', account_id=account.id)
                     
-                    dolphin = DolphinAnty(api_key=api_key)
+                    # Get Dolphin API host from environment (critical for Docker Windows deployment)
+                    dolphin_api_host = os.environ.get("DOLPHIN_API_HOST", "http://localhost:3001/v1.0")
+                    if not dolphin_api_host.endswith("/v1.0"):
+                        dolphin_api_host = dolphin_api_host.rstrip("/") + "/v1.0"
+                    
+                    dolphin = DolphinAnty(api_key=api_key, local_api_base=dolphin_api_host)
                     dolphin_available = dolphin.authenticate()
 
                     if dolphin_available:
@@ -506,7 +516,12 @@ def import_accounts(request):
                 messages.error(request, "Dolphin API token not configured. Please set DOLPHIN_API_TOKEN environment variable.")
                 return redirect('import_accounts')
             
-            dolphin = DolphinAnty(api_key=api_key)
+            # Get Dolphin API host from environment (critical for Docker Windows deployment)
+            dolphin_api_host = os.environ.get("DOLPHIN_API_HOST", "http://localhost:3001/v1.0")
+            if not dolphin_api_host.endswith("/v1.0"):
+                dolphin_api_host = dolphin_api_host.rstrip("/") + "/v1.0"
+            
+            dolphin = DolphinAnty(api_key=api_key, local_api_base=dolphin_api_host)
             dolphin_available = dolphin.authenticate()
             if dolphin_available:
                 logger.info("[SUCCESS] Successfully authenticated with Dolphin Anty API")
@@ -832,7 +847,12 @@ def change_account_proxy(request, account_id):
                         else:
                             from bot.src.instagram_uploader.dolphin_anty import DolphinAnty
                             
-                            dolphin = DolphinAnty(api_key=api_key)
+                            # Get Dolphin API host from environment (critical for Docker Windows deployment)
+                            dolphin_api_host = os.environ.get("DOLPHIN_API_HOST", "http://localhost:3001/v1.0")
+                            if not dolphin_api_host.endswith("/v1.0"):
+                                dolphin_api_host = dolphin_api_host.rstrip("/") + "/v1.0"
+                            
+                            dolphin = DolphinAnty(api_key=api_key, local_api_base=dolphin_api_host)
                             
                             # Authenticate with Dolphin
                             if dolphin.authenticate():
@@ -2187,7 +2207,12 @@ def run_cookie_robot_task(task_id, urls, headless, imageless):
         task.log += log_message + "\n"
         logger.info(log_message)
         
-        dolphin = DolphinAnty(api_key=api_key)
+        # Get Dolphin API host from environment (critical for Docker Windows deployment)
+        dolphin_api_host = os.environ.get("DOLPHIN_API_HOST", "http://localhost:3001/v1.0")
+        if not dolphin_api_host.endswith("/v1.0"):
+            dolphin_api_host = dolphin_api_host.rstrip("/") + "/v1.0"
+        
+        dolphin = DolphinAnty(api_key=api_key, local_api_base=dolphin_api_host)
         
         # Run the cookie robot
         log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] 🚀 Starting Cookie Robot on Dolphin profile {account.dolphin_profile_id}..."
@@ -2441,7 +2466,12 @@ def create_dolphin_profile(request, account_id):
             messages.error(request, "Dolphin API token not configured. Please set DOLPHIN_API_TOKEN environment variable.")
             return redirect('account_detail', account_id=account.id)
         
-        dolphin = DolphinAnty(api_key=api_key)
+        # Get Dolphin API host from environment (critical for Docker Windows deployment)
+        dolphin_api_host = os.environ.get("DOLPHIN_API_HOST", "http://localhost:3001/v1.0")
+        if not dolphin_api_host.endswith("/v1.0"):
+            dolphin_api_host = dolphin_api_host.rstrip("/") + "/v1.0"
+        
+        dolphin = DolphinAnty(api_key=api_key, local_api_base=dolphin_api_host)
         
         # Authenticate with Dolphin
         if not dolphin.authenticate():

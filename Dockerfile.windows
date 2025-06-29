@@ -1,0 +1,84 @@
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV DISPLAY=:99
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies optimized for browser automation
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libffi-dev \
+    libjpeg-dev \
+    libpq-dev \
+    libssl-dev \
+    wget \
+    curl \
+    # Browser automation dependencies
+    xvfb \
+    libnss3 \
+    libatk-bridge2.0-0 \
+    libgdk-pixbuf2.0-0 \
+    libgtk-3-0 \
+    libgbm-dev \
+    libasound2 \
+    # Video processing
+    ffmpeg \
+    # Cleanup
+    && rm -rf /var/lib/apt/lists/*
+
+# Create virtual display for headless browser automation
+RUN echo '#!/bin/bash\nXvfb :99 -screen 0 1920x1080x24 &\nexport DISPLAY=:99\nexec "$@"' > /usr/local/bin/start-with-display.sh \
+    && chmod +x /usr/local/bin/start-with-display.sh
+
+# Install Playwright and browsers with Windows compatibility
+RUN pip install --no-cache-dir playwright==1.35.0
+RUN playwright install chromium
+RUN playwright install-deps chromium
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Add Windows-specific requirements
+RUN pip install --no-cache-dir \
+    psutil==6.1.1 \
+    python-dotenv==1.0.0
+
+# Copy project
+COPY . .
+
+# Create necessary directories
+RUN mkdir -p /app/static /app/temp /app/logs /app/browsers /app/media
+
+# Create startup script for Windows compatibility
+RUN echo '#!/bin/bash\n\
+# Start virtual display\n\
+Xvfb :99 -screen 0 1920x1080x24 &\n\
+export DISPLAY=:99\n\
+\n\
+# Wait for display to be ready\n\
+sleep 2\n\
+\n\
+# Collect static files\n\
+python manage.py collectstatic --noinput --clear\n\
+\n\
+# Create superuser if it doesnt exist\n\
+python create_superuser.py\n\
+\n\
+# Run gunicorn with WhiteNoise for static files\n\
+exec gunicorn wsgi_static:application --bind 0.0.0.0:8000 --workers 2 --timeout 300\n\
+' > /app/start.sh && chmod +x /app/start.sh
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/ || exit 1
+
+# Run the startup script
+CMD ["/app/start.sh"] 

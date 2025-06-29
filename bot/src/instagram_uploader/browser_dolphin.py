@@ -29,7 +29,14 @@ class DolphinBrowser:
         # Initialize Dolphin Anty API client
         if dolphin_api_token:
             print(f"✅ Initializing Dolphin Anty with API token")
-            self.dolphin = DolphinAnty(api_key=dolphin_api_token)
+            
+            # Get Dolphin API host from environment (critical for Docker Windows deployment)
+            dolphin_api_host = os.environ.get("DOLPHIN_API_HOST", "http://localhost:3001/v1.0")
+            if not dolphin_api_host.endswith("/v1.0"):
+                dolphin_api_host = dolphin_api_host.rstrip("/") + "/v1.0"
+            
+            print(f"🐬 Using Dolphin API host: {dolphin_api_host}")
+            self.dolphin = DolphinAnty(api_key=dolphin_api_token, local_api_base=dolphin_api_host)
         else:
             print(f"❌ No Dolphin API token provided - cannot initialize DolphinAnty")
             raise ValueError("Dolphin API token is required")

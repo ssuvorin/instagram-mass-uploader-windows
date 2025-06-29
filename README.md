@@ -1,377 +1,263 @@
-# 🚀 Instagram Mass Uploader
+# Instagram Mass Uploader with Playwright & Dolphin Anty
 
-Мощная система для автоматической массовой загрузки видео в Instagram с использованием множественных аккаунтов, интеграцией с Dolphin Anty браузером и продвинутым обходом защиты.
+🚀 **Professional Instagram mass video uploader** with browser automation using Playwright and Dolphin Anty integration.
 
-## ✨ Основные возможности
+## ✨ Features
 
-### 🎥 Загрузка контента
-- **Массовая загрузка видео** на несколько аккаунтов Instagram одновременно
-- **Асинхронная обработка** - до 3-5x быстрее при работе с несколькими аккаунтами
-- **Автоматическая обрезка видео** с оптимальными соотношениями сторон
-- **Поддержка описаний** с автоматической вставкой упоминаний и хештегов
+- 📱 **Multi-account support** with Dolphin Anty profiles
+- 🎬 **Bulk video upload** with automatic processing
+- 🤖 **Human-like behavior** simulation
+- 🔐 **2FA support** (Email, Authenticator)
+- 🧩 **reCAPTCHA solving** integration
+- 🌐 **Proxy support** for each account
+- 📊 **Real-time monitoring** and logging
+- 🐳 **Docker deployment** ready
+- 🪟 **Windows Server optimized**
 
-### 🔐 Безопасность и обход
-- **Человекоподобное поведение** с AI-симуляцией движений мыши и задержек
-- **Автоматическое решение reCAPTCHA v2** через ruCAPTCHA API
-- **Обход детекции** с помощью продвинутых алгоритмов поведения
-- **Прокси поддержка** для каждого аккаунта
-- **Интеграция с Dolphin Anty** для управления браузерными профилями
+## 🏗️ Architecture
 
-### 👥 Управление аккаунтами
-- **Множественные аккаунты** с централизованным управлением
-- **2FA поддержка** с автоматическим получением кодов
-- **Email верификация** с автоматической обработкой
-- **Система статусов** аккаунтов (ACTIVE, BLOCKED, LIMITED и др.)
-- **Автоматическая проверка** состояния аккаунтов
+- **Backend**: Django + Celery
+- **Browser Automation**: Playwright + Dolphin Anty
+- **Database**: SQLite/PostgreSQL
+- **Frontend**: Bootstrap + HTMX
+- **Containerization**: Docker + Docker Compose
 
-### 📊 Мониторинг и управление
-- **Веб-интерфейс** в реальном времени
-- **Детальные логи** для каждого действия
-- **Статистика выполнения** с визуализацией
-- **Cookie Robot** для прогрева аккаунтов
+## 🚀 Quick Start (Windows Server)
 
-## 🛠 Технологии
+### Prerequisites
 
-- **Backend**: Django 5.1.5, Python 3.8+
-- **Frontend**: Bootstrap 5, JavaScript, WebSocket для real-time обновлений
-- **Автоматизация**: Playwright с продвинутой симуляцией поведения
-- **Браузер**: Dolphin Anty интеграция
-- **База данных**: SQLite (по умолчанию), PostgreSQL поддержка
-- **Капча**: ruCAPTCHA API интеграция
-- **Архитектура**: Модульная система с разделенной ответственностью
+1. **Windows Server** with Docker Desktop
+2. **Dolphin Anty** installed and running
+3. **Git** for repository cloning
 
-## 📋 Требования
-
-- **Python 3.8+**
-- **Node.js** (для Playwright)
-- **Dolphin Anty браузер**
-- **Стабильное интернет-соединение**
-- **Минимум 4GB RAM** (рекомендуется 8GB для асинхронной работы)
-
-## 🚀 Быстрый старт
-
-### 1. Установка
+### 1. Clone Repository
 
 ```bash
-# Клонирование репозитория
-git clone <repository-url>
-cd playwright_instagram_uploader
-
-# Создание виртуального окружения
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# или venv\Scripts\activate для Windows
-
-# Установка зависимостей
-pip install -r requirements.txt
-playwright install chromium
+git clone https://github.com/YOUR_USERNAME/instagram-mass-uploader.git
+cd instagram-mass-uploader
 ```
 
-### 2. Настройка переменных окружения
+### 2. Environment Setup
 
-Создайте файл `.env`:
 ```bash
-# Django настройки
-SECRET_KEY=your-secret-key-here
-DEBUG=True
+# Copy Windows environment template
+copy windows_deployment.env.example windows_deployment.env
 
-# Dolphin Anty API
+# Edit configuration
+notepad windows_deployment.env
+```
+
+**Critical settings for Windows:**
+```env
+# ВАЖНО: Для Docker на Windows используйте host.docker.internal
+DOLPHIN_API_HOST=http://host.docker.internal:3001
 DOLPHIN_API_TOKEN=your-dolphin-api-token
 
-# reCAPTCHA решение (опционально)
+# Your server settings
+ALLOWED_HOSTS=localhost,127.0.0.1,YOUR_WINDOWS_SERVER_IP
+SECRET_KEY=your-super-secret-key-change-this
+
+# Optional: reCAPTCHA solving
 RUCAPTCHA_API_KEY=your-rucaptcha-api-key
-
-# 2FA API (опционально)
-TFA_API_URL=https://your-2fa-api.com/totp/
-
-# База данных (опционально)
-DATABASE_URL=postgresql://user:password@localhost/dbname
 ```
 
-### 3. Инициализация базы данных
+### 3. Deploy with Docker
 
 ```bash
-python manage.py migrate
-python manage.py createsuperuser
+# Build and start services
+docker-compose -f docker-compose.windows.yml up -d
+
+# Check logs
+docker-compose -f docker-compose.windows.yml logs -f
 ```
 
-### 4. Запуск
+### 4. Access Dashboard
 
+Open browser: `http://YOUR_SERVER_IP:8000`
+
+## 🐳 Docker Deployment Options
+
+### Option 1: Windows Docker Compose (Recommended)
 ```bash
-python manage.py runserver
+docker-compose -f docker-compose.windows.yml up -d
 ```
 
-Откройте http://localhost:8000 в браузере.
+### Option 2: PowerShell Automation
+```powershell
+.\deploy_windows.ps1
+```
 
-## 📖 Подробная настройка
-
-### Dolphin Anty
-
-1. **Установите Dolphin Anty браузер**
-2. **Получите API токен** из настроек Dolphin Anty
-3. **Создайте профили** для каждого Instagram аккаунта
-4. **Настройте прокси** в профилях (рекомендуется)
-
-### reCAPTCHA решение
-
-1. **Зарегистрируйтесь на [ruCAPTCHA.com](https://rucaptcha.com)**
-2. **Пополните баланс** (минимум $5 рекомендуется)
-3. **Получите API ключ** и добавьте в `.env`
-4. **Проверьте настройку**: `python manage.py check_captcha`
-
-### Настройка прокси
-
-В веб-интерфейсе:
-1. **Перейдите в "Proxies"**
-2. **Добавьте прокси серверы** (HTTP/SOCKS5)
-3. **Привяжите к аккаунтам** в разделе "Accounts"
-
-## 🎯 Использование
-
-### Добавление аккаунтов
-
-1. **Accounts → Add Account**
-2. **Заполните данные**:
-   - Username и Password
-   - Email для верификации (опционально)
-   - 2FA секрет (опционально)
-   - Dolphin Anty Profile ID
-   - Привязанный прокси
-
-### Массовая загрузка
-
-1. **Bulk Upload → Create Task**
-2. **Выберите аккаунты** (только ACTIVE статус)
-3. **Загрузите видео файлы**
-4. **Добавьте описания** с упоминаниями и хештегами
-5. **Запустите процесс**
-
-### Асинхронная загрузка
-
-Для ускорения при работе с несколькими аккаунтами:
+### Option 3: Manual Docker Build
 ```bash
-# Через веб-интерфейс
-http://localhost:8000/bulk-upload/start/123/?async=true
-
-# Через CLI
-python run_async_bulk_upload.py --run-async 123
+docker build -f Dockerfile.windows -t instagram-uploader .
+docker run -d -p 8000:8000 --name instagram-app instagram-uploader
 ```
 
-### Cookie Robot
+## 📋 Configuration
 
-Для прогрева аккаунтов:
-1. **Cookie Robot**
-2. **Выберите аккаунты**
-3. **Укажите URL для посещения**
-4. **Запустите процесс**
+### Environment Variables
 
-## 📊 Система статусов
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `DOLPHIN_API_HOST` | Dolphin Anty API URL | `http://localhost:3001` | ✅ |
+| `DOLPHIN_API_TOKEN` | Dolphin Anty API token | - | ✅ |
+| `RUCAPTCHA_API_KEY` | reCAPTCHA solving API key | - | ⚠️ |
+| `SECRET_KEY` | Django secret key | - | ✅ |
+| `ALLOWED_HOSTS` | Allowed hosts | `localhost` | ✅ |
 
-### Статусы аккаунтов
-- **ACTIVE** ✅ - готов к использованию
-- **BLOCKED** ❌ - заблокирован Instagram
-- **LIMITED** ⚠️ - имеет ограничения
-- **PHONE_VERIFICATION_REQUIRED** 📱 - требуется подтверждение телефона
-- **HUMAN_VERIFICATION_REQUIRED** 🤖 - требуется человеческая верификация
-- **INACTIVE** 💤 - неактивен
+### Dolphin Anty Setup
 
-### Статусы задач
-- **PENDING** ⏳ - ожидает выполнения
-- **RUNNING** 🔄 - выполняется
-- **COMPLETED** ✅ - успешно завершена
-- **FAILED** ❌ - завершена с ошибкой
-- **CANCELLED** 🚫 - отменена
+1. **Install Dolphin Anty** on Windows host
+2. **Create profiles** for each Instagram account
+3. **Get API token** from Dolphin settings
+4. **Configure proxy** for each profile
 
-## 🏗 Архитектура проекта
+### Account Configuration
 
+1. **Add Instagram accounts** in dashboard
+2. **Assign Dolphin profiles** to accounts
+3. **Configure proxies** (optional)
+4. **Test login** for each account
+
+## 🎬 Usage
+
+### 1. Create Bulk Upload Task
 ```
-playwright_instagram_uploader/
-├── uploader/                    # Основное Django приложение
-│   ├── models.py               # Модели данных
-│   ├── views.py                # Веб-интерфейс
-│   ├── bulk_tasks_playwright.py # Основная логика загрузки
-│   ├── instagram_automation.py  # Автоматизация Instagram
-│   ├── human_behavior.py       # Симуляция человеческого поведения
-│   ├── captcha_solver.py       # Решение reCAPTCHA
-│   ├── login_optimized.py      # Оптимизированный вход
-│   ├── crop_handler.py         # Обработка обрезки видео
-│   ├── constants.py            # Константы и конфигурация
-│   └── ...
-├── bot/                        # Дополнительные модули автоматизации
-├── static/                     # Статические файлы (CSS, JS)
-├── templates/                  # HTML шаблоны
-├── media/                      # Загруженные файлы
-├── manage.py                   # Django management
-├── requirements.txt            # Python зависимости
-├── run_async_bulk_upload.py    # CLI для асинхронной загрузки
-└── README.md                   # Эта документация
+Dashboard → Bulk Upload → Create New Task
 ```
 
-## 🔧 Конфигурация
+### 2. Add Videos and Accounts
+- Upload video files
+- Add captions/titles
+- Select Instagram accounts
+- Configure upload settings
 
-### Временные интервалы
+### 3. Start Upload Process
+```
+Task Detail → Start Upload
+```
 
+### 4. Monitor Progress
+- Real-time logs
+- Account status
+- Upload statistics
+- Error handling
+
+## 🔧 Advanced Configuration
+
+### Custom Delays and Behavior
 ```python
-# В uploader/constants.py
-HUMAN_DELAY_MIN = 0.5           # Минимальная задержка между действиями
-HUMAN_DELAY_MAX = 2.0           # Максимальная задержка
-ACCOUNT_DELAY_MIN = 30          # Задержка между аккаунтами (сек)
-ACCOUNT_DELAY_MAX = 120         # Максимальная задержка между аккаунтами
-VIDEO_DELAY_MIN = 180           # 3 минуты между видео
-VIDEO_DELAY_MAX = 420           # 7 минут между видео
+# uploader/constants.py
+TimeConstants.ACCOUNT_DELAY_MIN = 120  # 2 minutes
+TimeConstants.ACCOUNT_DELAY_MAX = 300  # 5 minutes
+TimeConstants.VIDEO_DELAY_MIN = 300   # 5 minutes
+TimeConstants.VIDEO_DELAY_MAX = 900   # 15 minutes
 ```
 
-### Параллельная обработка
-
+### Proxy Configuration
 ```python
-MAX_CONCURRENT_ACCOUNTS = 3     # Максимум аккаунтов одновременно
-RETRY_ATTEMPTS = 2              # Количество попыток при ошибке
+# Support for HTTP/HTTPS/SOCKS5
+proxy_format = "protocol://username:password@host:port"
 ```
 
-## 🛡 Безопасность
-
-### Рекомендации
-- **Используйте качественные прокси** для каждого аккаунта
-- **Не превышайте лимиты** Instagram по загрузкам
-- **Регулярно обновляйте пароли** аккаунтов
-- **Мониторьте статусы** аккаунтов
-- **Храните API ключи** в `.env` файле
-
-### Человекоподобное поведение
-- **Случайные задержки** между действиями
-- **Плавные движения мыши** с кривыми Безье
-- **Имитация усталости** и изменения скорости
-- **Вариативность паттернов** поведения
-
-## 🐛 Устранение проблем
-
-### Частые проблемы
-
-**Аккаунт заблокирован**
-- Проверьте качество прокси
-- Увеличьте задержки между действиями
-- Используйте прогрев через Cookie Robot
-
-**Капча не решается**
-- Проверьте баланс ruCAPTCHA
-- Убедитесь в правильности API ключа
-- Проверьте интернет-соединение
-
-**Dolphin Anty не подключается**
-- Убедитесь что Dolphin запущен
-- Проверьте API токен
-- Проверьте доступность портов
-
-**Медленная загрузка**
-- Используйте асинхронный режим для нескольких аккаунтов
-- Проверьте скорость интернета
-- Оптимизируйте настройки задержек
-
-### Логи и отладка
-
-```bash
-# Просмотр логов
-tail -f django.log
-
-# Детальные логи для аккаунта
-tail -f django.log | grep "username"
-
-# Проверка статуса системы
-python manage.py check
-```
-
-## 📈 Производительность
-
-### Асинхронная загрузка
-
-**3 аккаунта, 1 видео каждый:**
-- Синхронно: ~15 минут
-- Асинхронно: ~5 минут
-- **Ускорение: 3x**
-
-**5 аккаунтов, 2 видео каждый:**
-- Синхронно: ~45 минут  
-- Асинхронно: ~12 минут
-- **Ускорение: 3.7x**
-
-### Рекомендации по производительности
-
-**Для мощных систем (8GB+ RAM):**
-```bash
-python run_async_bulk_upload.py --max-accounts 5 --account-delay-min 15
-```
-
-**Для обычных систем (4GB RAM):**
-```bash
-python run_async_bulk_upload.py --max-accounts 2 --account-delay-min 60
-```
-
-## 🔄 API интеграции
-
-### 2FA коды
+### Human Behavior Simulation
 ```python
-# Автоматическое получение TOTP кодов
-TFA_API_URL = "https://2fa.fb.rip/api/otp/"
+# Automatic mouse movements, scrolling, delays
+# Randomized typing speeds
+# Smart break patterns
+# Activity simulation
 ```
 
-### Email верификация
-Система автоматически получает коды подтверждения из email при настройке соответствующих API.
+## 🚨 Troubleshooting
 
-### Webhook уведомления
-Настройте webhook для получения уведомлений о завершении задач.
+### Common Issues
 
-## 📚 Дополнительная документация
+#### ❌ "Connection to Dolphin Anty failed"
+**Solution:**
+```bash
+# Check Dolphin Anty is running on Windows host
+# Verify API token is correct
+# For Docker: Use host.docker.internal:3001
+```
 
-- **[ASYNC_BULK_UPLOAD.md](ASYNC_BULK_UPLOAD.md)** - Подробно об асинхронной загрузке
-- **[RECAPTCHA_SETUP.md](RECAPTCHA_SETUP.md)** - Настройка решения reCAPTCHA
+#### ❌ "Phone verification required"
+**Solution:**
+```bash
+# Check account status in dashboard
+# Manual verification may be needed
+# Account will be marked for manual review
+```
 
-## 🤝 Разработка
+#### ❌ "Docker build fails"
+**Solution:**
+```bash
+# Ensure Docker Desktop is running
+# Check network connectivity
+# Try: docker system prune -a
+```
 
-### Структура кода
-Проект использует модульную архитектуру с четким разделением ответственности:
+### Logs and Monitoring
 
-- **Models** (`models.py`) - модели данных
-- **Views** (`views.py`) - веб-интерфейс  
-- **Automation** (`instagram_automation.py`) - базовые классы автоматизации
-- **Behavior** (`human_behavior.py`) - симуляция человеческого поведения
-- **Tasks** (`bulk_tasks_playwright.py`) - оркестрация задач
-- **Utils** - вспомогательные модули
+```bash
+# Docker logs
+docker-compose -f docker-compose.windows.yml logs -f
 
-### Добавление новых функций
+# Application logs
+docker exec -it container_name tail -f /app/logs/app.log
 
-1. **Создайте ветку** для новой функции
-2. **Следуйте архитектуре** проекта
-3. **Добавьте тесты** для новой функциональности
-4. **Обновите документацию**
-5. **Создайте Pull Request**
+# Task-specific logs
+Dashboard → Task Detail → View Logs
+```
 
-### Принципы разработки
-- **SOLID принципы** для архитектуры
-- **DRY (Don't Repeat Yourself)** для избежания дублирования
-- **Модульность** и переиспользование кода
-- **Централизованная конфигурация** в `constants.py`
+## 🔒 Security
 
-## ⚖️ Лицензия и ответственность
+- ✅ **Environment variables** for sensitive data
+- ✅ **Secure token handling**
+- ✅ **Proxy authentication**
+- ✅ **Rate limiting** protection
+- ✅ **Account isolation**
 
-Этот проект предназначен для **образовательных целей**. 
+## 📊 Monitoring
 
-**⚠️ ВАЖНО**: Убедитесь, что вы соблюдаете:
-- Условия использования Instagram
-- Местное законодательство
-- Этические принципы автоматизации
+### Real-time Dashboard
+- Account health status
+- Upload progress
+- Error tracking
+- Performance metrics
 
-**Пользователи несут полную ответственность** за использование данного программного обеспечения.
+### Web Interface Features
+- Task management
+- Account configuration
+- Proxy management
+- Log viewing
+- Statistics
 
-## 💬 Поддержка
+## 🤝 Support
 
-При возникновении проблем:
+### Architecture Compatibility
+- ✅ **Windows Server** (Primary target)
+- ✅ **Linux** (Ubuntu, CentOS)
+- ✅ **macOS** (Development)
+- ✅ **Docker** (All platforms)
 
-1. **Проверьте логи** в веб-интерфейсе или `django.log`
-2. **Убедитесь** что Dolphin Anty запущен
-3. **Проверьте** правильность API токенов и ключей
-4. **Изучите** соответствующую документацию
-5. **Создайте Issue** в репозитории с подробным описанием проблемы
+### Browser Support
+- ✅ **Chromium** (Playwright)
+- ✅ **Dolphin Anty** profiles
+- ✅ **Headless** mode
+- ✅ **Multi-profile** management
+
+## 📝 License
+
+This project is for educational and personal use only. Please comply with Instagram's Terms of Service.
+
+## 🔗 Dependencies
+
+- Django 4.2+
+- Playwright 1.35+
+- Celery 5.3+
+- Docker 20.10+
+- Python 3.11+
 
 ---
 
-**🚀 Готовы начать? Следуйте инструкциям по быстрому старту выше!** 
+**⚠️ Important**: This tool is designed for legitimate use cases. Always respect Instagram's rate limits and terms of service. 
