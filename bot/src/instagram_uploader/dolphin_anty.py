@@ -15,14 +15,12 @@ from playwright.sync_api import sync_playwright
 # Load environment variables from .env file
 load_dotenv()
 
-logger = logging.getLogger(__name__)
-
 def safe_log_message(message):
     """
     Remove or replace emoji characters that cause encoding issues on Windows
     """
     try:
-        # Replace common emoji characters with safe alternatives
+        # Expanded emoji replacements for comprehensive coverage
         emoji_replacements = {
             '🔍': '[SEARCH]',
             '✅': '[SUCCESS]',
@@ -30,38 +28,78 @@ def safe_log_message(message):
             '🚀': '[START]',
             '🔄': '[PROCESS]',
             '🔗': '[LINK]',
-            '📄': '[PAGE]',
-            '🌐': '[WEB]',
             '🖼️': '[IMAGE]',
             '🛑': '[STOP]',
-            '🔌': '[DISCONNECT]',
-            '📜': '[SCROLL]',
             '🖱️': '[MOUSE]',
-            '🌊': '[SMOOTH]',
             '⏸️': '[PAUSE]',
-            '🎭': '[ACTIVITY]',
-            '📊': '[STATS]',
             '⚠️': '[WARNING]',
             '📝': '[TEXT]',
-            '📍': '[LOCATION]',
             '⬅️': '[BACK]',
-            '💥': '[CRASH]',
             '🗂️': '[TABS]',
-            '🎯': '[TARGET]',
-            '🔀': '[SHUFFLE]',
             '📋': '[LIST]',
-            '⏳': '[WAIT]'
+            '🗑️': '[DELETE]',
+            '🔧': '[TOOL]',
+            '📧': '[EMAIL]',
+            '🌐': '[WEB]',
+            '📍': '[LOCATION]',
+            '🎭': '[SIMULATION]',
+            '📊': '[STATS]',
+            '…': '...',
+            # Additional emoji that might appear
+            '📞': '[PHONE]',
+            '🔒': '[SECURE]',
+            '🔓': '[UNLOCK]',
+            '⭐': '[STAR]',
+            '💡': '[IDEA]',
+            '🔥': '[FIRE]',
+            '💻': '[COMPUTER]',
+            '📱': '[MOBILE]',
+            '🌟': '[STAR]',
+            '🎯': '[TARGET]',
+            '🚨': '[ALERT]',
+            '🔔': '[NOTIFICATION]',
+            '💬': '[CHAT]',
+            '📂': '[FOLDER]',
+            '📁': '[DIRECTORY]',
+            '🔑': '[KEY]',
+            '🆔': '[ID]',
+            '⌚': '[TIME]',
+            '🕐': '[CLOCK]',
         }
         
-        # Replace emojis with safe text
-        safe_message = message
+        # Replace emoji characters with safe alternatives
         for emoji, replacement in emoji_replacements.items():
-            safe_message = safe_message.replace(emoji, replacement)
+            message = message.replace(emoji, replacement)
         
-        return safe_message
+        # Ensure the message only contains ASCII characters
+        return message.encode('ascii', 'ignore').decode('ascii')
     except Exception:
-        # If anything fails, return a basic ASCII version
+        # If any error occurs, return a safe fallback
         return str(message).encode('ascii', 'ignore').decode('ascii')
+
+class SafeLogger:
+    """Wrapper around logger that automatically applies safe_log_message to all messages"""
+    def __init__(self, logger):
+        self._logger = logger
+    
+    def info(self, message, *args, **kwargs):
+        safe_message = safe_log_message(str(message))
+        self._logger.info(safe_message, *args, **kwargs)
+    
+    def error(self, message, *args, **kwargs):
+        safe_message = safe_log_message(str(message))
+        self._logger.error(safe_message, *args, **kwargs)
+    
+    def warning(self, message, *args, **kwargs):
+        safe_message = safe_log_message(str(message))
+        self._logger.warning(safe_message, *args, **kwargs)
+    
+    def debug(self, message, *args, **kwargs):
+        safe_message = safe_log_message(str(message))
+        self._logger.debug(safe_message, *args, **kwargs)
+
+# Create safe logger wrapper
+logger = SafeLogger(logging.getLogger(__name__))
 
 class DolphinAntyAPIError(Exception):
     """Exception for Dolphin{anty} API errors"""
@@ -1710,7 +1748,7 @@ class DolphinAnty:
                     elif action == "wait":
                         # Просто ждем (как пользователь читает)
                         wait_time = min(random.uniform(1, 4), remaining_time)
-                        await asyncio.sleep(wait_time)
+                        time.sleep(wait_time)
                         log_action(f"⏸️ Reading pause for {wait_time:.1f} seconds")
                     
                     actions_performed += 1
@@ -1718,7 +1756,7 @@ class DolphinAnty:
                     # Иногда делаем короткие паузы между действиями
                     if random.random() < 0.4:
                         mini_pause = random.uniform(0.2, 0.8)
-                        await asyncio.sleep(mini_pause)
+                        time.sleep(mini_pause)
                     
                 except Exception as e:
                     # Проверяем, связана ли ошибка с закрытием страницы
