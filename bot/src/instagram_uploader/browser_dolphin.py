@@ -76,7 +76,10 @@ class DolphinBrowser:
                 return None
             
             # Construct WebSocket URL
-            ws_url = f"ws://127.0.0.1:{port}{ws_endpoint}"
+            # В Docker контейнере используем host.docker.internal, иначе localhost
+            docker_container = os.environ.get("DOCKER_CONTAINER", "0") == "1"
+            host = "host.docker.internal" if docker_container else "127.0.0.1"
+            ws_url = f"ws://{host}:{port}{ws_endpoint}"
             logger.info(f"🔗 WebSocket URL: {ws_url}")
             
             # Initialize Playwright
