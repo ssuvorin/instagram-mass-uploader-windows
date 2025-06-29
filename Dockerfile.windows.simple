@@ -1,9 +1,6 @@
 # Multi-stage build для оптимизации размера образа
 FROM python:3.11-slim as base
 
-# Создаем пользователя для безопасности
-RUN groupadd -r appuser && useradd -r -g appuser appuser
-
 # Устанавливаем системные зависимости
 RUN apt-get update && apt-get install -y \
     curl \
@@ -19,12 +16,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Копируем код приложения
 COPY . .
 
-# Создаем необходимые директории и устанавливаем права
-RUN mkdir -p /app/media /app/logs /app/db_data /app/staticfiles && \
-    chown -R appuser:appuser /app
-
-# Переключаемся на пользователя
-USER appuser
+# Создаем необходимые директории
+RUN mkdir -p /app/media /app/logs /app/db_data /app/staticfiles
 
 # Указываем переменную окружения для Docker
 ENV DOCKER_CONTAINER=1
