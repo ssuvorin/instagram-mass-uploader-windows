@@ -19,6 +19,7 @@ from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from django.conf import settings
 from django.conf.urls.static import static
+import os
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -27,7 +28,8 @@ urlpatterns = [
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
 ]
 
-# Serve static files in development mode OR when running with runserver
-if settings.DEBUG or 'runserver' in __import__('sys').argv:
+# Always serve static files when using runserver OR when in Docker container
+# This fixes the issue where static files don't load in production Docker containers
+if settings.DEBUG or os.environ.get('CONTAINER_ENV') == 'docker' or any('runserver' in arg for arg in __import__('sys').argv):
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

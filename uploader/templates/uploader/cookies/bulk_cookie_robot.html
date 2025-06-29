@@ -1,0 +1,108 @@
+{% extends 'uploader/base.html' %}
+{% load static %}
+
+{% block title %}Bulk Cookie Robot{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Bulk Cookie Robot</h2>
+    <p class="lead">Run Cookie Robot on multiple accounts at once</p>
+    
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">Create Bulk Cookie Robot Tasks</h6>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <label for="accounts" class="form-label">Select Accounts</label>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Only accounts with Dolphin profiles are shown.
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="select-all-accounts">
+                        <label class="form-check-label" for="select-all-accounts">
+                            Select All Accounts
+                        </label>
+                    </div>
+                    <div class="account-list p-3 border rounded" style="max-height: 300px; overflow-y: auto;">
+                        {% for account in accounts %}
+                        <div class="form-check">
+                            <input class="form-check-input account-checkbox" type="checkbox" name="accounts" value="{{ account.id }}" id="account-{{ account.id }}">
+                            <label class="form-check-label" for="account-{{ account.id }}">
+                                {{ account.username }} 
+                                {% if account.proxy %}
+                                <span class="badge bg-success">Proxy</span>
+                                {% endif %}
+                                <small class="text-muted">(Profile ID: {{ account.dolphin_profile_id }})</small>
+                            </label>
+                        </div>
+                        {% empty %}
+                        <div class="alert alert-warning mb-0">
+                            No accounts with Dolphin profiles found. Please create accounts with Dolphin profiles first.
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="urls" class="form-label">URLs to Visit</label>
+                    <textarea class="form-control" id="urls" name="urls" rows="10" required>{{ default_urls }}</textarea>
+                    <div class="form-text">Enter one URL per line. These are the websites Cookie Robot will visit.</div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="headless" name="headless">
+                            <label class="form-check-label" for="headless">Headless Mode</label>
+                            <div class="form-text">Run without visible browser window</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="imageless" name="imageless">
+                            <label class="form-check-label" for="imageless">Disable Images</label>
+                            <div class="form-text">Don't load images to save bandwidth</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-robot"></i> Start Cookie Robot on Selected Accounts
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Select all accounts checkbox
+    const selectAllCheckbox = document.getElementById('select-all-accounts');
+    const accountCheckboxes = document.querySelectorAll('.account-checkbox');
+    
+    selectAllCheckbox.addEventListener('change', function() {
+        const isChecked = this.checked;
+        accountCheckboxes.forEach(checkbox => {
+            checkbox.checked = isChecked;
+        });
+    });
+    
+    // Update select all checkbox when individual checkboxes change
+    accountCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const allChecked = [...accountCheckboxes].every(cb => cb.checked);
+            const someChecked = [...accountCheckboxes].some(cb => cb.checked);
+            
+            selectAllCheckbox.checked = allChecked;
+            selectAllCheckbox.indeterminate = someChecked && !allChecked;
+        });
+    });
+});
+</script>
+{% endblock %} 

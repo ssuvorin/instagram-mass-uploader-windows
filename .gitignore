@@ -285,7 +285,6 @@ config/local_settings.py
 *.log
 
 # Bot specific files
-cookies/
 profiles/
 temp/
 screenshots/

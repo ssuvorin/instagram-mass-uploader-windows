@@ -23,6 +23,8 @@ services:
       - DOLPHIN_API_HOST=${DOLPHIN_API_HOST:-http://host.docker.internal:3001}
       # Указываем путь к БД внутри контейнера
       - DATABASE_PATH=/app/db_data/db.sqlite3
+      # Включаем обслуживание статических файлов в контейнере
+      - CONTAINER_ENV=docker
     networks:
       - instagram_network
     # Windows server optimizations
