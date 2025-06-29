@@ -1,3 +1,4 @@
+{% load static %}
 {% extends "uploader/base.html" %}
 
 {% block title %}Task Details - Instagram Uploader{% endblock %}
@@ -123,7 +124,7 @@
 
 {% block extra_js %}
 <!-- Include logs formatting script -->
-<script src="/static/uploader/js/logs.js"></script>
+<script src="{% static 'uploader/js/logs.js' %}"></script>
 
 {% if task.status == 'RUNNING' %}
 <script>

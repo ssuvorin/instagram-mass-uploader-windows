@@ -1,4 +1,5 @@
 {% extends "uploader/base.html" %}
+{% load static %}
 
 {% block title %}{{ task.name }} - Bulk Upload - Instagram Uploader{% endblock %}
 
@@ -1329,7 +1330,7 @@
 
 {% block extra_js %}
 <!-- Include logs formatting script -->
-<script src="/static/uploader/js/logs.js"></script>
+<script src="{% static 'uploader/js/logs.js' %}"></script>
 
 <!-- Generate account IDs array using JSON -->
 {{ accounts|length|json_script:"account-task-ids" }}
