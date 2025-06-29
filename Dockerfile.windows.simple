@@ -26,22 +26,39 @@ RUN pip install --no-cache-dir playwright==1.35.0
 # Copy project
 COPY . .
 
-# Create necessary directories
-RUN mkdir -p /app/static /app/temp /app/logs /app/media
+# Create necessary directories with proper permissions
+RUN mkdir -p /app/static /app/temp /app/logs /app/media \
+    && chmod -R 755 /app
 
-# Create simple startup script
+# Create simple startup script with database initialization
 RUN echo '#!/bin/bash\n\
 # Start virtual display\n\
 Xvfb :99 -screen 0 1920x1080x24 &\n\
 export DISPLAY=:99\n\
 sleep 2\n\
 \n\
+echo "🔧 Initializing database..."\n\
+# Run Django migrations\n\
+python manage.py makemigrations --noinput || echo "Migrations already exist"\n\
+python manage.py migrate --noinput || echo "Migration failed"\n\
+\n\
+# Create superuser\n\
+echo "👤 Creating superuser..."\n\
+python manage.py shell << EOF\n\
+from django.contrib.auth import get_user_model\n\
+User = get_user_model()\n\
+if not User.objects.filter(username="admin").exists():\n\
+    User.objects.create_superuser("admin", "admin@example.com", "admin123")\n\
+    print("Superuser created: admin / admin123")\n\
+else:\n\
+    print("Superuser already exists")\n\
+EOF\n\
+\n\
 # Collect static files\n\
-python manage.py collectstatic --noinput --clear || true\n\
+echo "📁 Collecting static files..."\n\
+python manage.py collectstatic --noinput --clear || echo "Static files failed"\n\
 \n\
-# Create superuser if it doesnt exist\n\
-python create_superuser.py || true\n\
-\n\
+echo "🚀 Starting application..."\n\
 # Run application\n\
 exec python manage.py runserver 0.0.0.0:8000\n\
 ' > /app/start.sh && chmod +x /app/start.sh

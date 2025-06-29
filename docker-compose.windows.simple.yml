@@ -10,11 +10,14 @@ services:
       - ./media:/app/media
       - ./static:/app/static
       - ./staticfiles:/app/staticfiles
+      # ВАЖНО: Сохраняем базу данных между перезапусками
+      - ./db.sqlite3:/app/db.sqlite3
+      - ./logs:/app/logs
     ports:
       - "8000:8000"
     environment:
       - DEBUG=False
-      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here}
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here-change-this}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
       - DOLPHIN_API_TOKEN=${DOLPHIN_API_TOKEN}
       - RUCAPTCHA_API_KEY=${RUCAPTCHA_API_KEY}
