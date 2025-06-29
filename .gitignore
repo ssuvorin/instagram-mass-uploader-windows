@@ -294,8 +294,6 @@ uploads/
 media/
 
 # Static files
-/static/
-/staticfiles/
 
 # Secret keys and sensitive data
 secret_key.txt
