@@ -29,8 +29,8 @@ urlpatterns = [
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
 ]
 
-# Always serve static files in development OR when using runserver
-# This ensures static files work both in DEBUG mode and in Docker deployments
-if settings.DEBUG or 'runserver' in sys.argv:
+# Always serve static and media files in development and Docker containers
+# Check for Docker environment or development server
+if settings.DEBUG or 'runserver' in sys.argv or os.environ.get('DOCKER_CONTAINER', False):
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
