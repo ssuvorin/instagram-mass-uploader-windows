@@ -11,6 +11,8 @@ from dotenv import load_dotenv
 import asyncio
 from playwright.async_api import async_playwright
 from playwright.sync_api import sync_playwright
+import threading
+import queue
 
 # Load environment variables from .env file
 load_dotenv()
@@ -1776,7 +1778,6 @@ class DolphinAnty:
         except Exception as e:
             log_action(f"⚠️ Critical error in user activity simulation: {str(e)}", "warning")
 
-    # Replace the broken run_cookie_robot_sync function with a proper synchronous implementation
     def run_cookie_robot_sync(
         self,
         profile_id: Union[str, int],
@@ -1789,6 +1790,92 @@ class DolphinAnty:
     ) -> Dict[str, Any]:
         """
         Synchronous Cookie Robot implementation using sync_playwright
+        This method properly isolates Playwright from Django's async context using subprocess
+        """
+        if not urls:
+            return {"success": False, "error": "No URLs provided"}
+
+        # Import asyncio to properly handle event loop detection
+        import asyncio
+        
+        # Check if we're in an async context
+        try:
+            # This will raise RuntimeError if no event loop is running
+            # or we're not in an async context
+            current_loop = asyncio.get_running_loop()
+            in_async_context = True
+            logger.info("🔍 Detected async context - using thread isolation")
+        except RuntimeError:
+            in_async_context = False
+            logger.info("🔍 No async context detected - running directly")
+        
+        if in_async_context:
+            # Run in a separate thread to completely isolate from async context
+            import threading
+            import queue
+            
+            result_queue = queue.Queue()
+            exception_queue = queue.Queue()
+            
+            def run_playwright_in_thread():
+                try:
+                    # Import sync_playwright inside thread to ensure clean context
+                    from playwright.sync_api import sync_playwright
+                    
+                    result = self._run_cookie_robot_sync_impl(
+                        profile_id=profile_id,
+                        urls=urls,
+                        headless=headless,
+                        imageless=imageless,
+                        duration=duration,
+                        poll_interval=poll_interval,
+                        task_logger=task_logger
+                    )
+                    result_queue.put(result)
+                except Exception as e:
+                    exception_queue.put(e)
+            
+            # Run in a separate thread to completely isolate from async context
+            thread = threading.Thread(target=run_playwright_in_thread)
+            thread.start()
+            thread.join()
+            
+            # Check for exceptions first
+            if not exception_queue.empty():
+                e = exception_queue.get()
+                logger.error(f"❌ Error during Playwright automation: {str(e)}")
+                return {"success": False, "error": f"Playwright automation error: {str(e)}"}
+            
+            # Get the result
+            if not result_queue.empty():
+                return result_queue.get()
+            else:
+                return {"success": False, "error": "No result returned from Playwright automation"}
+        else:
+            # Not in async context, run directly
+            return self._run_cookie_robot_sync_impl(
+                profile_id=profile_id,
+                urls=urls,
+                headless=headless,
+                imageless=imageless,
+                duration=duration,
+                poll_interval=poll_interval,
+                task_logger=task_logger
+            )
+
+    def _run_cookie_robot_sync_impl(
+        self,
+        profile_id: Union[str, int],
+        urls: List[str],
+        headless: bool = False,
+        imageless: bool = False,
+        duration: int = 300,
+        poll_interval: int = 5,
+        task_logger=None
+    ) -> Dict[str, Any]:
+        """
+        Internal implementation of synchronous Cookie Robot using sync_playwright
+        This runs in a separate thread to avoid async context issues
         """
         if not urls:
             return {"success": False, "error": "No URLs provided"}
