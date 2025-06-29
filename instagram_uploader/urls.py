@@ -28,8 +28,7 @@ urlpatterns = [
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
 ]
 
-# Always serve static files when using runserver OR when in Docker container
-# This fixes the issue where static files don't load in production Docker containers
-if settings.DEBUG or os.environ.get('CONTAINER_ENV') == 'docker' or any('runserver' in arg for arg in __import__('sys').argv):
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Always serve static files in development OR Docker containers
+# This ensures static files work with runserver and in Docker deployments
+urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
