@@ -467,9 +467,16 @@ class DolphinAnty:
                 logger.error(f"❌ Dolphin Anty local API error (HTTP {status_resp.status_code})")
                 logger.error("💡 Please make sure Dolphin Anty application is running")
                 return False, None
-        except requests.exceptions.RequestException as e:
-            logger.error(f"❌ Cannot connect to Dolphin Anty local API: {e}")
+        except requests.exceptions.ConnectionError:
+            logger.error(f"❌ Cannot connect to Dolphin Anty local API at {self.local_api_base}")
             logger.error("💡 Please make sure Dolphin Anty application is running on port 3001")
+            logger.error("💡 For Docker: verify DOLPHIN_API_HOST=http://host.docker.internal:3001")
+            return False, None
+        except requests.exceptions.Timeout:
+            logger.error(f"❌ Timeout connecting to Dolphin Anty API")
+            return False, None
+        except requests.exceptions.RequestException as e:
+            logger.error(f"❌ Network error connecting to Dolphin Anty: {e}")
             return False, None
         
         # Step 2: Prepare start request

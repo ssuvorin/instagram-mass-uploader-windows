@@ -2106,106 +2106,50 @@ def delete_cookie_task(request, task_id):
 
 def run_cookie_robot_task(task_id, urls, headless, imageless):
     """
-    Run a cookie robot task in the background
+    Run cookie robot task in background thread
     """
-    task = UploadTask.objects.get(id=task_id)
-    
-    # Check if task was cancelled before starting
-    if task.status == 'CANCELLED':
-        logger.info(f"Cookie Robot task {task_id} was cancelled before starting")
-        return
-    
-    task.status = 'RUNNING'
-    
-    log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] Starting Cookie Robot task..."
-    task.log += log_message + "\n"
-    logger.info(log_message)
-    
-    log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] URLs to visit: {urls}"
-    task.log += log_message + "\n"
-    logger.info(log_message)
-    
-    log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] Headless mode: {headless}"
-    task.log += log_message + "\n"
-    logger.info(log_message)
-    
-    log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] Disable images: {imageless}"
-    task.log += log_message + "\n"
-    logger.info(log_message)
-    
-    task.save()
-    
-    # Create a task logger function for real-time log updates
-    def task_logger_func(message):
-        """Add log message to task and save to database"""
-        import threading
-        
-        def update_task_log():
-            try:
-                # Check if task was cancelled
-                task_check = UploadTask.objects.get(id=task_id)
-                if task_check.status == 'CANCELLED':
-                    logger.info(f"Task {task_id} was cancelled, stopping log updates")
-                    return
-                    
-                # Refresh task from database to get latest state
-                task_updated = UploadTask.objects.get(id=task_id)
-                log_entry = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}"
-                task_updated.log += log_entry + "\n"
-                task_updated.save(update_fields=['log', 'updated_at'])
-            except Exception as e:
-                logger.error(f"Error updating task log: {str(e)}")
-        
-        # Run the database update in a separate thread to avoid async context issues
-        thread = threading.Thread(target=update_task_log)
-        thread.daemon = True
-        thread.start()
+    from django.utils import timezone
     
     try:
-        # Get the account
-        account = task.account
-        log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] Using account: {account.username}"
-        task.log += log_message + "\n"
-        logger.info(log_message)
+        # Get the task object
+        task = UploadTask.objects.get(id=task_id)
         
-        # Check for cancellation
-        task.refresh_from_db()
+        # Check if task was cancelled before starting
         if task.status == 'CANCELLED':
-            logger.info(f"Cookie Robot task {task_id} was cancelled during setup")
+            logger.info(f"Cookie Robot task {task_id} was cancelled before execution")
             return
         
-        # Check if account has a Dolphin profile ID
-        if not account.dolphin_profile_id:
-            log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ❌ Error: Account does not have a Dolphin profile ID."
-            task.log += log_message + "\n"
-            logger.error(log_message)
+        # Get the associated account
+        try:
+            account = InstagramAccount.objects.get(id=task.instagram_account.id)
+        except InstagramAccount.DoesNotExist:
+            logger.error(f"Instagram account not found for task {task_id}")
             task.status = 'FAILED'
+            task.log += "[ERROR] Instagram account not found\n"
             task.save()
             return
         
-        log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] Using Dolphin profile ID: {account.dolphin_profile_id}"
-        task.log += log_message + "\n"
-        logger.info(log_message)
+        # Check if account has a Dolphin profile
+        if not account.dolphin_profile_id:
+            error_msg = f"Account {account.username} does not have a Dolphin profile"
+            logger.error(f"[COOKIE_ROBOT] {error_msg}")
+            task.status = 'FAILED'
+            task.log += f"[ERROR] {error_msg}\n"
+            task.save()
+            return
         
-        # Initialize Dolphin API
+        # Get API token
         api_key = os.environ.get("DOLPHIN_API_TOKEN", "")
         if not api_key:
-            log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ❌ Error: Dolphin API token not found in environment variables."
-            task.log += log_message + "\n"
-            logger.error(log_message)
+            error_msg = "Dolphin API token not found in environment variables"
+            logger.error(f"[COOKIE_ROBOT] {error_msg}")
             task.status = 'FAILED'
+            task.log += f"[ERROR] {error_msg}\n"
             task.save()
             return
         
-        # Check for cancellation before starting main work
-        task.refresh_from_db()
-        if task.status == 'CANCELLED':
-            logger.info(f"Cookie Robot task {task_id} was cancelled before starting Dolphin API")
-            return
-        
-        log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] Initializing Dolphin API client..."
-        task.log += log_message + "\n"
-        logger.info(log_message)
+        # Initialize Dolphin API client
+        from bot.src.instagram_uploader.dolphin_anty import DolphinAnty
         
         # Get Dolphin API host from environment (critical for Docker Windows deployment)
         dolphin_api_host = os.environ.get("DOLPHIN_API_HOST", "http://localhost:3001/v1.0")
@@ -2213,6 +2157,22 @@ def run_cookie_robot_task(task_id, urls, headless, imageless):
             dolphin_api_host = dolphin_api_host.rstrip("/") + "/v1.0"
         
         dolphin = DolphinAnty(api_key=api_key, local_api_base=dolphin_api_host)
+        
+        # Check Dolphin status before proceeding
+        dolphin_status = dolphin.check_dolphin_status()
+        if not dolphin_status.get("authenticated", False):
+            error_msg = f"Dolphin Anty API not available: {dolphin_status.get('error', 'Unknown error')}"
+            logger.error(f"[COOKIE_ROBOT] {error_msg}")
+            task.status = 'FAILED'
+            task.log += f"[ERROR] {error_msg}\n"
+            task.log += f"[INFO] Please ensure Dolphin Anty is running and Local API is enabled on port 3001\n"
+            task.save()
+            return
+        
+        # Define logging function for the task
+        def task_logger_func(message):
+            task.log += message + "\n"
+            task.save()
         
         # Run the cookie robot
         log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] 🚀 Starting Cookie Robot on Dolphin profile {account.dolphin_profile_id}..."
