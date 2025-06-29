@@ -31,6 +31,36 @@ from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 
+def safe_log_message(message):
+    """
+    Remove or replace emoji characters that cause encoding issues on Windows
+    """
+    try:
+        # Replace common emoji characters with safe alternatives
+        emoji_replacements = {
+            '🔍': '[SEARCH]',
+            '✅': '[SUCCESS]',
+            '❌': '[ERROR]',
+            '🚀': '[START]',
+            '🔄': '[PROCESS]',
+            '⚠️': '[WARNING]',
+            '🔧': '[TOOL]',
+            '🖼️': '[IMAGE]',
+            '📋': '[LIST]',
+            '🗑️': '[DELETE]',
+            '📧': '[EMAIL]'
+        }
+        
+        # Replace emoji characters with safe alternatives
+        for emoji, replacement in emoji_replacements.items():
+            message = message.replace(emoji, replacement)
+        
+        # Ensure the message only contains ASCII characters
+        return message.encode('ascii', 'ignore').decode('ascii')
+    except Exception:
+        # If any error occurs, return a safe fallback
+        return str(message).encode('ascii', 'ignore').decode('ascii')
+
 @login_required
 def dashboard(request):
     """Dashboard with recent tasks and accounts"""
@@ -2081,7 +2111,9 @@ def delete_cookie_task(request, task_id):
             # Update status if running
             if task.status == 'RUNNING':
                 task.status = 'CANCELLED'
-                task.log += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] 🗑️ Task deleted while running\n"
+                log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [DELETE] Task deleted while running"
+                safe_message = safe_log_message(log_message)
+                task.log += safe_message + "\n"
                 task.save()
             
             # Delete the task
@@ -2176,9 +2208,10 @@ def run_cookie_robot_task(task_id, urls, headless, imageless):
             task.save()
         
         # Run the cookie robot
-        log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] 🚀 Starting Cookie Robot on Dolphin profile {account.dolphin_profile_id}..."
-        task.log += log_message + "\n"
-        logger.info(log_message)
+        log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [START] Starting Cookie Robot on Dolphin profile {account.dolphin_profile_id}..."
+        safe_message = safe_log_message(log_message)
+        task.log += safe_message + "\n"
+        logger.info(safe_message)
         
         # Save initial state before starting robot
         task.save()
@@ -2202,9 +2235,10 @@ def run_cookie_robot_task(task_id, urls, headless, imageless):
         # Update task with result
         if result.get('success', False):
             task.status = 'COMPLETED'
-            log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ✅ Cookie Robot completed successfully!"
-            task.log += log_message + "\n"
-            logger.info(log_message)
+            log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [SUCCESS] Cookie Robot completed successfully!"
+            safe_message = safe_log_message(log_message)
+            task.log += safe_message + "\n"
+            logger.info(safe_message)
             
             log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] Response details:"
             task.log += log_message + "\n"
@@ -2219,9 +2253,10 @@ def run_cookie_robot_task(task_id, urls, headless, imageless):
             # Check if it's a human verification error
             if error_details == 'HUMAN_VERIFICATION_REQUIRED':
                 task.status = 'FAILED'
-                log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ❌ Human verification required for this account"
-                task.log += log_message + "\n"
-                logger.error(log_message)
+                log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [ERROR] Human verification required for this account"
+                safe_message = safe_log_message(log_message)
+                task.log += safe_message + "\n"
+                logger.error(safe_message)
                 
                 # Update the Instagram account status
                 try:
@@ -2229,18 +2264,21 @@ def run_cookie_robot_task(task_id, urls, headless, imageless):
                     instagram_account.status = 'HUMAN_VERIFICATION_REQUIRED'
                     instagram_account.save()
                     
-                    log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] 📝 Updated account {account.username} status to HUMAN_VERIFICATION_REQUIRED"
-                    task.log += log_message + "\n"
-                    logger.info(log_message)
+                    log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] Updated account {account.username} status to HUMAN_VERIFICATION_REQUIRED"
+                    safe_message = safe_log_message(log_message)
+                    task.log += safe_message + "\n"
+                    logger.info(safe_message)
                 except Exception as update_error:
-                    log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ⚠️ Could not update account status: {str(update_error)}"
-                    task.log += log_message + "\n"
-                    logger.warning(log_message)
+                    log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [WARNING] Could not update account status: {str(update_error)}"
+                    safe_message = safe_log_message(log_message)
+                    task.log += safe_message + "\n"
+                    logger.warning(safe_message)
             else:
                 task.status = 'FAILED'
-                log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ❌ Cookie Robot failed: {error_details}"
-                task.log += log_message + "\n"
-                logger.error(log_message)
+                log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [ERROR] Cookie Robot failed: {error_details}"
+                safe_message = safe_log_message(log_message)
+                task.log += safe_message + "\n"
+                logger.error(safe_message)
                 
                 # Add full error details if available
                 if isinstance(error_details, dict):
@@ -2258,9 +2296,10 @@ def run_cookie_robot_task(task_id, urls, headless, imageless):
             return
             
         task.status = 'FAILED'
-        log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ❌ Exception occurred: {str(e)}"
-        task.log += log_message + "\n"
-        logger.error(log_message)
+        log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [ERROR] Exception occurred: {str(e)}"
+        safe_message = safe_log_message(log_message)
+        task.log += safe_message + "\n"
+        logger.error(safe_message)
         
         stack_trace = traceback.format_exc()
         task.log += stack_trace
@@ -2302,21 +2341,25 @@ def bulk_cookie_robot(request):
                 
                 # Create task
                 initial_log = f"Cookie Robot Task\n"
-                log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ✅ Task created for account: {account.username}"
-                initial_log += log_message + "\n"
-                logger.info(log_message)
+                log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [SUCCESS] Task created for account: {account.username}"
+                safe_message = safe_log_message(log_message)
+                initial_log += safe_message + "\n"
+                logger.info(safe_message)
                 
-                log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] 📋 URLs to visit: {urls}"
-                initial_log += log_message + "\n"
-                logger.info(log_message)
+                log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [LIST] URLs to visit: {urls}"
+                safe_message = safe_log_message(log_message)
+                initial_log += safe_message + "\n"
+                logger.info(safe_message)
                 
-                log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] 🔧 Headless mode: {headless}"
-                initial_log += log_message + "\n"
-                logger.info(log_message)
+                log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [TOOL] Headless mode: {headless}"
+                safe_message = safe_log_message(log_message)
+                initial_log += safe_message + "\n"
+                logger.info(safe_message)
                 
-                log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] 🖼️ Disable images: {imageless}"
-                initial_log += log_message + "\n"
-                logger.info(log_message)
+                log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [IMAGE] Disable images: {imageless}"
+                safe_message = safe_log_message(log_message)
+                initial_log += safe_message + "\n"
+                logger.info(safe_message)
                 
                 task = UploadTask.objects.create(
                     account=account,
