@@ -939,7 +939,10 @@ class DolphinAnty:
                 return {"success": False, "error": "Missing port or wsEndpoint in automation data"}
             
             # Формируем WebSocket URL для подключения
-            ws_url = f"ws://127.0.0.1:{port}{ws_endpoint}"
+            # В Docker контейнере используем host.docker.internal, иначе localhost
+            docker_container = os.environ.get("DOCKER_CONTAINER", "0") == "1"
+            host = "host.docker.internal" if docker_container else "127.0.0.1"
+            ws_url = f"ws://{host}:{port}{ws_endpoint}"
             logger.info(f"🌐 Connecting to browser via: {ws_url}")
             
             async with async_playwright() as p:
