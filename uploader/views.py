@@ -2122,7 +2122,7 @@ def run_cookie_robot_task(task_id, urls, headless, imageless):
         
         # Get the associated account
         try:
-            account = InstagramAccount.objects.get(id=task.instagram_account.id)
+            account = InstagramAccount.objects.get(id=task.account.id)
         except InstagramAccount.DoesNotExist:
             logger.error(f"Instagram account not found for task {task_id}")
             task.status = 'FAILED'
