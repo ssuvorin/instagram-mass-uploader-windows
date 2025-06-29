@@ -1715,66 +1715,297 @@ class DolphinAnty:
         task_logger=None
     ) -> Dict[str, Any]:
         """
-        Синхронная обертка для асинхронной функции run_cookie_robot
-        Работает в Django threading контексте
+        Синхронная версия Cookie Robot - полностью без asyncio
+        Использует sync_playwright для совместимости с Django
         """
+        if not urls:
+            return {"success": False, "error": "No URLs provided"}
+
+        # Define log_action function for consistent logging within this method
+        def log_action(message, level="info"):
+            if level == "info":
+                logger.info(message)
+            elif level == "warning":
+                logger.warning(message)
+            elif level == "error":
+                logger.error(message)
+            
+            if task_logger:
+                task_logger(message)
+
+        # 1) Запускаем профиль и получаем данные для подключения
+        profile_started = False
+        automation_data = None
+        
         try:
-            # Проверяем, есть ли уже активный event loop в текущем потоке
-            try:
-                current_loop = asyncio.get_running_loop()
-                logger.info(f"🔄 Found existing event loop, will create new one in thread")
-                # Если есть активный loop, создаем новый в отдельном потоке
-                import concurrent.futures
-                import threading
-                
-                def run_async_in_thread():
-                    # Создаем новый event loop в отдельном потоке
-                    new_loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(new_loop)
-                    try:
-                        return new_loop.run_until_complete(self.run_cookie_robot(
-                            profile_id=profile_id,
-                            urls=urls,
-                            headless=headless,
-                            imageless=imageless,
-                            duration=duration,
-                            poll_interval=poll_interval,
-                            task_logger=task_logger
-                        ))
-                    finally:
-                        new_loop.close()
-                
-                # Запускаем в отдельном потоке
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(run_async_in_thread)
-                    result = future.result()
-                    return result
-                    
-            except RuntimeError:
-                # Нет активного event loop - создаем новый в текущем потоке
-                logger.info(f"🔄 No active event loop, creating new one")
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                
-                try:
-                    # Запускаем асинхронную функцию в новом event loop
-                    result = loop.run_until_complete(self.run_cookie_robot(
-                        profile_id=profile_id,
-                        urls=urls,
-                        headless=headless,
-                        imageless=imageless,
-                        duration=duration,
-                        poll_interval=poll_interval,
-                        task_logger=task_logger
-                    ))
-                    return result
-                finally:
-                    # Закрываем event loop после использования
-                    loop.close()
+            success, profile_data = self.start_profile(profile_id, headless=headless)
+            profile_started = success
+            automation_data = profile_data
+            
+            if success and automation_data:
+                logger.info(f"✅ Profile {profile_id} started automatically")
+                logger.info(f"🔗 Automation data: {automation_data}")
+            else:
+                logger.error(f"❌ Could not start profile {profile_id} or get automation data")
+                return {"success": False, "error": "Failed to start profile or get automation data"}
                 
         except Exception as e:
-            logger.error(f"❌ Error in sync wrapper: {str(e)}")
-            return {"success": False, "error": f"Sync wrapper error: {str(e)}"}
+            logger.error(f"❌ Exception during profile start: {e}")
+            return {"success": False, "error": f"Profile start error: {str(e)}"}
+
+        # 2) Подключаемся к браузеру через синхронный Playwright
+        browser = None
+        try:
+            # Извлекаем данные для подключения
+            port = automation_data.get("port")
+            ws_endpoint = automation_data.get("wsEndpoint")
+            
+            if not port or not ws_endpoint:
+                logger.error(f"❌ Missing connection data: port={port}, wsEndpoint={ws_endpoint}")
+                if profile_started:
+                    self.stop_profile(profile_id)
+                return {"success": False, "error": "Missing port or wsEndpoint in automation data"}
+            
+            # Формируем WebSocket URL для подключения
+            # В Docker контейнере используем host.docker.internal, иначе localhost
+            docker_container = os.environ.get("DOCKER_CONTAINER", "0") == "1"
+            host = "host.docker.internal" if docker_container else "127.0.0.1"
+            ws_url = f"ws://{host}:{port}{ws_endpoint}"
+            logger.info(f"🌐 Connecting to browser via: {ws_url}")
+            
+            # Используем СИНХРОННЫЙ Playwright
+            from playwright.sync_api import sync_playwright
+            
+            with sync_playwright() as p:
+                # Подключаемся к уже запущенному браузеру
+                browser = p.chromium.connect_over_cdp(ws_url)
+                logger.info(f"✅ Successfully connected to Dolphin browser (sync)")
+                
+                try:
+                    # Получаем существующий контекст или создаем новый
+                    contexts = browser.contexts
+                    if contexts:
+                        context = contexts[0]
+                        logger.info(f"📄 Using existing browser context")
+                    else:
+                        context = browser.new_context()
+                        logger.info(f"📄 Created new browser context")
+                    
+                    # Создаем новую страницу
+                    page = context.new_page()
+                    
+                    # Cookie Robot - сразу переходим к основной логике набивания куков
+                    log_action("Starting Cookie Robot - focusing on cookie collection...", "info")
+                    
+                    # 4) Запускаем собственно Cookie Robot на заданных URLs
+                    # Настройки для imageless режима
+                    if imageless:
+                        page.route("**/*.{png,jpg,jpeg,gif,webp,svg,ico}", lambda route: route.abort())
+                        logger.info(f"🚫 Images blocked (imageless mode)")
+                    
+                    successful_visits = 0
+                    failed_visits = 0
+                    
+                    # Рандомизируем порядок URL для более естественного поведения
+                    shuffled_urls = urls.copy()
+                    random.shuffle(shuffled_urls)
+                    
+                    if task_logger:
+                        task_logger(f"🔀 URL order randomized for natural behavior")
+                        task_logger(f"📋 Visit order: {' → '.join(shuffled_urls[:5])}{'...' if len(shuffled_urls) > 5 else ''}")
+                    
+                    # Обходим каждый URL
+                    for i, url in enumerate(shuffled_urls, 1):
+                        try:
+                            logger.info(f"🌐 Visiting URL {i}/{len(shuffled_urls)}: {url}")
+                            
+                            if task_logger:
+                                task_logger(f"🌐 [{i}/{len(shuffled_urls)}] Starting visit to: {url}")
+                            
+                            # Переходим на страницу
+                            try:
+                                page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                            except Exception as nav_error:
+                                failed_visits += 1
+                                logger.error(f"❌ Navigation error for {url}: {str(nav_error)}")
+                                
+                                if task_logger:
+                                    task_logger(f"❌ [{i}/{len(shuffled_urls)}] Navigation failed: {url}")
+                                
+                                continue
+                            
+                            # Случайная задержка для имитации человеческого поведения
+                            base_duration = duration / len(shuffled_urls)
+                            random_delay = random.uniform(base_duration * 0.8, base_duration * 1.2)
+                            
+                            logger.info(f"⏳ Staying on {url} for {random_delay:.1f} seconds")
+                            
+                            if task_logger:
+                                task_logger(f"⏳ Page loaded, simulating user activity for {random_delay:.1f} seconds")
+                            
+                            # Имитируем активность пользователя (синхронная версия)
+                            try:
+                                self._simulate_user_activity_sync(page, random_delay, task_logger)
+                            except Exception as activity_error:
+                                logger.warning(f"⚠️ User activity error: {str(activity_error)}")
+                                if task_logger:
+                                    task_logger(f"⚠️ User activity interrupted: {str(activity_error)[:50]}")
+                            
+                            successful_visits += 1
+                            logger.info(f"✅ Successfully processed {url}")
+                            
+                            if task_logger:
+                                task_logger(f"✅ [{i}/{len(shuffled_urls)}] Successfully completed: {url}")
+                            
+                        except Exception as e:
+                            failed_visits += 1
+                            logger.error(f"❌ Error processing {url}: {str(e)}")
+                            
+                            if task_logger:
+                                task_logger(f"❌ [{i}/{len(shuffled_urls)}] Failed {url}: {str(e)}")
+                            
+                            continue
+                    
+                    # Закрываем страницу после всех URL
+                    try:
+                        if not page.is_closed():
+                            page.close()
+                            logger.info(f"📄 Page closed after processing all URLs")
+                    except Exception as close_error:
+                        logger.warning(f"⚠️ Error closing page: {str(close_error)}")
+                    
+                    # Результат выполнения
+                    result = {
+                        "success": True,
+                        "data": {
+                            "message": "Cookie Robot executed successfully via sync Playwright",
+                            "urls_total": len(urls),
+                            "urls_randomized": len(shuffled_urls),
+                            "urls_processed": len(shuffled_urls),
+                            "successful_visits": successful_visits,
+                            "failed_visits": failed_visits,
+                            "success_rate": round((successful_visits / len(shuffled_urls)) * 100, 2) if shuffled_urls else 0,
+                            "total_duration": duration,
+                            "visit_order": shuffled_urls[:10]  # Only first 10 for brevity
+                        }
+                    }
+                    
+                    logger.info(f"✅ Cookie Robot completed: {successful_visits}/{len(shuffled_urls)} URLs processed successfully")
+                    
+                    if task_logger:
+                        task_logger(f"🎯 Final Results:")
+                        task_logger(f"   • Total URLs: {len(urls)}")
+                        task_logger(f"   • Successfully visited: {successful_visits}")
+                        task_logger(f"   • Failed visits: {failed_visits}")
+                        task_logger(f"   • Success rate: {round((successful_visits / len(shuffled_urls)) * 100, 2)}%")
+                        task_logger(f"   • Total duration: {duration} seconds")
+                    
+                    return result
+                    
+                finally:
+                    # Закрываем браузер
+                    if browser:
+                        browser.close()
+                        logger.info(f"🔌 Disconnected from browser")
+                    
+        except Exception as e:
+            logger.error(f"❌ Error during sync Playwright automation: {str(e)}")
+            return {"success": False, "error": f"Sync Playwright automation error: {str(e)}"}
+            
+        finally:
+            # Останавливаем профиль только если мы его запустили
+            if profile_started:
+                logger.info(f"🛑 Stopping browser profile {profile_id}")
+                self.stop_profile(profile_id)
+
+    def _simulate_user_activity_sync(self, page, duration: float, task_logger=None):
+        """
+        Синхронная версия имитации активности пользователя
+        """
+        def log_action(message, level="debug"):
+            if level == "debug":
+                logger.debug(message)
+            elif level == "info":
+                logger.info(message)
+            elif level == "warning":
+                logger.warning(message)
+            
+            if task_logger:
+                task_logger(message)
+        
+        try:
+            start_time = time.time()
+            end_time = start_time + duration
+            actions_performed = 0
+            
+            log_action(f"🎭 Starting user activity simulation for {duration:.1f} seconds", "info")
+            
+            while time.time() < end_time:
+                remaining_time = end_time - time.time()
+                if remaining_time <= 0:
+                    break
+                
+                # Проверяем, что страница еще открыта
+                if page.is_closed():
+                    log_action("⚠️ Page was closed during user activity simulation, stopping", "warning")
+                    break
+                    
+                # Случайное действие каждые 2-6 секунд
+                action_interval = min(random.uniform(2, 6), remaining_time)
+                time.sleep(action_interval)
+                
+                if page.is_closed():
+                    log_action("⚠️ Page was closed during sleep, stopping", "warning")
+                    break
+                
+                # Выбираем случайное действие
+                actions = ["scroll_down", "scroll_up", "move_mouse", "random_click", "wait"]
+                action = random.choice(actions)
+                
+                try:
+                    if action == "scroll_down":
+                        scroll_amount = random.uniform(0.2, 0.5)
+                        page.evaluate(f"window.scrollBy(0, window.innerHeight * {scroll_amount})")
+                        log_action(f"📜 Scrolled down ({scroll_amount:.2f} screen heights)")
+                        
+                    elif action == "scroll_up":
+                        scroll_amount = random.uniform(0.1, 0.3)
+                        page.evaluate(f"window.scrollBy(0, -window.innerHeight * {scroll_amount})")
+                        log_action(f"📜 Scrolled up ({scroll_amount:.2f} screen heights)")
+                        
+                    elif action == "move_mouse":
+                        x = random.randint(50, 1200)
+                        y = random.randint(50, 800)
+                        page.mouse.move(x, y)
+                        log_action(f"🖱️ Moved mouse to ({x}, {y})")
+                        
+                    elif action == "random_click":
+                        x = random.randint(200, 800)
+                        y = random.randint(200, 600)
+                        page.mouse.click(x, y)
+                        log_action(f"🖱️ Clicked at ({x}, {y})")
+                        
+                    elif action == "wait":
+                        wait_time = min(random.uniform(1, 4), remaining_time)
+                        time.sleep(wait_time)
+                        log_action(f"⏸️ Reading pause for {wait_time:.1f} seconds")
+                    
+                    actions_performed += 1
+                    
+                except Exception as e:
+                    if page.is_closed():
+                        log_action(f"⚠️ Page closed during {action}, stopping simulation", "warning")
+                        break
+                    else:
+                        log_action(f"⚠️ Error during {action}: {str(e)[:100]}")
+                        continue
+            
+            # Финальная статистика
+            total_time = time.time() - start_time
+            log_action(f"🎭 Simulation complete! {actions_performed} actions in {total_time:.1f}s", "info")
+            
+        except Exception as e:
+            log_action(f"⚠️ Critical error in user activity simulation: {str(e)}", "warning")
 
     def check_dolphin_status(self) -> Dict[str, Any]:
         """
