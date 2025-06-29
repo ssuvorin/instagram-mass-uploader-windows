@@ -22,7 +22,7 @@ restart_clean.cmd
 
 ---
 
-### 2. Static Files Not Loading (CSS, JS, Logo missing)
+### 2. Static Files Not Loading (CSS, JS, Logo missing) - РЕШЕНО
 
 **Симптомы:**
 - Логотип не отображается
@@ -30,25 +30,26 @@ restart_clean.cmd
 - JavaScript не работает
 - 404 ошибки для `/static/css/apple-style.css`, `/static/js/apple-ui.js`, `/static/css/logo.svg`
 
-**Причина:** Статические файлы не копируются в правильное место при сборке Docker образа.
+**Причина:** Django с `DEBUG=False` не обслуживает статические файлы автоматически при использовании `runserver`.
 
 **Быстрое решение:**
 ```cmd
-# Быстрое исправление статических файлов
-fix_static_files.cmd
+# Финальное исправление статических файлов
+fix_static_files_final.cmd
 ```
 
-**Полное решение:**
-```cmd
-# Полная пересборка с исправлением
-restart_clean.cmd
+**Техническое исправление:** Добавлена поддержка статических файлов в `urls.py` для режима `runserver`:
+```python
+# Serve static files in development mode OR when running with runserver
+if settings.DEBUG or 'runserver' in __import__('sys').argv:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 ```
 
-**Объяснение:** Django ищет статические файлы в `STATICFILES_DIRS`, но они были только в `uploader/static/`. Исправление добавляет корректные пути.
+**Объяснение:** Django ищет статические файлы и успешно их собирает, но не обслуживает в продакшн режиме. Исправление включает обслуживание статических файлов для `runserver`.
 
 ---
 
-### 3. Server Error 500 on /cookies/ page
+### 3. Server Error 500 on /cookies/ page - ИСПРАВЛЕНО
 
 **Симптомы:**
 ```
@@ -56,13 +57,11 @@ TemplateDoesNotExist: uploader/cookies/dashboard.html
 django.template.exceptions.TemplateDoesNotExist
 ```
 
-**Причина:** Отсутствует темплейт для страницы cookies (уже исправлено в новой версии).
+**Причина:** Шаблон существует, но Django не может его найти из-за проблем с путями.
 
-**Решение:**
-```cmd
-# Обновите контейнер
-restart_clean.cmd
-```
+**Решение:** Исправлено в последней версии - шаблон находится в `uploader/templates/uploader/cookies/dashboard.html`
+
+**Статус:** ✅ РЕШЕНО - страница cookies теперь работает корректно.
 
 ---
 

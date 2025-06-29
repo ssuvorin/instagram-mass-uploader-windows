@@ -27,6 +27,7 @@ urlpatterns = [
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
 ]
 
-# Serve media files in development
-if settings.DEBUG:
+# Serve static files in development mode OR when running with runserver
+if settings.DEBUG or 'runserver' in __import__('sys').argv:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
