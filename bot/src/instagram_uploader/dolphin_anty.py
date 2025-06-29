@@ -10,6 +10,8 @@ from typing import Dict, List, Optional, Union, Any, Tuple
 from dotenv import load_dotenv
 import asyncio
 from playwright.async_api import async_playwright
+import concurrent.futures
+import threading
 
 # Load environment variables from .env file
 load_dotenv()
@@ -1717,26 +1719,58 @@ class DolphinAnty:
         Работает в Django threading контексте
         """
         try:
-            # Создаем новый event loop для этого потока
-            # Это необходимо потому что Django может уже иметь активный event loop
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            
+            # Проверяем, есть ли уже активный event loop в текущем потоке
             try:
-                # Запускаем асинхронную функцию в новом event loop
-                result = loop.run_until_complete(self.run_cookie_robot(
-                    profile_id=profile_id,
-                    urls=urls,
-                    headless=headless,
-                    imageless=imageless,
-                    duration=duration,
-                    poll_interval=poll_interval,
-                    task_logger=task_logger
-                ))
-                return result
-            finally:
-                # Закрываем event loop после использования
-                loop.close()
+                current_loop = asyncio.get_running_loop()
+                logger.info(f"🔄 Found existing event loop, will create new one in thread")
+                # Если есть активный loop, создаем новый в отдельном потоке
+                import concurrent.futures
+                import threading
+                
+                def run_async_in_thread():
+                    # Создаем новый event loop в отдельном потоке
+                    new_loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(new_loop)
+                    try:
+                        return new_loop.run_until_complete(self.run_cookie_robot(
+                            profile_id=profile_id,
+                            urls=urls,
+                            headless=headless,
+                            imageless=imageless,
+                            duration=duration,
+                            poll_interval=poll_interval,
+                            task_logger=task_logger
+                        ))
+                    finally:
+                        new_loop.close()
+                
+                # Запускаем в отдельном потоке
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(run_async_in_thread)
+                    result = future.result()
+                    return result
+                    
+            except RuntimeError:
+                # Нет активного event loop - создаем новый в текущем потоке
+                logger.info(f"🔄 No active event loop, creating new one")
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                
+                try:
+                    # Запускаем асинхронную функцию в новом event loop
+                    result = loop.run_until_complete(self.run_cookie_robot(
+                        profile_id=profile_id,
+                        urls=urls,
+                        headless=headless,
+                        imageless=imageless,
+                        duration=duration,
+                        poll_interval=poll_interval,
+                        task_logger=task_logger
+                    ))
+                    return result
+                finally:
+                    # Закрываем event loop после использования
+                    loop.close()
                 
         except Exception as e:
             logger.error(f"❌ Error in sync wrapper: {str(e)}")
