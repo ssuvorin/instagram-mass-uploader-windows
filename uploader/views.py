@@ -2109,6 +2109,7 @@ def run_cookie_robot_task(task_id, urls, headless, imageless):
     Run cookie robot task in background thread
     """
     from django.utils import timezone
+    from uploader.models import InstagramAccount
     
     try:
         # Get the task object
@@ -2224,7 +2225,6 @@ def run_cookie_robot_task(task_id, urls, headless, imageless):
                 
                 # Update the Instagram account status
                 try:
-                    from uploader.models import InstagramAccount
                     instagram_account = InstagramAccount.objects.get(username=account.username)
                     instagram_account.status = 'HUMAN_VERIFICATION_REQUIRED'
                     instagram_account.save()
