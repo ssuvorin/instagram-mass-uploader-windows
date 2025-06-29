@@ -287,6 +287,11 @@ restart_clean.cmd
 docker-compose -f docker-compose.windows.simple.yml up -d
 ```
 
+### Option 3: Quick Fix for Static Files Issues
+```cmd
+fix_static_files.cmd
+```
+
 ## 🔧 Fixed Database Issues
 
 **Previous Issue:** SQLite "unable to open database file" on Windows Docker
@@ -298,24 +303,40 @@ docker-compose -f docker-compose.windows.simple.yml up -d
 - 💾 **Volume Persistence** - Data survives container restarts
 - 🔄 **Auto Migrations** - Django migrations run automatically
 
+## 🎨 Fixed Static Files Issues
+
+**Previous Issue:** CSS, JavaScript, and logo files not loading (404 errors)
+**Solution:** Static files now properly configured in Django settings and Docker
+
+### Static Files Features:
+- 🎨 **Apple-style CSS** - Beautiful modern UI styling
+- 🖼️ **Logo Display** - SVG logo properly served  
+- ⚡ **JavaScript Functions** - UI enhancements and modal fixes
+- 📂 **Automatic Collection** - Static files collected during startup
+- 🔧 **Manual Backup** - Fallback copying if collectstatic fails
+
 ## 🚨 Troubleshooting
 
 If you encounter issues:
 
 1. **Quick Diagnosis:** `check_status.cmd`
-2. **Full Reset:** `restart_clean.cmd`
-3. **Detailed Guide:** See [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+2. **Static Files Fix:** `fix_static_files.cmd`  
+3. **Full Reset:** `restart_clean.cmd`
+4. **Detailed Guide:** See [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 
 ### Common Issues:
 - ❌ Database connection errors → Run `restart_clean.cmd`
+- ❌ Static files not loading → Run `fix_static_files.cmd`
 - ❌ Container won't start → Check port 8000 availability
 - ❌ Dolphin Anty not accessible → Verify `DOLPHIN_API_HOST` in `.env`
+- ❌ Server Error 500 on /cookies/ → Run `restart_clean.cmd`
 
 ## 📁 Project Structure
 
 ```
 instagram-mass-uploader-windows/
 ├── restart_clean.cmd              # Complete clean restart
+├── fix_static_files.cmd           # Quick static files fix
 ├── check_status.cmd               # System diagnostics
 ├── docker-compose.windows.simple.yml  # Simplified config
 ├── Dockerfile.windows.simple      # Optimized Dockerfile
@@ -393,6 +414,9 @@ deploy:
 ```cmd
 # System status check
 check_status.cmd
+
+# Quick static files fix
+fix_static_files.cmd
 
 # View live logs
 docker-compose -f docker-compose.windows.simple.yml logs -f

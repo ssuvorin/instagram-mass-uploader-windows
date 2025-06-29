@@ -22,7 +22,51 @@ restart_clean.cmd
 
 ---
 
-### 2. Container Won't Start
+### 2. Static Files Not Loading (CSS, JS, Logo missing)
+
+**Симптомы:**
+- Логотип не отображается
+- CSS стили не применяются (сайт выглядит без стилей)
+- JavaScript не работает
+- 404 ошибки для `/static/css/apple-style.css`, `/static/js/apple-ui.js`, `/static/css/logo.svg`
+
+**Причина:** Статические файлы не копируются в правильное место при сборке Docker образа.
+
+**Быстрое решение:**
+```cmd
+# Быстрое исправление статических файлов
+fix_static_files.cmd
+```
+
+**Полное решение:**
+```cmd
+# Полная пересборка с исправлением
+restart_clean.cmd
+```
+
+**Объяснение:** Django ищет статические файлы в `STATICFILES_DIRS`, но они были только в `uploader/static/`. Исправление добавляет корректные пути.
+
+---
+
+### 3. Server Error 500 on /cookies/ page
+
+**Симптомы:**
+```
+TemplateDoesNotExist: uploader/cookies/dashboard.html
+django.template.exceptions.TemplateDoesNotExist
+```
+
+**Причина:** Отсутствует темплейт для страницы cookies (уже исправлено в новой версии).
+
+**Решение:**
+```cmd
+# Обновите контейнер
+restart_clean.cmd
+```
+
+---
+
+### 4. Container Won't Start
 
 **Симптомы:**
 - Container exits immediately
@@ -47,7 +91,7 @@ restart_clean.cmd
 
 ---
 
-### 3. Cannot Access Dolphin Anty API
+### 5. Cannot Access Dolphin Anty API
 
 **Симптомы:**
 - "Connection refused" errors
@@ -66,7 +110,7 @@ curl http://localhost:3001/v1.0/browser_profiles
 
 ---
 
-### 4. Memory/Performance Issues
+### 6. Memory/Performance Issues
 
 **Симптомы:**
 - Slow performance
@@ -84,27 +128,16 @@ deploy:
 
 ---
 
-### 5. Static Files Not Loading
-
-**Симптомы:**
-- CSS/JS не загружается
-- 404 errors for static files
-
-**Решение:**
-```cmd
-# Пересоберите контейнер
-docker-compose -f docker-compose.windows.simple.yml down
-docker-compose -f docker-compose.windows.simple.yml build --no-cache
-docker-compose -f docker-compose.windows.simple.yml up -d
-```
-
----
-
 ## 🔍 Диагностические команды
 
 ### Проверить статус системы:
 ```cmd
 check_status.cmd
+```
+
+### Быстрое исправление статических файлов:
+```cmd
+fix_static_files.cmd
 ```
 
 ### Посмотреть логи:
@@ -115,6 +148,11 @@ docker-compose -f docker-compose.windows.simple.yml logs -f
 ### Войти в контейнер:
 ```cmd
 docker-compose -f docker-compose.windows.simple.yml exec web bash
+```
+
+### Проверить статические файлы в контейнере:
+```cmd
+docker-compose -f docker-compose.windows.simple.yml exec web ls -la /app/staticfiles/css/
 ```
 
 ### Проверить базу данных:

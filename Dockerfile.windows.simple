@@ -63,9 +63,22 @@ else:\n\
     print("🔐 Superuser already exists")\n\
 EOF\n\
 \n\
-# Collect static files\n\
+# Collect static files (with proper paths)\n\
 echo "📁 Collecting static files..."\n\
-python manage.py collectstatic --noinput --clear || echo "Static files failed"\n\
+python manage.py collectstatic --noinput --clear\n\
+\n\
+# Verify critical static files exist\n\
+echo "🔍 Verifying static files..."\n\
+if [ ! -f "/app/staticfiles/css/apple-style.css" ]; then\n\
+    echo "⚠️ apple-style.css not found, copying manually..."\n\
+    mkdir -p /app/staticfiles/css /app/staticfiles/js\n\
+    cp -f /app/uploader/static/css/* /app/staticfiles/css/ 2>/dev/null || true\n\
+    cp -f /app/uploader/static/js/* /app/staticfiles/js/ 2>/dev/null || true\n\
+    cp -f /app/uploader/static/uploader/js/* /app/staticfiles/uploader/js/ 2>/dev/null || true\n\
+    echo "📂 Static files copied manually"\n\
+else\n\
+    echo "✅ Static files collected successfully"\n\
+fi\n\
 \n\
 echo "🚀 Starting application..."\n\
 # Run application\n\
