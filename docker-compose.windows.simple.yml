@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.windows.simple
+    restart: always
+    volumes:
+      - ./media:/app/media
+      - ./static:/app/static
+      - ./staticfiles:/app/staticfiles
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      - DOLPHIN_API_TOKEN=${DOLPHIN_API_TOKEN}
+      - RUCAPTCHA_API_KEY=${RUCAPTCHA_API_KEY}
+      # КРИТИЧНО для Windows Docker
+      - DOLPHIN_API_HOST=${DOLPHIN_API_HOST:-http://host.docker.internal:3001}
+    networks:
+      - instagram_network
+    # Windows server optimizations
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1'
+    # ВАЖНО: Доступ к Windows хосту
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  instagram_network:
+    driver: bridge 
