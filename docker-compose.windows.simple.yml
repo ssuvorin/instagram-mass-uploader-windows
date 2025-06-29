@@ -10,9 +10,9 @@ services:
       - ./media:/app/media
       - ./static:/app/static
       - ./staticfiles:/app/staticfiles
-      # ВАЖНО: Сохраняем базу данных между перезапусками
-      - ./db.sqlite3:/app/db.sqlite3
       - ./logs:/app/logs
+      # УБИРАЕМ проблемное монтирование db.sqlite3 - база будет создаваться внутри контейнера
+      - db_data:/app/db_data
     ports:
       - "8000:8000"
     environment:
@@ -23,6 +23,8 @@ services:
       - RUCAPTCHA_API_KEY=${RUCAPTCHA_API_KEY}
       # КРИТИЧНО для Windows Docker
       - DOLPHIN_API_HOST=${DOLPHIN_API_HOST:-http://host.docker.internal:3001}
+      # Указываем путь к БД внутри контейнера
+      - DATABASE_PATH=/app/db_data/db.sqlite3
     networks:
       - instagram_network
     # Windows server optimizations
@@ -34,6 +36,10 @@ services:
     # ВАЖНО: Доступ к Windows хосту
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+volumes:
+  db_data:
+    driver: local
 
 networks:
   instagram_network:

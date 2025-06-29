@@ -27,7 +27,7 @@ RUN pip install --no-cache-dir playwright==1.35.0
 COPY . .
 
 # Create necessary directories with proper permissions
-RUN mkdir -p /app/static /app/temp /app/logs /app/media \
+RUN mkdir -p /app/static /app/temp /app/logs /app/media /app/db_data \
     && chmod -R 755 /app
 
 # Create simple startup script with database initialization
@@ -36,6 +36,15 @@ RUN echo '#!/bin/bash\n\
 Xvfb :99 -screen 0 1920x1080x24 &\n\
 export DISPLAY=:99\n\
 sleep 2\n\
+\n\
+echo "🔧 Setting up database..."\n\
+# Убеждаемся что папка для БД существует\n\
+mkdir -p /app/db_data\n\
+chmod 755 /app/db_data\n\
+\n\
+# Если переменная DATABASE_PATH не установлена, используем дефолт\n\
+export DATABASE_PATH=${DATABASE_PATH:-/app/db_data/db.sqlite3}\n\
+echo "📊 Database path: $DATABASE_PATH"\n\
 \n\
 echo "🔧 Initializing database..."\n\
 # Run Django migrations\n\
@@ -49,9 +58,9 @@ from django.contrib.auth import get_user_model\n\
 User = get_user_model()\n\
 if not User.objects.filter(username="admin").exists():\n\
     User.objects.create_superuser("admin", "admin@example.com", "admin123")\n\
-    print("Superuser created: admin / admin123")\n\
+    print("✅ Superuser created: admin / admin123")\n\
 else:\n\
-    print("Superuser already exists")\n\
+    print("🔐 Superuser already exists")\n\
 EOF\n\
 \n\
 # Collect static files\n\
