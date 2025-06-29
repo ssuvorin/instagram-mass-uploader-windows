@@ -1714,18 +1714,30 @@ class DolphinAnty:
     ) -> Dict[str, Any]:
         """
         Синхронная обертка для асинхронной функции run_cookie_robot
+        Работает в Django threading контексте
         """
         try:
-            # Запускаем асинхронную функцию в новом event loop
-            return asyncio.run(self.run_cookie_robot(
-                profile_id=profile_id,
-                urls=urls,
-                headless=headless,
-                imageless=imageless,
-                duration=duration,
-                poll_interval=poll_interval,
-                task_logger=task_logger
-            ))
+            # Создаем новый event loop для этого потока
+            # Это необходимо потому что Django может уже иметь активный event loop
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+            try:
+                # Запускаем асинхронную функцию в новом event loop
+                result = loop.run_until_complete(self.run_cookie_robot(
+                    profile_id=profile_id,
+                    urls=urls,
+                    headless=headless,
+                    imageless=imageless,
+                    duration=duration,
+                    poll_interval=poll_interval,
+                    task_logger=task_logger
+                ))
+                return result
+            finally:
+                # Закрываем event loop после использования
+                loop.close()
+                
         except Exception as e:
             logger.error(f"❌ Error in sync wrapper: {str(e)}")
             return {"success": False, "error": f"Sync wrapper error: {str(e)}"}
