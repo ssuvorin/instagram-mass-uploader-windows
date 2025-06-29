@@ -1,107 +1,45 @@
-FROM python:3.11-slim
+# Multi-stage build для оптимизации размера образа
+FROM python:3.11-slim as base
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-ENV DISPLAY=:99
-ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-ENV DOCKER_CONTAINER=1
+# Создаем пользователя для безопасности
+RUN groupadd -r appuser && useradd -r -g appuser appuser
 
-# Set working directory
-WORKDIR /app
-
-# Install minimal system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Устанавливаем системные зависимости
+RUN apt-get update && apt-get install -y \
     curl \
     wget \
-    xvfb \
+    gnupg \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Устанавливаем Python зависимости
+WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Playwright (without system dependencies - will use system browser)
-RUN pip install --no-cache-dir playwright==1.35.0
-
-# Copy project
+# Копируем код приложения
 COPY . .
 
-# Create necessary directories with proper permissions
-RUN mkdir -p /app/static /app/temp /app/logs /app/media /app/db_data \
-    && chmod -R 755 /app
+# Создаем необходимые директории и устанавливаем права
+RUN mkdir -p /app/media /app/logs /app/db_data /app/staticfiles && \
+    chown -R appuser:appuser /app
 
-# Create simple startup script with database initialization
-RUN echo '#!/bin/bash\n\
-# Start virtual display\n\
-Xvfb :99 -screen 0 1920x1080x24 &\n\
-export DISPLAY=:99\n\
-sleep 2\n\
-\n\
-echo "🔧 Setting up database..."\n\
-# Убеждаемся что папка для БД существует\n\
-mkdir -p /app/db_data\n\
-chmod 755 /app/db_data\n\
-\n\
-# Если переменная DATABASE_PATH не установлена, используем дефолт\n\
-export DATABASE_PATH=${DATABASE_PATH:-/app/db_data/db.sqlite3}\n\
-echo "📊 Database path: $DATABASE_PATH"\n\
-\n\
-echo "🔧 Initializing database..."\n\
-# Run Django migrations\n\
-python manage.py makemigrations --noinput || echo "Migrations already exist"\n\
-python manage.py migrate --noinput || echo "Migration failed"\n\
-\n\
-# Create superuser\n\
-echo "👤 Creating superuser..."\n\
-python manage.py shell << EOF\n\
-from django.contrib.auth import get_user_model\n\
-User = get_user_model()\n\
-if not User.objects.filter(username="admin").exists():\n\
-    User.objects.create_superuser("admin", "admin@example.com", "admin123")\n\
-    print("✅ Superuser created: admin / admin123")\n\
-else:\n\
-    print("🔐 Superuser already exists")\n\
-EOF\n\
-\n\
-# Clean old static files to avoid duplicates\n\
-echo "🧹 Cleaning old static files..."\n\
-rm -rf /app/staticfiles/css /app/staticfiles/js /app/staticfiles/uploader\n\
-\n\
-# Collect static files (with proper paths)\n\
-echo "📁 Collecting static files..."\n\
-python manage.py collectstatic --noinput --clear\n\
-\n\
-# Debug: Show static files structure\n\
-echo "🔍 Debug: Static files structure:"\n\
-echo "Source files in uploader/static:"\n\
-find /app/uploader/static -type f | head -10\n\
-echo "Collected files in staticfiles:"\n\
-find /app/staticfiles -name "*.css" -o -name "*.js" -o -name "*.svg" | grep -E "(apple|logo)" | head -10\n\
-\n\
-# Verify critical static files exist\n\
-echo "🔍 Verifying static files..."\n\
-if [ -f "/app/staticfiles/css/apple-style.css" ] && [ -f "/app/staticfiles/js/apple-ui.js" ] && [ -f "/app/staticfiles/css/logo.svg" ]; then\n\
-    echo "✅ All critical static files found"\n\
-else\n\
-    echo "⚠️ Missing critical static files, checking locations:"\n\
-    test -f "/app/staticfiles/css/apple-style.css" && echo "✅ apple-style.css found" || echo "❌ apple-style.css missing"\n\
-    test -f "/app/staticfiles/js/apple-ui.js" && echo "✅ apple-ui.js found" || echo "❌ apple-ui.js missing"\n\
-    test -f "/app/staticfiles/css/logo.svg" && echo "✅ logo.svg found" || echo "❌ logo.svg missing"\n\
-    echo "📂 Manual copy from source..."\n\
-    mkdir -p /app/staticfiles/css /app/staticfiles/js\n\
-    cp -f /app/uploader/static/css/* /app/staticfiles/css/ 2>/dev/null || true\n\
-    cp -f /app/uploader/static/js/* /app/staticfiles/js/ 2>/dev/null || true\n\
-    echo "📂 Static files copied manually"\n\
-fi\n\
-\n\
-echo "🚀 Starting application..."\n\
-# Run application\n\
-exec python manage.py runserver 0.0.0.0:8000\n\
-' > /app/start.sh && chmod +x /app/start.sh
+# Переключаемся на пользователя
+USER appuser
 
-# Expose port
-EXPOSE 8000
+# Указываем переменную окружения для Docker
+ENV DOCKER_CONTAINER=1
 
-# Run the startup script
-CMD ["/app/start.sh"] 
+# Запускаемся с настройкой базы и сбором статических файлов
+CMD ["sh", "-c", "\
+    echo '🔧 Setting up database...' && \
+    echo '📊 Database path: /app/db_data/db.sqlite3' && \
+    echo '🔧 Initializing database...' && \
+    python manage.py makemigrations && \
+    python manage.py migrate && \
+    echo '👤 Creating superuser...' && \
+    python create_superuser.py && \
+    echo '📁 Collecting static files...' && \
+    python manage.py collectstatic --noinput && \
+    echo '🚀 Starting application...' && \
+    python manage.py runserver 0.0.0.0:8000 \
+"] 

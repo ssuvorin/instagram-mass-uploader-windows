@@ -6,8 +6,6 @@ services:
     restart: always
     volumes:
       - ./media:/app/media
-      - ./static:/app/static
-      - ./staticfiles:/app/staticfiles
       - ./logs:/app/logs
       # УБИРАЕМ проблемное монтирование db.sqlite3 - база будет создаваться внутри контейнера
       - db_data:/app/db_data
