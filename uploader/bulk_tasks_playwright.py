@@ -1746,6 +1746,9 @@ def perform_instagram_operations(page, account_details, videos, video_files_to_u
         init_human_behavior(page)
         log_info("Human behavior initialized")
         
+        # Handle cookie consent modal before login
+        handle_cookie_consent(page)
+        
         # Check login status and login if needed
         if not handle_login_flow(page, account_details):
             return False, "LOGIN_FAILED"
@@ -2515,3 +2518,135 @@ def determine_verification_type(page):
     except Exception as e:
         log_error(f"🔍 [VERIFICATION_TYPE] Error determining verification type: {str(e)}")
         return "unknown"
+
+def handle_cookie_consent(page):
+    """Handle Instagram cookie consent modal with comprehensive Russian and English support"""
+    try:
+        log_info("🍪 [COOKIES] Checking for cookie consent modal...", LogCategories.LOGIN)
+        
+        # First, check if cookie modal is present
+        modal_detected = False
+        
+        for i, indicator in enumerate(SelectorConfig.COOKIE_MODAL_INDICATORS):
+            try:
+                if SelectorUtils.is_xpath(indicator):
+                    element = page.query_selector(f"xpath={indicator}")
+                else:
+                    element = page.query_selector(indicator)
+                
+                if element and element.is_visible():
+                    modal_detected = True
+                    log_info(f"🍪 [COOKIES] Cookie modal detected with indicator {i+1}", LogCategories.LOGIN)
+                    break
+                    
+            except Exception:
+                continue
+        
+        if not modal_detected:
+            log_info("🍪 [COOKIES] No cookie consent modal found", LogCategories.LOGIN)
+            return False
+        
+        # Wait a bit for modal to fully load
+        time.sleep(random.uniform(2, 4))
+        
+        # Try to find and click "Accept All" button
+        log_info("🍪 [COOKIES] Attempting to accept all cookies...", LogCategories.LOGIN)
+        
+        for i, selector in enumerate(SelectorConfig.COOKIE_CONSENT_BUTTONS):
+            try:
+                log_info(f"🍪 [COOKIES] Trying selector {i+1}/{len(SelectorConfig.COOKIE_CONSENT_BUTTONS)}: {selector[:50]}...")
+                
+                if SelectorUtils.is_xpath(selector):
+                    element = page.query_selector(f"xpath={selector}")
+                else:
+                    element = page.query_selector(selector)
+                
+                if element and element.is_visible():
+                    # Get button text for logging
+                    button_text = ""
+                    try:
+                        button_text = element.text_content() or ""
+                        button_text = button_text.strip()[:50]
+                    except:
+                        button_text = "Unknown"
+                    
+                    log_info(f"🍪 [COOKIES] Found accept button: '{button_text}' with selector: {selector}")
+                    
+                    # Simulate human behavior before clicking
+                    human_behavior = get_human_behavior()
+                    if human_behavior:
+                        # Hover over button briefly
+                        try:
+                            element.hover()
+                            time.sleep(random.uniform(0.5, 1.0))
+                        except:
+                            pass
+                    
+                    # Click the button
+                    element.click()
+                    log_success(f"✅ [COOKIES] Successfully clicked accept button: '{button_text}'", LogCategories.LOGIN)
+                    
+                    # Wait for modal to disappear
+                    time.sleep(random.uniform(2, 4))
+                    
+                    # Verify modal is gone
+                    modal_still_present = False
+                    for indicator in SelectorConfig.COOKIE_MODAL_INDICATORS:
+                        try:
+                            if SelectorUtils.is_xpath(indicator):
+                                check_element = page.query_selector(f"xpath={indicator}")
+                            else:
+                                check_element = page.query_selector(indicator)
+                            
+                            if check_element and check_element.is_visible():
+                                modal_still_present = True
+                                break
+                        except:
+                            continue
+                    
+                    if not modal_still_present:
+                        log_success("✅ [COOKIES] Cookie consent modal successfully dismissed", LogCategories.LOGIN)
+                        return True
+                    else:
+                        log_warning("⚠️ [COOKIES] Modal still present after clicking button", LogCategories.LOGIN)
+                    
+                    break
+                    
+            except Exception as e:
+                log_warning(f"⚠️ [COOKIES] Selector {i+1} failed: {str(e)}")
+                continue
+        
+        # If we get here, we couldn't find the accept button
+        log_warning("⚠️ [COOKIES] Could not find accept cookies button, trying decline", LogCategories.LOGIN)
+        
+        # Try decline buttons as fallback (better than nothing)
+        for i, selector in enumerate(SelectorConfig.COOKIE_DECLINE_BUTTONS):
+            try:
+                if SelectorUtils.is_xpath(selector):
+                    element = page.query_selector(f"xpath={selector}")
+                else:
+                    element = page.query_selector(selector)
+                
+                if element and element.is_visible():
+                    button_text = ""
+                    try:
+                        button_text = element.text_content() or ""
+                        button_text = button_text.strip()[:50]
+                    except:
+                        button_text = "Unknown"
+                    
+                    log_info(f"🍪 [COOKIES] Found decline button: '{button_text}', clicking as fallback")
+                    element.click()
+                    time.sleep(random.uniform(2, 4))
+                    log_info(f"✅ [COOKIES] Clicked decline button as fallback: '{button_text}'", LogCategories.LOGIN)
+                    return True
+                    
+            except Exception:
+                continue
+        
+        log_warning("⚠️ [COOKIES] Could not handle cookie consent modal", LogCategories.LOGIN)
+        return False
+        
+    except Exception as e:
+        log_error(f"❌ [COOKIES] Error handling cookie consent: {str(e)}", LogCategories.LOGIN)
+        return False

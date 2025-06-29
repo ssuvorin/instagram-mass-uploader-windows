@@ -719,6 +719,133 @@ class InstagramSelectors:
         'main:has(form:has(input[type="password"]))',
     ]
 
+    # Cookie consent modal selectors - RUSSIAN + ENGLISH SUPPORT
+    COOKIE_CONSENT_BUTTONS = [
+        # 🎯 ПРИОРИТЕТ 1: Русские селекторы для кнопки "Разрешить все cookie"
+        'button:has-text("Разрешить все cookie")',
+        'button:has-text("Разрешить все файлы cookie")', 
+        'button[class*="_asz1"]:has-text("Разрешить")',
+        'button[class*="_a9--"]:has-text("Разрешить")',
+        'button[tabindex="0"]:has-text("Разрешить все")',
+        'button[tabindex="0"]:has-text("Разрешить")',
+        
+        # 🎯 ПРИОРИТЕТ 2: Английские селекторы
+        'button:has-text("Allow all cookies")',
+        'button:has-text("Accept all cookies")',
+        'button[class*="_asz1"]:has-text("Allow")',
+        'button[class*="_a9--"]:has-text("Allow")',
+        'button[tabindex="0"]:has-text("Allow all")',
+        'button[tabindex="0"]:has-text("Accept")',
+        
+        # 🎯 ПРИОРИТЕТ 3: XPath селекторы для русского текста
+        '//button[contains(text(), "Разрешить все cookie")]',
+        '//button[contains(text(), "Разрешить все файлы cookie")]',
+        '//button[contains(@class, "_asz1") and contains(text(), "Разрешить")]',
+        '//button[contains(@class, "_a9--") and contains(text(), "Разрешить")]',
+        '//button[@tabindex="0" and contains(text(), "Разрешить все")]',
+        '//button[@tabindex="0" and contains(text(), "Разрешить")]',
+        
+        # 🎯 ПРИОРИТЕТ 4: XPath селекторы для английского текста
+        '//button[contains(text(), "Allow all cookies")]',
+        '//button[contains(text(), "Accept all cookies")]',
+        '//button[contains(@class, "_asz1") and contains(text(), "Allow")]',
+        '//button[contains(@class, "_a9--") and contains(text(), "Allow")]',
+        '//button[@tabindex="0" and contains(text(), "Allow all")]',
+        '//button[@tabindex="0" and contains(text(), "Accept")]',
+        
+        # 🎯 ПРИОРИТЕТ 5: Универсальные CSS классы Instagram
+        'button[class*="_asz1"]',  # Основной класс кнопки cookies
+        'button[class*="_a9--"][class*="_asz1"]',  # Комбинированные классы
+        '[class*="_a9--"][class*="_asz1"]',  # Любой элемент с этими классами
+        
+        # 🎯 ПРИОРИТЕТ 6: Текст в div с role="button"
+        'div[role="button"]:has-text("Разрешить все cookie")',
+        'div[role="button"]:has-text("Allow all cookies")',
+        'div[tabindex="0"]:has-text("Разрешить все cookie")',
+        'div[tabindex="0"]:has-text("Allow all cookies")',
+        
+        # 🎯 ПРИОРИТЕТ 7: XPath для div кнопок
+        '//div[@role="button" and contains(text(), "Разрешить все cookie")]',
+        '//div[@role="button" and contains(text(), "Allow all cookies")]',
+        '//div[@tabindex="0" and contains(text(), "Разрешить все cookie")]',
+        '//div[@tabindex="0" and contains(text(), "Allow all cookies")]',
+        
+        # 🎯 ПРИОРИТЕТ 8: Широкие селекторы (fallback)
+        'button:has-text("Разрешить")',
+        'button:has-text("Allow")',
+        'div[role="button"]:has-text("Разрешить")',
+        'div[role="button"]:has-text("Allow")',
+        '[tabindex="0"]:has-text("Разрешить")',
+        '[tabindex="0"]:has-text("Allow")',
+        
+        # 🎯 ПРИОРИТЕТ 9: Универсальные XPath (последний резерв)
+        '//button[contains(text(), "Разрешить")]',
+        '//button[contains(text(), "Allow")]',
+        '//div[@role="button" and contains(text(), "Разрешить")]',
+        '//div[@role="button" and contains(text(), "Allow")]',
+        '//*[@tabindex="0" and contains(text(), "Разрешить")]',
+        '//*[@tabindex="0" and contains(text(), "Allow")]',
+    ]
+    
+    # Alternative cookie consent selectors (for "Отклонить" / "Decline" buttons)
+    COOKIE_DECLINE_BUTTONS = [
+        # Русские селекторы для кнопки "Отклонить"
+        'button:has-text("Отклонить необязательные файлы cookie")',
+        'button:has-text("Отклонить необязательные")',
+        'button:has-text("Отклонить")',
+        'button[class*="_a9_1"]:has-text("Отклонить")',
+        
+        # Английские селекторы для кнопки "Decline"
+        'button:has-text("Decline optional cookies")',
+        'button:has-text("Decline optional")',
+        'button:has-text("Decline")',
+        'button[class*="_a9_1"]:has-text("Decline")',
+        
+        # XPath селекторы
+        '//button[contains(text(), "Отклонить необязательные файлы cookie")]',
+        '//button[contains(text(), "Отклонить необязательные")]',
+        '//button[contains(text(), "Отклонить")]',
+        '//button[contains(text(), "Decline optional cookies")]',
+        '//button[contains(text(), "Decline optional")]',
+        '//button[contains(text(), "Decline")]',
+        
+        # CSS класс для decline кнопки
+        'button[class*="_a9_1"]',
+        'div[role="button"][class*="_a9_1"]',
+    ]
+    
+    # Cookie modal indicators (to detect if modal is open)
+    COOKIE_MODAL_INDICATORS = [
+        # Заголовок модального окна
+        'h2:has-text("Разрешить использование файлов cookie")',
+        'h2:has-text("Allow the use of cookies")',
+        'h1:has-text("Разрешить использование файлов cookie")',
+        'h1:has-text("Allow the use of cookies")',
+        
+        # Текст в модальном окне
+        'div:has-text("Мы используем файлы cookie")',
+        'div:has-text("We use cookies")',
+        'span:has-text("файлы cookie")',
+        'span:has-text("cookies")',
+        
+        # Контейнеры модального окна
+        'div[class*="xs83m0k"]',  # Основной контейнер модала cookies
+        'div[class*="x7r02ix"]',  # Внутренний контейнер
+        'div[class*="_abdc"]',    # Контейнер с контентом
+        
+        # XPath для заголовков
+        '//h2[contains(text(), "Разрешить использование файлов cookie")]',
+        '//h2[contains(text(), "Allow the use of cookies")]',
+        '//h1[contains(text(), "Разрешить использование файлов cookie")]',
+        '//h1[contains(text(), "Allow the use of cookies")]',
+        
+        # XPath для текста
+        '//div[contains(text(), "Мы используем файлы cookie")]',
+        '//div[contains(text(), "We use cookies")]',
+        '//*[contains(text(), "файлы cookie")]',
+        '//*[contains(text(), "cookies")]',
+    ]
+
 class SelectorUtils:
     """Utility functions for working with selectors"""
     

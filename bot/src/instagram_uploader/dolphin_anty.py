@@ -13,6 +13,9 @@ from playwright.async_api import async_playwright
 from playwright.sync_api import sync_playwright
 import threading
 import queue
+import subprocess
+import sys
+import tempfile
 
 # Load environment variables from .env file
 load_dotenv()
@@ -1789,735 +1792,72 @@ class DolphinAnty:
         task_logger=None
     ) -> Dict[str, Any]:
         """
-        Synchronous Cookie Robot implementation using sync_playwright
-        This method properly isolates Playwright from Django's async context using subprocess
+        Synchronous Cookie Robot implementation - используем sync_to_async для изоляции
         """
         if not urls:
             return {"success": False, "error": "No URLs provided"}
-
-        # Import asyncio to properly handle event loop detection
-        import asyncio
         
-        # Check if we're in an async context
         try:
-            # This will raise RuntimeError if no event loop is running
-            # or we're not in an async context
-            current_loop = asyncio.get_running_loop()
-            in_async_context = True
-            logger.info("🔍 Detected async context - using thread isolation")
-        except RuntimeError:
-            in_async_context = False
-            logger.info("🔍 No async context detected - running directly")
-        
-        if in_async_context:
-            # Run in a separate thread to completely isolate from async context
-            import threading
-            import queue
+            # Импортируем sync_to_async для изоляции от Django async контекста
+            from asgiref.sync import sync_to_async
+            import asyncio
             
-            result_queue = queue.Queue()
-            exception_queue = queue.Queue()
-            
-            def run_playwright_in_thread():
+            # Определяем sync функцию, которая будет вызывать async код
+            def run_sync_version():
+                """Sync wrapper для async кода"""
                 try:
-                    # Import sync_playwright inside thread to ensure clean context
-                    from playwright.sync_api import sync_playwright
+                    # Создаем новый event loop только для этой функции
+                    loop = asyncio.new_event_loop()
+                    old_loop = None
                     
-                    result = self._run_cookie_robot_sync_impl(
-                        profile_id=profile_id,
-                        urls=urls,
-                        headless=headless,
-                        imageless=imageless,
-                        duration=duration,
-                        poll_interval=poll_interval,
-                        task_logger=task_logger
-                    )
-                    result_queue.put(result)
+                    try:
+                        # Сохраняем старый loop если он есть
+                        old_loop = asyncio.get_event_loop()
+                    except RuntimeError:
+                        pass  # Нет активного loop
+                    
+                    # Устанавливаем новый loop
+                    asyncio.set_event_loop(loop)
+                    
+                    try:
+                        # Запускаем async метод в новом изолированном loop
+                        result = loop.run_until_complete(
+                            self.run_cookie_robot(
+                                profile_id=profile_id,
+                                urls=urls,
+                                headless=headless,
+                                imageless=imageless,
+                                duration=duration,
+                                poll_interval=poll_interval,
+                                task_logger=task_logger
+                            )
+                        )
+                        return result
+                    finally:
+                        # Закрываем новый loop
+                        loop.close()
+                        
+                        # Восстанавливаем старый loop
+                        if old_loop is not None:
+                            asyncio.set_event_loop(old_loop)
+                        else:
+                            asyncio.set_event_loop(None)
+                            
                 except Exception as e:
-                    exception_queue.put(e)
+                    logger.error(f"❌ Error in sync wrapper: {str(e)}")
+                    return {"success": False, "error": f"Sync wrapper error: {str(e)}"}
             
-            # Run in a separate thread to completely isolate from async context
-            thread = threading.Thread(target=run_playwright_in_thread)
-            thread.start()
-            thread.join()
-            
-            # Check for exceptions first
-            if not exception_queue.empty():
-                e = exception_queue.get()
-                logger.error(f"❌ Error during Playwright automation: {str(e)}")
-                return {"success": False, "error": f"Playwright automation error: {str(e)}"}
-            
-            # Get the result
-            if not result_queue.empty():
-                return result_queue.get()
-            else:
-                return {"success": False, "error": "No result returned from Playwright automation"}
-        else:
-            # Not in async context, run directly
-            return self._run_cookie_robot_sync_impl(
-                profile_id=profile_id,
-                urls=urls,
-                headless=headless,
-                imageless=imageless,
-                duration=duration,
-                poll_interval=poll_interval,
-                task_logger=task_logger
-            )
-
-    def _run_cookie_robot_sync_impl(
-        self,
-        profile_id: Union[str, int],
-        urls: List[str],
-        headless: bool = False,
-        imageless: bool = False,
-        duration: int = 300,
-        poll_interval: int = 5,
-        task_logger=None
-    ) -> Dict[str, Any]:
-        """
-        Internal implementation of synchronous Cookie Robot using sync_playwright
-        This runs in a separate thread to avoid async context issues
-        """
-        if not urls:
-            return {"success": False, "error": "No URLs provided"}
-
-        # Define log_action function for consistent logging within this method
-        def log_action(message, level="info"):
-            safe_message = safe_log_message(message)
-            if level == "info":
-                logger.info(safe_message)
-            elif level == "warning":
-                logger.warning(safe_message)
-            elif level == "error":
-                logger.error(safe_message)
-            
-            if task_logger:
-                task_logger(safe_message)
-
-        # 1) Start profile and get connection data
-        profile_started = False
-        automation_data = None
-        
-        try:
-            success, profile_data = self.start_profile(profile_id, headless=headless)
-            profile_started = success
-            automation_data = profile_data
-            
-            if success and automation_data:
-                log_action(f"✅ Profile {profile_id} started automatically")
-                log_action(f"🔗 Automation data: {automation_data}")
-            else:
-                log_action(f"❌ Could not start profile {profile_id} or get automation data", "error")
-                return {"success": False, "error": "Failed to start profile or get automation data"}
+            # Вызываем sync функцию (полностью изолированно от Django async)
+            return run_sync_version()
                 
         except Exception as e:
-            log_action(f"❌ Exception during profile start: {e}", "error")
-            return {"success": False, "error": f"Profile start error: {str(e)}"}
+            logger.error(f"❌ Error in sync Cookie Robot: {str(e)}")
+            return {"success": False, "error": f"Sync execution error: {str(e)}"}
 
-        # 2) Connect to browser via Playwright (synchronous)
-        browser = None
-        try:
-            # Extract connection data
-            port = automation_data.get("port")
-            ws_endpoint = automation_data.get("wsEndpoint")
-            
-            if not port or not ws_endpoint:
-                log_action(f"❌ Missing connection data: port={port}, wsEndpoint={ws_endpoint}", "error")
-                if profile_started:
-                    self.stop_profile(profile_id)
-                return {"success": False, "error": "Missing port or wsEndpoint in automation data"}
-            
-            # Form WebSocket URL for connection
-            ws_url = f"ws://127.0.0.1:{port}{ws_endpoint}"
-            log_action(f"🌐 Connecting to browser via: {ws_url}")
-            
-            with sync_playwright() as p:
-                # Connect to already running browser (synchronous)
-                browser = p.chromium.connect_over_cdp(ws_url)
-                log_action(f"✅ Successfully connected to Dolphin browser")
-                
-                try:
-                    # Get existing context or create new one
-                    contexts = browser.contexts
-                    if contexts:
-                        context = contexts[0]
-                        log_action(f"📄 Using existing browser context")
-                    else:
-                        context = browser.new_context()
-                        log_action(f"📄 Created new browser context")
-                    
-                    # Create new page
-                    page = context.new_page()
-                    
-                    # Cookie Robot - go straight to main logic for cookie collection
-                    log_action("Starting Cookie Robot - focusing on cookie collection...", "info")
-                    
-                    # 4) Run Cookie Robot on specified URLs
-                    # Configure imageless mode
-                    if imageless:
-                        page.route("**/*.{png,jpg,jpeg,gif,webp,svg,ico}", lambda route: route.abort())
-                        log_action(f"🚫 Images blocked (imageless mode)")
-                    
-                    successful_visits = 0
-                    failed_visits = 0
-                    
-                    # Randomize URL order for more natural behavior
-                    shuffled_urls = urls.copy()
-                    random.shuffle(shuffled_urls)
-                    
-                    if task_logger:
-                        task_logger(f"🔀 URL order randomized for natural behavior")
-                        task_logger(f"📋 Visit order: {' → '.join(shuffled_urls)}")
-                    
-                    # Visit each URL
-                    for i, url in enumerate(shuffled_urls, 1):
-                        try:
-                            # Ensure we have a working page before each URL
-                            try:
-                                page = self._ensure_page_available_sync(context, page, imageless, task_logger)
-                            except Exception as page_error:
-                                log_action(f"❌ Cannot ensure page availability for URL {i}/{len(shuffled_urls)}: {url}", "error")
-                                log_action(f"💥 Page recovery failed: {str(page_error)}", "error")
-                                
-                                if task_logger:
-                                    task_logger(f"❌ [{i}/{len(shuffled_urls)}] Page recovery failed for: {url}")
-                                    task_logger(f"💥 Error: {str(page_error)}")
-                                
-                                failed_visits += 1
-                                continue
-                            
-                            log_action(f"🌐 Visiting URL {i}/{len(shuffled_urls)}: {url}")
-                            
-                            if task_logger:
-                                task_logger(f"🌐 [{i}/{len(shuffled_urls)}] Starting visit to: {url}")
-                            
-                            # Navigate to page with improved error handling
-                            navigation_success = False
-                            max_nav_attempts = 3
-                            
-                            for attempt in range(max_nav_attempts):
-                                try:
-                                    page.goto(url, wait_until="domcontentloaded", timeout=30000)
-                                    navigation_success = True
-                                    break
-                                    
-                                except Exception as nav_error:
-                                    error_str = str(nav_error).lower()
-                                    
-                                    # If page was closed or context lost
-                                    if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                                        log_action(f"⚠️ Navigation attempt {attempt + 1}/{max_nav_attempts} failed due to page/context loss: {url}", "warning")
-                                        
-                                        if attempt < max_nav_attempts - 1:  # Not last attempt
-                                            try:
-                                                # Try to recover page
-                                                page = self._ensure_page_available_sync(context, page, imageless, task_logger)
-                                                log_action(f"🔄 Page recovered, retrying navigation to: {url}")
-                                                continue
-                                            except Exception as recovery_error:
-                                                log_action(f"❌ Page recovery failed on attempt {attempt + 1}: {str(recovery_error)}", "error")
-                                                break
-                                        else:
-                                            log_action(f"❌ All navigation attempts failed for: {url}", "error")
-                                            break
-                                    else:
-                                        # Other navigation error
-                                        log_action(f"❌ Navigation error (attempt {attempt + 1}/{max_nav_attempts}): {str(nav_error)}", "error")
-                                        if attempt == max_nav_attempts - 1:
-                                            raise nav_error
-                                        time.sleep(1)  # Small pause before retry
-                            
-                            if not navigation_success:
-                                failed_visits += 1
-                                log_action(f"❌ Failed to navigate to {url} after {max_nav_attempts} attempts", "error")
-                                
-                                if task_logger:
-                                    task_logger(f"❌ [{i}/{len(shuffled_urls)}] Navigation failed after {max_nav_attempts} attempts: {url}")
-                                
-                                continue
-                            
-                            # Random delay to simulate human behavior
-                            base_duration = duration / len(shuffled_urls)
-                            random_delay = random.uniform(base_duration * 0.8, base_duration * 1.2)
-                            
-                            log_action(f"⏳ Staying on {url} for {random_delay:.1f} seconds")
-                            
-                            if task_logger:
-                                task_logger(f"⏳ Page loaded, simulating user activity for {random_delay:.1f} seconds")
-                            
-                            # Simulate user activity with improved error handling (synchronous)
-                            try:
-                                self._simulate_user_activity_sync(page, random_delay, task_logger)
-                            except Exception as activity_error:
-                                error_str = str(activity_error).lower()
-                                
-                                if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                                    log_action(f"⚠️ User activity stopped due to page/context loss: {str(activity_error)}", "warning")
-                                    
-                                    if task_logger:
-                                        task_logger(f"⚠️ User activity interrupted by page closure")
-                                    
-                                    # Try to recover page for next URL
-                                    try:
-                                        page = self._ensure_page_available_sync(context, page, imageless, task_logger)
-                                        log_action(f"🔄 Page recovered after activity interruption")
-                                    except Exception as recovery_error:
-                                        log_action(f"❌ Failed to recover page after activity interruption: {str(recovery_error)}", "error")
-                                        # Continue with current page (may be None)
-                                else:
-                                    log_action(f"⚠️ Non-critical error in user activity simulation: {str(activity_error)}", "warning")
-                            
-                            successful_visits += 1
-                            log_action(f"✅ Successfully processed {url}")
-                            
-                            if task_logger:
-                                task_logger(f"✅ [{i}/{len(shuffled_urls)}] Successfully completed: {url}")
-                            
-                        except Exception as e:
-                            failed_visits += 1
-                            error_str = str(e).lower()
-                            
-                            log_action(f"❌ Error processing {url}: {str(e)}", "error")
-                            
-                            if task_logger:
-                                task_logger(f"❌ [{i}/{len(shuffled_urls)}] Failed {url}: {str(e)}")
-                            
-                            # If error related to page/context loss, try to recover
-                            if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                                try:
-                                    log_action(f"🔄 Attempting to recover page after error for next URL...")
-                                    page = self._ensure_page_available_sync(context, page, imageless, task_logger)
-                                    log_action(f"✅ Page recovered successfully after error")
-                                    
-                                    if task_logger:
-                                        task_logger(f"🔄 Page recovered for next URL")
-                                        
-                                except Exception as recovery_error:
-                                    log_action(f"❌ Failed to recover page after error: {str(recovery_error)}", "error")
-                                    
-                                    if task_logger:
-                                        task_logger(f"💥 Page recovery failed, may affect remaining URLs")
-                                    
-                                    # If recovery failed, set page to None
-                                    # _ensure_page_available_sync will try to create new one on next iteration
-                                    page = None
-                            
-                            continue
-                    
-                    # Close page after all URLs only if still open
-                    try:
-                        if not page.is_closed():
-                            page.close()
-                            log_action(f"📄 Page closed after processing all URLs")
-                        else:
-                            log_action(f"📄 Page was already closed")
-                    except Exception as close_error:
-                        log_action(f"⚠️ Error closing main page: {str(close_error)}", "warning")
-                    
-                    # Close all other tabs before finishing
-                    try:
-                        all_pages = context.pages
-                        log_action(f"🗂️ Found {len(all_pages)} pages/tabs total")
-                        
-                        for i, p in enumerate(all_pages):
-                            try:
-                                if not p.is_closed():
-                                    log_action(f"📄 Closing page/tab {i+1}/{len(all_pages)}")
-                                    p.close()
-                            except Exception as e:
-                                log_action(f"⚠️ Could not close page {i+1}: {str(e)}", "warning")
-                        
-                        log_action(f"✅ All pages/tabs closed successfully")
-                        
-                        if task_logger:
-                            task_logger(f"🗂️ Closed all browser tabs and pages")
-                            
-                    except Exception as e:
-                        log_action(f"⚠️ Error closing some pages: {str(e)}", "warning")
-                        if task_logger:
-                            task_logger(f"⚠️ Some tabs could not be closed: {str(e)[:100]}")
-                    
-                    # Close browser context
-                    try:
-                        context.close()
-                        log_action(f"🌐 Browser context closed")
-                    except Exception as e:
-                        log_action(f"⚠️ Error closing browser context: {str(e)}", "warning")
-                    
-                    # Execution result
-                    result = {
-                        "success": True,
-                        "data": {
-                            "message": "Cookie Robot executed successfully via Playwright",
-                            "urls_total": len(urls),
-                            "urls_randomized": len(shuffled_urls),
-                            "urls_processed": len(shuffled_urls),
-                            "successful_visits": successful_visits,
-                            "failed_visits": failed_visits,
-                            "success_rate": round((successful_visits / len(shuffled_urls)) * 100, 2) if shuffled_urls else 0,
-                            "total_duration": duration,
-                            "visit_order": shuffled_urls
-                        }
-                    }
-                    
-                    log_action(f"✅ Cookie Robot completed: {successful_visits}/{len(shuffled_urls)} URLs processed successfully")
-                    
-                    if task_logger:
-                        task_logger(f"🎯 Final Results:")
-                        task_logger(f"   • Total URLs: {len(urls)}")
-                        task_logger(f"   • Successfully visited: {successful_visits}")
-                        task_logger(f"   • Failed visits: {failed_visits}")
-                        task_logger(f"   • Success rate: {round((successful_visits / len(shuffled_urls)) * 100, 2)}%")
-                        task_logger(f"   • Total duration: {duration} seconds")
-                    
-                    return result
-                    
-                finally:
-                    # Disconnect from browser (don't close it)
-                    if browser:
-                        browser.close()
-                        log_action(f"🔌 Disconnected from browser")
-                    
-        except Exception as e:
-            safe_error = safe_log_message(f"❌ Error during Playwright automation: {str(e)}")
-            logger.error(safe_error)
-            return {"success": False, "error": f"Playwright automation error: {str(e)}"}
-            
-        finally:
-            # Stop profile only if we started it
-            if profile_started:
-                log_action(f"🛑 Stopping browser profile {profile_id}")
-                self.stop_profile(profile_id)
-
-    def _ensure_page_available_sync(self, context, page, imageless=False, task_logger=None):
-        """
-        Synchronous version of _ensure_page_available
-        """
-        def log_action(message, level="info"):
-            safe_message = safe_log_message(message)
-            if level == "info":
-                logger.info(safe_message)
-            elif level == "warning":
-                logger.warning(safe_message)
-            elif level == "error":
-                logger.error(safe_message)
-            
-            if task_logger:
-                task_logger(safe_message)
-        
-        try:
-            # Check if current page is valid and open
-            if page and not page.is_closed():
-                return page
-            
-            # Page is closed or None, create new one
-            log_action("🔄 Creating new page (previous was closed or None)")
-            page = context.new_page()
-            
-            # Configure imageless mode if needed
-            if imageless:
-                page.route("**/*.{png,jpg,jpeg,gif,webp,svg,ico}", lambda route: route.abort())
-                log_action("🚫 Images blocked for new page")
-            
-            return page
-            
-        except Exception as e:
-            log_action(f"❌ Error ensuring page availability: {str(e)}", "error")
-            raise e
-
-    def _simulate_user_activity_sync(self, page, duration: float, task_logger=None):
-        """
-        Synchronous version of user activity simulation
-        """
-        def log_action(message, level="debug"):
-            """Helper function to log both to logger and task"""
-            safe_message = safe_log_message(message)
-            if level == "debug":
-                logger.debug(safe_message)
-            elif level == "info":
-                logger.info(safe_message)
-            elif level == "warning":
-                logger.warning(safe_message)
-            
-            # Also log to task if task_logger is provided
-            if task_logger:
-                task_logger(safe_message)
-        
-        try:
-            start_time = time.time()
-            end_time = start_time + duration
-            actions_performed = 0
-            
-            log_action(f"🎭 Starting user activity simulation for {duration:.1f} seconds", "info")
-            
-            # Action statistics for report
-            action_stats = {
-                "scroll_down": 0, "scroll_up": 0, "smooth_scroll": 0,
-                "move_mouse": 0, "random_click": 0, "hover_element": 0,
-                "select_text": 0, "right_click": 0, "double_click": 0, "wait": 0
-            }
-            
-            while time.time() < end_time:
-                remaining_time = end_time - time.time()
-                if remaining_time <= 0:
-                    break
-                
-                # Check that page is still open before each action
-                if page.is_closed():
-                    log_action("⚠️ Page was closed during user activity simulation, stopping", "warning")
-                    break
-                    
-                # Random action every 2-6 seconds (more frequent actions)
-                action_interval = min(random.uniform(2, 6), remaining_time)
-                time.sleep(action_interval)
-                
-                # Another check after sleep
-                if page.is_closed():
-                    log_action("⚠️ Page was closed during sleep, stopping", "warning")
-                    break
-                
-                # Choose random action with weights (more human-like actions more often)
-                actions = [
-                    "scroll_down", "scroll_down", "scroll_down",  # scroll down more often
-                    "scroll_up", 
-                    "move_mouse", "move_mouse", "move_mouse",    # mouse movement more often
-                    "random_click", "random_click", "random_click", # random clicks
-                    "hover_element", "hover_element",               # hovering over elements
-                    "smooth_scroll",              # smooth scroll
-                    "select_text",                # text selection
-                    "right_click",                # right click
-                    "double_click",               # double click
-                    "wait", "wait"                # pause for reading
-                ]
-                action = random.choice(actions)
-                action_stats[action] += 1
-                
-                try:
-                    # Check page state before each action
-                    if page.is_closed():
-                        log_action("⚠️ Page closed before action execution, stopping", "warning")
-                        break
-                    
-                    # Additional check - try to get page URL
-                    try:
-                        current_url = page.url
-                    except Exception as url_error:
-                        # If we can't get URL, page is likely unavailable
-                        error_str = str(url_error).lower()
-                        if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                            log_action("⚠️ Page became unavailable during activity simulation, stopping", "warning")
-                            break
-                        else:
-                            log_action(f"⚠️ Warning: Could not get page URL: {str(url_error)[:50]}")
-                    
-                    if action == "scroll_down":
-                        # More natural scrolling with different intensity
-                        scroll_amount = random.uniform(0.2, 0.5)
-                        page.evaluate(f"window.scrollBy(0, window.innerHeight * {scroll_amount})")
-                        log_action(f"📜 Scrolled down ({scroll_amount:.2f} screen heights)")
-                        
-                    elif action == "scroll_up":
-                        scroll_amount = random.uniform(0.1, 0.3)
-                        page.evaluate(f"window.scrollBy(0, -window.innerHeight * {scroll_amount})")
-                        log_action(f"📜 Scrolled up ({scroll_amount:.2f} screen heights)")
-                        
-                    elif action == "smooth_scroll":
-                        # Smooth scroll with animation
-                        target_y = random.randint(100, 500)
-                        page.evaluate(f"""
-                            window.scrollTo({{
-                                top: window.scrollY + {target_y},
-                                behavior: 'smooth'
-                            }})
-                        """)
-                        log_action(f"🌊 Smooth scrolled {target_y}px down")
-                        
-                    elif action == "move_mouse":
-                        # More natural mouse movement with smooth transitions
-                        x = random.randint(50, 1200)
-                        y = random.randint(50, 800)
-                        
-                        # Smooth mouse movement (synchronous)
-                        page.mouse.move(x, y)
-                        
-                        # Sometimes pause
-                        if random.random() < 0.3:
-                            pause_time = random.uniform(0.5, 1.5)
-                            time.sleep(pause_time)
-                            log_action(f"🖱️ Moved mouse to ({x}, {y}), paused {pause_time:.1f}s")
-                        else:
-                            log_action(f"🖱️ Moved mouse to ({x}, {y})")
-                        
-                    elif action == "random_click":
-                        # Realistic clicks like a real user
-                        click_success = False
-                        try:
-                            # Check page state before click
-                            if page.is_closed():
-                                log_action("⚠️ Page closed before click, skipping", "warning")
-                                continue
-                            
-                            # Save current URL for possible return
-                            try:
-                                current_url = page.url
-                            except Exception:
-                                log_action("⚠️ Could not get current URL for click action, skipping", "warning")
-                                continue
-                            
-                            # Look for interactive elements (like a real user)
-                            interactive_selectors = [
-                                "a", "button", "input[type='button']", "input[type='submit']",
-                                "[onclick]", "[role='button']", ".btn", ".button", 
-                                "div[onclick]", "span[onclick]", "li[onclick]",
-                                "p", "div", "span", "h1", "h2", "h3", "img"  # Regular elements too
-                            ]
-                            
-                            # Choose random element type
-                            selector = random.choice(interactive_selectors)
-                            
-                            try:
-                                elements = page.query_selector_all(selector)
-                            except Exception as selector_error:
-                                # If can't find elements, do regular click
-                                error_str = str(selector_error).lower()
-                                if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                                    log_action("⚠️ Page closed during element search, stopping", "warning")
-                                    break
-                                else:
-                                    # Regular click by coordinates
-                                    x = random.randint(200, 800)
-                                    y = random.randint(200, 600)
-                                    page.mouse.click(x, y)
-                                    log_action(f"🖱️ Fallback click at ({x}, {y}) due to selector error")
-                                    continue
-                            
-                            if elements:
-                                # Filter only critically dangerous elements
-                                filtered_elements = []
-                                for element in elements[:30]:  # Check more elements
-                                    try:
-                                        is_visible = element.is_visible()
-                                        if not is_visible:
-                                            continue
-                                            
-                                        # Block only critically dangerous actions
-                                        text_content = element.text_content() or ""
-                                        critical_danger_words = [
-                                            'close window', 'close tab', 'exit browser', 'quit',
-                                            'закрыть окно', 'закрыть вкладку', 'выйти из браузера',
-                                            'window.close', 'tab.close'
-                                        ]
-                                        
-                                        # Check only for critically dangerous text
-                                        is_critical_danger = any(
-                                            danger.lower() in text_content.lower() 
-                                            for danger in critical_danger_words
-                                        )
-                                        
-                                        if is_critical_danger:
-                                            continue
-                                            
-                                        # Check href for critically dangerous javascript commands
-                                        href = element.get_attribute('href')
-                                        if href and ('window.close()' in href or 'tab.close()' in href):
-                                            continue
-                                            
-                                        filtered_elements.append(element)
-                                    except Exception:
-                                        continue
-                                
-                                if filtered_elements:
-                                    # Click like a real user
-                                    element = random.choice(filtered_elements)
-                                    
-                                    # Realistic click with short timeout
-                                    element.click(timeout=2000)
-                                    log_action(f"🖱️ User-like clicked on {selector} element")
-                                    
-                                    # Wait a bit to see what happened
-                                    time.sleep(random.uniform(0.5, 1.5))
-                                    
-                                    # Check if navigation occurred
-                                    try:
-                                        new_url = page.url
-                                        if new_url != current_url:
-                                            log_action(f"🌐 Navigation detected: {current_url} → {new_url}")
-                                            
-                                            # Randomly decide - stay or return (like user)
-                                            should_return = random.choice([True, True, False])  # 66% return
-                                            
-                                            if should_return:
-                                                # Go back (like user pressed "back")
-                                                try:
-                                                    page.go_back(wait_until="domcontentloaded", timeout=5000)
-                                                    log_action(f"⬅️ User went back to original page")
-                                                except Exception:
-                                                    # If can't go back, navigate directly
-                                                    try:
-                                                        page.goto(current_url, wait_until="domcontentloaded", timeout=5000)
-                                                        log_action(f"🔄 Returned to original page via direct navigation")
-                                                    except Exception:
-                                                        log_action(f"⚠️ Could not return to original page")
-                                            else:
-                                                log_action(f"📍 User stayed on new page")
-                                    except Exception as nav_check_error:
-                                        # If can't check navigation, continue
-                                        error_str = str(nav_check_error).lower()
-                                        if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                                            log_action("⚠️ Page closed during navigation check, stopping", "warning")
-                                            break
-                                        else:
-                                            log_action(f"⚠️ Could not check navigation: {str(nav_check_error)[:50]}")
-                                else:
-                                    # No safe elements found, regular coordinate click
-                                    x = random.randint(200, 800)
-                                    y = random.randint(200, 600)
-                                    page.mouse.click(x, y)
-                                    log_action(f"🖱️ Safe coordinate click at ({x}, {y})")
-                            else:
-                                # No elements found, regular coordinate click
-                                x = random.randint(200, 800)
-                                y = random.randint(200, 600)
-                                page.mouse.click(x, y)
-                                log_action(f"🖱️ Coordinate click at ({x}, {y}) - no elements found")
-                                
-                        except Exception as click_error:
-                            error_str = str(click_error).lower()
-                            if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                                log_action("⚠️ Page closed during click, stopping", "warning")
-                                break
-                            else:
-                                log_action(f"🖱️ Click failed: {str(click_error)[:50]}")
-                                
-                    elif action == "wait":
-                        # Just wait (as user reads)
-                        wait_time = min(random.uniform(1, 4), remaining_time)
-                        time.sleep(wait_time)
-                        log_action(f"⏸️ Reading pause for {wait_time:.1f} seconds")
-                    
-                    actions_performed += 1
-                    
-                    # Sometimes make short pauses between actions
-                    if random.random() < 0.4:
-                        mini_pause = random.uniform(0.2, 0.8)
-                        time.sleep(mini_pause)
-                    
-                except Exception as e:
-                    # Check if error is related to page closure
-                    error_str = str(e).lower()
-                    if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                        log_action(f"⚠️ Page closed during {action}, stopping simulation", "warning")
-                        break
-                    else:
-                        log_action(f"⚠️ Error during {action}: {str(e)[:100]}")
-                        continue
-            
-            # Final statistics
-            total_time = time.time() - start_time
-            log_action(f"🎭 Simulation complete! {actions_performed} actions in {total_time:.1f}s", "info")
-            log_action(f"📊 Action stats: {action_stats}", "info")
-            
-        except Exception as e:
-            log_action(f"⚠️ Critical error in user activity simulation: {str(e)}", "warning")
+    def _simulate_user_activity_sync(self, page, duration, urls, task_logger=None):
+        """УСТАРЕВШИЙ МЕТОД - теперь используется run_cookie_robot_sync с изоляцией"""
+        # Этот метод больше не используется, так как логика перенесена в изолированный subprocess
+        return {"success": False, "error": "This method is deprecated, use run_cookie_robot_sync instead"}
 
     def check_dolphin_status(self) -> Dict[str, Any]:
         """

@@ -27,8 +27,11 @@ signup_email = "https://www.instagram.com/accounts/emailsignup/"
 
     [selectors.register]
 
-    accept_cookies = "//button[text()='Allow all cookies']"
-    alternate_accept_cookies = "//div[text()='Allow all cookies' and @tabindex='0']"
+    # Русские и английские варианты кнопки принятия всех cookies
+    accept_cookies = "//button[contains(text(), 'Разрешить все cookie')] | //button[text()='Allow all cookies'] | //button[contains(@class, '_asz1') and contains(text(), 'Разрешить')] | //button[contains(@class, '_asz1') and contains(text(), 'Allow')]"
+    
+    # Альтернативные селекторы для кнопки принятия cookies
+    alternate_accept_cookies = "//div[contains(text(), 'Разрешить все cookie') and @tabindex='0'] | //div[text()='Allow all cookies' and @tabindex='0'] | //*[contains(@class, '_a9--') and contains(@class, '_asz1')] | //button[@tabindex='0' and contains(text(), 'Разрешить все')]"
 
     email_field = "//input[@name=\"emailOrPhone\"]"
     password_field = "//input[@name='password']"

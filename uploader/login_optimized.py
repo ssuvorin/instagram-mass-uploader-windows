@@ -15,6 +15,7 @@ def perform_instagram_login_optimized(page, account_details):
     """Optimized Instagram login with enhanced logged-in detection"""
     try:
         from .selectors_config import InstagramSelectors
+        from .bulk_tasks_playwright import handle_cookie_consent  # Import cookie handler
         
         selectors = InstagramSelectors()
         username = account_details['username']
@@ -22,6 +23,9 @@ def perform_instagram_login_optimized(page, account_details):
         tfa_secret = account_details.get('tfa_secret')
         
         log_info(f"Starting login process for: {username}")
+        
+        # Handle cookie consent modal BEFORE login check
+        handle_cookie_consent(page)
         
         # Enhanced check if already logged in
         logged_in_status = _check_if_already_logged_in(page, selectors)
