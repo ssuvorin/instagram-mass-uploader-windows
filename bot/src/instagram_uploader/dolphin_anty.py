@@ -1793,78 +1793,85 @@ class DolphinAnty:
         task_logger=None
     ) -> Dict[str, Any]:
         """
-        Synchronous Cookie Robot implementation - используем threading для полной изоляции
+        Synchronous Cookie Robot implementation - используем subprocess для полной изоляции на Windows
         """
         if not urls:
             return {"success": False, "error": "No URLs provided"}
         
         try:
-            # Импортируем необходимые модули для изоляции от Django async контекста
-            import asyncio
-            import threading
-            import queue
             import platform
+            import subprocess
+            import json
+            import tempfile
+            import os
             
-            logger.info(f"🔄 Disconnected from browser")
+            logger.info(f"🚀 Starting Cookie Robot sync for profile {profile_id} via subprocess")
             
-            # Используем thread-based изоляцию для полного отделения от Django контекста
-            result_queue = queue.Queue()
-            
-            def run_in_thread():
-                """Функция для выполнения в отдельном потоке"""
-                try:
-                    # Windows-specific: установим policy для event loop
-                    if platform.system() == 'Windows':
-                        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-                    
-                    # Создаем новый event loop в этом потоке
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    
-                    try:
-                        # Запускаем async метод в полностью изолированном контексте
-                        result = loop.run_until_complete(
-                            self.run_cookie_robot(
-                                profile_id=profile_id,
-                                urls=urls,
-                                headless=headless,
-                                imageless=imageless,
-                                duration=duration,
-                                poll_interval=poll_interval,
-                                task_logger=task_logger
-                            )
-                        )
-                        result_queue.put(("SUCCESS", result))
-                    finally:
-                        loop.close()
-                        asyncio.set_event_loop(None)
-                        
-                except Exception as e:
-                    logger.error(f"❌ Error in thread execution: {str(e)}")
-                    result_queue.put(("ERROR", {"success": False, "error": f"Thread execution error: {str(e)}"}))
-            
-            # Запускаем в отдельном потоке
-            thread = threading.Thread(target=run_in_thread)
-            thread.daemon = True
-            thread.start()
-            
-            # Ждем результат (с таймаутом для безопасности)
-            timeout = max(duration + 60, 300)  # Даем дополнительное время
-            thread.join(timeout=timeout)
-            
-            if thread.is_alive():
-                logger.error(f"❌ Thread timeout after {timeout} seconds")
-                return {"success": False, "error": f"Execution timeout after {timeout} seconds"}
+            # Создаем временный файл для передачи параметров
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp_file:
+                params = {
+                    'profile_id': profile_id,
+                    'urls': urls,
+                    'headless': headless,
+                    'imageless': imageless,
+                    'duration': duration,
+                    'api_key': self.api_key,
+                    'local_api_base': self.local_api_base
+                }
+                json.dump(params, temp_file)
+                temp_file_path = temp_file.name
             
             try:
-                status, result = result_queue.get_nowait()
-                if status == "SUCCESS":
-                    return result
+                # Запускаем изолированный скрипт
+                script_path = os.path.join(os.path.dirname(__file__), 'isolated_cookie_robot.py')
+                
+                # Для Windows используем полный путь к Python
+                python_exe = sys.executable
+                
+                cmd = [python_exe, script_path, temp_file_path]
+                
+                logger.info(f"🔄 Running subprocess: {' '.join(cmd)}")
+                
+                # Запускаем subprocess с таймаутом
+                timeout = max(duration + 120, 360)  # Добавляем больше времени
+                
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout,
+                    cwd=os.getcwd()
+                )
+                
+                if result.returncode == 0:
+                    try:
+                        # Парсим результат
+                        output_data = json.loads(result.stdout)
+                        logger.info(f"✅ Subprocess completed successfully")
+                        return output_data
+                    except json.JSONDecodeError as e:
+                        logger.error(f"❌ Failed to parse subprocess output: {e}")
+                        logger.error(f"Raw stdout: {result.stdout}")
+                        logger.error(f"Raw stderr: {result.stderr}")
+                        return {"success": False, "error": f"Failed to parse subprocess output: {str(e)}"}
                 else:
-                    return result
-            except queue.Empty:
-                logger.error(f"❌ No result from thread")
-                return {"success": False, "error": "No result from thread execution"}
+                    logger.error(f"❌ Subprocess failed with return code {result.returncode}")
+                    logger.error(f"Stdout: {result.stdout}")
+                    logger.error(f"Stderr: {result.stderr}")
+                    return {"success": False, "error": f"Subprocess failed: {result.stderr}"}
+                    
+            except subprocess.TimeoutExpired:
+                logger.error(f"❌ Subprocess timeout after {timeout} seconds")
+                return {"success": False, "error": f"Subprocess timeout after {timeout} seconds"}
+            except Exception as e:
+                logger.error(f"❌ Subprocess execution error: {str(e)}")
+                return {"success": False, "error": f"Subprocess execution error: {str(e)}"}
+            finally:
+                # Удаляем временный файл
+                try:
+                    os.unlink(temp_file_path)
+                except Exception:
+                    pass
             
         except Exception as e:
             logger.error(f"❌ Error in sync Cookie Robot: {str(e)}")

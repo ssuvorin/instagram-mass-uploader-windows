@@ -1,14 +1,18 @@
 #!/usr/bin/env python
+"""
+Isolated Cookie Robot script for subprocess execution
+Completely isolated from Django async context
+"""
+import asyncio
 import json
 import sys
 import os
-import asyncio
-import time
-import random
-from playwright.async_api import async_playwright
+import logging
+import platform
 
-def log_message(msg):
-    print(f"[ISOLATED] {msg}")
+def log_message(message):
+    """Simple logging function"""
+    print(f"[ISOLATED] {message}", file=sys.stderr)
 
 async def run_cookie_robot_isolated(params):
     try:
@@ -23,157 +27,63 @@ async def run_cookie_robot_isolated(params):
         log_message(f"Starting Cookie Robot for profile {profile_id}")
         log_message(f"URLs: {len(urls)}, Duration: {duration}s")
         
-        # Импортируем DolphinAnty
+        # Импортируем DolphinAnty в изолированном контексте
         sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
         from bot.src.instagram_uploader.dolphin_anty import DolphinAnty
         
+        # Создаем экземпляр DolphinAnty
         dolphin = DolphinAnty(api_key=api_key, local_api_base=local_api_base)
         
-        # Запускаем профиль
-        log_message("Starting Dolphin profile...")
-        success, automation_data = dolphin.start_profile(profile_id, headless=headless)
+        # Запускаем async метод напрямую (теперь мы в изолированном контексте)
+        result = await dolphin.run_cookie_robot(
+            profile_id=profile_id,
+            urls=urls,
+            headless=headless,
+            imageless=imageless,
+            duration=duration,
+            task_logger=lambda msg: log_message(msg)
+        )
         
-        if not success or not automation_data:
-            return {"success": False, "error": "Failed to start profile"}
+        return result
         
-        port = automation_data.get("port")
-        ws_endpoint = automation_data.get("wsEndpoint")
-        
-        if not port or not ws_endpoint:
-            return {"success": False, "error": "No automation data"}
-        
-        ws_url = f"ws://127.0.0.1:{port}{ws_endpoint}"
-        log_message(f"Connecting to: {ws_url}")
-        
-        # Используем async_playwright в новом процессе
-        async with async_playwright() as p:
-            browser = await p.chromium.connect_over_cdp(ws_url)
-            log_message("Connected to browser")
-            
-            try:
-                # Получаем контекст
-                contexts = browser.contexts
-                if contexts:
-                    context = contexts[0]
-                else:
-                    context = await browser.new_context()
-                
-                page = await context.new_page()
-                
-                # Настройки для imageless
-                if imageless:
-                    await page.route("**/*.{png,jpg,jpeg,gif,webp,svg,ico}", lambda route: route.abort())
-                
-                successful_visits = 0
-                failed_visits = 0
-                start_time = time.time()
-                
-                # Рандомизируем URLs
-                shuffled_urls = urls.copy()
-                random.shuffle(shuffled_urls)
-                
-                log_message(f"Processing {len(shuffled_urls)} URLs...")
-                
-                for i, url in enumerate(shuffled_urls, 1):
-                    if time.time() - start_time > duration:
-                        log_message("Duration limit reached")
-                        break
-                    
-                    try:
-                        log_message(f"[{i}/{len(shuffled_urls)}] Visiting: {url}")
-                        
-                        await page.goto(url, wait_until="domcontentloaded", timeout=30000)
-                        
-                        # Имитация активности
-                        activity_time = random.uniform(5, 15)
-                        await asyncio.sleep(activity_time)
-                        
-                        # Случайные действия
-                        if random.choice([True, False]):
-                            await page.evaluate("window.scrollBy(0, Math.random() * 500)")
-                            await asyncio.sleep(random.uniform(1, 3))
-                        
-                        successful_visits += 1
-                        log_message(f"[{i}/{len(shuffled_urls)}] Success: {url}")
-                        
-                    except Exception as e:
-                        failed_visits += 1
-                        log_message(f"[{i}/{len(shuffled_urls)}] Error: {url} - {str(e)}")
-                    
-                    # Пауза между URL
-                    await asyncio.sleep(random.uniform(2, 8))
-                
-                # Закрываем страницу
-                try:
-                    await page.close()
-                except:
-                    pass
-                
-                log_message(f"Completed: {successful_visits} success, {failed_visits} failed")
-                
-                result = {
-                    "success": True,
-                    "data": {
-                        "message": "Cookie Robot completed in isolated process",
-                        "urls_total": len(urls),
-                        "successful_visits": successful_visits,
-                        "failed_visits": failed_visits,
-                        "success_rate": round((successful_visits / len(shuffled_urls)) * 100, 2) if shuffled_urls else 0,
-                        "total_duration": time.time() - start_time
-                    }
-                }
-                
-                return result
-                
-            finally:
-                # Закрываем браузер
-                try:
-                    await browser.close()
-                except:
-                    pass
-                
-                # Останавливаем профиль
-                try:
-                    dolphin.stop_profile(profile_id)
-                    log_message("Profile stopped")
-                except:
-                    pass
-                
     except Exception as e:
-        log_message(f"Error: {str(e)}")
-        return {"success": False, "error": str(e)}
+        log_message(f"Error in isolated cookie robot: {str(e)}")
+        return {"success": False, "error": f"Isolated execution error: {str(e)}"}
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: python isolated_cookie_robot.py <params_file>")
+    if len(sys.argv) < 2:
+        print(json.dumps({"success": False, "error": "No parameters file provided"}))
         sys.exit(1)
     
     params_file = sys.argv[1]
     
     try:
-        # Загружаем параметры
+        # Читаем параметры из файла
         with open(params_file, 'r') as f:
             params = json.load(f)
         
-        # Запускаем в новом event loop
-        result = asyncio.run(run_cookie_robot_isolated(params))
+        # Windows-specific: устанавливаем правильный event loop policy
+        if platform.system() == 'Windows':
+            asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
         
-        # Выводим результат как JSON
-        print("RESULT_START")
-        print(json.dumps(result))
-        print("RESULT_END")
+        # Создаем новый event loop в изолированном процессе
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         
-    except Exception as e:
-        error_result = {"success": False, "error": str(e)}
-        print("RESULT_START")
-        print(json.dumps(error_result))
-        print("RESULT_END")
-    finally:
-        # Удаляем временный файл
         try:
-            os.unlink(params_file)
-        except:
-            pass
+            # Выполняем Cookie Robot
+            result = loop.run_until_complete(run_cookie_robot_isolated(params))
+            
+            # Выводим результат в stdout как JSON
+            print(json.dumps(result))
+            
+        finally:
+            loop.close()
+            
+    except Exception as e:
+        error_result = {"success": False, "error": f"Main execution error: {str(e)}"}
+        print(json.dumps(error_result))
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
