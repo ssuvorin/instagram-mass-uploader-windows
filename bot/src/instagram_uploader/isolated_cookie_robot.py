@@ -27,9 +27,39 @@ async def run_cookie_robot_isolated(params):
         log_message(f"Starting Cookie Robot for profile {profile_id}")
         log_message(f"URLs: {len(urls)}, Duration: {duration}s")
         
+        # Добавляем корневую директорию проекта в sys.path
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
+        if project_root not in sys.path:
+            sys.path.insert(0, project_root)
+        
+        log_message(f"Added to sys.path: {project_root}")
+        
+        # Альтернативный способ - ищем manage.py в родительских директориях
+        search_dir = current_dir
+        for _ in range(5):  # Ограничиваем поиск 5 уровнями вверх
+            if os.path.exists(os.path.join(search_dir, 'manage.py')):
+                if search_dir not in sys.path:
+                    sys.path.insert(0, search_dir)
+                log_message(f"Found manage.py, added to sys.path: {search_dir}")
+                break
+            search_dir = os.path.dirname(search_dir)
+        
+        # Также добавляем текущую рабочую директорию
+        cwd = os.getcwd()
+        if cwd not in sys.path:
+            sys.path.insert(0, cwd)
+        log_message(f"Added current working directory to sys.path: {cwd}")
+        
         # Импортируем DolphinAnty в изолированном контексте
-        sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-        from bot.src.instagram_uploader.dolphin_anty import DolphinAnty
+        try:
+            from bot.src.instagram_uploader.dolphin_anty import DolphinAnty
+        except ImportError as e:
+            log_message(f"Failed to import DolphinAnty: {e}")
+            log_message(f"Current sys.path: {sys.path}")
+            raise ImportError(f"Cannot import DolphinAnty: {e}")
+        
+        log_message("Successfully imported DolphinAnty")
         
         # Создаем экземпляр DolphinAnty
         dolphin = DolphinAnty(api_key=api_key, local_api_base=local_api_base)
