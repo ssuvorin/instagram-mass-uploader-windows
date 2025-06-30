@@ -113,7 +113,7 @@ try:
     from playwright.sync_api import sync_playwright
     from bot.src.instagram_uploader.dolphin_anty import DolphinAnty
     from bot.src.instagram_uploader.browser_dolphin import DolphinBrowser
-    from bot.src.instagram_uploader.email import Email
+    from bot.src.instagram_uploader.email_client import Email
 except ImportError as e:
     print(f"Error importing required modules: {str(e)}. Make sure they're installed.")
 

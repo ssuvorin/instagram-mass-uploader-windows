@@ -9,8 +9,8 @@ from playwright.sync_api import expect
 
 from bot.src import logger
 from bot.src.instagram_uploader import config
-from bot.src.instagram_uploader.browser_playwright import get_browser, get_page, close_browser, verify_ip_address
-from bot.src.instagram_uploader.email import Email
+from bot.src.instagram_uploader.browser_dolphin import get_browser, get_page, close_browser
+from bot.src.instagram_uploader.email_client import Email
 from .tfa_api import TFAAPI
 from bot.src.instagram_uploader.util import random_delay, realistic_type, human_action
 
@@ -217,25 +217,25 @@ class Auth:
                     
                     if email_username and email_password:
                         logger.info(f"✉️ Используем учетные данные почты: {email_username}")
-                    email = Email(login=email_username, password=email_password)
-                    code = email.get_verification_code()
+                        email = Email(login=email_username, password=email_password)
+                        code = email.get_verification_code()
                         
                         if code:
-                    logger.info(f"⌨️ Ввод кода подтверждения: {code}")
-                    code_field.click()
-                    random_delay()
-                    realistic_type(self.page, "xpath=" + config['selectors']['login']['email_code_field'], code)
-                    random_delay()
+                            logger.info(f"⌨️ Ввод кода подтверждения: {code}")
+                            code_field.click()
+                            random_delay()
+                            realistic_type(self.page, "xpath=" + config['selectors']['login']['email_code_field'], code)
+                            random_delay()
 
-                    logger.info("👆 Нажатие кнопки продолжить")
-                    continue_button = self.page.locator("xpath=" + config['selectors']['login']['continue_button'])
-                    continue_button.click()
-                    logger.info("⏳ Ожидание после ввода кода подтверждения...")
-                    random_delay()
+                            logger.info("👆 Нажатие кнопки продолжить")
+                            continue_button = self.page.locator("xpath=" + config['selectors']['login']['continue_button'])
+                            continue_button.click()
+                            logger.info("⏳ Ожидание после ввода кода подтверждения...")
+                            random_delay()
                         else:
                             logger.error("❌ Не удалось получить код подтверждения с почты")
-                    else:
-                        logger.error("❌ Требуется код верификации с почты, но учетные данные почты не указаны")
+                else:
+                    logger.error("❌ Требуется код верификации с почты, но учетные данные почты не указаны")
             except Exception as e:
                 logger.info(f"⚠️ Проверка кода верификации пропущена: {str(e)}")
                 pass
