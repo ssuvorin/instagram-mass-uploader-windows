@@ -16,6 +16,7 @@ import queue
 import subprocess
 import sys
 import tempfile
+import platform
 
 # Load environment variables from .env file
 load_dotenv()
@@ -1792,35 +1793,36 @@ class DolphinAnty:
         task_logger=None
     ) -> Dict[str, Any]:
         """
-        Synchronous Cookie Robot implementation - используем sync_to_async для изоляции
+        Synchronous Cookie Robot implementation - используем threading для полной изоляции
         """
         if not urls:
             return {"success": False, "error": "No URLs provided"}
         
         try:
-            # Импортируем sync_to_async для изоляции от Django async контекста
-            from asgiref.sync import sync_to_async
+            # Импортируем необходимые модули для изоляции от Django async контекста
             import asyncio
+            import threading
+            import queue
+            import platform
             
-            # Определяем sync функцию, которая будет вызывать async код
-            def run_sync_version():
-                """Sync wrapper для async кода"""
+            logger.info(f"🔄 Disconnected from browser")
+            
+            # Используем thread-based изоляцию для полного отделения от Django контекста
+            result_queue = queue.Queue()
+            
+            def run_in_thread():
+                """Функция для выполнения в отдельном потоке"""
                 try:
-                    # Создаем новый event loop только для этой функции
+                    # Windows-specific: установим policy для event loop
+                    if platform.system() == 'Windows':
+                        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+                    
+                    # Создаем новый event loop в этом потоке
                     loop = asyncio.new_event_loop()
-                    old_loop = None
-                    
-                    try:
-                        # Сохраняем старый loop если он есть
-                        old_loop = asyncio.get_event_loop()
-                    except RuntimeError:
-                        pass  # Нет активного loop
-                    
-                    # Устанавливаем новый loop
                     asyncio.set_event_loop(loop)
                     
                     try:
-                        # Запускаем async метод в новом изолированном loop
+                        # Запускаем async метод в полностью изолированном контексте
                         result = loop.run_until_complete(
                             self.run_cookie_robot(
                                 profile_id=profile_id,
@@ -1832,24 +1834,38 @@ class DolphinAnty:
                                 task_logger=task_logger
                             )
                         )
-                        return result
+                        result_queue.put(("SUCCESS", result))
                     finally:
-                        # Закрываем новый loop
                         loop.close()
+                        asyncio.set_event_loop(None)
                         
-                        # Восстанавливаем старый loop
-                        if old_loop is not None:
-                            asyncio.set_event_loop(old_loop)
-                        else:
-                            asyncio.set_event_loop(None)
-                            
                 except Exception as e:
-                    logger.error(f"❌ Error in sync wrapper: {str(e)}")
-                    return {"success": False, "error": f"Sync wrapper error: {str(e)}"}
+                    logger.error(f"❌ Error in thread execution: {str(e)}")
+                    result_queue.put(("ERROR", {"success": False, "error": f"Thread execution error: {str(e)}"}))
             
-            # Вызываем sync функцию (полностью изолированно от Django async)
-            return run_sync_version()
-                
+            # Запускаем в отдельном потоке
+            thread = threading.Thread(target=run_in_thread)
+            thread.daemon = True
+            thread.start()
+            
+            # Ждем результат (с таймаутом для безопасности)
+            timeout = max(duration + 60, 300)  # Даем дополнительное время
+            thread.join(timeout=timeout)
+            
+            if thread.is_alive():
+                logger.error(f"❌ Thread timeout after {timeout} seconds")
+                return {"success": False, "error": f"Execution timeout after {timeout} seconds"}
+            
+            try:
+                status, result = result_queue.get_nowait()
+                if status == "SUCCESS":
+                    return result
+                else:
+                    return result
+            except queue.Empty:
+                logger.error(f"❌ No result from thread")
+                return {"success": False, "error": "No result from thread execution"}
+            
         except Exception as e:
             logger.error(f"❌ Error in sync Cookie Robot: {str(e)}")
             return {"success": False, "error": f"Sync execution error: {str(e)}"}
