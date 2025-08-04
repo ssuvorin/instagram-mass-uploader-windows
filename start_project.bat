@@ -86,7 +86,8 @@ if errorlevel 1 (
     )
     
     echo %CYAN%Установка зависимостей из %REQUIREMENTS_FILE%...%RESET%
-    pip install -r %REQUIREMENTS_FILE%
+    pip install --no-deps -r %REQUIREMENTS_FILE%
+    pip install "greenlet>=3.0.0"
     if errorlevel 1 (
         echo %RED%❌ Ошибка установки зависимостей%RESET%
         echo Попробуйте обновить pip: python -m pip install --upgrade pip

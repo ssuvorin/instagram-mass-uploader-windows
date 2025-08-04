@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+"""
+Dolphin{anty} Remote API Client
+Provides functionality to interact with Dolphin{anty} Remote API
+"""
+
 import os
 import json
 import requests
@@ -18,6 +23,22 @@ import sys
 import tempfile
 import platform
 import uuid
+
+# Импортируем Windows совместимость
+try:
+    # Пытаемся импортировать из uploader модуля
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'uploader'))
+    from windows_compatibility import get_python_executable, run_subprocess_windows
+except ImportError:
+    # Fallback если модуль не найден
+    def get_python_executable():
+        if platform.system().lower() == "windows":
+            return sys.executable
+        else:
+            return 'python'
+    
+    def run_subprocess_windows(cmd, timeout=300, cwd=None, capture_output=True, text=True):
+        return subprocess.run(cmd, timeout=timeout, cwd=cwd, capture_output=capture_output, text=text)
 
 # Load environment variables from .env file
 load_dotenv()
@@ -1067,44 +1088,7 @@ class DolphinAnty:
                     # Создаем новую страницу
                     page = await context.new_page()
                     
-                    # Убираем проверку на верификацию человека для Cookie Robot
-                    # Цель Cookie Robot - набить куки, поэтому верификация не критична
-                    # log_action("Opening Instagram page to check for human verification...", "info")
                     
-                    # try:
-                    #     # Переходим на Instagram
-                    #     await page.goto("https://www.instagram.com/", wait_until="domcontentloaded", timeout=30000)
-                    #     await asyncio.sleep(random.uniform(2, 5))
-                    #     
-                    #     # Проверяем на верификацию человека
-                    #     if await self._check_for_human_verification_dialog_async(page, task_logger):
-                    #         log_action("Human verification dialog detected! Stopping task.", "error")
-                    #         
-                    #         # Закрываем браузер немедленно
-                    #         try:
-                    #             await context.close()
-                    #             log_action("Browser context closed due to human verification", "info")
-                    #         except Exception as e:
-                    #             log_action(f"Error closing browser context: {str(e)}", "warning")
-                    #         
-                    #         # Останавливаем профиль
-                    #         try:
-                    #             self.stop_profile(profile_id)
-                    #             log_action(f"Dolphin profile {profile_id} stopped due to human verification", "info")
-                    #         except Exception as e:
-                    #             log_action(f"Error stopping profile: {str(e)}", "warning")
-                    #         
-                    #         return {
-                    #             "success": False, 
-                    #             "error": "HUMAN_VERIFICATION_REQUIRED",
-                    #             "message": "Instagram requires human verification for this account"
-                    #         }
-                    #     
-                    #     log_action("No human verification dialog detected, proceeding with cookie robot...", "info")
-                    #     
-                    # except Exception as e:
-                    #     log_action(f"Error checking Instagram page: {str(e)}", "error")
-                    #     # Продолжаем выполнение, так как это может быть временная ошибка
                         
                     # Cookie Robot - сразу переходим к основной логике набивания куков
                     log_action("Starting Cookie Robot - focusing on cookie collection...", "info")
