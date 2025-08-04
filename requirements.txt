@@ -37,8 +37,12 @@ opencv-python-headless==4.8.1.78
 # Enhanced logging and monitoring
 structlog==23.2.0
 
-# Database connectors (optional)
-psycopg2-binary==2.9.9
+# Database connectors (optional - not for Windows)
+psycopg2-binary==2.9.9; sys_platform != "win32"
 
 # Development and debugging tools
 python-dateutil==2.8.2
+
+# Windows-specific dependencies
+pywin32==306; sys_platform == "win32"
+wmi==1.5.1; sys_platform == "win32"

@@ -95,7 +95,8 @@ class BulkUploadTaskForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Set queryset dynamically to get fresh data from database
-        self.fields['selected_accounts'].queryset = InstagramAccount.objects.all().order_by('status', 'username')
+        # Sort by creation date descending (newest first) for better UX
+        self.fields['selected_accounts'].queryset = InstagramAccount.objects.all().order_by('-created_at')
     
     class Meta:
         model = BulkUploadTask
@@ -144,7 +145,7 @@ class BulkTitlesUploadForm(forms.Form):
 
 class CookieRobotForm(forms.Form):
     account = forms.ModelChoiceField(
-        queryset=InstagramAccount.objects.filter(dolphin_profile_id__isnull=False),
+        queryset=InstagramAccount.objects.filter(dolphin_profile_id__isnull=False).order_by('-created_at'),
         widget=forms.Select(attrs={'class': 'form-select'}),
         label='Instagram Account',
         required=True

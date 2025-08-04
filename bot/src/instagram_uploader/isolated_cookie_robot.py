@@ -11,8 +11,10 @@ import logging
 import platform
 
 def log_message(message):
-    """Simple logging function"""
-    print(f"[ISOLATED] {message}", file=sys.stderr)
+    """Simple logging function - only writes to stderr to avoid polluting stdout"""
+    # Убеждаемся, что сообщение не содержит специальных символов JSON
+    safe_message = message.replace('"', "'").replace('\\', '/')
+    print(f"[ISOLATED] {safe_message}", file=sys.stderr, flush=True)
 
 async def run_cookie_robot_isolated(params):
     try:
@@ -82,6 +84,9 @@ async def run_cookie_robot_isolated(params):
 
 def main():
     if len(sys.argv) < 2:
+        # Очищаем stdout перед выводом JSON
+        sys.stdout.flush()
+        sys.stderr.flush()
         print(json.dumps({"success": False, "error": "No parameters file provided"}))
         sys.exit(1)
     
@@ -101,16 +106,50 @@ def main():
         asyncio.set_event_loop(loop)
         
         try:
-            # Выполняем Cookie Robot
-            result = loop.run_until_complete(run_cookie_robot_isolated(params))
+            # Выполняем Cookie Robot с увеличенным таймаутом
+            # Увеличиваем таймаут до 15 минут, чтобы Cookie Robot мог пройти все сайты
+            # Даже если некоторые сайты медленные или зависают
+            timeout_seconds = max(params['duration'] + 600, 900)  # Минимум 15 минут
             
-            # Выводим результат в stdout как JSON
-            print(json.dumps(result))
+            result = loop.run_until_complete(asyncio.wait_for(
+                run_cookie_robot_isolated(params),
+                timeout=timeout_seconds
+            ))
             
+            # Очищаем stdout и stderr перед выводом JSON
+            sys.stdout.flush()
+            sys.stderr.flush()
+            
+            # Дополнительная проверка - убеждаемся, что результат валидный
+            if not isinstance(result, dict):
+                result = {"success": False, "error": f"Invalid result type: {type(result)}"}
+            
+            # Выводим результат в stdout как JSON - только JSON, ничего больше
+            json_output = json.dumps(result)
+            print(json_output)
+            
+        except asyncio.TimeoutError:
+            log_message(f"⚠️ Cookie Robot timeout after {timeout_seconds} seconds")
+            log_message(f"🔄 Forcing completion due to timeout")
+            
+            # Очищаем stdout и stderr перед выводом JSON ошибки
+            sys.stdout.flush()
+            sys.stderr.flush()
+            error_result = {"success": False, "error": f"Cookie Robot timeout after {timeout_seconds} seconds - process terminated"}
+            print(json.dumps(error_result))
+        except KeyboardInterrupt:
+            log_message(f"⚠️ Cookie Robot interrupted by user")
+            sys.stdout.flush()
+            sys.stderr.flush()
+            error_result = {"success": False, "error": "Cookie Robot interrupted by user"}
+            print(json.dumps(error_result))
         finally:
             loop.close()
             
     except Exception as e:
+        # Очищаем stdout перед выводом JSON ошибки
+        sys.stdout.flush()
+        sys.stderr.flush()
         error_result = {"success": False, "error": f"Main execution error: {str(e)}"}
         print(json.dumps(error_result))
         sys.exit(1)

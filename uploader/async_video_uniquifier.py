@@ -1,0 +1,549 @@
+#!/usr/bin/env python
+"""
+Асинхронный модуль для уникализации видео в bulk upload tasks
+Интегрирует логику из uniq_video.py в async версию
+"""
+
+import os
+import sys
+import asyncio
+import subprocess
+import random
+import datetime
+import tempfile
+import json
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple, Any
+from dataclasses import dataclass
+import time
+import logging
+
+# В начале файла добавляем импорт Windows совместимости
+try:
+    from .windows_compatibility import run_subprocess_windows, get_windows_temp_dir, is_windows
+except ImportError:
+    # Fallback если модуль не найден
+    def run_subprocess_windows(cmd, timeout=300, cwd=None, capture_output=True, text=True):
+        return subprocess.run(cmd, timeout=timeout, cwd=cwd, capture_output=capture_output, text=text)
+    
+    def get_windows_temp_dir():
+        return tempfile.gettempdir()
+    
+    def is_windows():
+        import platform
+        return platform.system().lower() == "windows"
+
+@dataclass
+class UniqueVideoConfig:
+    """Конфигурация для уникализации видео"""
+    # Фильтры
+    cut_enabled: bool = True
+    contrast_enabled: bool = True
+    color_enabled: bool = True
+    noise_enabled: bool = True
+    brightness_enabled: bool = True
+    crop_enabled: bool = True
+    zoompan_enabled: bool = True
+    emoji_enabled: bool = False
+    
+    # Текст
+    text_enabled: bool = True
+    text_content: str = ""
+    text_font_size: int = 27
+    
+    # Бейдж
+    badge_enabled: bool = True
+    badge_file_path: str = ""
+    
+    # Формат видео
+    video_format: str = "9:16"  # "1:1", "9:16", "16:9"
+    
+    @classmethod
+    def create_random_config(cls, account_username: str = "") -> 'UniqueVideoConfig':
+        """Создать случайную конфигурацию уникализации"""
+        return cls(
+            cut_enabled=random.choice([True, False]),
+            contrast_enabled=random.choice([True, False]),
+            color_enabled=random.choice([True, False]),
+            noise_enabled=random.choice([True, False]),
+            brightness_enabled=random.choice([True, False]),
+            crop_enabled=random.choice([True, False]),
+            zoompan_enabled=False,  # Отключаем zoompan - он медленный
+            emoji_enabled=False,    # Отключаем эмодзи - они тоже медленные
+            text_enabled=True,
+            text_content=f"@{account_username}" if account_username else "",
+            text_font_size=random.randint(20, 35),
+            badge_enabled=False,  # Отключаем бейдж по умолчанию для bulk upload
+            video_format="9:16"  # Instagram format
+        )
+
+class AsyncVideoUniquifier:
+    """Асинхронный уникализатор видео"""
+    
+    def __init__(self, config: Optional[UniqueVideoConfig] = None):
+        self.config = config or UniqueVideoConfig()
+        self.temp_files = []
+    
+    async def uniquify_video_async(self, input_path: str, account_username: str, 
+                                 copy_number: int = 1) -> str:
+        """
+        Асинхронно создать уникальную версию видео для аккаунта
+        
+        Args:
+            input_path: путь к исходному видео
+            account_username: имя пользователя аккаунта
+            copy_number: номер копии (для случая когда одно видео используется несколько раз)
+            
+        Returns:
+            путь к уникализированному видео
+        """
+        # Создаем случайную конфигурацию для каждого аккаунта
+        unique_config = UniqueVideoConfig.create_random_config(account_username)
+        
+        # Генерируем уникальное имя файла
+        input_path_obj = Path(input_path)
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_filename = f"{input_path_obj.stem}_{account_username}_{timestamp}_v{copy_number}.mp4"
+        
+        # Создаем временный файл для результата
+        temp_dir = tempfile.gettempdir()
+        output_path = os.path.join(temp_dir, output_filename)
+        
+        # Запускаем FFmpeg асинхронно
+        try:
+            # Python 3.9+
+            success = await asyncio.to_thread(
+                self._process_video_sync, input_path, output_path, unique_config, account_username
+            )
+        except AttributeError:
+            # Fallback для Python < 3.9
+            loop = asyncio.get_running_loop()
+            success = await loop.run_in_executor(
+                None, self._process_video_sync, input_path, output_path, unique_config, account_username
+            )
+        
+        if success and os.path.exists(output_path):
+            self.temp_files.append(output_path)
+            return output_path
+        else:
+            raise Exception(f"Failed to create unique video for account {account_username}")
+    
+    def _process_video_sync(self, input_path: str, output_path: str, 
+                           config: UniqueVideoConfig, account_username: str) -> bool:
+        """Синхронная обработка видео с помощью FFmpeg"""
+        try:
+            # Проверяем наличие входного файла
+            if not os.path.exists(input_path):
+                print(f"❌ [UNIQUIFY] Input file does not exist: {input_path}")
+                return False
+            
+            file_size = os.path.getsize(input_path)
+            print(f"📁 [UNIQUIFY] Input file: {os.path.basename(input_path)} ({file_size} bytes)")
+            
+            # Проверяем наличие FFmpeg
+            subprocess.run(["ffmpeg", "-version"], capture_output=True, check=True, timeout=5)
+        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+            print(f"❌ FFmpeg not found! Please install FFmpeg and add it to PATH.")
+            return False
+        
+        try:
+            # Получаем длительность видео
+            duration = self._get_video_duration(input_path)
+            
+            # Строим команду FFmpeg
+            cmd = self._build_ffmpeg_command(input_path, output_path, config, duration, account_username)
+            
+            print(f"🎬 [UNIQUIFY] Processing video for {account_username}...")
+            print(f"🔧 [UNIQUIFY] FFmpeg command: {' '.join(cmd[:8])}... (truncated)")  # Показываем только начало команды
+            
+            # Выполняем команду с таймаутом
+            start_time = time.time()
+            result = subprocess.run(
+                cmd, 
+                check=True, 
+                capture_output=True, 
+                text=True,
+                timeout=300  # 5 минут максимум на обработку
+            )
+            processing_time = time.time() - start_time
+            
+            # Проверяем что выходной файл создан
+            if os.path.exists(output_path):
+                output_size = os.path.getsize(output_path)
+                print(f"✅ [UNIQUIFY] Successfully created unique video: {os.path.basename(output_path)} ({output_size} bytes, took {processing_time:.1f}s)")
+                return True
+            else:
+                print(f"❌ [UNIQUIFY] Output file was not created: {output_path}")
+                return False
+            
+        except subprocess.TimeoutExpired:
+            print(f"⏰ [UNIQUIFY] FFmpeg timeout (>300s) for {account_username}")
+            return False
+        except subprocess.CalledProcessError as e:
+            print(f"❌ [UNIQUIFY] FFmpeg error: {e.stderr}")
+            return False
+        except Exception as e:
+            print(f"❌ [UNIQUIFY] General error: {str(e)}")
+            return False
+    
+    def _get_video_duration(self, video_path: str) -> float:
+        """Получить длительность видео"""
+        try:
+            print(f"🔍 [UNIQUIFY] Getting video duration for: {os.path.basename(video_path)}")
+            result = subprocess.run([
+                "ffprobe", "-v", "error", "-show_entries", "format=duration", 
+                "-of", "default=noprint_wrappers=1:nokey=1", video_path
+            ], capture_output=True, text=True, timeout=30)
+            
+            duration = float(result.stdout.strip())
+            print(f"⏱️  [UNIQUIFY] Video duration: {duration:.2f}s")
+            return duration
+        except subprocess.TimeoutExpired:
+            print(f"⏰ [UNIQUIFY] ffprobe timeout, using default duration 12.63s")
+            return 12.63
+        except (subprocess.CalledProcessError, ValueError):
+            print(f"⚠️ [UNIQUIFY] Could not determine video duration, using default 12.63s")
+            return 12.63
+    
+    def _build_ffmpeg_command(self, input_path: str, output_path: str, 
+                             config: UniqueVideoConfig, duration: float, 
+                             account_username: str) -> List[str]:
+        """Построить команду FFmpeg для уникализации"""
+        filters = []
+        
+        # Определяем размеры видео
+        video_w, video_h = self._get_video_dimensions(config.video_format)
+        
+        # Применяем фильтры уникализации
+        if config.cut_enabled:
+            trim_value = random.uniform(0.1, 0.3)
+            filters.append(f"trim=start={trim_value},setpts=PTS-STARTPTS")
+            print(f"🔪 [UNIQUIFY] Added cut filter: trim=start={trim_value}")
+        
+        if config.contrast_enabled:
+            contrast_value = random.uniform(1.0, 1.2)
+            filters.append(f"eq=contrast={contrast_value}")
+            print(f"🔆 [UNIQUIFY] Added contrast filter: eq=contrast={contrast_value}")
+        
+        if config.color_enabled:
+            hue_value = random.uniform(-10, 10)
+            filters.append(f"hue=h={hue_value}")
+            print(f"🌈 [UNIQUIFY] Added color filter: hue=h={hue_value}")
+        
+        if config.noise_enabled:
+            noise_value = random.randint(5, 15)
+            filters.append(f"noise=alls={noise_value}:allf=t")
+            print(f"📺 [UNIQUIFY] Added noise filter: noise=alls={noise_value}")
+        
+        if config.brightness_enabled:
+            brightness_value = random.uniform(0.01, 0.1)
+            saturation_value = random.uniform(0.8, 1.2)
+            filters.append(f"eq=brightness={brightness_value}:saturation={saturation_value}")
+            print(f"💡 [UNIQUIFY] Added brightness/saturation filter")
+        
+        if config.crop_enabled:
+            crop_w = random.uniform(0.95, 0.99)
+            crop_h = random.uniform(0.95, 0.99)
+            crop_x = random.uniform(0, video_w * 0.05)
+            crop_y = random.uniform(0, video_h * 0.05)
+            filters.append(f"crop=iw*{crop_w}:ih*{crop_h}:{crop_x}:{crop_y}")
+            print(f"✂️ [UNIQUIFY] Added crop filter")
+        
+        if config.zoompan_enabled:
+            zoom_value = random.uniform(1.0, 1.2)
+            zoom_duration = random.uniform(0.5, 2.0)
+            # Убираем enable параметр так как zoompan его не поддерживает
+            filters.append(f"zoompan=z='zoom+{zoom_value-1}':d={int(zoom_duration*25)}:s={video_w}x{video_h}")
+            print(f"🔍 [UNIQUIFY] Added zoom/pan filter: zoom={zoom_value:.3f}, duration={zoom_duration:.1f}s")
+        
+        # Масштабирование и padding
+        filters.append(f"scale={video_w}:{video_h}:force_original_aspect_ratio=decrease,pad={video_w}:{video_h}:(ow-iw)/2:(oh-ih)/2:black,setsar=1")
+        
+        # Добавляем текст
+        text_filters = []
+        if config.text_enabled and config.text_content.strip():
+            safe_text = self._escape_text(config.text_content.strip())
+            if safe_text:
+                colors = ["#FFFFFF", "#FFFF00", "#FF0000", "#00FF00", "#0000FF"]
+                text_color = random.choice(colors)
+                x, y = self._calculate_text_position(video_w, video_h)
+                
+                # Используем встроенный шрифт
+                text_filters.append(f"drawtext=text='{safe_text}':fontsize={config.text_font_size}:fontcolor={text_color}:x={x}:y={y}")
+                print(f"📝 [UNIQUIFY] Added text: '{safe_text}' at ({x}, {y}), color={text_color}")
+        
+        # Добавляем эмодзи
+        if config.emoji_enabled:
+            emoji_list = ['🦁', '🌟', '🔥', '🎉', '⭐']
+            num_emojis = random.randint(1, 3)
+            for _ in range(num_emojis):
+                emoji = random.choice(emoji_list)
+                emoji_x = random.uniform(0, video_w * 0.8)
+                emoji_y = random.uniform(0, video_h * 0.8)
+                emoji_start = random.uniform(0, max(0.1, duration - 0.5))
+                emoji_duration = random.uniform(0.1, 0.5)
+                
+                text_filters.append(f"drawtext=text='{emoji}':fontsize=48:fontcolor=#FFFFFF:x={emoji_x}:y={emoji_y}:enable='between(t,{emoji_start},{emoji_start+emoji_duration})'")
+                print(f"😀 [UNIQUIFY] Added emoji '{emoji}' at ({emoji_x}, {emoji_y})")
+        
+        filters.extend(text_filters)
+        
+        # Строим команду
+        cmd = ["ffmpeg", "-y", "-i", input_path]
+        cmd += ["-vf", ",".join(filters)]
+        cmd += self._random_metadata(account_username)
+        cmd += ["-c:v", "libx264", "-preset", "fast", "-c:a", "aac", output_path]
+        
+        return cmd
+    
+    def _get_video_dimensions(self, video_format: str) -> Tuple[int, int]:
+        """Получить размеры видео по формату"""
+        if "1:1" in video_format:
+            return 1080, 1080
+        elif "9:16" in video_format:
+            return 1080, 1920
+        elif "16:9" in video_format:
+            return 1920, 1080
+        else:
+            return 1080, 1920  # По умолчанию Instagram format
+    
+    def _escape_text(self, text: str) -> str:
+        """Экранировать текст для FFmpeg"""
+        return text.replace("'", "'\\''").replace(':', '\\:').replace(',', '\\,').replace('=', '\\=')
+    
+    def _calculate_text_position(self, video_w: int, video_h: int) -> Tuple[str, str]:
+        """Вычислить позицию текста"""
+        positions = [
+            ("верх-лево", (0.05 * video_w, 0.05 * video_h)),
+            ("верх-центр", ((video_w - 200) / 2, 0.05 * video_h)),
+            ("верх-право", (max(0, video_w - 200 - 0.05 * video_w), 0.05 * video_h)),
+            ("центр-лево", (0.05 * video_w, (video_h - 50) / 2)),
+            ("центр-центр", ((video_w - 200) / 2, (video_h - 50) / 2)),
+            ("центр-право", (max(0, video_w - 200 - 0.05 * video_w), (video_h - 50) / 2)),
+            ("низ-лево", (0.05 * video_w, max(0, video_h - 50 - 0.05 * video_h))),
+            ("низ-центр", ((video_w - 200) / 2, max(0, video_h - 50 - 0.05 * video_h))),
+            ("низ-право", (max(0, video_w - 200 - 0.05 * video_w), max(0, video_h - 50 - 0.05 * video_h)))
+        ]
+        
+        pos_name, (x, y) = random.choice(positions)
+        
+        # Добавляем движение текста
+        directions = [
+            ("t*20", "0"), ("-t*20", "0"), ("0", "t*20"), ("0", "-t*20"),
+            ("t*20", "t*20"), ("-t*20", "t*20"), ("t*20", "-t*20"), ("-t*20", "-t*20")
+        ]
+        move_x, move_y = random.choice(directions)
+        
+        x_str = f"{x}+{move_x}" if move_x != "0" else str(x)
+        y_str = f"{y}+{move_y}" if move_y != "0" else str(y)
+        x_str = x_str.replace("+-", "-")
+        y_str = y_str.replace("+-", "-")
+        
+        print(f"📍 [UNIQUIFY] Text position: {pos_name}, x={x_str}, y={y_str}")
+        return x_str, y_str
+    
+    def _random_metadata(self, account_username: str) -> List[str]:
+        """Генерировать случайные метаданные"""
+        now = datetime.datetime.now()
+        random_days = random.randint(-180, 0)
+        creation_time = now + datetime.timedelta(days=random_days)
+        
+        devices = [
+            ("Canon", "EOS R5"), ("Sony", "Alpha 7 IV"), ("Apple", "iPhone 14 Pro"),
+            ("Samsung", "S23 Ultra"), ("DJI", "Pocket 3"), ("GoPro", "Hero 11")
+        ]
+        make, model = random.choice(devices)
+        
+        comments = [f"Shot by {account_username}", "Fun moment", "Quick capture", f"From @{account_username}"]
+        comment = random.choice(comments)
+        
+        artists = [account_username, "Creator", "VideoMaker"]
+        artist = random.choice(artists)
+        
+        return [
+            "-metadata", f"title=Video {random.randint(1000, 9999)}",
+            "-metadata", f"encoder=FFmpeg {random.randint(4, 5)}.{random.randint(0, 9)}",
+            "-metadata", f"artist={artist}",
+            "-metadata", f"comment={comment}",
+            "-metadata", f"make={make}",
+            "-metadata", f"model={model}",
+            "-metadata", f"creation_time={creation_time.isoformat()}"
+        ]
+    
+    async def cleanup_temp_files_async(self) -> None:
+        """Асинхронно очистить временные файлы уникализации"""
+        def cleanup():
+            for file_path in self.temp_files:
+                try:
+                    if os.path.exists(file_path):
+                        os.unlink(file_path)
+                        print(f"🗑️ [UNIQUIFY] Cleaned up temp file: {os.path.basename(file_path)}")
+                except Exception as e:
+                    print(f"⚠️ [UNIQUIFY] Could not delete temp file {file_path}: {str(e)}")
+            self.temp_files.clear()
+        
+        # Запускаем очистку асинхронно
+        try:
+            # Python 3.9+
+            await asyncio.to_thread(cleanup)
+        except AttributeError:
+            # Fallback для Python < 3.9
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, cleanup)
+
+# Глобальный экземпляр для использования в async задачах
+_global_uniquifier = None
+
+async def get_video_uniquifier() -> AsyncVideoUniquifier:
+    """Получить глобальный экземпляр уникализатора"""
+    global _global_uniquifier
+    if _global_uniquifier is None:
+        _global_uniquifier = AsyncVideoUniquifier()
+    return _global_uniquifier
+
+async def uniquify_video_for_account(input_path: str, account_username: str, 
+                                   copy_number: int = 1) -> str:
+    """
+    Удобная функция для уникализации видео для конкретного аккаунта
+    
+    Args:
+        input_path: путь к исходному видео
+        account_username: имя пользователя аккаунта
+        copy_number: номер копии
+        
+    Returns:
+        путь к уникализированному видео
+    """
+    uniquifier = await get_video_uniquifier()
+    return await uniquifier.uniquify_video_async(input_path, account_username, copy_number)
+
+async def cleanup_uniquifier_temp_files():
+    """Очистить все временные файлы уникализатора"""
+    global _global_uniquifier
+    if _global_uniquifier:
+        await _global_uniquifier.cleanup_temp_files_async()
+
+def cleanup_hanging_ffmpeg():
+    """Очистка зависших FFmpeg процессов"""
+    try:
+        import psutil
+        ffmpeg_processes = []
+        
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                if proc.info['name'] and 'ffmpeg' in proc.info['name'].lower():
+                    ffmpeg_processes.append(proc)
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+        
+        if ffmpeg_processes:
+            print(f"🔧 [UNIQUIFY_CLEANUP] Found {len(ffmpeg_processes)} FFmpeg processes")
+            for proc in ffmpeg_processes:
+                try:
+                    # Проверяем как долго процесс работает
+                    create_time = proc.create_time()
+                    runtime = time.time() - create_time
+                    
+                    if runtime > 600:  # Если процесс работает больше 10 минут
+                        print(f"💀 [UNIQUIFY_CLEANUP] Killing long-running FFmpeg process (PID: {proc.pid}, runtime: {runtime:.1f}s)")
+                        proc.kill()
+                        proc.wait(timeout=5)
+                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.TimeoutExpired):
+                    continue
+                    
+        print(f"✅ [UNIQUIFY_CLEANUP] FFmpeg cleanup completed")
+        
+    except ImportError:
+        print(f"⚠️ [UNIQUIFY_CLEANUP] psutil not available, cannot cleanup FFmpeg processes")
+    except Exception as e:
+        print(f"❌ [UNIQUIFY_CLEANUP] Error during FFmpeg cleanup: {str(e)}") 
+
+def check_ffmpeg_availability() -> bool:
+    """Проверка доступности FFmpeg"""
+    try:
+        # Используем Windows-совместимый subprocess
+        result = run_subprocess_windows(["ffmpeg", "-version"], timeout=5)
+        return result.returncode == 0
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+
+def uniquify_video_sync(input_path: str, output_path: str, quality: int = 23) -> bool:
+    """Синхронная уникализация видео с Windows совместимостью"""
+    try:
+        # Проверяем доступность FFmpeg
+        if not check_ffmpeg_availability():
+            print("❌ [UNIQUIFY] FFmpeg not available")
+            return False
+        
+        # Создаем команду FFmpeg
+        cmd = [
+            "ffmpeg", "-i", input_path,
+            "-c:v", "libx264",
+            "-crf", str(quality),
+            "-preset", "medium",
+            "-c:a", "aac",
+            "-b:a", "128k",
+            "-movflags", "+faststart",
+            "-y",  # Перезаписывать выходной файл
+            output_path
+        ]
+        
+        print(f"🔧 [UNIQUIFY] FFmpeg command: {' '.join(cmd[:8])}... (truncated)")
+        
+        # Используем Windows-совместимый subprocess
+        result = run_subprocess_windows(
+            cmd,
+            timeout=300,  # 5 минут таймаут
+            capture_output=True,
+            text=True
+        )
+        
+        if result.returncode == 0:
+            print(f"✅ [UNIQUIFY] Video uniquified successfully: {output_path}")
+            return True
+        else:
+            print(f"❌ [UNIQUIFY] FFmpeg failed: {result.stderr}")
+            return False
+            
+    except subprocess.TimeoutExpired:
+        print("❌ [UNIQUIFY] FFmpeg timeout")
+        return False
+    except subprocess.CalledProcessError as e:
+        print(f"❌ [UNIQUIFY] FFmpeg error: {e}")
+        return False
+    except Exception as e:
+        print(f"❌ [UNIQUIFY] Unexpected error: {e}")
+        return False
+
+def get_video_info_sync(video_path: str) -> Optional[Dict]:
+    """Получение информации о видео с Windows совместимостью"""
+    try:
+        # Команда для получения информации о видео
+        cmd = [
+            "ffprobe",
+            "-v", "quiet",
+            "-print_format", "json",
+            "-show_format",
+            "-show_streams",
+            video_path
+        ]
+        
+        # Используем Windows-совместимый subprocess
+        result = run_subprocess_windows(cmd, timeout=30, capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            import json
+            return json.loads(result.stdout)
+        else:
+            print(f"❌ [UNIQUIFY] FFprobe failed: {result.stderr}")
+            return None
+            
+    except subprocess.TimeoutExpired:
+        print("❌ [UNIQUIFY] FFprobe timeout")
+        return None
+    except (subprocess.CalledProcessError, ValueError):
+        print("❌ [UNIQUIFY] FFprobe error")
+        return None
+    except Exception as e:
+        print(f"❌ [UNIQUIFY] Unexpected error: {e}")
+        return None 

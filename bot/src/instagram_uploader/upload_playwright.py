@@ -5,7 +5,7 @@ from playwright.sync_api import Page, expect
 
 from bot.src import logger
 from bot.src.instagram_uploader import config
-from bot.src.instagram_uploader.browser_playwright import close_browser
+from bot.src.instagram_uploader.browser_dolphin import close_browser
 from bot.src.instagram_uploader.util import random_delay, realistic_type, human_action
 
 

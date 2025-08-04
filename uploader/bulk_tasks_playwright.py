@@ -1325,6 +1325,14 @@ def run_bulk_upload_task(task_id):
             logger_summary = web_logger.get_summary()
             log_info(f"📈 [LOG_SUMMARY] Generated {logger_summary['total']} log entries, {logger_summary['critical_count']} critical events", LogCategories.TASK_INFO)
         
+        # Cleanup original video files from media directory
+        try:
+            deleted_files = cleanup_original_video_files_sync(task)
+            if deleted_files > 0:
+                log_info(f"🗑️ [CLEANUP] Cleaned up {deleted_files} original video files from media directory", LogCategories.CLEANUP)
+        except Exception as cleanup_error:
+            log_warning(f"⚠️ [CLEANUP] Failed to cleanup original video files: {str(cleanup_error)}", LogCategories.CLEANUP)
+        
         return final_status in [TaskStatus.COMPLETED, TaskStatus.PARTIALLY_COMPLETED]
         
     except Exception as e:
@@ -1347,6 +1355,15 @@ def run_bulk_upload_task(task_id):
             log_info("🧹 [CLEANUP] Browser cleanup completed", LogCategories.CLEANUP)
         except Exception as cleanup_error:
             log_warning(f"⚠️ [CLEANUP] Browser cleanup had issues: {str(cleanup_error)}", LogCategories.CLEANUP)
+        
+        # Also cleanup original video files if task exists
+        if 'task' in locals() and task:
+            try:
+                deleted_files = cleanup_original_video_files_sync(task)
+                if deleted_files > 0:
+                    log_info(f"🗑️ [CLEANUP] Finally cleanup: removed {deleted_files} original video files", LogCategories.CLEANUP)
+            except Exception as cleanup_error:
+                log_warning(f"⚠️ [CLEANUP] Finally cleanup failed for original video files: {str(cleanup_error)}", LogCategories.CLEANUP)
 
 def process_account_videos(account_task, task, all_videos, all_titles, task_id):
     """Process videos for a single account"""
@@ -1412,41 +1429,102 @@ def process_account_videos(account_task, task, all_videos, all_titles, task_id):
     return result_type, completed, failed
 
 def prepare_video_files(videos_for_account, account_task):
-    """Prepare video files for upload"""
+    """Prepare video files for upload with uniquification"""
     temp_files = []
     video_files_to_upload = []
+    account_username = account_task.account.username
     
-    for video in videos_for_account:
+    log_info(f"🎬 Starting video uniquification for account {account_username}")
+    
+    for i, video in enumerate(videos_for_account):
         video_filename = os.path.basename(video.video_file.name)
         timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
-        log_info(f"Preparing video: {video_filename}")
+        log_info(f"Preparing and uniquifying video: {video_filename}")
         update_account_task(
             account_task,
-            log_message=f"[{timestamp}] 📋 Preparing video: {video_filename}\n"
+            log_message=f"[{timestamp}] 📋 Preparing and uniquifying video: {video_filename}\n"
         )
         
         try:
-            with NamedTemporaryFile(delete=False, suffix=f"_{video_filename}") as tmp:
+            # Сначала создаем временный файл из оригинала
+            with NamedTemporaryFile(delete=False, suffix=f"_original_{video_filename}") as tmp:
                 log_debug(f"Creating temporary file: {tmp.name}")
                 for chunk in video.video_file.chunks():
                     tmp.write(chunk)
                 temp_files.append(tmp.name)
-                video_files_to_upload.append(tmp.name)
                 
                 timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
-                log_info(f"Saved video to temporary file: {tmp.name}")
+                log_info(f"Created temporary file: {tmp.name}")
                 update_account_task(
                     account_task,
-                    log_message=f"[{timestamp}] ✅ Saved video to temporary file\n"
+                    log_message=f"[{timestamp}] ✅ Created temporary file\n"
                 )
+                
+                # Теперь уникализируем видео для этого аккаунта
+                try:
+                    # Импортируем модуль уникализации
+                    from .async_video_uniquifier import AsyncVideoUniquifier, UniqueVideoConfig
+                    
+                    # Создаем уникальную конфигурацию для аккаунта
+                    unique_config = UniqueVideoConfig.create_random_config(account_username)
+                    uniquifier = AsyncVideoUniquifier(unique_config)
+                    
+                    # Создаем уникальное видео синхронно
+                    import datetime
+                    from pathlib import Path
+                    import tempfile
+                    
+                    input_path_obj = Path(tmp.name)
+                    timestamp_str = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+                    output_filename = f"{input_path_obj.stem}_{account_username}_{timestamp_str}_v{i+1}.mp4"
+                    
+                    temp_dir = tempfile.gettempdir()
+                    unique_video_path = os.path.join(temp_dir, output_filename)
+                    
+                    # Обрабатываем видео синхронно
+                    success = uniquifier._process_video_sync(tmp.name, unique_video_path, unique_config, account_username)
+                    
+                    if success and os.path.exists(unique_video_path):
+                        video_files_to_upload.append(unique_video_path)
+                        temp_files.append(unique_video_path)
+                        
+                        timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
+                        log_info(f"✅ Created unique video for {account_username}: {os.path.basename(unique_video_path)}")
+                        update_account_task(
+                            account_task,
+                            log_message=f"[{timestamp}] ✅ Created unique video: {os.path.basename(unique_video_path)}\n"
+                        )
+                    else:
+                        # Если уникализация не удалась, используем оригинальный файл
+                        log_warning(f"⚠️ Video uniquification failed, using original file")
+                        video_files_to_upload.append(tmp.name)
+                        
+                        timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
+                        update_account_task(
+                            account_task,
+                            log_message=f"[{timestamp}] ⚠️ Uniquification failed, using original\n"
+                        )
+                        
+                except Exception as uniquify_error:
+                    # Если уникализация не удалась, используем оригинальный файл
+                    log_warning(f"⚠️ Video uniquification failed: {str(uniquify_error)}, using original file")
+                    video_files_to_upload.append(tmp.name)
+                    
+                    timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
+                    update_account_task(
+                        account_task,
+                        log_message=f"[{timestamp}] ⚠️ Uniquification error: {str(uniquify_error)}\n"
+                    )
+                
         except Exception as e:
-            log_error(f"Error creating temporary file for {video_filename}: {str(e)}")
+            log_error(f"❌ Error creating temporary file for {video_filename}: {str(e)}")
             timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
             update_account_task(
                 account_task,
                 log_message=f"[{timestamp}] ❌ Error creating temporary file: {str(e)}\n"
             )
     
+    log_info(f"🎯 Prepared {len(video_files_to_upload)} unique videos for account {account_username}")
     return temp_files, video_files_to_upload
 
 def cleanup_temp_files(temp_files):
@@ -2650,3 +2728,62 @@ def handle_cookie_consent(page):
     except Exception as e:
         log_error(f"❌ [COOKIES] Error handling cookie consent: {str(e)}", LogCategories.LOGIN)
         return False
+
+def cleanup_original_video_files_sync(task) -> int:
+    """Очищает оригинальные видео файлы из media/bot/bulk_videos/ для данной задачи (синхронная версия)"""
+    import os
+    
+    deleted_count = 0
+    
+    try:
+        # Получаем все видео файлы для этой задачи
+        videos = task.videos.all()
+        
+        for video in videos:
+            if video.video_file:
+                try:
+                    # Получаем полный путь к файлу
+                    file_path = video.video_file.path if hasattr(video.video_file, 'path') else None
+                    
+                    if file_path and os.path.exists(file_path):
+                        # БЕЗОПАСНАЯ ПРОВЕРКА: проверяем, не используется ли файл другими активными задачами
+                        def is_file_safe_to_delete():
+                            filename = os.path.basename(file_path)
+                            
+                            # Проверяем, есть ли другие BulkVideo объекты с таким же файлом в активных задачах
+                            from .models import BulkVideo, BulkUploadTask
+                            
+                            other_videos_with_same_file = BulkVideo.objects.filter(
+                                video_file__icontains=filename
+                            ).exclude(
+                                bulk_task=task  # Исключаем текущую задачу
+                            )
+                            
+                            # Проверяем статусы задач для этих видео
+                            for other_video in other_videos_with_same_file:
+                                other_task = other_video.bulk_task
+                                if other_task.status in ['RUNNING', 'PENDING']:
+                                    return False, f'🚫 File {filename} is still used by running task "{other_task.name}" (ID: {other_task.id})'
+                            
+                            return True, None
+                        
+                        is_safe, warning_msg = is_file_safe_to_delete()
+                        
+                        if is_safe:
+                            # Удаляем файл
+                            filename = os.path.basename(file_path)
+                            os.unlink(file_path)
+                            deleted_count += 1
+                            log_debug(f"🗑️ [CLEANUP] Deleted original video file: {filename}", LogCategories.CLEANUP)
+                        else:
+                            log_info(f"⏸️ [CLEANUP] Skipped deleting file (still in use by other tasks): {os.path.basename(file_path)}", LogCategories.CLEANUP)
+                            if warning_msg:
+                                log_warning(warning_msg, LogCategories.CLEANUP)
+                        
+                except Exception as e:
+                    log_warning(f"⚠️ [CLEANUP] Failed to delete video file {video.id}: {str(e)}", LogCategories.CLEANUP)
+    
+    except Exception as e:
+        log_error(f"❌ [CLEANUP] Error in cleanup_original_video_files_sync: {str(e)}", LogCategories.CLEANUP)
+    
+    return deleted_count

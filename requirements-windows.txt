@@ -41,4 +41,17 @@ structlog==23.2.0
 # psycopg2-binary removed for Windows compatibility
 
 # Development and debugging tools
-python-dateutil==2.8.2 
+python-dateutil==2.8.2
+
+# Additional Windows-specific dependencies
+pywin32==306; sys_platform == "win32"
+wmi==1.5.1; sys_platform == "win32"
+
+# Async support for Windows
+asyncio-mqtt==0.16.1
+
+# File handling for Windows
+pathlib2==2.3.7; python_version < "3.4"
+
+# Windows service support
+pywin32-ctypes==0.2.2; sys_platform == "win32" 

@@ -1,21 +1,42 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
-from django.conf import settings
-from django.db.models import Q
+from django.core.paginator import Paginator
+from django.db.models import Q, Count
 from django.utils import timezone
-from django.urls import reverse
-
-from .models import UploadTask, VideoFile, InstagramAccount, Proxy, BulkUploadTask, BulkUploadAccount, BulkVideo, VideoTitle, InstagramCookies, DolphinCookieRobotTask
-from .tasks_playwright import run_upload_task, run_cookie_robot_task
-from .bulk_tasks_playwright import run_bulk_upload_task
-from .forms import UploadTaskForm, VideoUploadForm, ProxyForm, InstagramAccountForm, BulkUploadTaskForm, BulkVideoUploadForm, BulkTitlesUploadForm, CookieRobotForm, BulkVideoLocationMentionsForm
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from django.conf import settings
+import json
+import os
+import threading
+import time
+import traceback
+from datetime import datetime, timedelta
+import csv
+import io
+from .models import (
+    UploadTask, InstagramAccount, VideoFile, BulkUploadTask, 
+    BulkUploadAccount, BulkVideo, DolphinCookieRobotTask, InstagramCookies, Proxy, VideoTitle
+)
+from django.contrib.auth.models import User
+from .constants import TaskStatus
+from .task_utils import (
+    get_all_task_videos, get_all_task_titles, update_task_status,
+    get_account_tasks, get_assigned_videos, handle_verification_error,
+    handle_task_completion, handle_emergency_cleanup, process_browser_result,
+    handle_account_task_error, handle_critical_task_error
+)
 from .utils import validate_proxy
+from .forms import (
+    UploadTaskForm, VideoUploadForm, InstagramAccountForm, ProxyForm,
+    BulkUploadTaskForm, BulkVideoUploadForm, BulkTitlesUploadForm,
+    BulkVideoLocationMentionsForm
+)
 from bot.src.instagram_uploader.dolphin_anty import DolphinAnty
 
-import threading
 import logging
 import io
 import asyncio
@@ -128,7 +149,7 @@ def dashboard(request):
 
 @login_required
 def task_list(request):
-    """List all upload tasks"""
+    """List all tasks with filtering and pagination"""
     status_filter = request.GET.get('status', '')
     search_query = request.GET.get('q', '')
     
@@ -227,7 +248,8 @@ def account_list(request):
     status_filter = request.GET.get('status', '')
     search_query = request.GET.get('q', '')
     
-    accounts = InstagramAccount.objects.order_by('-last_used')
+    # Sort by creation date descending (newest first) for consistency
+    accounts = InstagramAccount.objects.order_by('-created_at')
     
     if status_filter:
         accounts = accounts.filter(status=status_filter)
@@ -346,9 +368,10 @@ def create_account(request):
                     # Assign a random available proxy
                     assigned_proxy = available_proxies.order_by('?').first()
                     account.proxy = assigned_proxy
-                    account.save(update_fields=['proxy'])
+                    account.current_proxy = assigned_proxy
+                    account.save(update_fields=['proxy', 'current_proxy'])
                     assigned_proxy.assigned_account = account
-                    assigned_proxy.save()
+                    assigned_proxy.save(update_fields=['assigned_account'])
                     logger.info(f"[CREATE ACCOUNT] Assigned proxy {assigned_proxy} to account {account.username}")
                 else:
                     logger.warning(f"[CREATE ACCOUNT] No available proxies found for account {account.username}. Skipping proxy assignment.")
@@ -609,7 +632,11 @@ def import_accounts(request):
                 email_password = None
                 
                 # Determine account type based on number of parts
-                if len(parts) == 3:
+                if len(parts) == 2:
+                    # Basic format: username:password (no 2FA, no email verification)
+                    logger.info(f"[INFO] Account {username} identified as basic account (no 2FA, no email)")
+                
+                elif len(parts) == 3:
                     # This could be either a 2FA account or an email verification account
                     # Check if the third part looks like a 2FA secret (usually uppercase letters and numbers)
                     if parts[2].isupper() and any(c.isdigit() for c in parts[2]):
@@ -620,11 +647,25 @@ def import_accounts(request):
                         email_username = parts[2]
                         logger.info(f"[INFO] Account {username} identified with email (no password)")
                 
-                elif len(parts) >= 4:
-                    # Assume this is an email verification account (username:password:email:email_password)
+                elif len(parts) == 4:
+                    # This is an email verification account (username:password:email:email_password)
                     email_username = parts[2]
                     email_password = parts[3]
                     logger.info(f"[INFO] Account {username} identified as email verification account")
+                
+                elif len(parts) == 5:
+                    # This is a TFA account (username:password:email:email_password:tfa_secret)
+                    email_username = parts[2]
+                    email_password = parts[3]
+                    tfa_secret = parts[4]
+                    logger.info(f"[INFO] Account {username} identified as TFA account with email")
+                
+                elif len(parts) > 5:
+                    # Extended format with additional fields
+                    email_username = parts[2]
+                    email_password = parts[3]
+                    tfa_secret = parts[4]
+                    logger.info(f"[INFO] Account {username} identified as TFA account with extended format")
                 
                 # Get an unused active proxy for this account
                 logger.info(f"[STEP 4/5] Assigning proxy to account: {username}")
@@ -801,6 +842,13 @@ def edit_account(request, account_id):
         form = InstagramAccountForm(request.POST, instance=account)
         if form.is_valid():
             account = form.save()
+            
+            # Synchronize proxy and current_proxy fields
+            if account.proxy != account.current_proxy:
+                account.current_proxy = account.proxy
+                account.save(update_fields=['current_proxy'])
+                logger.info(f"[EDIT ACCOUNT] Synchronized proxy fields for account {account.username}")
+            
             messages.success(request, f'Account {account.username} updated successfully!')
             return redirect('account_detail', account_id=account.id)
     else:
@@ -820,40 +868,24 @@ def change_account_proxy(request, account_id):
     
     if request.method == 'POST':
         proxy_id = request.POST.get('proxy_id')
-        force_region_change = request.POST.get('force_region_change') == '1'
         
         try:
             if proxy_id:
                 # Assign the selected proxy
                 new_proxy = get_object_or_404(Proxy, id=proxy_id)
                 
-                # Check region compatibility if account currently has a proxy
-                if account.proxy and account.proxy.country and new_proxy.country:
-                    if account.proxy.country != new_proxy.country and not force_region_change:
-                        # Regions don't match and force is not enabled
-                        messages.warning(
-                            request,
-                            f'Region mismatch detected! Current proxy region: {account.proxy.country}, '
-                            f'new proxy region: {new_proxy.country}. This may affect account behavior. '
-                            f'<form method="post" style="display: inline;">'
-                            f'<input type="hidden" name="proxy_id" value="{proxy_id}">'
-                            f'<input type="hidden" name="force_region_change" value="1">'
-                            f'<button type="submit" class="btn btn-sm btn-warning ms-2">Force Change Region</button>'
-                            f'</form>',
-                            extra_tags='safe'
-                        )
-                        return redirect('change_account_proxy', account_id=account.id)
-                
                 # If this proxy is assigned to another account, unassign it
                 if new_proxy.assigned_account and new_proxy.assigned_account != account:
                     old_account = new_proxy.assigned_account
                     old_account.proxy = None
-                    old_account.save(update_fields=['proxy'])
+                    old_account.current_proxy = None
+                    old_account.save(update_fields=['proxy', 'current_proxy'])
                 
-                # Update the current account's proxy
+                # Update the current account's proxy - update both proxy and current_proxy fields
                 old_proxy = account.proxy
                 account.proxy = new_proxy
-                account.save(update_fields=['proxy'])
+                account.current_proxy = new_proxy  # Ensure both fields are updated
+                account.save(update_fields=['proxy', 'current_proxy'])
                 
                 # Update the proxy's assigned account
                 new_proxy.assigned_account = account
@@ -875,8 +907,6 @@ def change_account_proxy(request, account_id):
                             logger.warning("[CHANGE PROXY] Dolphin API token not found in environment variables")
                             messages.warning(request, f'Proxy changed for account {account.username}, but could not update Dolphin profile: API token not configured.')
                         else:
-                            from bot.src.instagram_uploader.dolphin_anty import DolphinAnty
-                            
                             # Get Dolphin API host from environment (critical for Docker Windows deployment)
                             dolphin_api_host = os.environ.get("DOLPHIN_API_HOST", "http://localhost:3001/v1.0")
                             if not dolphin_api_host.endswith("/v1.0"):
@@ -895,7 +925,7 @@ def change_account_proxy(request, account_id):
                                 if result.get("success"):
                                     logger.info(f"[CHANGE PROXY] Successfully updated Dolphin profile {account.dolphin_profile_id} proxy")
                                     region_msg = ""
-                                    if force_region_change and old_proxy and old_proxy.country != new_proxy.country:
+                                    if old_proxy and old_proxy.country and new_proxy.country and old_proxy.country != new_proxy.country:
                                         region_msg = f" (Region changed from {old_proxy.country} to {new_proxy.country})"
                                     messages.success(request, f'Proxy changed for account {account.username} and Dolphin profile {account.dolphin_profile_id} updated successfully!{region_msg}')
                                 else:
@@ -915,10 +945,11 @@ def change_account_proxy(request, account_id):
                         region_msg = f" (Region changed from {old_proxy.country} to {new_proxy.country})"
                     messages.success(request, f'Proxy changed for account {account.username}{region_msg}')
             else:
-                # Remove proxy assignment
+                # Remove proxy assignment - clear both proxy and current_proxy fields
                 old_proxy = account.proxy
                 account.proxy = None
-                account.save(update_fields=['proxy'])
+                account.current_proxy = None
+                account.save(update_fields=['proxy', 'current_proxy'])
                 
                 if old_proxy:
                     old_proxy.assigned_account = None
@@ -966,6 +997,7 @@ def change_account_proxy(request, account_id):
         'available_proxies': available_proxies,
         'active_tab': 'accounts'
     }
+    
     return render(request, 'uploader/change_account_proxy.html', context)
 
 @login_required
@@ -1517,70 +1549,68 @@ def start_bulk_upload(request, task_id):
     """Start a bulk upload task"""
     task = get_object_or_404(BulkUploadTask, id=task_id)
     
-    # Check if task is ready to start
-    if task.status != 'PENDING':
-        messages.error(request, f'Cannot start task "{task.name}" as it is already {task.status}')
+    # Check if task is already running
+    if task.status == TaskStatus.RUNNING:
+        messages.warning(request, f'Task "{task.name}" is already running!')
         return redirect('bulk_upload_detail', task_id=task.id)
     
-    # Check if task has accounts
-    if not task.accounts.exists():
-        messages.error(request, f'Cannot start task "{task.name}" as it has no accounts assigned')
-        return redirect('bulk_upload_detail', task_id=task.id)
-    
-    # Check if task has videos
+    # Check if task has videos and accounts
     if not task.videos.exists():
-        messages.error(request, f'Cannot start task "{task.name}" as it has no videos')
+        messages.error(request, 'No videos found for this task!')
         return redirect('bulk_upload_detail', task_id=task.id)
     
-    # Check if the number of titles is at least equal to the number of videos
-    if task.titles.count() < task.videos.count():
-        messages.warning(request, f'Task "{task.name}" has fewer titles than videos. Some videos will use empty captions.')
+    if not task.accounts.exists():
+        messages.error(request, 'No accounts assigned to this task!')
+        return redirect('bulk_upload_detail', task_id=task.id)
     
-    # Final assignment of videos and titles
-    if not all_videos_assigned(task):
-        print(f"[TASK] Assigning videos to accounts for task {task.id}: {task.name}")
-        assign_videos_to_accounts(task)
-    
-    if not all_titles_assigned(task):
-        print(f"[TASK] Assigning titles to videos for task {task.id}: {task.name}")
-        assign_titles_to_videos(task)
-    
-    # Update task status
-    print(f"[TASK] Changing task {task.id}: {task.name} status to RUNNING")
-    task.status = 'RUNNING'
-    task.save()
-    
-    # Check for async mode preference (from request parameters or settings)
+    # Determine if we should use async mode
     use_async_mode = request.GET.get('async', 'false').lower() == 'true'
     
-    # Wrapper function to run the task
-    def run_task_wrapper(task_id, use_async):
-        print(f"[TASK] Starting task run for task {task_id} (async={use_async})")
-        
-        if use_async:
-            # Use async version
-            try:
-                from .async_bulk_tasks import run_async_bulk_upload_task_sync
-                result = run_async_bulk_upload_task_sync(task_id)
-                print(f"[TASK] Async task run completed for task {task_id}: {result}")
-            except ImportError as e:
-                print(f"[TASK] Async mode not available: {str(e)}, falling back to sync mode")
-                run_bulk_upload_task(task_id)
-            except Exception as e:
-                print(f"[TASK] Async task run failed for task {task_id}: {str(e)}, falling back to sync mode")
-                run_bulk_upload_task(task_id)
-        else:
-            # Use sync version
+    # Update task status to RUNNING
+    update_task_status(task, TaskStatus.RUNNING, f"Task started in {'ASYNC' if use_async_mode else 'SYNC'} mode")
+    print(f"[TASK] Changing task {task.id}: {task.name} status to RUNNING")
+    
+    # Assign videos to accounts if not already done
+    if not all_videos_assigned(task):
+        assign_videos_to_accounts(task)
+        print(f"[TASK] Assigning videos to accounts for task {task.id}: {task.name}")
+    
+    if use_async_mode:
+        # Use async version - run directly without background thread
+        try:
+            from .async_bulk_tasks import run_async_bulk_upload_task_sync
+            print(f"[TASK] Starting async task for task {task.id}: {task.name}")
+            
+            # Run async task directly in the current thread context
+            result = run_async_bulk_upload_task_sync(task_id)
+            print(f"[TASK] Async task completed for task {task_id}: {result}")
+            
+            # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Для async режима редиректим на страницу с логами
+            if result:
+                messages.success(request, f'Async bulk upload task "{task.name}" completed successfully!')
+                return redirect('bulk_upload_detail', task_id=task.id)
+            else:
+                messages.error(request, f'Async bulk upload task "{task.name}" failed!')
+                return redirect('bulk_upload_detail', task_id=task.id)
+            
+        except Exception as e:
+            print(f"[TASK] Async task failed for task {task_id}: {str(e)}")
+            messages.error(request, f'Async task failed: {str(e)}')
+            update_task_status(task, TaskStatus.FAILED, f"Task failed: {str(e)}")
+            return redirect('bulk_upload_detail', task_id=task.id)
+    else:
+        # Use sync version
+        try:
+            from .bulk_tasks_playwright import run_bulk_upload_task
+            print(f"[TASK] Starting sync task for task {task.id}: {task.name}")
             run_bulk_upload_task(task_id)
-            print(f"[TASK] Sync task run completed for task {task_id}")
+            print(f"[TASK] Sync task completed for task {task_id}")
+        except Exception as e:
+            print(f"[TASK] Sync task failed for task {task_id}: {str(e)}")
+            messages.error(request, f'Sync task failed: {str(e)}')
+            update_task_status(task, TaskStatus.FAILED, f"Task failed: {str(e)}")
     
-    # Start task in background
-    print(f"[TASK] Starting background thread for task {task.id}: {task.name} (async={use_async_mode})")
-    task_thread = threading.Thread(target=run_task_wrapper, args=(task.id, use_async_mode))
-    task_thread.daemon = True
-    task_thread.start()
-    
-    # Success message with mode info
+    # Success message with mode info (только для sync режима)
     mode_text = "ASYNC" if use_async_mode else "SYNC"
     messages.success(request, f'Bulk upload task "{task.name}" started successfully in {mode_text} mode!')
     return redirect('bulk_upload_detail', task_id=task.id)
@@ -2144,6 +2174,12 @@ def run_cookie_robot_task(task_id, urls, headless, imageless):
     from uploader.models import InstagramAccount
     
     try:
+        # Debug information
+        logger.info(f"[COOKIE ROBOT TASK] Starting task {task_id}")
+        logger.info(f"[COOKIE ROBOT TASK] URLs received: {urls}")
+        logger.info(f"[COOKIE ROBOT TASK] Headless: {headless}")
+        logger.info(f"[COOKIE ROBOT TASK] Imageless: {imageless}")
+        
         # Get the task object
         task = UploadTask.objects.get(id=task_id)
         
@@ -2204,8 +2240,15 @@ def run_cookie_robot_task(task_id, urls, headless, imageless):
         
         # Define logging function for the task
         def task_logger_func(message):
-            task.log += message + "\n"
-            task.save()
+            try:
+                # Обновляем статус задачи в реальном времени
+                task.refresh_from_db()
+                if task.status != 'CANCELLED':
+                    task.log += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}\n"
+                    task.save()
+                    logger.info(f"[TASK {task_id}] {message}")
+            except Exception as e:
+                logger.error(f"Error in task_logger_func: {str(e)}")
         
         # Run the cookie robot
         log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [START] Starting Cookie Robot on Dolphin profile {account.dolphin_profile_id}..."
@@ -2213,8 +2256,15 @@ def run_cookie_robot_task(task_id, urls, headless, imageless):
         task.log += safe_message + "\n"
         logger.info(safe_message)
         
-        # Save initial state before starting robot
+        # Обновляем статус на RUNNING
+        task.status = 'RUNNING'
         task.save()
+        
+        # Добавляем информацию о параметрах
+        task_logger_func(f"[INFO] Processing {len(urls)} URLs")
+        task_logger_func(f"[INFO] Headless mode: {headless}")
+        task_logger_func(f"[INFO] Disable images: {imageless}")
+        task_logger_func(f"[INFO] Account: {account.username}")
         
         result = dolphin.run_cookie_robot_sync(
             profile_id=account.dolphin_profile_id,
@@ -2320,6 +2370,14 @@ def bulk_cookie_robot(request):
         # Parse URLs
         urls = [url.strip() for url in urls_text.split('\n') if url.strip()]
         
+        # Debug information
+        logger.info(f"[BULK COOKIE ROBOT] Received request:")
+        logger.info(f"[BULK COOKIE ROBOT] Account IDs: {account_ids}")
+        logger.info(f"[BULK COOKIE ROBOT] URLs text length: {len(urls_text)}")
+        logger.info(f"[BULK COOKIE ROBOT] Parsed URLs: {urls}")
+        logger.info(f"[BULK COOKIE ROBOT] Headless: {headless}")
+        logger.info(f"[BULK COOKIE ROBOT] Imageless: {imageless}")
+        
         if not account_ids:
             messages.error(request, 'Please select at least one account')
             return redirect('bulk_cookie_robot')
@@ -2391,8 +2449,8 @@ def bulk_cookie_robot(request):
             return redirect('bulk_cookie_robot')
     
     # GET request - show form
-    # Get accounts with Dolphin profiles
-    accounts = InstagramAccount.objects.filter(dolphin_profile_id__isnull=False).order_by('username')
+    # Get accounts with Dolphin profiles - sort by creation date descending (newest first)
+    accounts = InstagramAccount.objects.filter(dolphin_profile_id__isnull=False).order_by('-created_at')
     
     # Default URLs for the form
     default_urls = [
@@ -2659,9 +2717,10 @@ def bulk_change_proxy(request):
                 
                 if proxy:
                     try:
-                        # Update account proxy
+                        # Update account proxy - update both proxy and current_proxy fields
                         account.proxy = proxy
-                        account.save(update_fields=['proxy'])
+                        account.current_proxy = proxy
+                        account.save(update_fields=['proxy', 'current_proxy'])
                         
                         # Update proxy assignment
                         proxy.assigned_account = account
@@ -2711,7 +2770,7 @@ def bulk_change_proxy(request):
                 messages.error(request, f'Failed to assign proxies to {error_count} accounts')
                 
         elif action == 'remove_all':
-            # Remove proxies from all selected accounts
+            # Remove proxies from all selected accounts - clear both proxy and current_proxy fields
             success_count = 0
             error_count = 0
             
@@ -2719,7 +2778,8 @@ def bulk_change_proxy(request):
                 try:
                     old_proxy = account.proxy
                     account.proxy = None
-                    account.save(update_fields=['proxy'])
+                    account.current_proxy = None
+                    account.save(update_fields=['proxy', 'current_proxy'])
                     
                     if old_proxy:
                         old_proxy.assigned_account = None
@@ -2885,7 +2945,8 @@ def cleanup_inactive_proxies(request):
                 if not available_active_proxies:
                     # No more active proxies available
                     account.proxy = None
-                    account.save(update_fields=['proxy'])
+                    account.current_proxy = None
+                    account.save(update_fields=['proxy', 'current_proxy'])
                     unassigned_count += 1
                     logger.warning(f"[CLEANUP] No active proxy available for account {account.username}, removed proxy assignment")
                     continue
@@ -2911,9 +2972,10 @@ def cleanup_inactive_proxies(request):
                 
                 if new_proxy:
                     try:
-                        # Update account
+                        # Update account - update both proxy and current_proxy fields
                         account.proxy = new_proxy
-                        account.save(update_fields=['proxy'])
+                        account.current_proxy = new_proxy
+                        account.save(update_fields=['proxy', 'current_proxy'])
                         
                         # Update proxy assignment
                         new_proxy.assigned_account = account
@@ -2958,8 +3020,8 @@ def cleanup_inactive_proxies(request):
             # Force delete all inactive proxies, leaving accounts without proxies
             affected_count = affected_accounts.count()
             
-            # Remove proxy assignments from accounts
-            affected_accounts.update(proxy=None)
+            # Remove proxy assignments from accounts - clear both proxy and current_proxy fields
+            affected_accounts.update(proxy=None, current_proxy=None)
             
             # Delete inactive proxies
             deleted_count = inactive_proxies.count()

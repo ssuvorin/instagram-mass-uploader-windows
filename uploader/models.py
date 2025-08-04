@@ -107,8 +107,11 @@ class InstagramAccount(models.Model):
         if self.email_password:
             data["email_password"] = self.email_password
             
-        # Add proxy if exists
-        if self.proxy:
+        # Add proxy if exists - use current_proxy as the primary proxy
+        if self.current_proxy:
+            data["proxy"] = self.current_proxy.to_dict()
+        elif self.proxy:
+            # Fallback to proxy field if current_proxy is not set
             data["proxy"] = self.proxy.to_dict()
             
         # Add Dolphin profile if exists
@@ -129,13 +132,28 @@ class InstagramAccount(models.Model):
     
     def get_random_proxy(self):
         """Get a random active proxy if none is assigned"""
-        if self.proxy and self.proxy.is_active:
+        # Use current_proxy as the primary proxy
+        if self.current_proxy and self.current_proxy.is_active:
+            return self.current_proxy
+        elif self.proxy and self.proxy.is_active:
+            # Fallback to proxy field if current_proxy is not set
             return self.proxy
             
         active_proxies = Proxy.objects.filter(is_active=True)
         if active_proxies.exists():
             return random.choice(active_proxies)
         return None
+    
+    def save(self, *args, **kwargs):
+        """Override save method to synchronize proxy and current_proxy fields"""
+        # If proxy is set but current_proxy is different, sync them
+        if self.proxy and self.proxy != self.current_proxy:
+            self.current_proxy = self.proxy
+        # If proxy is None but current_proxy is set, sync them
+        elif self.proxy is None and self.current_proxy is not None:
+            self.current_proxy = None
+        
+        super().save(*args, **kwargs)
 
 
 class InstagramCookies(models.Model):

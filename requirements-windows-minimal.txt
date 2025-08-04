@@ -13,6 +13,7 @@ python-dotenv==1.0.0
 
 # HTTP requests and networking
 requests==2.32.3
+PySocks==1.7.1
 
 # System utilities
 psutil==6.1.1
@@ -21,4 +22,18 @@ psutil==6.1.1
 python-dateutil==2.8.2
 
 # Configuration parsing
-toml==0.10.2 
+toml==0.10.2
+tomli==2.0.1
+
+# Security and authentication
+pyotp==2.8.0
+
+# Async support
+asyncio-throttle==1.0.2
+aiofiles==24.1.0
+
+# Enhanced logging
+structlog==23.2.0
+
+# Windows-specific dependencies
+pywin32==306; sys_platform == "win32" 

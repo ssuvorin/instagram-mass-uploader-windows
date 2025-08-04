@@ -17,6 +17,7 @@ import subprocess
 import sys
 import tempfile
 import platform
+import uuid
 
 # Load environment variables from .env file
 load_dotenv()
@@ -119,7 +120,7 @@ class DolphinAnty:
     """
     Class for interacting with Dolphin{anty} Remote API
     """
-    OS_PLATFORMS = ["windows", "macos", "linux"]
+    OS_PLATFORMS = ["windows"]
     SCREEN_RESOLUTIONS = [
         "1920x1080", "2560x1440", "1366x768",
         "1440x900", "1536x864", "1680x1050"
@@ -279,7 +280,7 @@ class DolphinAnty:
             return {"success": False, "error": "Proxy configuration is required"}
 
         # 2) Choose OS and browser version
-        os_plat     = random.choices(self.OS_PLATFORMS, weights=[0.6,0.35,0.05], k=1)[0]
+        os_plat     = self.OS_PLATFORMS[0]
         browser_ver = random.choice(self.BROWSER_VERSIONS)
 
         # 3) Generate User-Agent
@@ -994,19 +995,41 @@ class DolphinAnty:
         automation_data = None
         
         try:
+            logger.info(f"🔄 Starting Dolphin profile {profile_id}...")
+            if task_logger:
+                task_logger(f"🔄 Starting Dolphin profile {profile_id}...")
+            
+            # Debug: check Dolphin status before starting profile
+            dolphin_status = self.check_dolphin_status()
+            logger.info(f"🔍 Dolphin status before starting profile: {dolphin_status}")
+            if task_logger:
+                task_logger(f"🔍 Dolphin status: {dolphin_status}")
+            
             success, profile_data = self.start_profile(profile_id, headless=headless)
             profile_started = success
             automation_data = profile_data
             
+            logger.info(f"🔄 Profile start result - Success: {success}, Data: {profile_data}")
+            if task_logger:
+                task_logger(f"🔄 Profile start result - Success: {success}")
+            
             if success and automation_data:
-                logger.info(f"✅ Profile {profile_id} started automatically")
+                logger.info(f"✅ Profile {profile_id} started successfully")
                 logger.info(f"🔗 Automation data: {automation_data}")
+                if task_logger:
+                    task_logger(f"✅ Profile {profile_id} started successfully")
             else:
                 logger.error(f"❌ Could not start profile {profile_id} or get automation data")
+                logger.error(f"❌ Success: {success}, Profile data: {profile_data}")
+                if task_logger:
+                    task_logger(f"❌ Failed to start profile {profile_id}")
+                    task_logger(f"❌ Success: {success}, Profile data: {profile_data}")
                 return {"success": False, "error": "Failed to start profile or get automation data"}
                 
         except Exception as e:
             logger.error(f"❌ Exception during profile start: {e}")
+            if task_logger:
+                task_logger(f"❌ Profile start error: {str(e)}")
             return {"success": False, "error": f"Profile start error: {str(e)}"}
 
         # 2) Подключаемся к браузеру через Playwright
@@ -1101,11 +1124,16 @@ class DolphinAnty:
                     
                     if task_logger:
                         task_logger(f"🔀 URL order randomized for natural behavior")
-                        task_logger(f"📋 Visit order: {' → '.join(shuffled_urls)}")
+                        task_logger(f"📋 Processing {len(shuffled_urls)} URLs")
+                        task_logger(f"⏱️ Total duration: {duration} seconds")
+                        task_logger(f"🎯 Starting Cookie Robot simulation...")
                     
                     # Обходим каждый URL
                     for i, url in enumerate(shuffled_urls, 1):
                         try:
+                            if task_logger:
+                                task_logger(f"🔄 [{i}/{len(shuffled_urls)}] Starting: {url}")
+                            
                             # Убеждаемся, что у нас есть рабочая страница перед каждым URL
                             try:
                                 page = await self._ensure_page_available(context, page, imageless, task_logger)
@@ -1120,10 +1148,11 @@ class DolphinAnty:
                                 failed_visits += 1
                                 continue
                             
-                            logger.info(f"🌐 Visiting URL {i}/{len(shuffled_urls)}: {url}")
+                            # Убираем избыточные логи о каждом URL
+                            logger.debug(f"🌐 Visiting URL {i}/{len(shuffled_urls)}: {url}")
                             
                             if task_logger:
-                                task_logger(f"🌐 [{i}/{len(shuffled_urls)}] Starting visit to: {url}")
+                                task_logger(f"🌐 [{i}/{len(shuffled_urls)}] Navigating to: {url}")
                             
                             # Переходим на страницу с улучшенной обработкой ошибок
                             navigation_success = False
@@ -1142,11 +1171,14 @@ class DolphinAnty:
                                     if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
                                         logger.warning(f"⚠️ Navigation attempt {attempt + 1}/{max_nav_attempts} failed due to page/context loss: {url}")
                                         
+                                        if task_logger:
+                                            task_logger(f"⚠️ [{i}/{len(shuffled_urls)}] Navigation attempt {attempt + 1}/{max_nav_attempts} failed")
+                                        
                                         if attempt < max_nav_attempts - 1:  # Не последняя попытка
                                             try:
                                                 # Пытаемся восстановить страницу
                                                 page = await self._ensure_page_available(context, page, imageless, task_logger)
-                                                logger.info(f"🔄 Page recovered, retrying navigation to: {url}")
+                                                logger.debug(f"🔄 Page recovered, retrying navigation to: {url}")
                                                 continue
                                             except Exception as recovery_error:
                                                 logger.error(f"❌ Page recovery failed on attempt {attempt + 1}: {str(recovery_error)}")
@@ -1174,10 +1206,11 @@ class DolphinAnty:
                             base_duration = duration / len(shuffled_urls)
                             random_delay = random.uniform(base_duration * 0.8, base_duration * 1.2)
                             
-                            logger.info(f"⏳ Staying on {url} for {random_delay:.1f} seconds")
+                            # Убираем избыточные логи о времени
+                            logger.debug(f"⏳ Staying on {url} for {random_delay:.1f} seconds")
                             
                             if task_logger:
-                                task_logger(f"⏳ Page loaded, simulating user activity for {random_delay:.1f} seconds")
+                                task_logger(f"⏳ [{i}/{len(shuffled_urls)}] Simulating user activity for {random_delay:.1f} seconds")
                             
                             # Имитируем активность пользователя с улучшенной обработкой ошибок
                             try:
@@ -1189,12 +1222,12 @@ class DolphinAnty:
                                     logger.warning(f"⚠️ User activity stopped due to page/context loss: {str(activity_error)}")
                                     
                                     if task_logger:
-                                        task_logger(f"⚠️ User activity interrupted by page closure")
+                                        task_logger(f"⚠️ [{i}/{len(shuffled_urls)}] User activity interrupted by page closure")
                                     
                                     # Пытаемся восстановить страницу для следующего URL
                                     try:
                                         page = await self._ensure_page_available(context, page, imageless, task_logger)
-                                        logger.info(f"🔄 Page recovered after activity interruption")
+                                        logger.debug(f"🔄 Page recovered after activity interruption")
                                     except Exception as recovery_error:
                                         logger.error(f"❌ Failed to recover page after activity interruption: {str(recovery_error)}")
                                         # Продолжаем с текущей страницей (может быть None)
@@ -1206,6 +1239,25 @@ class DolphinAnty:
                             
                             if task_logger:
                                 task_logger(f"✅ [{i}/{len(shuffled_urls)}] Successfully completed: {url}")
+                            
+                            # Очищаем все вкладки кроме текущей после каждого сайта для оптимизации памяти
+                            try:
+                                all_pages = context.pages
+                                if len(all_pages) > 1:
+                                    logger.debug(f"🗂️ Cleaning up {len(all_pages)-1} extra tabs after visiting {url}")
+                                    
+                                    for p in all_pages:
+                                        if p != page and not p.is_closed():
+                                            try:
+                                                await p.close()
+                                                logger.debug(f"📄 Closed extra tab")
+                                            except Exception as e:
+                                                logger.warning(f"⚠️ Could not close extra tab: {str(e)}")
+                                    
+                                    if task_logger:
+                                        task_logger(f"🗂️ Cleaned up extra tabs after: {url}")
+                            except Exception as cleanup_error:
+                                logger.warning(f"⚠️ Error during tab cleanup: {str(cleanup_error)}")
                             
                         except Exception as e:
                             failed_visits += 1
@@ -1242,29 +1294,32 @@ class DolphinAnty:
                     try:
                         if not page.is_closed():
                             await page.close()
-                            logger.info(f"📄 Page closed after processing all URLs")
+                            logger.debug(f"📄 Page closed after processing all URLs")
                         else:
-                            logger.info(f"📄 Page was already closed")
+                            logger.debug(f"📄 Page was already closed")
                     except Exception as close_error:
                         logger.warning(f"⚠️ Error closing main page: {str(close_error)}")
                     
                     # Закрываем все остальные вкладки перед завершением
                     try:
                         all_pages = context.pages
-                        logger.info(f"🗂️ Found {len(all_pages)} pages/tabs total")
-                        
-                        for i, p in enumerate(all_pages):
-                            try:
-                                if not p.is_closed():
-                                    logger.info(f"📄 Closing page/tab {i+1}/{len(all_pages)}")
-                                    await p.close()
-                            except Exception as e:
-                                logger.warning(f"⚠️ Could not close page {i+1}: {str(e)}")
-                        
-                        logger.info(f"✅ All pages/tabs closed successfully")
+                        if all_pages:
+                            logger.debug(f"🗂️ Found {len(all_pages)} pages/tabs total")
+                            
+                            for i, p in enumerate(all_pages):
+                                try:
+                                    if not p.is_closed():
+                                        logger.debug(f"📄 Closing page/tab {i+1}/{len(all_pages)}")
+                                        await p.close()
+                                except Exception as e:
+                                    logger.warning(f"⚠️ Could not close page {i+1}: {str(e)}")
+                            
+                            logger.debug(f"✅ All pages/tabs closed successfully")
+                        else:
+                            logger.debug(f"📄 No pages to close")
                         
                         if task_logger:
-                            task_logger(f"🗂️ Closed all browser tabs and pages")
+                            task_logger(f"🗂️ Cleanup completed")
                             
                     except Exception as e:
                         logger.warning(f"⚠️ Error closing some pages: {str(e)}")
@@ -1274,7 +1329,7 @@ class DolphinAnty:
                     # Закрываем контекст браузера
                     try:
                         await context.close()
-                        logger.info(f"🌐 Browser context closed")
+                        logger.debug(f"🌐 Browser context closed")
                     except Exception as e:
                         logger.warning(f"⚠️ Error closing browser context: {str(e)}")
                     
@@ -1297,20 +1352,27 @@ class DolphinAnty:
                     logger.info(f"✅ Cookie Robot completed: {successful_visits}/{len(shuffled_urls)} URLs processed successfully")
                     
                     if task_logger:
-                        task_logger(f"🎯 Final Results:")
-                        task_logger(f"   • Total URLs: {len(urls)}")
-                        task_logger(f"   • Successfully visited: {successful_visits}")
-                        task_logger(f"   • Failed visits: {failed_visits}")
-                        task_logger(f"   • Success rate: {round((successful_visits / len(shuffled_urls)) * 100, 2)}%")
-                        task_logger(f"   • Total duration: {duration} seconds")
+                        task_logger(f"🎯 Cookie Robot completed successfully!")
+                        task_logger(f"📊 Results: {successful_visits}/{len(shuffled_urls)} URLs processed ({round((successful_visits / len(shuffled_urls)) * 100, 2)}% success rate)")
                     
                     return result
+                    
+                except asyncio.TimeoutError:
+                    logger.error(f"❌ Cookie Robot timeout during execution")
+                    if task_logger:
+                        task_logger(f"❌ Cookie Robot timeout - forcing completion")
+                    return {"success": False, "error": "Cookie Robot timeout during execution"}
+                except Exception as e:
+                    logger.error(f"❌ Unexpected error in Cookie Robot: {str(e)}")
+                    if task_logger:
+                        task_logger(f"❌ Unexpected error: {str(e)}")
+                    return {"success": False, "error": f"Unexpected error in Cookie Robot: {str(e)}"}
                     
                 finally:
                     # Отключаемся от браузера (не закрываем его)
                     if browser:
                         await browser.close()
-                        logger.info(f"🔌 Disconnected from browser")
+                        logger.debug(f"🔌 Disconnected from browser")
                     
         except Exception as e:
             logger.error(f"❌ Error during Playwright automation: {str(e)}")
@@ -1326,18 +1388,24 @@ class DolphinAnty:
         """
         Имитирует активность пользователя на странице с более человечными действиями
         """
-        def log_action(message, level="debug"):
+        def log_action(message, level="info"):
             """Helper function to log both to logger and task"""
             if level == "debug":
+                # Убираем debug логи из task_logger для чистоты
                 logger.debug(message)
             elif level == "info":
                 logger.info(message)
+                # В task_logger только важные info сообщения
+                if task_logger and any(keyword in message.lower() for keyword in ["start", "complete", "error", "warning", "success"]):
+                    task_logger(message)
             elif level == "warning":
                 logger.warning(message)
-            
-            # Also log to task if task_logger is provided
-            if task_logger:
-                task_logger(message)
+                if task_logger:
+                    task_logger(message)
+            elif level == "error":
+                logger.error(message)
+                if task_logger:
+                    task_logger(message)
         
         try:
             start_time = time.time()
@@ -1350,8 +1418,11 @@ class DolphinAnty:
             action_stats = {
                 "scroll_down": 0, "scroll_up": 0, "smooth_scroll": 0,
                 "move_mouse": 0, "random_click": 0, "hover_element": 0,
-                "select_text": 0, "right_click": 0, "double_click": 0, "wait": 0
+                "select_text": 0, "double_click": 0, "wait": 0
             }
+            
+            # Логируем прогресс каждые 30 секунд
+            last_progress_log = start_time
             
             while time.time() < end_time:
                 remaining_time = end_time - time.time()
@@ -1372,6 +1443,14 @@ class DolphinAnty:
                     log_action("⚠️ Page was closed during sleep, stopping", "warning")
                     break
                 
+                # Логируем прогресс каждые 30 секунд
+                current_time = time.time()
+                if current_time - last_progress_log >= 30:
+                    elapsed = current_time - start_time
+                    remaining = duration - elapsed
+                    log_action(f"⏳ Activity progress: {elapsed:.0f}s elapsed, {remaining:.0f}s remaining", "info")
+                    last_progress_log = current_time
+                
                 # Выбираем случайное действие с весами (более человечные действия чаще)
                 actions = [
                     "scroll_down", "scroll_down", "scroll_down",  # скролл вниз чаще
@@ -1381,7 +1460,6 @@ class DolphinAnty:
                     "hover_element", "hover_element",               # наведение на элементы
                     "smooth_scroll",              # плавный скролл
                     "select_text",                # выделение текста
-                    "right_click",                # правый клик
                     "double_click",               # двойной клик
                     "wait", "wait"                # пауза для чтения
                 ]
@@ -1404,18 +1482,19 @@ class DolphinAnty:
                             log_action("⚠️ Page became unavailable during activity simulation, stopping", "warning")
                             break
                         else:
-                            log_action(f"⚠️ Warning: Could not get page URL: {str(url_error)[:50]}")
+                            # Убираем избыточные warning логи
+                            logger.debug(f"Could not get page URL: {str(url_error)[:50]}")
                     
                     if action == "scroll_down":
                         # Более естественный скролл с разной интенсивностью
                         scroll_amount = random.uniform(0.2, 0.5)
                         await page.evaluate(f"window.scrollBy(0, window.innerHeight * {scroll_amount})")
-                        log_action(f"📜 Scrolled down ({scroll_amount:.2f} screen heights)")
+                        logger.debug(f"📜 Scrolled down ({scroll_amount:.2f} screen heights)")
                         
                     elif action == "scroll_up":
                         scroll_amount = random.uniform(0.1, 0.3)
                         await page.evaluate(f"window.scrollBy(0, -window.innerHeight * {scroll_amount})")
-                        log_action(f"📜 Scrolled up ({scroll_amount:.2f} screen heights)")
+                        logger.debug(f"📜 Scrolled up ({scroll_amount:.2f} screen heights)")
                         
                     elif action == "smooth_scroll":
                         # Плавный скролл с анимацией
@@ -1426,7 +1505,7 @@ class DolphinAnty:
                                 behavior: 'smooth'
                             }})
                         """)
-                        log_action(f"🌊 Smooth scrolled {target_y}px down")
+                        logger.debug(f"🌊 Smooth scrolled {target_y}px down")
                         
                     elif action == "move_mouse":
                         # Более естественное движение мыши с плавными переходами
@@ -1441,9 +1520,9 @@ class DolphinAnty:
                         if random.random() < 0.3:
                             pause_time = random.uniform(0.5, 1.5)
                             await asyncio.sleep(pause_time)
-                            log_action(f"🖱️ Moved mouse to ({x}, {y}) in {steps} steps, paused {pause_time:.1f}s")
+                            logger.debug(f"🖱️ Moved mouse to ({x}, {y}) in {steps} steps, paused {pause_time:.1f}s")
                         else:
-                            log_action(f"🖱️ Moved mouse to ({x}, {y}) in {steps} steps)")
+                            logger.debug(f"🖱️ Moved mouse to ({x}, {y}) in {steps} steps)")
                         
                     elif action == "random_click":
                         # Реалистичные клики как у настоящего пользователя
@@ -1458,7 +1537,7 @@ class DolphinAnty:
                             try:
                                 current_url = page.url
                             except Exception:
-                                log_action("⚠️ Could not get current URL for click action, skipping", "warning")
+                                logger.debug("Could not get current URL for click action, skipping")
                                 continue
                             
                             # Ищем интерактивные элементы (как настоящий пользователь)
@@ -1485,7 +1564,7 @@ class DolphinAnty:
                                     x = random.randint(200, 800)
                                     y = random.randint(200, 600)
                                     await page.mouse.click(x, y)
-                                    log_action(f"🖱️ Fallback click at ({x}, {y}) due to selector error")
+                                    logger.debug(f"🖱️ Fallback click at ({x}, {y}) due to selector error")
                                     continue
                             
                             if elements:
@@ -1529,7 +1608,7 @@ class DolphinAnty:
                                     
                                     # Реалистичный клик с коротким таймаутом
                                     await element.click(timeout=2000)
-                                    log_action(f"🖱️ User-like clicked on {selector} element")
+                                    logger.debug(f"🖱️ User-like clicked on {selector} element")
                                     
                                     # Ждем немного чтобы увидеть что произошло
                                     await asyncio.sleep(random.uniform(0.5, 1.5))
@@ -1538,7 +1617,7 @@ class DolphinAnty:
                                     try:
                                         new_url = page.url
                                         if new_url != current_url:
-                                            log_action(f"🌐 Navigation detected: {current_url} → {new_url}")
+                                            logger.debug(f"🌐 Navigation detected: {current_url} → {new_url}")
                                             
                                             # Случайно решаем - остаться или вернуться (как пользователь)
                                             should_return = random.choice([True, True, False])  # 66% вернуться
@@ -1547,16 +1626,16 @@ class DolphinAnty:
                                                 # Возвращаемся назад (как пользователь нажал "назад")
                                                 try:
                                                     await page.go_back(wait_until="domcontentloaded", timeout=5000)
-                                                    log_action(f"⬅️ User went back to original page")
+                                                    logger.debug(f"⬅️ User went back to original page")
                                                 except Exception:
                                                     # Если не получается вернуться, переходим напрямую
                                                     try:
                                                         await page.goto(current_url, wait_until="domcontentloaded", timeout=5000)
-                                                        log_action(f"🔄 Returned to original page via direct navigation")
+                                                        logger.debug(f"🔄 Returned to original page via direct navigation")
                                                     except Exception:
-                                                        log_action(f"⚠️ Could not return to original page")
+                                                        logger.debug(f"Could not return to original page")
                                             else:
-                                                log_action(f"📍 User stayed on new page")
+                                                logger.debug(f"📍 User stayed on new page")
                                     except Exception as nav_check_error:
                                         # Если не можем проверить навигацию, продолжаем
                                         error_str = str(nav_check_error).lower()
@@ -1564,7 +1643,7 @@ class DolphinAnty:
                                             log_action("⚠️ Page closed during navigation check, stopping", "warning")
                                             break
                                         else:
-                                            log_action(f"⚠️ Could not check navigation: {str(nav_check_error)[:50]}")
+                                            logger.debug(f"Could not check navigation: {str(nav_check_error)[:50]}")
                                     
                                     click_success = True
                                 else:
@@ -1572,7 +1651,7 @@ class DolphinAnty:
                                     x = random.randint(100, 900)
                                     y = random.randint(100, 700)
                                     await page.mouse.click(x, y)
-                                    log_action(f"🖱️ User clicked on empty area ({x}, {y})")
+                                    logger.debug(f"🖱️ User clicked on empty area ({x}, {y})")
                                     click_success = True
                             
                             if not click_success:
@@ -1580,7 +1659,7 @@ class DolphinAnty:
                                 x = random.randint(100, 900)
                                 y = random.randint(100, 700)
                                 await page.mouse.click(x, y)
-                                log_action(f"🖱️ Random user click at ({x}, {y})")
+                                logger.debug(f"🖱️ Random user click at ({x}, {y})")
                                 
                         except Exception as click_error:
                             # Проверяем, связана ли ошибка с закрытием страницы
@@ -1594,9 +1673,9 @@ class DolphinAnty:
                                     x = random.randint(200, 800)
                                     y = random.randint(200, 600)
                                     await page.mouse.click(x, y)
-                                    log_action(f"🖱️ Fallback click at ({x}, {y}) after error: {str(click_error)[:30]}")
+                                    logger.debug(f"🖱️ Fallback click at ({x}, {y}) after error: {str(click_error)[:30]}")
                                 except Exception:
-                                    log_action(f"🖱️ Click completely failed: {str(click_error)[:50]}")
+                                    logger.debug(f"🖱️ Click completely failed: {str(click_error)[:50]}")
                             
                     elif action == "hover_element":
                         # Реалистичное наведение на элементы
@@ -1616,7 +1695,7 @@ class DolphinAnty:
                                     x = random.randint(100, 900)
                                     y = random.randint(100, 700)
                                     await page.mouse.move(x, y)
-                                    log_action(f"👆 Fallback mouse movement to ({x}, {y})")
+                                    logger.debug(f"👆 Fallback mouse movement to ({x}, {y})")
                                     continue
                             
                             if elements:
@@ -1627,13 +1706,13 @@ class DolphinAnty:
                                         hover_time = random.uniform(0.8, 2.5)  # Более реалистичное время
                                         await element.hover(timeout=1000)
                                         await asyncio.sleep(hover_time)
-                                        log_action(f"👆 Hovered over {selector} element for {hover_time:.1f}s")
+                                        logger.debug(f"👆 Hovered over {selector} element for {hover_time:.1f}s")
                                     else:
                                         # Движение мыши как у пользователя
                                         x = random.randint(100, 900)
                                         y = random.randint(100, 700)
                                         await page.mouse.move(x, y)
-                                        log_action(f"👆 Mouse moved to ({x}, {y})")
+                                        logger.debug(f"👆 Mouse moved to ({x}, {y})")
                                 except Exception as hover_error:
                                     error_str = str(hover_error).lower()
                                     if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
@@ -1644,20 +1723,20 @@ class DolphinAnty:
                                         x = random.randint(100, 900)
                                         y = random.randint(100, 700)
                                         await page.mouse.move(x, y)
-                                        log_action(f"👆 Fallback mouse movement after hover error")
+                                        logger.debug(f"👆 Fallback mouse movement after hover error")
                             else:
                                 # Обычное движение мыши
                                 x = random.randint(100, 900)
                                 y = random.randint(100, 700)
                                 await page.mouse.move(x, y)
-                                log_action(f"👆 Random mouse movement to ({x}, {y})")
+                                logger.debug(f"👆 Random mouse movement to ({x}, {y})")
                         except Exception as e:
                             error_str = str(e).lower()
                             if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
                                 log_action("⚠️ Page closed during hover action, stopping", "warning")
                                 break
                             else:
-                                log_action(f"👆 Hover error: {str(e)[:50]}")
+                                logger.debug(f"👆 Hover error: {str(e)[:50]}")
                             
                     elif action == "select_text":
                         # Реалистичное выделение текста (пользователь читает)
@@ -1673,7 +1752,7 @@ class DolphinAnty:
                                     log_action("⚠️ Page closed during text selection search, stopping", "warning")
                                     break
                                 else:
-                                    log_action(f"📝 Text selection search failed: {str(selector_error)[:50]}")
+                                    logger.debug(f"📝 Text selection search failed: {str(selector_error)[:50]}")
                                     continue
                             
                             if text_elements:
@@ -1691,50 +1770,27 @@ class DolphinAnty:
                                             
                                             # Снимаем выделение
                                             await page.mouse.click(random.randint(100, 200), random.randint(100, 200))
-                                            log_action(f"📝 Selected text for {selection_time:.1f}s (user reading)")
+                                            logger.debug(f"📝 Selected text for {selection_time:.1f}s (user reading)")
                                         else:
-                                            log_action(f"📝 Skipped text selection - no meaningful text")
+                                            logger.debug(f"📝 Skipped text selection - no meaningful text")
                                     else:
-                                        log_action(f"📝 Skipped text selection - element not visible")
+                                        logger.debug(f"📝 Skipped text selection - element not visible")
                                 except Exception as text_error:
                                     error_str = str(text_error).lower()
                                     if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
                                         log_action("⚠️ Page closed during text selection, stopping", "warning")
                                         break
                                     else:
-                                        log_action(f"📝 Text selection error: {str(text_error)[:50]}")
+                                        logger.debug(f"📝 Text selection error: {str(text_error)[:50]}")
                             else:
-                                log_action(f"📝 No text elements found for selection")
+                                logger.debug(f"📝 No text elements found for selection")
                         except Exception as e:
                             error_str = str(e).lower()
                             if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
                                 log_action("⚠️ Page closed during text selection action, stopping", "warning")
                                 break
                             else:
-                                log_action(f"📝 Text selection error: {str(e)[:50]}")
-                            
-                    elif action == "right_click":
-                        # Реалистичный правый клик (пользователь исследует контекстное меню)
-                        try:
-                            x = random.randint(200, 800)
-                            y = random.randint(200, 600)
-                            await page.mouse.click(x, y, button="right")
-                            
-                            # Пользователь смотрит на меню
-                            menu_wait = random.uniform(0.8, 2.0)
-                            await asyncio.sleep(menu_wait)
-                            
-                            # Закрываем меню (пользователь передумал)
-                            await page.keyboard.press("Escape")
-                            
-                            log_action(f"🖱️ Right clicked at ({x}, {y}), examined menu for {menu_wait:.1f}s")
-                        except Exception as e:
-                            error_str = str(e).lower()
-                            if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                                log_action("⚠️ Page closed during right click, stopping", "warning")
-                                break
-                            else:
-                                log_action(f"🖱️ Right click failed: {str(e)[:50]}")
+                                logger.debug(f"📝 Text selection error: {str(e)[:50]}")
                             
                     elif action == "double_click":
                         # Реалистичный двойной клик (пользователь хочет что-то выделить/открыть)
@@ -1742,20 +1798,20 @@ class DolphinAnty:
                             x = random.randint(200, 800)
                             y = random.randint(200, 600)
                             await page.mouse.dblclick(x, y)
-                            log_action(f"🖱️ Double clicked at ({x}, {y}) (user action)")
+                            logger.debug(f"🖱️ Double clicked at ({x}, {y}) (user action)")
                         except Exception as e:
                             error_str = str(e).lower()
                             if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
                                 log_action("⚠️ Page closed during double click, stopping", "warning")
                                 break
                             else:
-                                log_action(f"🖱️ Double click failed: {str(e)[:50]}")
+                                logger.debug(f"🖱️ Double click failed: {str(e)[:50]}")
                         
                     elif action == "wait":
                         # Просто ждем (как пользователь читает)
                         wait_time = min(random.uniform(1, 4), remaining_time)
                         time.sleep(wait_time)
-                        log_action(f"⏸️ Reading pause for {wait_time:.1f} seconds")
+                        logger.debug(f"⏸️ Reading pause for {wait_time:.1f} seconds")
                     
                     actions_performed += 1
                     
@@ -1771,13 +1827,18 @@ class DolphinAnty:
                         log_action(f"⚠️ Page closed during {action}, stopping simulation", "warning")
                         break
                     else:
-                        log_action(f"⚠️ Error during {action}: {str(e)[:100]}")
+                        logger.debug(f"⚠️ Error during {action}: {str(e)[:100]}")
                         continue
             
-            # Финальная статистика
+            # Финальная статистика - только важная информация
             total_time = time.time() - start_time
             log_action(f"🎭 Simulation complete! {actions_performed} actions in {total_time:.1f}s", "info")
-            log_action(f"📊 Action stats: {action_stats}", "info")
+            
+            # Логируем только основные статистики
+            main_actions = {k: v for k, v in action_stats.items() if v > 0}
+            if main_actions:
+                stats_summary = ", ".join([f"{k}: {v}" for k, v in main_actions.items()])
+                log_action(f"📊 Main actions: {stats_summary}", "info")
             
         except Exception as e:
             log_action(f"⚠️ Critical error in user activity simulation: {str(e)}", "warning")
@@ -1826,40 +1887,116 @@ class DolphinAnty:
                 script_path = os.path.join(os.path.dirname(__file__), 'isolated_cookie_robot.py')
                 
                 # Для Windows используем полный путь к Python
-                python_exe = sys.executable
+                python_exe = get_python_executable()
                 
                 cmd = [python_exe, script_path, temp_file_path]
                 
                 logger.info(f"🔄 Running subprocess: {' '.join(cmd)}")
                 
-                # Запускаем subprocess с таймаутом
-                timeout = max(duration + 120, 360)  # Добавляем больше времени
+                # Запускаем subprocess с увеличенным таймаутом
+                # Увеличиваем таймаут до 20 минут, чтобы Cookie Robot мог пройти все сайты
+                # Даже если некоторые сайты медленные или зависают
+                timeout = max(duration + 900, 1200)  # Минимум 20 минут
                 
-                result = subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    timeout=timeout,
-                    cwd=os.getcwd()
-                )
+                try:
+                    # Используем Windows-совместимый subprocess
+                    result = run_subprocess_windows(
+                        cmd,
+                        timeout=timeout,
+                        cwd=os.getcwd()
+                    )
+                except subprocess.TimeoutExpired:
+                    logger.error(f"❌ Subprocess timeout after {timeout} seconds")
+                    # Принудительно завершаем subprocess
+                    try:
+                        import psutil
+                        # Ищем и завершаем все дочерние процессы
+                        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+                            try:
+                                if any('isolated_cookie_robot.py' in str(arg) for arg in proc.info['cmdline'] or []):
+                                    logger.info(f"🔄 Force killing subprocess {proc.info['pid']}")
+                                    proc.terminate()
+                                    proc.wait(timeout=5)
+                            except (psutil.NoSuchProcess, psutil.TimeoutExpired):
+                                pass
+                    except ImportError:
+                        logger.warning("⚠️ psutil not available, cannot force kill subprocess")
+                    
+                    return {"success": False, "error": f"Subprocess timeout after {timeout} seconds - Cookie Robot took too long to complete"}
+                except Exception as e:
+                    logger.error(f"❌ Subprocess execution error: {str(e)}")
+                    return {"success": False, "error": f"Subprocess execution error: {str(e)}"}
                 
+                # Обрабатываем результат subprocess
                 if result.returncode == 0:
                     try:
+                        # Очищаем stdout от возможных лишних символов
+                        stdout_clean = result.stdout.strip()
+                        
+                        # Проверяем, что stdout не пустой
+                        if not stdout_clean:
+                            logger.error("❌ Subprocess returned empty stdout")
+                            logger.error(f"Stderr: {result.stderr}")
+                            return {"success": False, "error": "Subprocess returned empty stdout"}
+                        
+                        # Дополнительная очистка - убираем все до первого '{'
+                        json_start = stdout_clean.find('{')
+                        if json_start != -1:
+                            stdout_clean = stdout_clean[json_start:]
+                        
                         # Парсим результат
-                        output_data = json.loads(result.stdout)
+                        output_data = json.loads(stdout_clean)
                         logger.info(f"✅ Subprocess completed successfully")
                         return output_data
                     except json.JSONDecodeError as e:
                         logger.error(f"❌ Failed to parse subprocess output: {e}")
-                        logger.error(f"Raw stdout: {result.stdout}")
+                        logger.error(f"Raw stdout (first 500 chars): {result.stdout[:500]}")
                         logger.error(f"Raw stderr: {result.stderr}")
+                        
+                        # Попробуем найти JSON в stdout - более агрессивный поиск
+                        try:
+                            # Ищем начало JSON объекта
+                            start_idx = result.stdout.find('{')
+                            if start_idx != -1:
+                                potential_json = result.stdout[start_idx:]
+                                # Убираем все после последнего '}'
+                                end_idx = potential_json.rfind('}')
+                                if end_idx != -1:
+                                    potential_json = potential_json[:end_idx+1]
+                                output_data = json.loads(potential_json)
+                                logger.info(f"✅ Successfully parsed JSON after cleanup")
+                                return output_data
+                        except Exception as cleanup_error:
+                            logger.error(f"❌ JSON cleanup also failed: {cleanup_error}")
+                        
+                        # Последняя попытка - ищем любой валидный JSON в stdout
+                        try:
+                            import re
+                            # Ищем JSON объект с помощью regex
+                            json_pattern = r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
+                            matches = re.findall(json_pattern, result.stdout)
+                            if matches:
+                                # Берем самый длинный match
+                                longest_match = max(matches, key=len)
+                                output_data = json.loads(longest_match)
+                                logger.info(f"✅ Successfully parsed JSON using regex fallback")
+                                return output_data
+                        except Exception as regex_error:
+                            logger.error(f"❌ Regex JSON parsing also failed: {regex_error}")
+                        
+                        # Если все попытки не удались, возвращаем ошибку с детальной диагностикой
+                        logger.error(f"❌ All JSON parsing attempts failed")
+                        logger.error(f"❌ Stdout length: {len(result.stdout)}")
+                        logger.error(f"❌ Stderr length: {len(result.stderr)}")
+                        logger.error(f"❌ First 100 chars of stdout: {repr(result.stdout[:100])}")
+                        
                         return {"success": False, "error": f"Failed to parse subprocess output: {str(e)}"}
                 else:
                     logger.error(f"❌ Subprocess failed with return code {result.returncode}")
                     logger.error(f"Stdout: {result.stdout}")
                     logger.error(f"Stderr: {result.stderr}")
                     return {"success": False, "error": f"Subprocess failed: {result.stderr}"}
-                    
+                
             except subprocess.TimeoutExpired:
                 logger.error(f"❌ Subprocess timeout after {timeout} seconds")
                 return {"success": False, "error": f"Subprocess timeout after {timeout} seconds"}
