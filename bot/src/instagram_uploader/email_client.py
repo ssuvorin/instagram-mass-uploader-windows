@@ -38,15 +38,53 @@ class Email:
         'yandex.com': {'server': 'imap.yandex.ru', 'port': 993, 'type': 'imap'},
         'ya.ru': {'server': 'imap.yandex.ru', 'port': 993, 'type': 'imap'},
         
-        # NotLetters and temporary email providers
-        'notletters.com': {'server': 'imap.notletters.com', 'port': 993, 'type': 'imap'},
-        'tempmail.org': {'server': 'imap.tempmail.org', 'port': 993, 'type': 'imap'},
-        '10minutemail.com': {'server': 'imap.10minutemail.com', 'port': 993, 'type': 'imap'},
-        'guerrillamail.com': {'server': 'imap.guerrillamail.com', 'port': 993, 'type': 'imap'},
-        'mailinator.com': {'server': 'imap.mailinator.com', 'port': 993, 'type': 'imap'},
-        
-        # FirstMail (POP3)
+        # FirstMail - расширенная поддержка различных доменов
         'firstmail.ltd': {'server': 'imap.firstmail.ltd', 'port': 995, 'type': 'pop3'},
+        'firstmail.org': {'server': 'imap.firstmail.ltd', 'port': 995, 'type': 'pop3'},
+        'firstmail.com': {'server': 'imap.firstmail.ltd', 'port': 995, 'type': 'pop3'},
+        'firstmail.net': {'server': 'imap.firstmail.ltd', 'port': 995, 'type': 'pop3'},
+        'firstmail.co': {'server': 'imap.firstmail.ltd', 'port': 995, 'type': 'pop3'},
+        'firstmail.io': {'server': 'imap.firstmail.ltd', 'port': 995, 'type': 'pop3'},
+        'firstmail.me': {'server': 'imap.firstmail.ltd', 'port': 995, 'type': 'pop3'},
+        'firstmail.xyz': {'server': 'imap.firstmail.ltd', 'port': 995, 'type': 'pop3'},
+        'firstmail.site': {'server': 'imap.firstmail.ltd', 'port': 995, 'type': 'pop3'},
+        'firstmail.online': {'server': 'imap.firstmail.ltd', 'port': 995, 'type': 'pop3'},
+        
+        # NotLetters and temporary email providers - расширенная поддержка
+        'notletters.com': {'server': 'imap.notletters.com', 'port': 993, 'type': 'imap'},
+        'notletters.org': {'server': 'imap.notletters.com', 'port': 993, 'type': 'imap'},
+        'notletters.net': {'server': 'imap.notletters.com', 'port': 993, 'type': 'imap'},
+        'notletters.co': {'server': 'imap.notletters.com', 'port': 993, 'type': 'imap'},
+        
+        # Другие временные email провайдеры
+        'tempmail.org': {'server': 'imap.tempmail.org', 'port': 993, 'type': 'imap'},
+        'tempmail.com': {'server': 'imap.tempmail.org', 'port': 993, 'type': 'imap'},
+        'tempmail.net': {'server': 'imap.tempmail.org', 'port': 993, 'type': 'imap'},
+        
+        '10minutemail.com': {'server': 'imap.10minutemail.com', 'port': 993, 'type': 'imap'},
+        '10minutemail.org': {'server': 'imap.10minutemail.com', 'port': 993, 'type': 'imap'},
+        '10minutemail.net': {'server': 'imap.10minutemail.com', 'port': 993, 'type': 'imap'},
+        
+        'guerrillamail.com': {'server': 'imap.guerrillamail.com', 'port': 993, 'type': 'imap'},
+        'guerrillamail.org': {'server': 'imap.guerrillamail.com', 'port': 993, 'type': 'imap'},
+        'guerrillamail.net': {'server': 'imap.guerrillamail.com', 'port': 993, 'type': 'imap'},
+        
+        'mailinator.com': {'server': 'imap.mailinator.com', 'port': 993, 'type': 'imap'},
+        'mailinator.org': {'server': 'imap.mailinator.com', 'port': 993, 'type': 'imap'},
+        'mailinator.net': {'server': 'imap.mailinator.com', 'port': 993, 'type': 'imap'},
+        
+        # Дополнительные временные провайдеры
+        'temp-mail.org': {'server': 'imap.temp-mail.org', 'port': 993, 'type': 'imap'},
+        'temp-mail.com': {'server': 'imap.temp-mail.org', 'port': 993, 'type': 'imap'},
+        'temp-mail.net': {'server': 'imap.temp-mail.org', 'port': 993, 'type': 'imap'},
+        
+        'maildrop.cc': {'server': 'imap.maildrop.cc', 'port': 993, 'type': 'imap'},
+        'maildrop.com': {'server': 'imap.maildrop.cc', 'port': 993, 'type': 'imap'},
+        'maildrop.org': {'server': 'imap.maildrop.cc', 'port': 993, 'type': 'imap'},
+        
+        'throwaway.email': {'server': 'imap.throwaway.email', 'port': 993, 'type': 'imap'},
+        'throwaway.com': {'server': 'imap.throwaway.email', 'port': 993, 'type': 'imap'},
+        'throwaway.org': {'server': 'imap.throwaway.email', 'port': 993, 'type': 'imap'},
         
         # Add more email providers as needed
     }
@@ -143,11 +181,32 @@ class Email:
         # Fallback: try common servers if specific config failed or not found
         print(f"📧 [EMAIL_CLIENT] Trying fallback servers...")
         
+        # Расширенный список fallback серверов с приоритетом для временных email провайдеров
         fallback_servers = [
-            ('imap.notletters.com', 993, 'imap'),
-            ('imap-mail.outlook.com', 993, 'imap'),
+            # FirstMail серверы (высокий приоритет для временных email)
             ('imap.firstmail.ltd', 995, 'pop3'),
+            ('imap.firstmail.ltd', 993, 'imap'),  # Попробуем и IMAP
+            
+            # NotLetters серверы
+            ('imap.notletters.com', 993, 'imap'),
+            ('imap.notletters.com', 995, 'pop3'),  # Попробуем и POP3
+            
+            # Другие временные email провайдеры
+            ('imap.tempmail.org', 993, 'imap'),
+            ('imap.10minutemail.com', 993, 'imap'),
+            ('imap.guerrillamail.com', 993, 'imap'),
+            ('imap.mailinator.com', 993, 'imap'),
+            ('imap.temp-mail.org', 993, 'imap'),
+            ('imap.maildrop.cc', 993, 'imap'),
+            ('imap.throwaway.email', 993, 'imap'),
+            
+            # Основные email провайдеры
+            ('imap-mail.outlook.com', 993, 'imap'),
             ('imap.rambler.ru', 993, 'imap'),
+            ('imap.mail.ru', 993, 'imap'),
+            ('imap.yandex.ru', 993, 'imap'),
+            ('imap.gmail.com', 993, 'imap'),
+            ('imap.mail.yahoo.com', 993, 'imap'),
         ]
         
         for server, port, server_type in fallback_servers:
@@ -159,9 +218,12 @@ class Email:
                     code = self._get_verification_pop3(server, port)
                 
                 if code:
+                    print(f"📧 [EMAIL_CLIENT] ✅ Success with {server}:{port}")
                     return code
+                else:
+                    print(f"📧 [EMAIL_CLIENT] ⚠️ No code found with {server}:{port}")
             except Exception as e:
-                print(f"📧 [EMAIL_CLIENT] ❌ {server} failed: {str(e)}")
+                print(f"📧 [EMAIL_CLIENT] ❌ {server}:{port} failed: {str(e)}")
                 continue
         
         return None

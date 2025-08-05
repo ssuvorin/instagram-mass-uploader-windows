@@ -46,6 +46,13 @@ from .logging_utils import log_info, log_error, log_debug, log_warning
 from .human_behavior import AdvancedHumanBehavior, init_human_behavior, get_human_behavior
 from .captcha_solver import solve_recaptcha_if_present, detect_recaptcha_on_page, RuCaptchaSolver, solve_recaptcha_if_present_sync
 
+# Import email verification functions
+from .email_verification_async import (
+    get_email_verification_code_async,
+    get_2fa_code_async,
+    determine_verification_type_async
+)
+
 # Configure Django settings for async operations
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'instagram_uploader.settings')
 import django
@@ -4541,7 +4548,7 @@ async def perform_enhanced_instagram_login_async(page, account_details):
             return False
 
 async def handle_login_completion_async(page, account_details):
-    """Handle login completion including 2FA and error checks"""
+    """Handle login completion including 2FA, email verification and error checks"""
     try:
         print("🔍 [ASYNC_LOGIN] Checking login completion...")
         
@@ -4596,7 +4603,20 @@ async def handle_login_completion_async(page, account_details):
         except Exception as e:
             print(f"⚠️ [ASYNC_LOGIN] Error checking for login errors: {str(e)}")
         
-        # Check for 2FA requirement
+        # Check for verification requirements
+        verification_type = await determine_verification_type_async(page)
+        
+        if verification_type == "authenticator":
+            print("📱 [ASYNC_LOGIN] 2FA/Authenticator verification required")
+            return await handle_2fa_async(page, account_details)
+        elif verification_type == "email_code":
+            print("📧 [ASYNC_LOGIN] Email verification code required")
+            return await handle_email_verification_async(page, account_details)
+        elif verification_type == "email_field":
+            print("📧 [ASYNC_LOGIN] Email field input required")
+            return await handle_email_field_verification_async(page, account_details)
+        
+        # Legacy 2FA check for backward compatibility
         tfa_indicators = [
             'input[name="verificationCode"]',
             'input[placeholder*="код"]',
@@ -4611,13 +4631,13 @@ async def handle_login_completion_async(page, account_details):
                     # Text content check
                     page_text = await page.inner_text('body') or ""
                     if indicator[6:] in page_text:
-                        print("📱 [ASYNC_LOGIN] 2FA code required")
+                        print("📱 [ASYNC_LOGIN] 2FA code required (legacy check)")
                         return await handle_2fa_async(page, account_details)
                 else:
                     # Element check
                     element = await page.query_selector(indicator)
                     if element and await element.is_visible():
-                        print("📱 [ASYNC_LOGIN] 2FA code required")
+                        print("📱 [ASYNC_LOGIN] 2FA code required (legacy check)")
                         return await handle_2fa_async(page, account_details)
             except:
                 continue
@@ -4635,7 +4655,7 @@ async def handle_login_completion_async(page, account_details):
         return False
 
 async def handle_2fa_async(page, account_details):
-    """Handle 2FA authentication if required"""
+    """Handle 2FA authentication using API instead of pyotp"""
     try:
         tfa_secret = account_details.get('tfa_secret')
         if not tfa_secret:
@@ -4665,18 +4685,13 @@ async def handle_2fa_async(page, account_details):
             print("❌ [ASYNC_2FA] 2FA code input not found")
             return False
         
-        # Generate TOTP code
-        try:
-            import pyotp
-            totp = pyotp.TOTP(tfa_secret)
-            code = totp.now()
-            print(f"📱 [ASYNC_2FA] Generated 2FA code: {code}")
-        except ImportError:
-            print("❌ [ASYNC_2FA] pyotp not available for 2FA")
+        # Get 2FA code from API
+        code = await get_2fa_code_async(tfa_secret)
+        if not code:
+            print("❌ [ASYNC_2FA] Failed to get 2FA code from API")
             return False
-        except Exception as e:
-            print(f"❌ [ASYNC_2FA] Error generating 2FA code: {str(e)}")
-            return False
+        
+        print(f"📱 [ASYNC_2FA] Got 2FA code from API: {code}")
         
         # Enter 2FA code
         await code_input.click()
@@ -4698,9 +4713,137 @@ async def handle_2fa_async(page, account_details):
         else:
             print("❌ [ASYNC_2FA] 2FA authentication failed")
             return False
-        
+            
     except Exception as e:
         print(f"❌ [ASYNC_2FA] Error in 2FA handling: {str(e)}")
+        return False
+
+async def handle_email_verification_async(page, account_details):
+    """Handle email verification code entry"""
+    try:
+        email_login = account_details.get('email_login')
+        email_password = account_details.get('email_password')
+        
+        if not email_login or not email_password:
+            print("❌ [ASYNC_EMAIL] Email credentials not provided for verification")
+            return False
+        
+        print("📧 [ASYNC_EMAIL] Starting email verification...")
+        
+        # Find verification code input
+        code_input = None
+        code_selectors = [
+            'input[name="verificationCode"]',
+            'input[name="confirmationCode"]',
+            'input[autocomplete="one-time-code"]',
+            'input[inputmode="numeric"]',
+            'input[maxlength="6"]',
+            'input[placeholder*="код"]',
+            'input[placeholder*="code"]',
+        ]
+        
+        for selector in code_selectors:
+            try:
+                code_input = await page.query_selector(selector)
+                if code_input and await code_input.is_visible():
+                    break
+            except:
+                continue
+        
+        if not code_input:
+            print("❌ [ASYNC_EMAIL] Email verification code input not found")
+            return False
+        
+        # Get verification code from email
+        verification_code = await get_email_verification_code_async(email_login, email_password, max_retries=3)
+        
+        if verification_code:
+            print(f"📧 [ASYNC_EMAIL] Got email verification code: {verification_code}")
+            
+            # Enter verification code
+            await code_input.click()
+            await asyncio.sleep(random.uniform(0.5, 1.0))
+            await code_input.fill(verification_code)
+            await asyncio.sleep(random.uniform(1, 2))
+            
+            # Submit verification form
+            submit_button = await page.query_selector('button[type="submit"], button:has-text("Confirm"), button:has-text("Подтвердить")')
+            if submit_button:
+                await submit_button.click()
+                await asyncio.sleep(random.uniform(3, 5))
+            
+            # Check if verification was successful
+            current_url = page.url
+            if '/accounts/login' not in current_url and 'challenge' not in current_url:
+                print("✅ [ASYNC_EMAIL] Email verification successful")
+                return True
+            else:
+                print("❌ [ASYNC_EMAIL] Email verification failed")
+                return False
+        else:
+            print("❌ [ASYNC_EMAIL] Failed to get email verification code")
+            return False
+            
+    except Exception as e:
+        print(f"❌ [ASYNC_EMAIL] Error in email verification: {str(e)}")
+        return False
+
+async def handle_email_field_verification_async(page, account_details):
+    """Handle email field input verification"""
+    try:
+        email_login = account_details.get('email_login')
+        
+        if not email_login:
+            print("❌ [ASYNC_EMAIL_FIELD] Email login not provided")
+            return False
+        
+        print("📧 [ASYNC_EMAIL_FIELD] Starting email field verification...")
+        
+        # Find email input field
+        email_input = None
+        email_selectors = [
+            'input[name="email"]',
+            'input[name="emailOrPhone"]',
+            'input[type="email"]',
+            'input[autocomplete="email"]',
+            'input[inputmode="email"]',
+        ]
+        
+        for selector in email_selectors:
+            try:
+                email_input = await page.query_selector(selector)
+                if email_input and await email_input.is_visible():
+                    break
+            except:
+                continue
+        
+        if not email_input:
+            print("❌ [ASYNC_EMAIL_FIELD] Email input field not found")
+            return False
+        
+        # Enter email address
+        await email_input.click()
+        await asyncio.sleep(random.uniform(0.5, 1.0))
+        await email_input.fill(email_login)
+        await asyncio.sleep(random.uniform(1, 2))
+        
+        # Submit email form
+        submit_button = await page.query_selector('button[type="submit"], button:has-text("Confirm"), button:has-text("Подтвердить")')
+        if submit_button:
+            await submit_button.click()
+            await asyncio.sleep(random.uniform(3, 5))
+        
+        # Check if email submission was successful
+        current_url = page.url
+        if '/accounts/login' not in current_url and 'challenge' not in current_url:
+            print("✅ [ASYNC_EMAIL_FIELD] Email field verification successful")
+            return True
+        else:
+            print("❌ [ASYNC_EMAIL_FIELD] Email field verification failed")
+            return False
+            
+    except Exception as e:
+        print(f"❌ [ASYNC_EMAIL_FIELD] Error in email field verification: {str(e)}")
         return False
 
 async def handle_save_login_info_dialog_async(page):
