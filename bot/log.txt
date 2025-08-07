@@ -18695,3 +18695,95 @@ navigating to 'https://amazon.com/', waiting until 'domcontentloaded'
 2025-08-07 01:55:26,939 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping Dolphin profile: 642753136
 2025-08-07 01:55:27,199 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Successfully stopped profile: 642753136
 2025-08-07 01:55:27,199 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Successfully stopped profile: 642753136
+2025-08-07 13:21:12,207 - bot.src.instagram_uploader.dolphin_anty - INFO - Getting profile list with params: {'limit': 1, 'page': 1}
+2025-08-07 13:21:12,207 - bot.src.instagram_uploader.dolphin_anty - INFO - Getting profile list with params: {'limit': 1, 'page': 1}
+2025-08-07 13:21:12,958 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-08-07 13:21:12,958 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-08-07 13:21:14,029 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-08-07 13:21:14,029 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-08-07 13:21:14,032 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 612850481 (headless=False)
+2025-08-07 13:21:14,032 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 612850481 (headless=False)
+2025-08-07 13:21:14,033 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-08-07 13:21:14,033 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-08-07 13:21:14,692 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-08-07 13:21:14,692 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-08-07 13:21:14,692 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 612850481
+2025-08-07 13:21:14,692 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 612850481
+2025-08-07 13:21:18,351 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-08-07 13:21:18,351 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-08-07 13:21:18,351 - bot.src.instagram_uploader.dolphin_anty - INFO - Getting profile list with params: {'limit': 1, 'page': 1}
+2025-08-07 13:21:18,351 - bot.src.instagram_uploader.dolphin_anty - INFO - Getting profile list with params: {'limit': 1, 'page': 1}
+2025-08-07 13:21:19,021 - bot.src.instagram_uploader.dolphin_anty - INFO - Getting profile list with params: {'limit': 1, 'page': 1}
+2025-08-07 13:21:19,021 - bot.src.instagram_uploader.dolphin_anty - INFO - Getting profile list with params: {'limit': 1, 'page': 1}
+2025-08-07 13:21:19,731 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping Dolphin profile: 612850481
+2025-08-07 13:21:19,731 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping Dolphin profile: 612850481
+2025-08-07 13:21:19,752 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Successfully stopped profile: 612850481
+2025-08-07 13:21:19,752 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Successfully stopped profile: 612850481
+2025-08-07 13:21:19,753 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-08-07 13:21:19,753 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-08-07 13:22:11,655 - bot.src.instagram_uploader.dolphin_anty - INFO - Getting profile list with params: {'limit': 1, 'page': 1}
+2025-08-07 13:22:11,655 - bot.src.instagram_uploader.dolphin_anty - INFO - Getting profile list with params: {'limit': 1, 'page': 1}
+2025-08-07 13:22:12,400 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-08-07 13:22:12,400 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-08-07 13:22:13,444 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-08-07 13:22:13,444 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-08-07 13:22:13,448 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 642752979 (headless=False)
+2025-08-07 13:22:13,448 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 642752979 (headless=False)
+2025-08-07 13:22:13,449 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-08-07 13:22:13,449 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-08-07 13:22:14,155 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-08-07 13:22:14,155 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-08-07 13:22:14,158 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 642752979
+2025-08-07 13:22:14,158 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 642752979
+2025-08-07 13:22:16,660 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] [Step 3/3] Profile 642752979 started successfully
+2025-08-07 13:22:16,660 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] [Step 3/3] Profile 642752979 started successfully
+2025-08-07 13:22:16,661 - bot.src.instagram_uploader.dolphin_anty - INFO - [LINK] Connection details: port=58793, wsEndpoint=/devtools/browser/a114e1fd-3a17-4351-9e1d-ac37c3a1e3e5
+2025-08-07 13:22:16,661 - bot.src.instagram_uploader.dolphin_anty - INFO - [LINK] Connection details: port=58793, wsEndpoint=/devtools/browser/a114e1fd-3a17-4351-9e1d-ac37c3a1e3e5
+2025-08-07 13:22:18,551 - bot.src.instagram_uploader.dolphin_anty - INFO - Getting profile list with params: {'limit': 1, 'page': 1}
+2025-08-07 13:22:18,551 - bot.src.instagram_uploader.dolphin_anty - INFO - Getting profile list with params: {'limit': 1, 'page': 1}
+2025-08-07 13:22:19,192 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-08-07 13:22:19,192 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-08-07 13:22:20,036 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-08-07 13:22:20,036 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-08-07 13:22:20,036 - bot.src.instagram_uploader.dolphin_anty - INFO - Getting profile list with params: {'limit': 1, 'page': 1}
+2025-08-07 13:22:20,036 - bot.src.instagram_uploader.dolphin_anty - INFO - Getting profile list with params: {'limit': 1, 'page': 1}
+2025-08-07 13:22:20,719 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-08-07 13:22:20,719 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-08-07 13:22:21,428 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-08-07 13:22:21,428 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-08-07 13:22:21,429 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 612899146 (headless=False)
+2025-08-07 13:22:21,429 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 612899146 (headless=False)
+2025-08-07 13:22:21,429 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-08-07 13:22:21,429 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-08-07 13:22:22,208 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-08-07 13:22:22,208 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-08-07 13:22:22,209 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 612899146
+2025-08-07 13:22:22,209 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 612899146
+2025-08-07 13:22:23,971 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] [Step 3/3] Profile 612899146 started successfully
+2025-08-07 13:22:23,971 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] [Step 3/3] Profile 612899146 started successfully
+2025-08-07 13:22:23,971 - bot.src.instagram_uploader.dolphin_anty - INFO - [LINK] Connection details: port=58847, wsEndpoint=/devtools/browser/12c7213d-7d94-4049-bc99-2b6e1bcb737d
+2025-08-07 13:22:23,971 - bot.src.instagram_uploader.dolphin_anty - INFO - [LINK] Connection details: port=58847, wsEndpoint=/devtools/browser/12c7213d-7d94-4049-bc99-2b6e1bcb737d
+2025-08-07 13:22:23,988 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 642874888 (headless=False)
+2025-08-07 13:22:23,988 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 642874888 (headless=False)
+2025-08-07 13:22:23,988 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-08-07 13:22:23,988 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-08-07 13:22:24,705 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-08-07 13:22:24,705 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-08-07 13:22:24,705 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 642874888
+2025-08-07 13:22:24,705 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 642874888
+2025-08-07 13:22:26,327 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] [Step 3/3] Profile 642874888 started successfully
+2025-08-07 13:22:26,327 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] [Step 3/3] Profile 642874888 started successfully
+2025-08-07 13:22:26,327 - bot.src.instagram_uploader.dolphin_anty - INFO - [LINK] Connection details: port=58874, wsEndpoint=/devtools/browser/a1d062eb-816d-4c9f-81a6-78e2843cc708
+2025-08-07 13:22:26,327 - bot.src.instagram_uploader.dolphin_anty - INFO - [LINK] Connection details: port=58874, wsEndpoint=/devtools/browser/a1d062eb-816d-4c9f-81a6-78e2843cc708
+2025-08-07 13:24:12,039 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping Dolphin profile: 642752979
+2025-08-07 13:24:12,039 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping Dolphin profile: 642752979
+2025-08-07 13:24:12,303 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Successfully stopped profile: 642752979
+2025-08-07 13:24:12,303 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Successfully stopped profile: 642752979
+2025-08-07 13:25:28,387 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping Dolphin profile: 642874888
+2025-08-07 13:25:28,387 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping Dolphin profile: 642874888
+2025-08-07 13:25:28,650 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Successfully stopped profile: 642874888
+2025-08-07 13:25:28,650 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Successfully stopped profile: 642874888
+2025-08-07 13:27:03,250 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping Dolphin profile: 612899146
+2025-08-07 13:27:03,250 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping Dolphin profile: 612899146
+2025-08-07 13:27:03,523 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Successfully stopped profile: 612899146
+2025-08-07 13:27:03,523 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Successfully stopped profile: 612899146
