@@ -109,7 +109,7 @@ def run_bot_with_playwright(account, video_files, task_id):
         
         # Update Dolphin profile ID if it's in the output and not already set
         if not account.dolphin_profile_id:
-            # Look for a line like "✅ Profile Dolphin 12345678 saved for account"
+            # Look for a line like "[OK] Profile Dolphin 12345678 saved for account"
             import re
             profile_matches = re.findall(r"Profile Dolphin ([a-zA-Z0-9]+) saved for account", stdout_text)
             if profile_matches:
@@ -201,7 +201,7 @@ def run_cookie_robot_task(task_id):
         
         # Check if account has a Dolphin profile ID
         if not account.dolphin_profile_id:
-            log_message = f"❌ Error: Account does not have a Dolphin profile ID."
+            log_message = f"[FAIL] Error: Account does not have a Dolphin profile ID."
             task.log += log_message + "\n"
             logger.error(log_message)
             task.status = 'FAILED'
@@ -215,7 +215,7 @@ def run_cookie_robot_task(task_id):
         # Initialize Dolphin API
         api_key = os.environ.get("DOLPHIN_API_TOKEN", "")
         if not api_key:
-            log_message = f"❌ Error: Dolphin API token not found in environment variables."
+            log_message = f"[FAIL] Error: Dolphin API token not found in environment variables."
             task.log += log_message + "\n"
             logger.error(log_message)
             task.status = 'FAILED'
@@ -235,7 +235,7 @@ def run_cookie_robot_task(task_id):
         dolphin = DolphinAnty(api_key=api_key, local_api_base=dolphin_api_host)
         
         # Run the cookie robot
-        log_message = f"🚀 Starting Cookie Robot on Dolphin profile {account.dolphin_profile_id}..."
+        log_message = f"[START] Starting Cookie Robot on Dolphin profile {account.dolphin_profile_id}..."
         task.log += log_message + "\n"
         logger.info(log_message)
         
@@ -249,7 +249,7 @@ def run_cookie_robot_task(task_id):
         # Update task with result
         if result.get('success', False):
             task.status = 'COMPLETED'
-            log_message = f"✅ Cookie Robot completed successfully!"
+            log_message = f"[OK] Cookie Robot completed successfully!"
             task.log += log_message + "\n"
             logger.info(log_message)
             
@@ -263,7 +263,7 @@ def run_cookie_robot_task(task_id):
         else:
             task.status = 'FAILED'
             error_details = result.get('error', 'Unknown error')
-            log_message = f"❌ Cookie Robot failed: {error_details}"
+            log_message = f"[FAIL] Cookie Robot failed: {error_details}"
             task.log += log_message + "\n"
             logger.error(log_message)
             
@@ -277,7 +277,7 @@ def run_cookie_robot_task(task_id):
         
     except Exception as e:
         task.status = 'FAILED'
-        log_message = f"❌ Exception occurred: {str(e)}"
+        log_message = f"[FAIL] Exception occurred: {str(e)}"
         task.log += log_message + "\n"
         logger.error(log_message)
         

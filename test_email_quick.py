@@ -17,7 +17,7 @@ from uploader.tests_email_2fa import Email2FATestCase, EmailServerTestSuite
 
 async def quick_test():
     """Быстрый тест основных функций"""
-    print("🚀 QUICK EMAIL AND 2FA TEST")
+    print("[START] QUICK EMAIL AND 2FA TEST")
     print("=" * 50)
     
     # Создаем тестовый экземпляр
@@ -36,7 +36,7 @@ async def quick_test():
     )
     
     if not accounts_with_email:
-        print("❌ No accounts with email found")
+        print("[FAIL] No accounts with email found")
         return
     
     print(f"📧 Found {len(accounts_with_email)} accounts with email")
@@ -57,7 +57,7 @@ async def quick_test():
         
         await asyncio.sleep(1)
     
-    print("\n✅ Quick test completed!")
+    print("\n[OK] Quick test completed!")
 
 
 if __name__ == "__main__":
@@ -66,6 +66,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n⏹️ Test interrupted by user")
     except Exception as e:
-        print(f"\n❌ Error: {str(e)}")
+        print(f"\n[FAIL] Error: {str(e)}")
         import traceback
         traceback.print_exc() 

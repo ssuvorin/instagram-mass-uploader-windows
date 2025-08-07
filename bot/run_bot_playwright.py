@@ -59,14 +59,14 @@ def check_proxy_config(proxy_data):
     Проверяет конфигурацию прокси и возвращает информацию о текущем IP
     """
     if not proxy_data:
-        logger.error("❌ Прокси не указан, но он обязателен для работы бота")
+        logger.error("[FAIL] Прокси не указан, но он обязателен для работы бота")
         return None
         
-    logger.info("🔄 Инициализация временного браузера для проверки прокси...")
+    logger.info("[RETRY] Инициализация временного браузера для проверки прокси...")
     # Создаем временный профиль Dolphin для проверки прокси
     api_key = os.environ.get("DOLPHIN_API_TOKEN", "")
     if not api_key:
-        logger.error("❌ Dolphin API token not found in environment variables")
+        logger.error("[FAIL] Dolphin API token not found in environment variables")
         return None
     
     dolphin = DolphinAnty(api_key=api_key)
@@ -89,17 +89,17 @@ def check_proxy_config(proxy_data):
         
         profile_response = dolphin.create_profile(temp_profile_data)
         if not profile_response or not profile_response.get("success"):
-            logger.error("❌ Не удалось создать временный профиль для проверки прокси")
+            logger.error("[FAIL] Не удалось создать временный профиль для проверки прокси")
             return None
             
         profile_id = profile_response.get("browserProfileId")
         
         # Запускаем профиль
-        logger.info("🔄 Запуск временного профиля для проверки прокси...")
+        logger.info("[RETRY] Запуск временного профиля для проверки прокси...")
         success, automation_data = dolphin.start_profile(profile_id, headless=True)
         
         if not success:
-            logger.error("❌ Не удалось запустить временный профиль")
+            logger.error("[FAIL] Не удалось запустить временный профиль")
             dolphin.delete_profile(profile_id)
             return None
             
@@ -108,7 +108,7 @@ def check_proxy_config(proxy_data):
         page = get_page(browser)
         
         if not page:
-            logger.error("❌ Не удалось создать страницу браузера")
+            logger.error("[FAIL] Не удалось создать страницу браузера")
             close_browser(browser)
             dolphin.delete_profile(profile_id)
             return None
@@ -116,10 +116,10 @@ def check_proxy_config(proxy_data):
         logger.info("🌐 Проверка работы прокси...")
         ip = verify_ip_address(page)
         if ip:
-            logger.info(f"✅ Прокси работает! Используемый IP-адрес: {ip}")
+            logger.info(f"[OK] Прокси работает! Используемый IP-адрес: {ip}")
             result = ip
         else:
-            logger.error("❌ Не удалось проверить IP-адрес или прокси не работает")
+            logger.error("[FAIL] Не удалось проверить IP-адрес или прокси не работает")
             result = None
     finally:
         # Закрываем браузер
@@ -129,7 +129,7 @@ def check_proxy_config(proxy_data):
         
         # Удаляем временный профиль
         if 'profile_id' in locals():
-            logger.info("🗑️ Удаление временного профиля...")
+            logger.info("[DELETE] Удаление временного профиля...")
             dolphin.delete_profile(profile_id)
         
     return result
@@ -141,11 +141,11 @@ def prepare_video_for_upload(video_path):
     - Возвращает путь к подготовленному файлу
     """
     try:
-        logger.info(f"🔄 Подготовка видео для загрузки: {video_path}")
+        logger.info(f"[RETRY] Подготовка видео для загрузки: {video_path}")
         
         # Проверяем, существует ли файл
         if not os.path.exists(video_path):
-            logger.error(f"❌ Видео не найдено: {video_path}")
+            logger.error(f"[FAIL] Видео не найдено: {video_path}")
             return None
         
         # Создаем директорию для подготовленных видео, если её нет
@@ -201,18 +201,18 @@ def prepare_video_for_upload(video_path):
         new_filename = f"{base_name}{file_ext}"
         new_path = os.path.join(prepared_dir, new_filename)
         
-        logger.info(f"🔄 Копирование видео из {video_path} в {new_path}")
+        logger.info(f"[RETRY] Копирование видео из {video_path} в {new_path}")
         
         # Копируем файл
         shutil.copy2(video_path, new_path)
-        logger.info(f"✅ Видео успешно скопировано с новым именем: {new_filename}")
+        logger.info(f"[OK] Видео успешно скопировано с новым именем: {new_filename}")
         
         # Добавляем случайную задержку для имитации человеческого поведения
         random_delay(1, 3)
         
         # Проверяем, нужно ли изменить метаданные видео
         if random.random() > 0.5:
-            logger.info(f"🔄 Изменение метаданных видео для большей естественности...")
+            logger.info(f"[RETRY] Изменение метаданных видео для большей естественности...")
             try:
                 # Используем exiftool для изменения метаданных, если он установлен
                 if shutil.which('exiftool'):
@@ -231,19 +231,19 @@ def prepare_video_for_upload(video_path):
                     
                     # Выполняем команду
                     subprocess.run(cmd, capture_output=True, text=True)
-                    logger.info(f"✅ Метаданные видео успешно изменены")
+                    logger.info(f"[OK] Метаданные видео успешно изменены")
                 else:
                     logger.info(f"ℹ️ exiftool не установлен, пропуск изменения метаданных")
             except Exception as e:
-                logger.info(f"⚠️ Не удалось изменить метаданные: {str(e)}")
+                logger.info(f"[WARN] Не удалось изменить метаданные: {str(e)}")
         
         return new_path
     except Exception as e:
-        logger.error(f"❌ Ошибка при копировании файла: {str(e)}")
+        logger.error(f"[FAIL] Ошибка при копировании файла: {str(e)}")
         return None
 
 def main():
-    logger.info("🚀 Запуск Instagram Uploader Bot (Playwright + Dolphin Anty)")
+    logger.info("[START] Запуск Instagram Uploader Bot (Playwright + Dolphin Anty)")
     
     parser = argparse.ArgumentParser(description='Instagram Uploader Bot')
     parser.add_argument('--account', required=True, help='Path to account data JSON file')
@@ -273,7 +273,7 @@ def main():
     # Получаем API токен Dolphin Anty
     dolphin_token = args.dolphin_token or os.environ.get("DOLPHIN_API_TOKEN")
     if not dolphin_token:
-        logger.warning("⚠️ API токен Dolphin Anty не указан! Используйте --dolphin-token или переменную окружения DOLPHIN_API_TOKEN")
+        logger.warning("[WARN] API токен Dolphin Anty не указан! Используйте --dolphin-token или переменную окружения DOLPHIN_API_TOKEN")
     
     logger.info(f"📋 Параметры запуска: account={args.account}, videos={args.videos}, proxy={args.proxy if args.proxy else 'не используется'}, non-interactive={args.non_interactive}, visible={not headless_mode}")
 
@@ -286,21 +286,21 @@ def main():
         try:
             with open(args.account, 'r') as f:
                 account_data = json.load(f)
-            logger.info(f"✅ Данные аккаунта успешно загружены: {account_data.get('username')}")
+            logger.info(f"[OK] Данные аккаунта успешно загружены: {account_data.get('username')}")
         except Exception as e:
-            logger.error(f"❌ Ошибка загрузки данных аккаунта: {str(e)}")
+            logger.error(f"[FAIL] Ошибка загрузки данных аккаунта: {str(e)}")
             return 1
         
         # Загружаем данные прокси (если указаны)
         proxy_data = None
         if args.proxy:
-            logger.info(f"🔄 Загрузка данных прокси из файла: {args.proxy}")
+            logger.info(f"[RETRY] Загрузка данных прокси из файла: {args.proxy}")
             try:
                 with open(args.proxy, 'r') as f:
                     proxy_data = json.load(f)
-                logger.info(f"✅ Данные прокси успешно загружены: {proxy_data.get('host')}:{proxy_data.get('port')}")
+                logger.info(f"[OK] Данные прокси успешно загружены: {proxy_data.get('host')}:{proxy_data.get('port')}")
             except Exception as e:
-                logger.error(f"❌ Ошибка загрузки данных прокси: {str(e)}")
+                logger.error(f"[FAIL] Ошибка загрузки данных прокси: {str(e)}")
                 return 1
         
         # Проверяем конфигурацию прокси (если он указан)
@@ -309,25 +309,25 @@ def main():
             if not ip_info and not args.non_interactive:
                 user_answer = input("Прокси не работает. Продолжить без прокси? (y/n): ")
                 if user_answer.lower() != 'y':
-                    logger.error("❌ Выход по запросу пользователя")
+                    logger.error("[FAIL] Выход по запросу пользователя")
                     return 1
                 proxy_data = None  # Отключаем прокси
         
         # Загружаем список видео
-        logger.info(f"🔄 Загрузка списка видео из файла: {args.videos}")
+        logger.info(f"[RETRY] Загрузка списка видео из файла: {args.videos}")
         try:
             with open(args.videos, 'r') as f:
                 video_paths = json.load(f)
-            logger.info(f"✅ Список видео успешно загружен, найдено {len(video_paths)} видео")
+            logger.info(f"[OK] Список видео успешно загружен, найдено {len(video_paths)} видео")
         except Exception as e:
-            logger.error(f"❌ Ошибка загрузки списка видео: {str(e)}")
+            logger.error(f"[FAIL] Ошибка загрузки списка видео: {str(e)}")
             return 1
 
         # Проверяем, есть ли у аккаунта уже созданный профиль Dolphin
         dolphin_profile_id = account_data.get('dolphin_profile_id')
         
         # Инициализируем браузер
-        logger.info("🔄 Инициализация браузера с Dolphin Anty...")
+        logger.info("[RETRY] Инициализация браузера с Dolphin Anty...")
         
         if dolphin_profile_id:
             # Используем существующий профиль
@@ -339,7 +339,7 @@ def main():
             )
         else:
             # Создаем новый профиль для аккаунта
-            logger.info(f"🔧 Создаем новый профиль Dolphin для аккаунта {account_data.get('username')}")
+            logger.info(f"[TOOL] Создаем новый профиль Dolphin для аккаунта {account_data.get('username')}")
             browser = get_browser(
                 headless=headless_mode, 
                 proxy=proxy_data, 
@@ -351,28 +351,28 @@ def main():
             if browser and hasattr(browser, 'dolphin_profile_id') and browser.dolphin_profile_id:
                 dolphin_profile_id = browser.dolphin_profile_id
                 account_data['dolphin_profile_id'] = dolphin_profile_id
-                logger.info(f"✅ Профиль Dolphin {dolphin_profile_id} сохранен для аккаунта")
+                logger.info(f"[OK] Профиль Dolphin {dolphin_profile_id} сохранен для аккаунта")
                 
                 # Сохраняем обновленные данные аккаунта обратно в файл
                 try:
                     with open(args.account, 'w') as f:
                         json.dump(account_data, f, indent=2)
-                    logger.info("✅ Данные аккаунта обновлены с ID профиля Dolphin")
+                    logger.info("[OK] Данные аккаунта обновлены с ID профиля Dolphin")
                 except Exception as e:
-                    logger.error(f"❌ Не удалось сохранить обновленные данные аккаунта: {str(e)}")
+                    logger.error(f"[FAIL] Не удалось сохранить обновленные данные аккаунта: {str(e)}")
         
         if not browser:
-            logger.error("❌ Не удалось инициализировать браузер")
+            logger.error("[FAIL] Не удалось инициализировать браузер")
             return 1
             
-        logger.info("🔄 Получение страницы браузера...")
+        logger.info("[RETRY] Получение страницы браузера...")
         page = get_page(browser)
         if not page:
-            logger.error("❌ Не удалось получить страницу браузера")
+            logger.error("[FAIL] Не удалось получить страницу браузера")
             close_browser(browser)
             return 1
             
-        logger.info("✅ Браузер успешно инициализирован")
+        logger.info("[OK] Браузер успешно инициализирован")
         random_delay(2, 4)  # Случайная задержка после инициализации браузера
 
         # Авторизация
@@ -384,14 +384,14 @@ def main():
             auth.account_id = account_data['account_id']
             logger.info(f"🆔 Используем ID аккаунта: {account_data['account_id']}")
         
-        logger.info("⏳ Выполнение входа в аккаунт...")
+        logger.info("[WAIT] Выполнение входа в аккаунт...")
         if not auth.login_with_tfa():
-            logger.error("❌ Ошибка авторизации! Не удалось войти в аккаунт.")
+            logger.error("[FAIL] Ошибка авторизации! Не удалось войти в аккаунт.")
             logger.info("🔒 Закрытие браузера...")
             close_browser(browser)
             return
         
-        logger.info("✅ Авторизация успешно выполнена!")
+        logger.info("[OK] Авторизация успешно выполнена!")
         random_delay(3, 5)  # Случайная задержка после успешной авторизации
 
         # Загрузка видео
@@ -401,28 +401,28 @@ def main():
         prepared_videos = []
         
         # Подготавливаем все видео перед загрузкой
-        logger.info("🔄 Подготовка видео для загрузки...")
+        logger.info("[RETRY] Подготовка видео для загрузки...")
         for video_path in video_paths:
             prepared_path = prepare_video_for_upload(video_path)
             if prepared_path:
                 prepared_videos.append(prepared_path)
         
         if not prepared_videos:
-            logger.error("❌ Не удалось подготовить ни одного видео для загрузки")
+            logger.error("[FAIL] Не удалось подготовить ни одного видео для загрузки")
             logger.info("🔒 Закрытие браузера...")
             close_browser(browser)
             return
             
-        logger.info(f"✅ Подготовлено {len(prepared_videos)} видео для загрузки")
+        logger.info(f"[OK] Подготовлено {len(prepared_videos)} видео для загрузки")
         
         # Перемешиваем порядок видео для большей естественности (с вероятностью 30%)
         if random.random() > 0.7 and len(prepared_videos) > 1:
-            logger.info("🔄 Перемешивание порядка загрузки видео для большей естественности...")
+            logger.info("[RETRY] Перемешивание порядка загрузки видео для большей естественности...")
             random.shuffle(prepared_videos)
         
         for i, video_path in enumerate(prepared_videos):
-            logger.info(f"🎬 Загрузка видео {i+1}/{len(prepared_videos)}: {video_path}")
-            logger.info("⏳ Процесс загрузки может занять некоторое время...")
+            logger.info(f"[VIDEO] Загрузка видео {i+1}/{len(prepared_videos)}: {video_path}")
+            logger.info("[WAIT] Процесс загрузки может занять некоторое время...")
             
             # Добавляем случайную задержку для имитации человеческого поведения
             random_delay(3, 8)
@@ -449,7 +449,7 @@ def main():
                                     logger.info("❤️ Лайк поставлен")
                                     random_delay(1, 3)
                             except Exception as e:
-                                logger.info(f"⚠️ Не удалось поставить лайк: {str(e)}")
+                                logger.info(f"[WARN] Не удалось поставить лайк: {str(e)}")
                     
                     # Посещение случайного профиля (с вероятностью 30%)
                     if random.random() > 0.7:
@@ -462,21 +462,21 @@ def main():
                             logger.info("🔙 Возврат на главную страницу")
                             random_delay(1, 3)
                         except Exception as e:
-                            logger.info(f"⚠️ Не удалось посетить профиль: {str(e)}")
+                            logger.info(f"[WARN] Не удалось посетить профиль: {str(e)}")
                 except Exception as e:
-                    logger.info(f"⚠️ Ошибка при имитации просмотра ленты: {str(e)}")
+                    logger.info(f"[WARN] Ошибка при имитации просмотра ленты: {str(e)}")
                     # Возвращаемся на главную страницу в случае ошибки
                     page.goto("https://www.instagram.com/")
                     random_delay(1, 3)
                 
-                logger.info("✅ Имитация просмотра ленты завершена")
+                logger.info("[OK] Имитация просмотра ленты завершена")
             
             # Загрузка видео
             upload_success = uploader.upload_video(video_path)
             if upload_success:
-                logger.info(f"✅ Видео {i+1}/{len(prepared_videos)} успешно загружено!")
+                logger.info(f"[OK] Видео {i+1}/{len(prepared_videos)} успешно загружено!")
             else:
-                logger.error(f"❌ Ошибка при загрузке видео {i+1}/{len(prepared_videos)}")
+                logger.error(f"[FAIL] Ошибка при загрузке видео {i+1}/{len(prepared_videos)}")
             
             # Задержка между загрузками видео с вариативностью
             if i < len(prepared_videos) - 1:  # Если это не последнее видео
@@ -484,18 +484,18 @@ def main():
                 if random.random() > 0.7:
                     # Длинная пауза (имитация перерыва)
                     delay = random.randint(60, 180)  # От 1 до 3 минут
-                    logger.info(f"⏳ Длительная пауза между загрузками: {delay} секунд...")
+                    logger.info(f"[WAIT] Длительная пауза между загрузками: {delay} секунд...")
                     time.sleep(delay)
                 else:
                     # Обычная пауза
                     delay = random.randint(30, 60)  # От 30 секунд до 1 минуты
-                    logger.info(f"⏳ Ожидание {delay} секунд перед загрузкой следующего видео...")
+                    logger.info(f"[WAIT] Ожидание {delay} секунд перед загрузкой следующего видео...")
                     time.sleep(delay)
 
-        logger.info("✅ Процесс загрузки видео завершен!")
+        logger.info("[OK] Процесс загрузки видео завершен!")
 
     except Exception as e:
-        logger.error(f"❌ Критическая ошибка: {str(e)}")
+        logger.error(f"[FAIL] Критическая ошибка: {str(e)}")
         logger.error(traceback.format_exc())
     finally:
         logger.info("🔒 Закрытие браузера...")

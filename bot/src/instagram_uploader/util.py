@@ -35,7 +35,7 @@ def random_delay(action_type="normal"):
         max_delay = config['delays']['action_max']
     
     delay = random.uniform(min_delay, max_delay)
-    logger.info(f"⏳ Ожидание {delay:.2f} секунд...")
+    logger.info(f"[WAIT] Ожидание {delay:.2f} секунд...")
     time.sleep(delay)
     return delay
 
@@ -73,7 +73,7 @@ def realistic_type(page, selector, text, log_message=None):
         random_delay((0.5, 1.0))
         return True
     except Exception as e:
-        logger.error(f"❌ Ошибка при вводе текста: {str(e)}")
+        logger.error(f"[FAIL] Ошибка при вводе текста: {str(e)}")
         return False
 
 def human_action(page, action_type, selector=None, value=None, log_message=None):
@@ -116,5 +116,5 @@ def human_action(page, action_type, selector=None, value=None, log_message=None)
         random_delay()
         return True
     except Exception as e:
-        logger.error(f"❌ Ошибка при выполнении действия {action_type}: {str(e)}")
+        logger.error(f"[FAIL] Ошибка при выполнении действия {action_type}: {str(e)}")
         return False 

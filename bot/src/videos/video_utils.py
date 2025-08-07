@@ -27,10 +27,10 @@ def get_videos_list(video_dir):
             pattern = os.path.join(video_dir, f"*{ext.upper()}")
             videos.extend(glob.glob(pattern))
             
-        logger.info(f"✅ Found {len(videos)} videos in directory")
+        logger.info(f"[OK] Found {len(videos)} videos in directory")
         return videos
     except Exception as e:
-        logger.error(f"❌ Error finding videos: {str(e)}")
+        logger.error(f"[FAIL] Error finding videos: {str(e)}")
         return []
 
 def get_videos_by_folders(root_dir):
@@ -58,8 +58,8 @@ def get_videos_by_folders(root_dir):
             if videos:
                 videos_by_folder[subdir] = videos
                 
-        logger.info(f"✅ Found videos in {len(videos_by_folder)} subdirectories")
+        logger.info(f"[OK] Found videos in {len(videos_by_folder)} subdirectories")
         return videos_by_folder
     except Exception as e:
-        logger.error(f"❌ Error finding videos by folders: {str(e)}")
+        logger.error(f"[FAIL] Error finding videos by folders: {str(e)}")
         return {} 

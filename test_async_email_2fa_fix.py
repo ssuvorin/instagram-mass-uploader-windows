@@ -66,7 +66,7 @@ async def test_determine_verification_type():
     for content_type, expected in test_cases:
         mock_page = MockPage(content_type)
         result = await determine_verification_type_async(mock_page)
-        status = "✅" if result == expected else "❌"
+        status = "[OK]" if result == expected else "[FAIL]"
         print(f"{status} {content_type} -> {result} (ожидалось: {expected})")
 
 async def test_verification_handlers():
@@ -100,7 +100,7 @@ async def test_verification_handlers():
     mock_page = MockPage()
     
     # Тест 2FA обработки
-    print("📱 Тестирование handle_2fa_async...")
+    print("[PHONE] Тестирование handle_2fa_async...")
     account_details_2fa = {
         'tfa_secret': 'TEST_SECRET_123'
     }
@@ -123,22 +123,22 @@ async def test_verification_handlers():
 
 async def main():
     """Основная функция тестирования"""
-    print("🚀 Запуск тестов async email/2fa исправлений...\n")
+    print("[START] Запуск тестов async email/2fa исправлений...\n")
     
     try:
         await test_determine_verification_type()
         await test_verification_handlers()
         
-        print("\n✅ Все тесты завершены!")
+        print("\n[OK] Все тесты завершены!")
         print("\n📋 Резюме исправлений:")
-        print("1. ✅ Исправлена функция check_post_login_verifications_async")
-        print("2. ✅ Убраны legacy проверки из handle_login_completion_async")
-        print("3. ✅ Правильное использование determine_verification_type_async")
-        print("4. ✅ Функции взаимодействуют с элементами вместо простого закрытия")
-        print("5. ✅ Устранено дублирование логики")
+        print("1. [OK] Исправлена функция check_post_login_verifications_async")
+        print("2. [OK] Убраны legacy проверки из handle_login_completion_async")
+        print("3. [OK] Правильное использование determine_verification_type_async")
+        print("4. [OK] Функции взаимодействуют с элементами вместо простого закрытия")
+        print("5. [OK] Устранено дублирование логики")
         
     except Exception as e:
-        print(f"❌ Ошибка в тестах: {str(e)}")
+        print(f"[FAIL] Ошибка в тестах: {str(e)}")
         import traceback
         traceback.print_exc()
 

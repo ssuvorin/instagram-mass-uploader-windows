@@ -36,7 +36,7 @@ def diagnose_account_proxy(account_id: int) -> Dict:
         }
         
         if not account.proxy:
-            result['recommendations'].append("❌ No proxy assigned to account")
+            result['recommendations'].append("[FAIL] No proxy assigned to account")
             return result
         
         proxy = account.proxy
@@ -70,16 +70,16 @@ def diagnose_account_proxy(account_id: int) -> Dict:
         
         # Рекомендации
         if not is_valid:
-            result['recommendations'].append(f"❌ Proxy test failed: {message}")
-            result['recommendations'].append("🔧 Try changing to a different proxy")
+            result['recommendations'].append(f"[FAIL] Proxy test failed: {message}")
+            result['recommendations'].append("[TOOL] Try changing to a different proxy")
         else:
-            result['recommendations'].append("✅ Proxy is working correctly")
+            result['recommendations'].append("[OK] Proxy is working correctly")
             
         if proxy.status != 'active':
-            result['recommendations'].append(f"⚠️ Proxy status is '{proxy.status}', should be 'active'")
+            result['recommendations'].append(f"[WARN] Proxy status is '{proxy.status}', should be 'active'")
             
         if not proxy.is_active:
-            result['recommendations'].append("⚠️ Proxy is marked as inactive")
+            result['recommendations'].append("[WARN] Proxy is marked as inactive")
             
         return result
         
@@ -180,11 +180,11 @@ def fix_account_proxy_issues(account_id: int, auto_fix: bool = False) -> Dict:
                     available_proxy.assigned_account = account
                     account.save(update_fields=['proxy', 'current_proxy'])
                     available_proxy.save(update_fields=['assigned_account'])
-                    result['fixes_applied'].append(f"✅ Assigned proxy {available_proxy.host}:{available_proxy.port}")
+                    result['fixes_applied'].append(f"[OK] Assigned proxy {available_proxy.host}:{available_proxy.port}")
                 else:
-                    result['fixes_applied'].append("❌ No available proxies to assign")
+                    result['fixes_applied'].append("[FAIL] No available proxies to assign")
             else:
-                result['fixes_applied'].append("⚠️ No proxy assigned (use --auto-fix to assign)")
+                result['fixes_applied'].append("[WARN] No proxy assigned (use --auto-fix to assign)")
             
             return result
         
@@ -200,7 +200,7 @@ def fix_account_proxy_issues(account_id: int, auto_fix: bool = False) -> Dict:
         )
         
         if not is_valid:
-            result['fixes_applied'].append(f"❌ Current proxy is not working: {message}")
+            result['fixes_applied'].append(f"[FAIL] Current proxy is not working: {message}")
             
             if auto_fix:
                 # Попытка найти другой рабочий прокси
@@ -231,15 +231,15 @@ def fix_account_proxy_issues(account_id: int, auto_fix: bool = False) -> Dict:
                         account.save(update_fields=['proxy', 'current_proxy'])
                         alt_proxy.save(update_fields=['assigned_account'])
                         
-                        result['fixes_applied'].append(f"✅ Switched to working proxy {alt_proxy.host}:{alt_proxy.port}")
+                        result['fixes_applied'].append(f"[OK] Switched to working proxy {alt_proxy.host}:{alt_proxy.port}")
                         result['success'] = True
                         break
                 else:
-                    result['fixes_applied'].append("❌ No working alternative proxies found")
+                    result['fixes_applied'].append("[FAIL] No working alternative proxies found")
             else:
-                result['fixes_applied'].append("⚠️ Proxy not working (use --auto-fix to find alternative)")
+                result['fixes_applied'].append("[WARN] Proxy not working (use --auto-fix to find alternative)")
         else:
-            result['fixes_applied'].append("✅ Current proxy is working correctly")
+            result['fixes_applied'].append("[OK] Current proxy is working correctly")
             result['success'] = True
         
         return result
@@ -268,7 +268,7 @@ def main():
         return
     
     if args.fix:
-        print(f"🔧 Attempting to fix proxy issues for account {args.fix}...")
+        print(f"[TOOL] Attempting to fix proxy issues for account {args.fix}...")
         result = fix_account_proxy_issues(args.fix, auto_fix=args.auto_fix)
         
         if args.json:
@@ -280,11 +280,11 @@ def main():
                 print(f"  {fix}")
             
             if result.get('success'):
-                print("\n✅ Proxy issues resolved!")
+                print("\n[OK] Proxy issues resolved!")
             elif result.get('error'):
-                print(f"\n❌ Error: {result['error']}")
+                print(f"\n[FAIL] Error: {result['error']}")
             else:
-                print("\n⚠️ Some issues remain unresolved")
+                print("\n[WARN] Some issues remain unresolved")
         
         return
     
@@ -314,9 +314,9 @@ def main():
             print(f"\n📋 Account Details:")
             for acc in result['accounts']:
                 if acc.get('error'):
-                    print(f"  ❌ {acc['username']} (ID: {acc['account_id']}): {acc['error']}")
+                    print(f"  [FAIL] {acc['username']} (ID: {acc['account_id']}): {acc['error']}")
                 else:
-                    status = "✅" if acc.get('proxy_test', {}).get('is_valid') else "❌"
+                    status = "[OK]" if acc.get('proxy_test', {}).get('is_valid') else "[FAIL]"
                     print(f"  {status} {acc['username']} (ID: {acc['account_id']}) - Profile: {acc['dolphin_profile_id']}")
                     
                     if acc.get('recommendations'):
@@ -324,7 +324,7 @@ def main():
                             print(f"    {rec}")
         else:
             if result.get('error'):
-                print(f"❌ Error: {result['error']}")
+                print(f"[FAIL] Error: {result['error']}")
             else:
                 print(f"\n📋 Account: {result['username']} (ID: {result['account_id']})")
                 print(f"🐬 Dolphin Profile: {result['dolphin_profile_id']}")
@@ -336,11 +336,11 @@ def main():
                     
                     test = result.get('proxy_test', {})
                     if test.get('is_valid'):
-                        print(f"✅ Proxy Test: PASSED - {test['message']}")
+                        print(f"[OK] Proxy Test: PASSED - {test['message']}")
                     else:
-                        print(f"❌ Proxy Test: FAILED - {test['message']}")
+                        print(f"[FAIL] Proxy Test: FAILED - {test['message']}")
                 else:
-                    print("❌ No proxy assigned")
+                    print("[FAIL] No proxy assigned")
                 
                 print(f"\n💡 Recommendations:")
                 for rec in result.get('recommendations', []):

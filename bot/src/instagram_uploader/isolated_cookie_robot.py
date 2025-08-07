@@ -129,8 +129,8 @@ def main():
             print(json_output)
             
         except asyncio.TimeoutError:
-            log_message(f"⚠️ Cookie Robot timeout after {timeout_seconds} seconds")
-            log_message(f"🔄 Forcing completion due to timeout")
+            log_message(f"[WARN] Cookie Robot timeout after {timeout_seconds} seconds")
+            log_message(f"[RETRY] Forcing completion due to timeout")
             
             # Очищаем stdout и stderr перед выводом JSON ошибки
             sys.stdout.flush()
@@ -138,7 +138,7 @@ def main():
             error_result = {"success": False, "error": f"Cookie Robot timeout after {timeout_seconds} seconds - process terminated"}
             print(json.dumps(error_result))
         except KeyboardInterrupt:
-            log_message(f"⚠️ Cookie Robot interrupted by user")
+            log_message(f"[WARN] Cookie Robot interrupted by user")
             sys.stdout.flush()
             sys.stderr.flush()
             error_result = {"success": False, "error": "Cookie Robot interrupted by user"}

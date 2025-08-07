@@ -136,14 +136,14 @@ async def run_dolphin_browser_async(account_details: Dict, videos: List, video_f
         # Pre-flight checks
         if not video_files_to_upload:
             error_msg = "No video files provided for upload"
-            log_error(f"❌ [ASYNC_DOLPHIN_ERROR] {error_msg}")
+            log_error(f"[FAIL] [ASYNC_DOLPHIN_ERROR] {error_msg}")
             return ("ERROR", 0, 1)
         
         # Initialize Dolphin with enhanced error handling
         dolphin_token = os.environ.get("DOLPHIN_API_TOKEN")
         if not dolphin_token:
             error_msg = "No Dolphin API token found in environment variables"
-            log_error(f"❌ [ASYNC_DOLPHIN_ERROR] {error_msg}")
+            log_error(f"[FAIL] [ASYNC_DOLPHIN_ERROR] {error_msg}")
             return ("DOLPHIN_ERROR", 0, 1)
             
         from bot.src.instagram_uploader.dolphin_anty import DolphinAnty
@@ -164,16 +164,16 @@ async def run_dolphin_browser_async(account_details: Dict, videos: List, video_f
         
         while auth_attempts < max_auth_attempts:
             if await authenticate_dolphin_async(dolphin):
-                log_info(f"✅ [ASYNC_DOLPHIN_AUTH] Authentication successful on attempt {auth_attempts + 1}")
+                log_info(f"[OK] [ASYNC_DOLPHIN_AUTH] Authentication successful on attempt {auth_attempts + 1}")
                 break
             else:
                 auth_attempts += 1
                 if auth_attempts < max_auth_attempts:
-                    log_warning(f"⚠️ [ASYNC_DOLPHIN_AUTH] Authentication failed, retrying... (attempt {auth_attempts}/{max_auth_attempts})")
+                    log_warning(f"[WARN] [ASYNC_DOLPHIN_AUTH] Authentication failed, retrying... (attempt {auth_attempts}/{max_auth_attempts})")
                     await asyncio.sleep(random.uniform(2, 5))
                 else:
                     error_msg = "Failed to authenticate with Dolphin Anty API after multiple attempts"
-                    log_error(f"❌ [ASYNC_DOLPHIN_AUTH] {error_msg}")
+                    log_error(f"[FAIL] [ASYNC_DOLPHIN_AUTH] {error_msg}")
                     return ("DOLPHIN_ERROR", 0, 1)
         
         # Get profile with validation
@@ -181,7 +181,7 @@ async def run_dolphin_browser_async(account_details: Dict, videos: List, video_f
         dolphin_profile_id = await get_dolphin_profile_id_async(username)
         if not dolphin_profile_id:
             error_msg = f"No Dolphin profile found for account: {username}"
-            log_error(f"❌ [ASYNC_DOLPHIN_PROFILE] {error_msg}")
+            log_error(f"[FAIL] [ASYNC_DOLPHIN_PROFILE] {error_msg}")
             return ("PROFILE_ERROR", 0, 1)
         
         log_info(f"🔗 [ASYNC_DOLPHIN_PROFILE] Found profile ID: {dolphin_profile_id}")
@@ -193,10 +193,10 @@ async def run_dolphin_browser_async(account_details: Dict, videos: List, video_f
         
         if not page:
             error_msg = "Failed to connect to browser profile"
-            log_error(f"❌ [ASYNC_DOLPHIN_BROWSER] {error_msg}")
+            log_error(f"[FAIL] [ASYNC_DOLPHIN_BROWSER] {error_msg}")
             return ("BROWSER_ERROR", 0, 1)
         
-        log_info("✅ [ASYNC_DOLPHIN_BROWSER] Successfully connected to profile: " + str(dolphin_profile_id))
+        log_info("[OK] [ASYNC_DOLPHIN_BROWSER] Successfully connected to profile: " + str(dolphin_profile_id))
         
         # Perform Instagram operations
         log_debug(f"🔍 [ASYNC_INSTAGRAM_PREP] Preparing Instagram operations for {len(videos)} videos")
@@ -207,53 +207,53 @@ async def run_dolphin_browser_async(account_details: Dict, videos: List, video_f
             failed_count = len(videos) - uploaded_count
             
             if uploaded_count > 0:
-                log_info(f"✅ [ASYNC_SUCCESS] Successfully uploaded {uploaded_count}/{len(videos)} videos")
+                log_info(f"[OK] [ASYNC_SUCCESS] Successfully uploaded {uploaded_count}/{len(videos)} videos")
                 
                 # ENHANCED: Update last_used for successful uploads
                 try:
                     await update_account_last_used_async(username)
-                    log_info(f"✅ [ASYNC_SUCCESS] Updated last_used for account: {username}")
+                    log_info(f"[OK] [ASYNC_SUCCESS] Updated last_used for account: {username}")
                 except Exception as last_used_error:
-                    log_warning(f"⚠️ [ASYNC_SUCCESS] Failed to update last_used: {str(last_used_error)}")
+                    log_warning(f"[WARN] [ASYNC_SUCCESS] Failed to update last_used: {str(last_used_error)}")
                 
                 return ("SUCCESS", uploaded_count, failed_count)
             else:
-                log_error(f"❌ [ASYNC_FAIL] No videos were uploaded despite successful operations")
+                log_error(f"[FAIL] [ASYNC_FAIL] No videos were uploaded despite successful operations")
                 return ("ERROR", 0, len(videos))
         else:
-            log_error(f"❌ [ASYNC_FAIL] Instagram operations failed")
+            log_error(f"[FAIL] [ASYNC_FAIL] Instagram operations failed")
             
             # ENHANCED: Update last_used even for failed operations (account was used)
             try:
                 await update_account_last_used_async(username)
-                log_info(f"✅ [ASYNC_FAIL] Updated last_used for failed account: {username}")
+                log_info(f"[OK] [ASYNC_FAIL] Updated last_used for failed account: {username}")
             except Exception as last_used_error:
-                log_warning(f"⚠️ [ASYNC_FAIL] Failed to update last_used: {str(last_used_error)}")
+                log_warning(f"[WARN] [ASYNC_FAIL] Failed to update last_used: {str(last_used_error)}")
             
             return ("ERROR", 0, len(videos))
     
     except Exception as e:
         error_message = str(e)
-        log_info(f"💥 [ASYNC_DOLPHIN_EXCEPTION] Critical error in Dolphin browser for account {username}: {error_message}")
+        log_info(f"[EXPLODE] [ASYNC_DOLPHIN_EXCEPTION] Critical error in Dolphin browser for account {username}: {error_message}")
         
         # Handle different error types with proper account status updates
         if "PHONE_VERIFICATION_REQUIRED" in error_message:
-            log_info(f"📱 [ASYNC_VERIFICATION_PHONE] Phone verification required for account: {username}")
+            log_info(f"[PHONE] [ASYNC_VERIFICATION_PHONE] Phone verification required for account: {username}")
             await update_account_status_async(username, 'PHONE_VERIFICATION_REQUIRED', account_task_id)
             return ("PHONE_VERIFICATION_REQUIRED", 0, 1)
             
         elif "HUMAN_VERIFICATION_REQUIRED" in error_message:
-            log_info(f"🤖 [ASYNC_VERIFICATION_HUMAN] Human verification required for account: {username}")
+            log_info(f"[BOT] [ASYNC_VERIFICATION_HUMAN] Human verification required for account: {username}")
             await update_account_status_async(username, 'HUMAN_VERIFICATION_REQUIRED', account_task_id)
             return ("HUMAN_VERIFICATION_REQUIRED", 0, 1)
             
         elif "SUSPENDED" in error_message:
-            log_info(f"🚫 [ASYNC_VERIFICATION_SUSPENDED] Account suspended for account: {username}")
+            log_info(f"[BLOCK] [ASYNC_VERIFICATION_SUSPENDED] Account suspended for account: {username}")
             await update_account_status_async(username, 'SUSPENDED', account_task_id)
             return ("SUSPENDED", 0, 1)
             
         elif "CAPTCHA" in error_message:
-            log_info(f"🤖 [ASYNC_VERIFICATION_CAPTCHA] CAPTCHA solving failed for account: {username}")
+            log_info(f"[BOT] [ASYNC_VERIFICATION_CAPTCHA] CAPTCHA solving failed for account: {username}")
             await update_account_status_async(username, 'CAPTCHA', account_task_id)
             return ("CAPTCHA", 0, 1)
             
@@ -329,10 +329,10 @@ async def authenticate_dolphin_async(dolphin) -> bool:
         auth_result = await authenticate_sync()
         
         if not auth_result:
-            log_info("❌ [ASYNC_DOLPHIN_AUTH] Failed to authenticate with Dolphin Anty API")
+            log_info("[FAIL] [ASYNC_DOLPHIN_AUTH] Failed to authenticate with Dolphin Anty API")
             return False
         
-        log_info("✅ [ASYNC_DOLPHIN_AUTH] Successfully authenticated with Dolphin Anty API")
+        log_info("[OK] [ASYNC_DOLPHIN_AUTH] Successfully authenticated with Dolphin Anty API")
         
         # Check application status - exact copy from sync
         log_info("🔍 [ASYNC_DOLPHIN_AUTH] Checking Dolphin Anty application status...")
@@ -341,14 +341,14 @@ async def authenticate_dolphin_async(dolphin) -> bool:
         
         if not dolphin_status["app_running"]:
             error_msg = dolphin_status.get("error", "Unknown error")
-            log_error(f"❌ [ASYNC_DOLPHIN_AUTH] Dolphin Anty application is not running: {error_msg}")
+            log_error(f"[FAIL] [ASYNC_DOLPHIN_AUTH] Dolphin Anty application is not running: {error_msg}")
             return False
         
-        log_info("✅ [ASYNC_DOLPHIN_AUTH] Dolphin Anty application is running and ready")
+        log_info("[OK] [ASYNC_DOLPHIN_AUTH] Dolphin Anty application is running and ready")
         return True
         
     except Exception as e:
-        log_error(f"❌ [ASYNC_DOLPHIN_AUTH] Authentication error: {str(e)}")
+        log_error(f"[FAIL] [ASYNC_DOLPHIN_AUTH] Authentication error: {str(e)}")
         return False
 
 class AsyncDolphinBrowser:
@@ -356,7 +356,7 @@ class AsyncDolphinBrowser:
     
     def __init__(self, dolphin_api_token: str = None):
         if dolphin_api_token:
-            log_info(f"✅ [ASYNC_DOLPHIN_INIT] Initializing Dolphin Anty with API token")
+            log_info(f"[OK] [ASYNC_DOLPHIN_INIT] Initializing Dolphin Anty with API token")
         
             # Get Dolphin API host from environment (critical for Docker Windows deployment)
         dolphin_api_host = os.environ.get("DOLPHIN_API_HOST", "http://localhost:3001/v1.0")
@@ -368,7 +368,7 @@ class AsyncDolphinBrowser:
             from bot.src.instagram_uploader.dolphin_anty import DolphinAnty
             self.dolphin = DolphinAnty(api_key=dolphin_api_token, local_api_base=dolphin_api_host)
         else:
-            log_error(f"❌ [ASYNC_DOLPHIN_INIT] No Dolphin API token provided - cannot initialize DolphinAnty")
+            log_error(f"[FAIL] [ASYNC_DOLPHIN_INIT] No Dolphin API token provided - cannot initialize DolphinAnty")
             raise ValueError("Dolphin API token is required")
         
         self.playwright = None
@@ -388,12 +388,12 @@ class AsyncDolphinBrowser:
             self.dolphin_profile_id = profile_id
             
             # Start the Dolphin profile using sync method
-            log_info(f"🔄 [ASYNC_BROWSER] [Step 1/5] Starting Dolphin Anty profile: {profile_id} (headless: {headless})")
+            log_info(f"[RETRY] [ASYNC_BROWSER] [Step 1/5] Starting Dolphin Anty profile: {profile_id} (headless: {headless})")
             start_profile_sync = sync_to_async(self.dolphin.start_profile)
             success, automation_data = await start_profile_sync(profile_id, headless=headless)
             
             if not success or not automation_data:
-                log_error(f"❌ [ASYNC_BROWSER] Failed to start Dolphin profile: {profile_id}")
+                log_error(f"[FAIL] [ASYNC_BROWSER] Failed to start Dolphin profile: {profile_id}")
                 return None
                 
             self.automation_data = automation_data
@@ -402,7 +402,7 @@ class AsyncDolphinBrowser:
             
             # Validate automation data
             if not port or not ws_endpoint:
-                log_error(f"❌ [ASYNC_BROWSER] Invalid automation data from Dolphin API:")
+                log_error(f"[FAIL] [ASYNC_BROWSER] Invalid automation data from Dolphin API:")
                 log_info(f"   Port: {port}")
                 log_info(f"   WS Endpoint: {ws_endpoint}")
                 log_info(f"   Full data: {automation_data}")
@@ -416,43 +416,43 @@ class AsyncDolphinBrowser:
             log_info(f"🔗 [ASYNC_BROWSER] WebSocket URL: {ws_url}")
                             
             # Initialize Playwright
-            log_info(f"🔄 [ASYNC_BROWSER] [Step 2/5] Initializing Playwright...")
+            log_info(f"[RETRY] [ASYNC_BROWSER] [Step 2/5] Initializing Playwright...")
             self.playwright = await async_playwright().start()
                             
             # Connect to browser
-            log_info(f"🔄 [ASYNC_BROWSER] [Step 3/5] Connecting to Dolphin browser via WebSocket...")
+            log_info(f"[RETRY] [ASYNC_BROWSER] [Step 3/5] Connecting to Dolphin browser via WebSocket...")
             try:
                 self.browser = await self.playwright.chromium.connect_over_cdp(ws_url)
-                log_info(f"✅ [ASYNC_BROWSER] Successfully connected to browser using CDP")
+                log_info(f"[OK] [ASYNC_BROWSER] Successfully connected to browser using CDP")
             except Exception as connect_error:
-                log_error(f"❌ [ASYNC_BROWSER] Failed to connect via CDP: {connect_error}")
+                log_error(f"[FAIL] [ASYNC_BROWSER] Failed to connect via CDP: {connect_error}")
                 log_info(f"   Make sure Dolphin profile {profile_id} is running")
                 log_info(f"   WebSocket URL: {ws_url}")
                 return None
                             
             # Use the default context (using contexts property like in working code)
-            log_info(f"🔄 [ASYNC_BROWSER] [Step 4/5] Getting browser context...")
+            log_info(f"[RETRY] [ASYNC_BROWSER] [Step 4/5] Getting browser context...")
             if self.browser.contexts:
                 self.context = self.browser.contexts[0]
-                log_info(f"✅ [ASYNC_BROWSER] Using existing browser context")
+                log_info(f"[OK] [ASYNC_BROWSER] Using existing browser context")
             else:
-                log_error(f"❌ [ASYNC_BROWSER] No browser contexts available")
+                log_error(f"[FAIL] [ASYNC_BROWSER] No browser contexts available")
                 return None
             
             # Get the page
-            log_info(f"🔄 [ASYNC_BROWSER] [Step 5/5] Getting page...")
+            log_info(f"[RETRY] [ASYNC_BROWSER] [Step 5/5] Getting page...")
             if self.context.pages:
                 self.page = self.context.pages[0]
-                log_info(f"✅ [ASYNC_BROWSER] Using existing page")
+                log_info(f"[OK] [ASYNC_BROWSER] Using existing page")
             else:
                 self.page = await self.context.new_page()
-                log_info(f"✅ [ASYNC_BROWSER] Created new page")
+                log_info(f"[OK] [ASYNC_BROWSER] Created new page")
             
-            log_info(f"✅ [ASYNC_BROWSER] Successfully connected to Dolphin profile: {profile_id}")
+            log_info(f"[OK] [ASYNC_BROWSER] Successfully connected to Dolphin profile: {profile_id}")
             return self.page
         
         except Exception as e:
-            log_error(f"❌ [ASYNC_BROWSER] Error connecting to profile {profile_id}: {str(e)}")
+            log_error(f"[FAIL] [ASYNC_BROWSER] Error connecting to profile {profile_id}: {str(e)}")
             await self.cleanup_async()
             return None
     
@@ -465,9 +465,9 @@ class AsyncDolphinBrowser:
             if self.page:
                 try:
                     await self.page.close()
-                    log_info("✅ [ASYNC_BROWSER_CLEANUP] Page closed")
+                    log_info("[OK] [ASYNC_BROWSER_CLEANUP] Page closed")
                 except Exception as e:
-                    log_warning(f"⚠️ [ASYNC_BROWSER_CLEANUP] Error closing page: {str(e)}")
+                    log_warning(f"[WARN] [ASYNC_BROWSER_CLEANUP] Error closing page: {str(e)}")
                 finally:
                     self.page = None
             
@@ -475,9 +475,9 @@ class AsyncDolphinBrowser:
             if self.browser:
                 try:
                     await self.browser.close()
-                    log_info("✅ [ASYNC_BROWSER_CLEANUP] Browser closed")
+                    log_info("[OK] [ASYNC_BROWSER_CLEANUP] Browser closed")
                 except Exception as e:
-                    log_warning(f"⚠️ [ASYNC_BROWSER_CLEANUP] Error closing browser: {str(e)}")
+                    log_warning(f"[WARN] [ASYNC_BROWSER_CLEANUP] Error closing browser: {str(e)}")
                 finally:
                     self.browser = None
             
@@ -485,9 +485,9 @@ class AsyncDolphinBrowser:
             if self.playwright:
                 try:
                     await self.playwright.stop()
-                    log_info("✅ [ASYNC_BROWSER_CLEANUP] Playwright stopped")
+                    log_info("[OK] [ASYNC_BROWSER_CLEANUP] Playwright stopped")
                 except Exception as e:
-                    log_warning(f"⚠️ [ASYNC_BROWSER_CLEANUP] Error stopping playwright: {str(e)}")
+                    log_warning(f"[WARN] [ASYNC_BROWSER_CLEANUP] Error stopping playwright: {str(e)}")
                 finally:
                     self.playwright = None
                 
@@ -497,9 +497,9 @@ class AsyncDolphinBrowser:
                     from asgiref.sync import sync_to_async
                     stop_profile_sync = sync_to_async(self.dolphin.stop_profile)
                     await stop_profile_sync(self.dolphin_profile_id)
-                    log_info("✅ [ASYNC_BROWSER_CLEANUP] Dolphin profile stopped")
+                    log_info("[OK] [ASYNC_BROWSER_CLEANUP] Dolphin profile stopped")
                 except Exception as e:
-                    log_warning(f"⚠️ [ASYNC_BROWSER_CLEANUP] Error stopping Dolphin profile: {str(e)}")
+                    log_warning(f"[WARN] [ASYNC_BROWSER_CLEANUP] Error stopping Dolphin profile: {str(e)}")
             
             # Clear references
             self.browser = None
@@ -509,10 +509,10 @@ class AsyncDolphinBrowser:
             self.dolphin_profile_id = None
             self.automation_data = None
             
-            log_info("✅ [ASYNC_BROWSER_CLEANUP] Cleanup completed successfully")
+            log_info("[OK] [ASYNC_BROWSER_CLEANUP] Cleanup completed successfully")
             
         except Exception as e:
-            log_error(f"❌ [ASYNC_BROWSER_CLEANUP] Critical cleanup error: {str(e)}")
+            log_error(f"[FAIL] [ASYNC_BROWSER_CLEANUP] Critical cleanup error: {str(e)}")
             
             # Force clear all references even if cleanup failed
             self.browser = None
@@ -536,7 +536,7 @@ async def get_dolphin_profile_id_async(username: str) -> str:
         account = await get_account(username=username)
         return account.dolphin_profile_id
     except Exception as e:
-        log_error(f"❌ [ASYNC_DOLPHIN_PROFILE] Error getting dolphin profile ID for {username}: {str(e)}")
+        log_error(f"[FAIL] [ASYNC_DOLPHIN_PROFILE] Error getting dolphin profile ID for {username}: {str(e)}")
         return None
 
 async def perform_instagram_operations_async(page, account_details: Dict, videos: List, video_files_to_upload: List[str]) -> bool:
@@ -548,10 +548,10 @@ async def perform_instagram_operations_async(page, account_details: Dict, videos
         navigation_success = await retry_navigation_async(page, "https://www.instagram.com/", max_attempts=3)
         
         if not navigation_success:
-            log_info("❌ [ASYNC_NAVIGATION] Failed to navigate to Instagram.com after all retry attempts")
+            log_info("[FAIL] [ASYNC_NAVIGATION] Failed to navigate to Instagram.com after all retry attempts")
             return False
         
-        log_info("✅ [ASYNC_NAVIGATION] Successfully loaded Instagram.com")
+        log_info("[OK] [ASYNC_NAVIGATION] Successfully loaded Instagram.com")
         
         # Initialize human behavior after page is fully loaded
         await init_human_behavior_async(page)
@@ -568,10 +568,10 @@ async def perform_instagram_operations_async(page, account_details: Dict, videos
         log_info("🔍 [ASYNC_VERIFICATION] Checking account status after login...")
         try:
             await check_post_login_verifications_async(page, account_details)
-            log_info("✅ [ASYNC_VERIFICATION] Account status check completed - no issues detected")
+            log_info("[OK] [ASYNC_VERIFICATION] Account status check completed - no issues detected")
         except Exception as verification_error:
             error_message = str(verification_error)
-            log_error(f"❌ [ASYNC_VERIFICATION] Account status issue detected: {error_message}")
+            log_error(f"[FAIL] [ASYNC_VERIFICATION] Account status issue detected: {error_message}")
             
             # Перебрасываем исключения для верификации и блокировок
             if ("PHONE_VERIFICATION_REQUIRED:" in error_message or 
@@ -579,14 +579,14 @@ async def perform_instagram_operations_async(page, account_details: Dict, videos
                 "SUSPENDED:" in error_message):
                 raise verification_error
             else:
-                log_warning(f"⚠️ [ASYNC_VERIFICATION] Non-critical verification error: {error_message}")
+                log_warning(f"[WARN] [ASYNC_VERIFICATION] Non-critical verification error: {error_message}")
         
         # Upload videos
         uploaded_videos = 0
         
         # ENHANCED: Verify that we have matching lists
         if len(videos) != len(video_files_to_upload):
-            log_info(f"[ASYNC_UPLOAD] ⚠️ Mismatch: {len(videos)} videos vs {len(video_files_to_upload)} files")
+            log_info(f"[ASYNC_UPLOAD] [WARN] Mismatch: {len(videos)} videos vs {len(video_files_to_upload)} files")
             log_info(f"[ASYNC_UPLOAD] 🔍 Videos: {[getattr(v, 'video_file', 'NO_FILE').name if hasattr(v, 'video_file') else 'NO_ATTR' for v in videos]}")
             log_info(f"[ASYNC_UPLOAD] 🔍 Files: {[os.path.basename(f) for f in video_files_to_upload]}")
         
@@ -596,7 +596,7 @@ async def perform_instagram_operations_async(page, account_details: Dict, videos
                 if i <= len(videos):
                     video_obj = videos[i-1]
                 else:
-                    log_info(f"[ASYNC_UPLOAD] ⚠️ No video object for file {i}, using None")
+                    log_info(f"[ASYNC_UPLOAD] [WARN] No video object for file {i}, using None")
                     video_obj = None
                 
                 # Log upload info
@@ -628,11 +628,11 @@ async def perform_instagram_operations_async(page, account_details: Dict, videos
         
         # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Навигация только после подтверждения успешной загрузки
         if uploaded_videos > 0:
-            log_info(f"[ASYNC_SUCCESS] ✅ {uploaded_videos} videos uploaded successfully, performing cleanup")
+            log_info(f"[ASYNC_SUCCESS] [OK] {uploaded_videos} videos uploaded successfully, performing cleanup")
             # Final cleanup только после успешной загрузки
             await perform_final_cleanup_async(page, account_details['username'])
         else:
-            log_info(f"[ASYNC_FAIL] ❌ No videos were uploaded, skipping cleanup to preserve upload state")
+            log_info(f"[ASYNC_FAIL] [FAIL] No videos were uploaded, skipping cleanup to preserve upload state")
         
         return uploaded_videos  # ← Возвращаем количество загруженных видео вместо True/False
         
@@ -659,9 +659,9 @@ async def init_human_behavior_async(page):
         # Human behavior initialization logic would go here
         # For now, just a placeholder
         await asyncio.sleep(1)
-        log_info("[ASYNC_HUMAN] ✅ Human behavior initialized")
+        log_info("[ASYNC_HUMAN] [OK] Human behavior initialized")
     except Exception as e:
-        log_info(f"[ASYNC_HUMAN] ❌ Error initializing human behavior: {str(e)}")
+        log_info(f"[ASYNC_HUMAN] [FAIL] Error initializing human behavior: {str(e)}")
 
 async def handle_login_flow_async(page, account_details: Dict) -> bool:
     """Handle Instagram login flow - enhanced to match sync version exactly"""
@@ -669,7 +669,7 @@ async def handle_login_flow_async(page, account_details: Dict) -> bool:
         log_info("🔑 [ASYNC_LOGIN] Starting enhanced login flow...")
         
         # Wait for page to be fully interactive before checking login status
-        log_info("⏳ [ASYNC_LOGIN] Ensuring page is fully loaded before login check...")
+        log_info("[WAIT] [ASYNC_LOGIN] Ensuring page is fully loaded before login check...")
         await asyncio.sleep(3)  # Additional wait for page stability
         
         # Import selectors for detailed checks
@@ -812,10 +812,10 @@ async def handle_login_flow_async(page, account_details: Dict) -> bool:
         logged_in_status = await check_if_already_logged_in_async(page, selectors)
         
         if logged_in_status == "SUSPENDED":
-            log_info(f"🚫 [ASYNC_LOGIN] Account is SUSPENDED - cannot proceed with login")
+            log_info(f"[BLOCK] [ASYNC_LOGIN] Account is SUSPENDED - cannot proceed with login")
             raise Exception(f"SUSPENDED: Account suspended by Instagram")
         elif logged_in_status:
-            log_info(f"✅ [ASYNC_LOGIN] Already logged in! Skipping login process")
+            log_info(f"[OK] [ASYNC_LOGIN] Already logged in! Skipping login process")
             
             # Still need to check for post-login verification requirements
             log_info("🔍 [ASYNC_LOGIN] Checking for verification requirements...")
@@ -828,21 +828,21 @@ async def handle_login_flow_async(page, account_details: Dict) -> bool:
         log_info("🔍 [ASYNC_LOGIN] Checking for reCAPTCHA on login page...")
         captcha_result = await handle_recaptcha_if_present_async(page, account_details)
         if not captcha_result:
-            log_info("❌ [ASYNC_LOGIN] reCAPTCHA solving failed, terminating login flow")
+            log_info("[FAIL] [ASYNC_LOGIN] reCAPTCHA solving failed, terminating login flow")
             raise Exception("CAPTCHA: Failed to solve reCAPTCHA")
-        log_info("✅ [ASYNC_LOGIN] reCAPTCHA handling completed")
+        log_info("[OK] [ASYNC_LOGIN] reCAPTCHA handling completed")
         
         # Perform login with enhanced process
         login_result = await perform_enhanced_instagram_login_async(page, account_details)
         
         if login_result == "SUSPENDED":
-            log_info("🚫 [ASYNC_LOGIN] Account suspended detected during login")
+            log_info("[BLOCK] [ASYNC_LOGIN] Account suspended detected during login")
             raise Exception(f"SUSPENDED: Account suspended by Instagram")
         elif not login_result:
-            log_info("❌ [ASYNC_LOGIN] Failed to login to Instagram")
+            log_info("[FAIL] [ASYNC_LOGIN] Failed to login to Instagram")
             return False
         
-        log_info("✅ [ASYNC_LOGIN] Login completed successfully")
+        log_info("[OK] [ASYNC_LOGIN] Login completed successfully")
         
         # Handle save login info dialog (like sync version)
         await handle_save_login_info_dialog_async(page)
@@ -850,7 +850,7 @@ async def handle_login_flow_async(page, account_details: Dict) -> bool:
         # Check for post-login verification requirements
         await check_post_login_verifications_async(page, account_details)
         
-        log_info("✅ [ASYNC_LOGIN] Login flow completed successfully")
+        log_info("[OK] [ASYNC_LOGIN] Login flow completed successfully")
         return True
         
     except Exception as e:
@@ -860,10 +860,10 @@ async def handle_login_flow_async(page, account_details: Dict) -> bool:
         if ("SUSPENDED:" in error_message or 
             "PHONE_VERIFICATION_REQUIRED:" in error_message or 
             "HUMAN_VERIFICATION_REQUIRED:" in error_message):
-            log_error(f"❌ [ASYNC_LOGIN] Login flow failed: {error_message}")
+            log_error(f"[FAIL] [ASYNC_LOGIN] Login flow failed: {error_message}")
             raise e  # Re-raise the exception so it reaches run_dolphin_browser_async
         else:
-            log_error(f"❌ [ASYNC_LOGIN] Error in login flow: {error_message}")
+            log_error(f"[FAIL] [ASYNC_LOGIN] Error in login flow: {error_message}")
             return False
 
 async def check_if_already_logged_in_async(page, selectors):
@@ -878,7 +878,7 @@ async def check_if_already_logged_in_async(page, selectors):
     log_debug(f"🔍 [ASYNC_LOGIN] Current URL: {current_url}")
     
     # Check for account suspension first - this is critical
-    log_info("🚫 [ASYNC_LOGIN] Checking for account suspension...")
+    log_info("[BLOCK] [ASYNC_LOGIN] Checking for account suspension...")
     
     # Check page text for suspension keywords (PRIMARY METHOD)
     try:
@@ -904,12 +904,12 @@ async def check_if_already_logged_in_async(page, selectors):
         
         for keyword in suspension_keywords:
             if keyword in page_text.lower():
-                log_info(f"🚫 [ASYNC_LOGIN] Account suspension detected from text: '{keyword}'")
-                log_info(f"🚫 [ASYNC_LOGIN] Page text sample: '{page_text[:200]}...'")
+                log_info(f"[BLOCK] [ASYNC_LOGIN] Account suspension detected from text: '{keyword}'")
+                log_info(f"[BLOCK] [ASYNC_LOGIN] Page text sample: '{page_text[:200]}...'")
                 return "SUSPENDED"
                 
     except Exception as e:
-        log_info(f"🚫 [ASYNC_LOGIN] Could not check page text for suspension: {str(e)}")
+        log_info(f"[BLOCK] [ASYNC_LOGIN] Could not check page text for suspension: {str(e)}")
     
     # Optional secondary check for URL patterns (as backup only)
     suspension_url_patterns = [
@@ -920,7 +920,7 @@ async def check_if_already_logged_in_async(page, selectors):
     
     url_indicates_suspension = any(pattern in current_url.lower() for pattern in suspension_url_patterns)
     if url_indicates_suspension:
-        log_info(f"🚫 [ASYNC_LOGIN] Account suspension also detected from URL: {current_url}")
+        log_info(f"[BLOCK] [ASYNC_LOGIN] Account suspension also detected from URL: {current_url}")
         return "SUSPENDED"
     
     # First check if we see login form elements
@@ -971,23 +971,23 @@ async def check_if_already_logged_in_async(page, selectors):
                     
                     logged_in_found = True
                     found_indicators.append(indicator)
-                    log_info(f"✅ [ASYNC_LOGIN] Found logged-in indicator {i+1}: {indicator}")
+                    log_info(f"[OK] [ASYNC_LOGIN] Found logged-in indicator {i+1}: {indicator}")
                     
                     if element_text.strip():
-                        log_info(f"✅ [ASYNC_LOGIN] Element text: '{element_text.strip()}'")
+                        log_info(f"[OK] [ASYNC_LOGIN] Element text: '{element_text.strip()}'")
                     
                 except Exception as e:
                     # Если не можем получить текст, продолжаем как раньше
                     logged_in_found = True
                     found_indicators.append(indicator)
-                    log_info(f"✅ [ASYNC_LOGIN] Found logged-in indicator {i+1}: {indicator}")
+                    log_info(f"[OK] [ASYNC_LOGIN] Found logged-in indicator {i+1}: {indicator}")
                     log_debug(f"🔍 [ASYNC_LOGIN] Could not analyze element text: {str(e)}")
                 
                 # If we found a strong indicator, we can be confident
                 if any(strong_keyword in indicator.lower() for strong_keyword in [
                     'главная', 'home', 'профиль', 'profile', 'поиск', 'search', 'сообщения', 'messages'
                 ]):
-                    log_info(f"✅ [ASYNC_LOGIN] Strong logged-in indicator found: {indicator}")
+                    log_info(f"[OK] [ASYNC_LOGIN] Strong logged-in indicator found: {indicator}")
                     break
                     
         except Exception as e:
@@ -995,16 +995,16 @@ async def check_if_already_logged_in_async(page, selectors):
             continue
     
     if logged_in_found:
-        log_info(f"✅ [ASYNC_LOGIN] Already logged in! Found {len(found_indicators)} indicators: {found_indicators[:5]}")
+        log_info(f"[OK] [ASYNC_LOGIN] Already logged in! Found {len(found_indicators)} indicators: {found_indicators[:5]}")
         
         # Additional verification - check page title (EXACT COPY from sync)
         try:
             page_title = await page.title()
-            log_info(f"✅ [ASYNC_LOGIN] Page title: '{page_title}'")
+            log_info(f"[OK] [ASYNC_LOGIN] Page title: '{page_title}'")
             
             # Instagram main page usually has "Instagram" in title
             if "instagram" in page_title.lower():
-                log_info("✅ [ASYNC_LOGIN] Page title confirms Instagram main page")
+                log_info("[OK] [ASYNC_LOGIN] Page title confirms Instagram main page")
             
         except Exception as e:
             log_debug(f"🔍 [ASYNC_LOGIN] Could not get page title: {str(e)}")
@@ -1047,9 +1047,9 @@ async def check_post_login_verifications_async(page, account_details):
         log_info("🔍 [ASYNC_LOGIN] Checking for post-login reCAPTCHA...")
         captcha_result = await handle_recaptcha_if_present_async(page, account_details)
         if not captcha_result:
-            log_info("❌ [ASYNC_LOGIN] Post-login reCAPTCHA solving failed, terminating login flow")
+            log_info("[FAIL] [ASYNC_LOGIN] Post-login reCAPTCHA solving failed, terminating login flow")
             raise Exception("CAPTCHA: Failed to solve post-login reCAPTCHA")
-        log_info("✅ [ASYNC_LOGIN] reCAPTCHA handling completed")
+        log_info("[OK] [ASYNC_LOGIN] reCAPTCHA handling completed")
         
         # Check for 2FA/Email verification after captcha
         log_info("🔍 [ASYNC_LOGIN] Checking for 2FA/Email verification...")
@@ -1075,7 +1075,7 @@ async def check_post_login_verifications_async(page, account_details):
             try:
                 element = await page.query_selector(indicator)
                 if element and await element.is_visible():
-                    log_info(f"✅ [ASYNC_LOGIN] Login successful! Found indicator: {indicator}")
+                    log_info(f"[OK] [ASYNC_LOGIN] Login successful! Found indicator: {indicator}")
                     return True
             except:
                 continue
@@ -1085,7 +1085,7 @@ async def check_post_login_verifications_async(page, account_details):
         log_info(f"🔍 [ASYNC_LOGIN] Detected verification type: {verification_type}")
         
         if verification_type == "authenticator":
-            log_info("📱 [ASYNC_LOGIN] 2FA/Authenticator verification required")
+            log_info("[PHONE] [ASYNC_LOGIN] 2FA/Authenticator verification required")
             return await handle_2fa_async(page, account_details)
         elif verification_type == "email_code":
             log_info("📧 [ASYNC_LOGIN] Email verification code required")
@@ -1094,10 +1094,10 @@ async def check_post_login_verifications_async(page, account_details):
             log_info("📧 [ASYNC_LOGIN] Email field input required")
             return await handle_email_field_verification_async(page, account_details)
         elif verification_type == "unknown":
-            log_info("✅ [ASYNC_LOGIN] No verification required or unknown verification type")
+            log_info("[OK] [ASYNC_LOGIN] No verification required or unknown verification type")
             return True
         else:
-            log_info(f"⚠️ [ASYNC_LOGIN] Unknown verification type: {verification_type}")
+            log_info(f"[WARN] [ASYNC_LOGIN] Unknown verification type: {verification_type}")
             return True
             
     except Exception as e:
@@ -1110,28 +1110,28 @@ async def check_post_login_verifications_async(page, account_details):
             "EMAIL_VERIFICATION_FAILED:" in str(e)):
             raise e
         else:
-            log_error(f"❌ [ASYNC_LOGIN] Error in post-login verification: {str(e)}")
+            log_error(f"[FAIL] [ASYNC_LOGIN] Error in post-login verification: {str(e)}")
             return False
 
 async def navigate_to_upload_with_human_behavior_async(page):
     """Navigate to upload page with advanced human behavior - ПОЛНАЯ КОПИЯ sync версии"""
     try:
-        log_info("[ASYNC_UPLOAD] 🚀 Starting enhanced navigation to upload interface")
+        log_info("[ASYNC_UPLOAD] [START] Starting enhanced navigation to upload interface")
         
         # ENHANCED: Initial page readiness check before starting navigation
         log_info("[ASYNC_UPLOAD] 🔍 Performing initial page readiness check...")
         initial_ready = await wait_for_page_ready_async(page, max_wait_time=15.0)
         if not initial_ready:
-            log_info("[ASYNC_UPLOAD] ⚠️ Initial page readiness check failed, but proceeding...")
+            log_info("[ASYNC_UPLOAD] [WARN] Initial page readiness check failed, but proceeding...")
         else:
-            log_info("[ASYNC_UPLOAD] ✅ Initial page readiness check passed")
+            log_info("[ASYNC_UPLOAD] [OK] Initial page readiness check passed")
         
         # Debug: Log current page state (ПОЛНАЯ КОПИЯ из sync)
         try:
             current_url = page.url
             page_title = await page.title()
-            log_info(f"[ASYNC_UPLOAD] 📍 Current page: {current_url}")
-            log_info(f"[ASYNC_UPLOAD] 📄 Page title: {page_title}")
+            log_info(f"[ASYNC_UPLOAD] [LOCATION] Current page: {current_url}")
+            log_info(f"[ASYNC_UPLOAD] [FILE] Page title: {page_title}")
         except Exception as debug_error:
             log_info(f"[ASYNC_UPLOAD] Could not get page info: {str(debug_error)}")
         
@@ -1142,16 +1142,16 @@ async def navigate_to_upload_with_human_behavior_async(page):
         success = await navigate_to_upload_core_async(page)
         
         if success:
-            log_info("[ASYNC_UPLOAD] ✅ Successfully navigated to upload interface")
+            log_info("[ASYNC_UPLOAD] [OK] Successfully navigated to upload interface")
             
             # Additional verification - check for file input immediately (ПОЛНАЯ КОПИЯ из sync)
             try:
                 final_url = page.url
-                log_info(f"[ASYNC_UPLOAD] 📍 Final URL: {final_url}")
+                log_info(f"[ASYNC_UPLOAD] [LOCATION] Final URL: {final_url}")
                 
                 # Check if we can see file input elements immediately (ПОЛНАЯ КОПИЯ из sync)
                 file_inputs = await page.query_selector_all('input[type="file"]')
-                log_info(f"[ASYNC_UPLOAD] 📁 Found {len(file_inputs)} file input elements")
+                log_info(f"[ASYNC_UPLOAD] [FOLDER] Found {len(file_inputs)} file input elements")
                 
                 # Also check for semantic file input selectors (ПОЛНАЯ КОПИЯ из sync)
                 semantic_file_inputs = []
@@ -1170,7 +1170,7 @@ async def navigate_to_upload_with_human_behavior_async(page):
                     except:
                         continue
                         
-                log_info(f"[ASYNC_UPLOAD] 📁 Found {len(semantic_file_inputs)} semantic file input elements")
+                log_info(f"[ASYNC_UPLOAD] [FOLDER] Found {len(semantic_file_inputs)} semantic file input elements")
                 
                 if len(file_inputs) > 0 or len(semantic_file_inputs) > 0:
                     for i, inp in enumerate(file_inputs + semantic_file_inputs):
@@ -1182,25 +1182,25 @@ async def navigate_to_upload_with_human_behavior_async(page):
                         except:
                             pass
                     
-                    log_info("[ASYNC_UPLOAD] ✅ File input elements are ready for upload")
+                    log_info("[ASYNC_UPLOAD] [OK] File input elements are ready for upload")
                 else:
-                    log_info("[ASYNC_UPLOAD] ⚠️ No file input elements found after navigation")
+                    log_info("[ASYNC_UPLOAD] [WARN] No file input elements found after navigation")
                             
             except Exception as verify_error:
                 log_info(f"[ASYNC_UPLOAD] Could not verify upload interface: {str(verify_error)}")
         else:
-            log_info("[ASYNC_UPLOAD] ❌ Failed to navigate to upload interface")
+            log_info("[ASYNC_UPLOAD] [FAIL] Failed to navigate to upload interface")
         
         return success
         
     except Exception as e:
-        log_info(f"[ASYNC_UPLOAD] ❌ Navigation failed: {str(e)}")
+        log_info(f"[ASYNC_UPLOAD] [FAIL] Navigation failed: {str(e)}")
         return False
 
 async def wait_for_page_ready_async(page, max_wait_time=30.0) -> bool:
     """Wait for page to be fully ready - OPTIMIZED VERSION"""
     try:
-        log_info(f"[ASYNC_READY] ⏳ Quick page readiness check (max {max_wait_time}s)...")
+        log_info(f"[ASYNC_READY] [WAIT] Quick page readiness check (max {max_wait_time}s)...")
         start_time = time.time()
         
         while time.time() - start_time < max_wait_time:
@@ -1208,48 +1208,48 @@ async def wait_for_page_ready_async(page, max_wait_time=30.0) -> bool:
                 # Quick check: document ready state
                 ready_state = await page.evaluate("document.readyState")
                 if ready_state != "complete":
-                    log_info(f"[ASYNC_READY] ⏳ Document not ready: {ready_state}")
+                    log_info(f"[ASYNC_READY] [WAIT] Document not ready: {ready_state}")
                     await asyncio.sleep(2)  # Faster check interval
                     continue
                 
                 # Quick check: main Instagram interface elements (one selector)
                 main_element = await page.query_selector('nav, [role="navigation"], [data-testid="navigation"]')
                 if not main_element:
-                    log_info(f"[ASYNC_READY] ⏳ Main interface not found")
+                    log_info(f"[ASYNC_READY] [WAIT] Main interface not found")
                     await asyncio.sleep(0.5)
                     continue
                 
                 # Quick check: upload button visibility (one selector)
                 upload_button = await page.query_selector('[aria-label*="New post"], [aria-label*="Create"], [data-testid="new-post-button"]')
                 if not upload_button or not await upload_button.is_visible():
-                    log_info(f"[ASYNC_READY] ⏳ Upload button not visible")
+                    log_info(f"[ASYNC_READY] [WAIT] Upload button not visible")
                     await asyncio.sleep(3)
                     continue
                 
-                log_info(f"[ASYNC_READY] ✅ Page is ready! (took {time.time() - start_time:.1f}s)")
+                log_info(f"[ASYNC_READY] [OK] Page is ready! (took {time.time() - start_time:.1f}s)")
                 return True
                 
             except Exception as e:
-                log_info(f"[ASYNC_READY] ⚠️ Error checking page state: {str(e)}")
+                log_info(f"[ASYNC_READY] [WARN] Error checking page state: {str(e)}")
                 await asyncio.sleep(0.5)
                 continue
         
-        log_info(f"[ASYNC_READY] ❌ Page not ready after {max_wait_time}s")
+        log_info(f"[ASYNC_READY] [FAIL] Page not ready after {max_wait_time}s")
         return False
         
     except Exception as e:
-        log_info(f"[ASYNC_READY] ❌ Error in wait_for_page_ready_async: {str(e)}")
+        log_info(f"[ASYNC_READY] [FAIL] Error in wait_for_page_ready_async: {str(e)}")
         return False
 
 async def navigate_to_upload_core_async(page):
     """Navigate to upload page with human behavior - OPTIMIZED VERSION"""
     try:
-        log_info("[ASYNC_UPLOAD] 🧠 Starting navigation to upload page")
+        log_info("[ASYNC_UPLOAD] [BRAIN] Starting navigation to upload page")
         
         # Quick page readiness check
         page_ready = await wait_for_page_ready_async(page, max_wait_time=10.0)  # Reduced timeout
         if not page_ready:
-            log_info("[ASYNC_UPLOAD] ⚠️ Page not ready, but proceeding with navigation...")
+            log_info("[ASYNC_UPLOAD] [WARN] Page not ready, but proceeding with navigation...")
         
         # Simulate page assessment
         await simulate_page_scan_async(page)
@@ -1258,43 +1258,43 @@ async def navigate_to_upload_core_async(page):
         upload_button = await find_element_with_selectors_async(page, SelectorConfig.UPLOAD_BUTTON, "UPLOAD_BTN")
         
         if not upload_button:
-            log_info("[ASYNC_UPLOAD] ⚠️ Upload button not found, trying alternative navigation...")
+            log_info("[ASYNC_UPLOAD] [WARN] Upload button not found, trying alternative navigation...")
             return await navigate_to_upload_alternative_async(page)
         
         # Quick check upload button readiness
         try:
             is_visible = await upload_button.is_visible()
             if not is_visible:
-                log_info("[ASYNC_UPLOAD] ⚠️ Upload button not visible, waiting briefly...")
+                log_info("[ASYNC_UPLOAD] [WARN] Upload button not visible, waiting briefly...")
                 await asyncio.sleep(3.0)
                 
                 # Try to find the button again
                 upload_button = await find_element_with_selectors_async(page, SelectorConfig.UPLOAD_BUTTON, "UPLOAD_BTN_RETRY")
                 if not upload_button:
-                    log_info("[ASYNC_UPLOAD] ❌ Upload button still not found after retry")
+                    log_info("[ASYNC_UPLOAD] [FAIL] Upload button still not found after retry")
                     return await navigate_to_upload_alternative_async(page)
         except Exception as e:
-            log_info(f"[ASYNC_UPLOAD] ⚠️ Error checking upload button: {str(e)}")
+            log_info(f"[ASYNC_UPLOAD] [WARN] Error checking upload button: {str(e)}")
         
         # Click upload button
         await click_element_with_behavior_async(page, upload_button, "UPLOAD_BTN")
         
         # Wait and observe page changes
-        log_info("[ASYNC_UPLOAD] 👀 Observing page changes...")
+        log_info("[ASYNC_UPLOAD] [EYES] Observing page changes...")
         await simulate_page_scan_async(page)
         
         # Check what happened after clicking upload button
         success = await handle_post_upload_click_async(page)
         
         if not success:
-            log_info("[ASYNC_UPLOAD] ⚠️ Standard navigation failed, trying alternative...")
+            log_info("[ASYNC_UPLOAD] [WARN] Standard navigation failed, trying alternative...")
             return await navigate_to_upload_alternative_async(page)
         
         return success
         
     except Exception as e:
-        log_info(f"[ASYNC_UPLOAD] ❌ Navigation failed: {str(e)}")
-        log_info("[ASYNC_UPLOAD] 🔄 Trying alternative navigation method...")
+        log_info(f"[ASYNC_UPLOAD] [FAIL] Navigation failed: {str(e)}")
+        log_info("[ASYNC_UPLOAD] [RETRY] Trying alternative navigation method...")
         return await navigate_to_upload_alternative_async(page)
 
 async def find_element_with_selectors_async(page, selectors, element_name):
@@ -1308,17 +1308,17 @@ async def find_element_with_selectors_async(page, selectors, element_name):
                     element = await page.query_selector(selector)
                 
                 if element and await element.is_visible():
-                    log_info(f"[ASYNC_UPLOAD] ✅ Found {element_name} with selector: {selector}")
+                    log_info(f"[ASYNC_UPLOAD] [OK] Found {element_name} with selector: {selector}")
                     return element
             except Exception as e:
                 log_info(f"[ASYNC_UPLOAD] Selector failed: {selector} - {str(e)}")
                 continue
         
-        log_info(f"[ASYNC_UPLOAD] ❌ {element_name} not found with any selector")
+        log_info(f"[ASYNC_UPLOAD] [FAIL] {element_name} not found with any selector")
         return None
         
     except Exception as e:
-        log_info(f"[ASYNC_UPLOAD] ❌ Error finding {element_name}: {str(e)}")
+        log_info(f"[ASYNC_UPLOAD] [FAIL] Error finding {element_name}: {str(e)}")
         return None
 
 async def click_element_with_behavior_async(page, element, element_name):
@@ -1330,21 +1330,21 @@ async def click_element_with_behavior_async(page, element, element_name):
             is_enabled = await element.is_enabled()
             
             if not is_visible:
-                log_info(f"[ASYNC_UPLOAD] ⚠️ {element_name} is not visible, waiting...")
+                log_info(f"[ASYNC_UPLOAD] [WARN] {element_name} is not visible, waiting...")
                 await asyncio.sleep(2.0 + random.uniform(-0.5, 0.5))
                 is_visible = await element.is_visible()
                 
             if not is_enabled:
-                log_info(f"[ASYNC_UPLOAD] ⚠️ {element_name} is not enabled, waiting...")
+                log_info(f"[ASYNC_UPLOAD] [WARN] {element_name} is not enabled, waiting...")
                 await asyncio.sleep(2.0 + random.uniform(-0.5, 0.5))
                 is_enabled = await element.is_enabled()
                 
             if not is_visible or not is_enabled:
-                log_info(f"[ASYNC_UPLOAD] ❌ {element_name} still not ready (visible: {is_visible}, enabled: {is_enabled})")
+                log_info(f"[ASYNC_UPLOAD] [FAIL] {element_name} still not ready (visible: {is_visible}, enabled: {is_enabled})")
                 raise Exception(f"Element {element_name} not ready for click")
                 
         except Exception as readiness_error:
-            log_info(f"[ASYNC_UPLOAD] ⚠️ Error checking element readiness: {str(readiness_error)}")
+            log_info(f"[ASYNC_UPLOAD] [WARN] Error checking element readiness: {str(readiness_error)}")
             # Continue anyway, as the element might still be clickable
         
         # Simulate mouse movement to element
@@ -1356,28 +1356,28 @@ async def click_element_with_behavior_async(page, element, element_name):
         
         # Click element
         await element.click()
-        log_info(f"[ASYNC_UPLOAD] ✅ {element_name} clicked successfully")
+        log_info(f"[ASYNC_UPLOAD] [OK] {element_name} clicked successfully")
         
         # Brief pause after click
         await asyncio.sleep(random.uniform(0.5, 1.0))
         
     except Exception as e:
-        log_info(f"[ASYNC_UPLOAD] ❌ Error clicking {element_name}: {str(e)}")
+        log_info(f"[ASYNC_UPLOAD] [FAIL] Error clicking {element_name}: {str(e)}")
         raise
 
 async def handle_post_upload_click_async(page) -> bool:
     """Handle what happens after clicking upload button - ENHANCED with longer timeouts and retry logic"""
     try:
-        log_info("[ASYNC_UPLOAD] 🚀 Starting enhanced post-upload click handling...")
+        log_info("[ASYNC_UPLOAD] [START] Starting enhanced post-upload click handling...")
         
         # ENHANCED: Longer initial wait for interface response
         initial_wait = 8.0 + random.uniform(-2.0, 2.0)  # Increased from 3.0 to 8.0 seconds
-        log_info(f"[ASYNC_UPLOAD] ⏳ Waiting {initial_wait:.1f}s for interface response (enhanced timeout)...")
+        log_info(f"[ASYNC_UPLOAD] [WAIT] Waiting {initial_wait:.1f}s for interface response (enhanced timeout)...")
         await asyncio.sleep(initial_wait)
         
         # Check for file dialog first
         if await check_for_file_dialog_async(page):
-            log_info("[ASYNC_UPLOAD] 📁 File dialog opened directly - no menu needed")
+            log_info("[ASYNC_UPLOAD] [FOLDER] File dialog opened directly - no menu needed")
             return True
         
         # Check for dropdown menu
@@ -1387,11 +1387,11 @@ async def handle_post_upload_click_async(page) -> bool:
         
         # ENHANCED: Longer additional wait and check again
         additional_wait = 5.0 + random.uniform(-1.0, 1.0)  # Increased from 2.0 to 5.0 seconds
-        log_info(f"[ASYNC_UPLOAD] ⏳ Waiting additional {additional_wait:.1f}s (enhanced timeout)...")
+        log_info(f"[ASYNC_UPLOAD] [WAIT] Waiting additional {additional_wait:.1f}s (enhanced timeout)...")
         await asyncio.sleep(additional_wait)
         
         if await check_for_file_dialog_async(page):
-            log_info("[ASYNC_UPLOAD] 📁 File dialog appeared after enhanced delay")
+            log_info("[ASYNC_UPLOAD] [FOLDER] File dialog appeared after enhanced delay")
             return True
         
         if await check_for_dropdown_menu_async(page):
@@ -1399,36 +1399,36 @@ async def handle_post_upload_click_async(page) -> bool:
             return await click_post_option_async(page)
         
         # ENHANCED: Try broader detection with retry logic
-        log_info("[ASYNC_UPLOAD] ⚠️ Neither menu nor file dialog detected, trying enhanced broader detection...")
+        log_info("[ASYNC_UPLOAD] [WARN] Neither menu nor file dialog detected, trying enhanced broader detection...")
         broader_result = await try_broader_upload_detection_async(page)
         
         if broader_result:
             return True
         
         # ENHANCED: Retry logic with page refresh
-        log_info("[ASYNC_UPLOAD] 🔄 First attempt failed, trying retry with page refresh...")
+        log_info("[ASYNC_UPLOAD] [RETRY] First attempt failed, trying retry with page refresh...")
         return await retry_upload_with_page_refresh_async(page)
         
     except Exception as e:
-        log_info(f"[ASYNC_UPLOAD] ❌ Error handling post-upload click: {str(e)}")
+        log_info(f"[ASYNC_UPLOAD] [FAIL] Error handling post-upload click: {str(e)}")
         return False
 
 async def retry_upload_with_page_refresh_async(page) -> bool:
     """Retry upload process with page refresh when dialog doesn't load"""
     try:
-        log_info("[ASYNC_UPLOAD] 🔄 Starting retry with page refresh...")
+        log_info("[ASYNC_UPLOAD] [RETRY] Starting retry with page refresh...")
         
         # Save current URL for navigation back
         current_url = page.url
-        log_info(f"[ASYNC_UPLOAD] 📍 Current URL: {current_url}")
+        log_info(f"[ASYNC_UPLOAD] [LOCATION] Current URL: {current_url}")
         
         # Refresh the page
-        log_info("[ASYNC_UPLOAD] 🔄 Refreshing page...")
+        log_info("[ASYNC_UPLOAD] [RETRY] Refreshing page...")
         await page.reload(wait_until="domcontentloaded", timeout=30000)
         
         # Wait for page to fully load
         refresh_wait = 5.0 + random.uniform(-1.0, 1.0)
-        log_info(f"[ASYNC_UPLOAD] ⏳ Waiting {refresh_wait:.1f}s for page to load after refresh...")
+        log_info(f"[ASYNC_UPLOAD] [WAIT] Waiting {refresh_wait:.1f}s for page to load after refresh...")
         await asyncio.sleep(refresh_wait)
         
         # Simulate page scan to ensure we're ready
@@ -1439,7 +1439,7 @@ async def retry_upload_with_page_refresh_async(page) -> bool:
         upload_button = await find_element_with_selectors_async(page, SelectorConfig.UPLOAD_BUTTON, "UPLOAD_BTN_RETRY")
         
         if not upload_button:
-            log_info("[ASYNC_UPLOAD] ⚠️ Upload button not found after refresh, trying alternative navigation...")
+            log_info("[ASYNC_UPLOAD] [WARN] Upload button not found after refresh, trying alternative navigation...")
             return await navigate_to_upload_alternative_async(page)
         
         # Click upload button again
@@ -1448,12 +1448,12 @@ async def retry_upload_with_page_refresh_async(page) -> bool:
         
         # ENHANCED: Even longer wait for retry attempt
         retry_wait = 10.0 + random.uniform(-2.0, 2.0)  # 10 seconds for retry
-        log_info(f"[ASYNC_UPLOAD] ⏳ Waiting {retry_wait:.1f}s for interface response after retry...")
+        log_info(f"[ASYNC_UPLOAD] [WAIT] Waiting {retry_wait:.1f}s for interface response after retry...")
         await asyncio.sleep(retry_wait)
         
         # Check for file dialog
         if await check_for_file_dialog_async(page):
-            log_info("[ASYNC_UPLOAD] 📁 File dialog opened after retry - success!")
+            log_info("[ASYNC_UPLOAD] [FOLDER] File dialog opened after retry - success!")
             return True
         
         # Check for dropdown menu
@@ -1462,18 +1462,18 @@ async def retry_upload_with_page_refresh_async(page) -> bool:
             return await click_post_option_async(page)
         
         # Final broader detection attempt
-        log_info("[ASYNC_UPLOAD] 🔄 Final broader detection attempt after retry...")
+        log_info("[ASYNC_UPLOAD] [RETRY] Final broader detection attempt after retry...")
         final_result = await try_broader_upload_detection_async(page)
         
         if final_result:
-            log_info("[ASYNC_UPLOAD] ✅ Success after retry with page refresh!")
+            log_info("[ASYNC_UPLOAD] [OK] Success after retry with page refresh!")
             return True
         else:
-            log_info("[ASYNC_UPLOAD] ❌ All retry attempts failed")
+            log_info("[ASYNC_UPLOAD] [FAIL] All retry attempts failed")
             return False
         
     except Exception as e:
-        log_info(f"[ASYNC_UPLOAD] ❌ Error in retry with page refresh: {str(e)}")
+        log_info(f"[ASYNC_UPLOAD] [FAIL] Error in retry with page refresh: {str(e)}")
         return False
 
 async def check_for_file_dialog_async(page) -> bool:
@@ -1491,7 +1491,7 @@ async def check_for_file_dialog_async(page) -> bool:
                 
                 for element in elements:
                     if await element.is_visible():
-                        log_info(f"[ASYNC_UPLOAD] ✅ File dialog indicator found: {selector}")
+                        log_info(f"[ASYNC_UPLOAD] [OK] File dialog indicator found: {selector}")
                         return True
             except Exception as e:
                 log_info(f"[ASYNC_UPLOAD] Selector failed: {selector} - {str(e)}")
@@ -1518,12 +1518,12 @@ async def check_for_file_dialog_async(page) -> bool:
             
             for keyword in upload_keywords:
                 if keyword in page_text.lower():
-                    log_info(f"[ASYNC_UPLOAD] ✅ Upload interface detected via keyword: '{keyword}'")
+                    log_info(f"[ASYNC_UPLOAD] [OK] Upload interface detected via keyword: '{keyword}'")
                     return True
         except:
             pass
         
-        log_info("[ASYNC_UPLOAD] ❌ No file dialog detected")
+        log_info("[ASYNC_UPLOAD] [FAIL] No file dialog detected")
         return False
         
     except Exception as e:
@@ -1537,7 +1537,7 @@ async def check_for_dropdown_menu_async(page) -> bool:
         menu_element = await find_element_with_selectors_async(page, SelectorConfig.MENU_INDICATORS, "MENU_CHECK")
         
         if menu_element:
-            log_info("[ASYNC_UPLOAD] ✅ Dropdown menu detected")
+            log_info("[ASYNC_UPLOAD] [OK] Dropdown menu detected")
             return True
         
         # Check for specific menu items (ПОЛНАЯ КОПИЯ из sync)
@@ -1549,7 +1549,7 @@ async def check_for_dropdown_menu_async(page) -> bool:
                     post_option = await page.query_selector(selector)
                 
                 if post_option and await post_option.is_visible():
-                    log_info(f"[ASYNC_UPLOAD] ✅ Post option visible in menu")
+                    log_info(f"[ASYNC_UPLOAD] [OK] Post option visible in menu")
                     return True
             except:
                 continue
@@ -1563,11 +1563,11 @@ async def check_for_dropdown_menu_async(page) -> bool:
 async def try_broader_upload_detection_async(page) -> bool:
     """Try broader detection methods - ENHANCED with additional wait and more robust detection"""
     try:
-        log_info("[ASYNC_UPLOAD] 🔄 Attempting enhanced broader upload interface detection...")
+        log_info("[ASYNC_UPLOAD] [RETRY] Attempting enhanced broader upload interface detection...")
         
         # ENHANCED: Additional wait before broader detection
         broader_wait = 3.0 + random.uniform(-1.0, 1.0)
-        log_info(f"[ASYNC_UPLOAD] ⏳ Waiting {broader_wait:.1f}s before broader detection...")
+        log_info(f"[ASYNC_UPLOAD] [WAIT] Waiting {broader_wait:.1f}s before broader detection...")
         await asyncio.sleep(broader_wait)
         
         # Enhanced upload indicators with more comprehensive selectors
@@ -1600,7 +1600,7 @@ async def try_broader_upload_detection_async(page) -> bool:
             try:
                 element = await page.query_selector(indicator)
                 if element and await element.is_visible():
-                    log_info(f"[ASYNC_UPLOAD] 🎯 Found upload indicator: {indicator}")
+                    log_info(f"[ASYNC_UPLOAD] [TARGET] Found upload indicator: {indicator}")
                     
                     # ENHANCED: Click behavior for buttons and interactive elements
                     if any(keyword in indicator.lower() for keyword in ['button', 'div[role="button"]']):
@@ -1609,17 +1609,17 @@ async def try_broader_upload_detection_async(page) -> bool:
                         
                         # Wait after clicking
                         click_wait = 2.0 + random.uniform(-0.5, 0.5)
-                        log_info(f"[ASYNC_UPLOAD] ⏳ Waiting {click_wait:.1f}s after clicking indicator...")
+                        log_info(f"[ASYNC_UPLOAD] [WAIT] Waiting {click_wait:.1f}s after clicking indicator...")
                         await asyncio.sleep(click_wait)
                         
                         # Check if file dialog appeared after clicking
                         if await check_for_file_dialog_async(page):
-                            log_info("[ASYNC_UPLOAD] ✅ File dialog appeared after clicking indicator!")
+                            log_info("[ASYNC_UPLOAD] [OK] File dialog appeared after clicking indicator!")
                             return True
                     
                     # For file inputs, just return True as they indicate upload interface
                     elif 'input' in indicator.lower():
-                        log_info(f"[ASYNC_UPLOAD] ✅ File input found: {indicator}")
+                        log_info(f"[ASYNC_UPLOAD] [OK] File input found: {indicator}")
                         return True
                     
                     return True
@@ -1644,7 +1644,7 @@ async def try_broader_upload_detection_async(page) -> bool:
             
             for keyword in upload_keywords:
                 if keyword in page_text.lower():
-                    log_info(f"[ASYNC_UPLOAD] ✅ Upload interface detected via keyword: '{keyword}'")
+                    log_info(f"[ASYNC_UPLOAD] [OK] Upload interface detected via keyword: '{keyword}'")
                     return True
         except Exception as e:
             log_info(f"[ASYNC_UPLOAD] Error checking page content: {str(e)}")
@@ -1656,16 +1656,16 @@ async def try_broader_upload_detection_async(page) -> bool:
             
             for indicator in url_indicators:
                 if indicator in current_url:
-                    log_info(f"[ASYNC_UPLOAD] ✅ Upload interface detected via URL: '{indicator}' in {current_url}")
+                    log_info(f"[ASYNC_UPLOAD] [OK] Upload interface detected via URL: '{indicator}' in {current_url}")
                     return True
         except Exception as e:
             log_info(f"[ASYNC_UPLOAD] Error checking URL: {str(e)}")
         
-        log_info("[ASYNC_UPLOAD] ⚠️ Could not detect upload interface with enhanced detection")
+        log_info("[ASYNC_UPLOAD] [WARN] Could not detect upload interface with enhanced detection")
         return False
         
     except Exception as e:
-        log_info(f"[ASYNC_UPLOAD] ❌ Error in enhanced broader detection: {str(e)}")
+        log_info(f"[ASYNC_UPLOAD] [FAIL] Error in enhanced broader detection: {str(e)}")
         return False
 
 async def click_post_option_async(page) -> bool:
@@ -1711,7 +1711,7 @@ async def click_post_option_async(page) -> bool:
                         ]
                         
                         if any(keyword in combined_text for keyword in post_keywords):
-                            log_info(f"[ASYNC_UPLOAD] ✅ Found 'Публикация' option: '{element_text.strip()}'")
+                            log_info(f"[ASYNC_UPLOAD] [OK] Found 'Публикация' option: '{element_text.strip()}'")
                             found_selector = selector
                             break
                         else:
@@ -1719,7 +1719,7 @@ async def click_post_option_async(page) -> bool:
                             post_option = None
                             continue
                     except Exception as text_error:
-                        log_info(f"[ASYNC_UPLOAD] ✅ Found potential 'Публикация' option (text check failed: {str(text_error)})")
+                        log_info(f"[ASYNC_UPLOAD] [OK] Found potential 'Публикация' option (text check failed: {str(text_error)})")
                         found_selector = selector
                         break
                 
@@ -1733,7 +1733,7 @@ async def click_post_option_async(page) -> bool:
                 
                 # ENHANCED: Pre-click wait
                 pre_click_wait = 1.0 + random.uniform(-0.3, 0.3)
-                log_info(f"[ASYNC_UPLOAD] ⏳ Waiting {pre_click_wait:.1f}s before clicking...")
+                log_info(f"[ASYNC_UPLOAD] [WAIT] Waiting {pre_click_wait:.1f}s before clicking...")
                 await asyncio.sleep(pre_click_wait)
                 
                 # Click the post option
@@ -1741,19 +1741,19 @@ async def click_post_option_async(page) -> bool:
                 
                 # ENHANCED: Longer post-click wait
                 post_click_wait = 5.0 + random.uniform(-1.0, 1.0)  # Increased wait after clicking
-                log_info(f"[ASYNC_UPLOAD] ⏳ Waiting {post_click_wait:.1f}s after clicking post option...")
+                log_info(f"[ASYNC_UPLOAD] [WAIT] Waiting {post_click_wait:.1f}s after clicking post option...")
                 await asyncio.sleep(post_click_wait)
                 
                 # Check if file dialog appeared
                 if await check_for_file_dialog_async(page):
-                    log_info("[ASYNC_UPLOAD] ✅ File dialog appeared after clicking post option!")
+                    log_info("[ASYNC_UPLOAD] [OK] File dialog appeared after clicking post option!")
                     return True
                 
                 # Check if we're on create page
                 try:
                     current_url = page.url.lower()
                     if 'create' in current_url:
-                        log_info(f"[ASYNC_UPLOAD] ✅ Successfully navigated to create page: {current_url}")
+                        log_info(f"[ASYNC_UPLOAD] [OK] Successfully navigated to create page: {current_url}")
                         return True
                 except:
                     pass
@@ -1764,46 +1764,46 @@ async def click_post_option_async(page) -> bool:
                 await asyncio.sleep(verification_wait)
                 
                 if await check_for_file_dialog_async(page):
-                    log_info("[ASYNC_UPLOAD] ✅ File dialog appeared after verification!")
+                    log_info("[ASYNC_UPLOAD] [OK] File dialog appeared after verification!")
                     return True
                 
-                log_info("[ASYNC_UPLOAD] ✅ Post option click completed (assuming success)")
+                log_info("[ASYNC_UPLOAD] [OK] Post option click completed (assuming success)")
                 return True
                 
             except Exception as click_error:
-                log_info(f"[ASYNC_UPLOAD] ❌ Error clicking post option: {str(click_error)}")
+                log_info(f"[ASYNC_UPLOAD] [FAIL] Error clicking post option: {str(click_error)}")
                 
                 # ENHANCED: Fallback click attempt
                 try:
-                    log_info("[ASYNC_UPLOAD] 🔄 Trying fallback click method...")
+                    log_info("[ASYNC_UPLOAD] [RETRY] Trying fallback click method...")
                     await post_option.click(timeout=5000)
                     
                     fallback_wait = 3.0 + random.uniform(-0.5, 0.5)
-                    log_info(f"[ASYNC_UPLOAD] ⏳ Waiting {fallback_wait:.1f}s after fallback click...")
+                    log_info(f"[ASYNC_UPLOAD] [WAIT] Waiting {fallback_wait:.1f}s after fallback click...")
                     await asyncio.sleep(fallback_wait)
                     
                     if await check_for_file_dialog_async(page):
-                        log_info("[ASYNC_UPLOAD] ✅ Fallback click successful!")
+                        log_info("[ASYNC_UPLOAD] [OK] Fallback click successful!")
                         return True
                     else:
-                        log_info("[ASYNC_UPLOAD] ✅ Fallback click completed (assuming success)")
+                        log_info("[ASYNC_UPLOAD] [OK] Fallback click completed (assuming success)")
                         return True
                         
                 except Exception as fallback_error:
-                    log_info(f"[ASYNC_UPLOAD] ❌ Fallback click also failed: {str(fallback_error)}")
+                    log_info(f"[ASYNC_UPLOAD] [FAIL] Fallback click also failed: {str(fallback_error)}")
                     return False
         else:
-            log_info("[ASYNC_UPLOAD] ❌ Post option not found with any selector")
+            log_info("[ASYNC_UPLOAD] [FAIL] Post option not found with any selector")
             return False
         
     except Exception as e:
-        log_info(f"[ASYNC_UPLOAD] ❌ Error in enhanced click_post_option: {str(e)}")
+        log_info(f"[ASYNC_UPLOAD] [FAIL] Error in enhanced click_post_option: {str(e)}")
         return False
 
 async def navigate_to_upload_alternative_async(page) -> bool:
     """Alternative navigation method - direct URL - ПОЛНАЯ КОПИЯ из sync InstagramNavigator._navigate_to_upload_alternative()"""
     try:
-        log_info("[ASYNC_UPLOAD] 🔄 Using alternative navigation: direct URL")
+        log_info("[ASYNC_UPLOAD] [RETRY] Using alternative navigation: direct URL")
         
         # Navigate directly to create page (ПОЛНАЯ КОПИЯ из sync)
         current_url = page.url
@@ -1815,18 +1815,18 @@ async def navigate_to_upload_alternative_async(page) -> bool:
             navigation_success = await retry_navigation_async(page, create_url, max_attempts=3, base_delay=3)
             
             if not navigation_success:
-                log_info("[ASYNC_UPLOAD] ❌ Alternative navigation failed after all retry attempts")
+                log_info("[ASYNC_UPLOAD] [FAIL] Alternative navigation failed after all retry attempts")
                 return False
             
             # Check if we're on upload page (ПОЛНАЯ КОПИЯ из sync)
             if await check_for_file_dialog_async(page):
-                log_info("[ASYNC_UPLOAD] ✅ Successfully navigated to upload page via direct URL")
+                log_info("[ASYNC_UPLOAD] [OK] Successfully navigated to upload page via direct URL")
                 return True
             else:
-                log_info("[ASYNC_UPLOAD] ⚠️ Direct URL navigation didn't show file dialog")
+                log_info("[ASYNC_UPLOAD] [WARN] Direct URL navigation didn't show file dialog")
                 return False
         else:
-            log_info("[ASYNC_UPLOAD] ❌ Not on Instagram domain, cannot use direct URL")
+            log_info("[ASYNC_UPLOAD] [FAIL] Not on Instagram domain, cannot use direct URL")
             return False
             
     except Exception as e:
@@ -1836,7 +1836,7 @@ async def navigate_to_upload_alternative_async(page) -> bool:
 async def upload_video_with_human_behavior_async(page, video_file_path, video_obj):
     """Upload video with advanced human behavior - ПОЛНАЯ КОПИЯ sync версии"""
     try:
-        log_info(f"[ASYNC_UPLOAD] 🎬 Starting video upload following exact Selenium pipeline: {os.path.basename(video_file_path)}")
+        log_info(f"[ASYNC_UPLOAD] [VIDEO] Starting video upload following exact Selenium pipeline: {os.path.basename(video_file_path)}")
         
         # Use the uploader with Selenium-style pipeline (ПОЛНАЯ КОПИЯ из sync)
         # This now follows the exact Selenium pipeline:
@@ -1852,40 +1852,40 @@ async def upload_video_with_human_behavior_async(page, video_file_path, video_ob
         return await upload_video_core_async(page, video_file_path, video_obj)
         
     except Exception as e:
-        log_info(f"[ASYNC_UPLOAD] ❌ Upload failed: {str(e)}")
+        log_info(f"[ASYNC_UPLOAD] [FAIL] Upload failed: {str(e)}")
         return False
 
 async def upload_video_core_async(page, video_file_path, video_obj):
     """Core video upload logic - FULL ADAPTIVE SEARCH like sync version"""
     try:
-        log_info(f"[ASYNC_UPLOAD] 📁 Starting adaptive file input search for: {os.path.basename(video_file_path)}")
+        log_info(f"[ASYNC_UPLOAD] [FOLDER] Starting adaptive file input search for: {os.path.basename(video_file_path)}")
         
         # ENHANCED: Verify file exists before attempting upload
         if not os.path.exists(video_file_path):
-            log_info(f"[ASYNC_UPLOAD] ❌ File does not exist: {video_file_path}")
+            log_info(f"[ASYNC_UPLOAD] [FAIL] File does not exist: {video_file_path}")
             return False
         
         file_size = os.path.getsize(video_file_path)
         if file_size == 0:
-            log_info(f"[ASYNC_UPLOAD] ❌ File is empty: {video_file_path}")
+            log_info(f"[ASYNC_UPLOAD] [FAIL] File is empty: {video_file_path}")
             return False
         
-        log_info(f"[ASYNC_UPLOAD] ✅ File verified: {os.path.basename(video_file_path)} ({file_size} bytes)")
+        log_info(f"[ASYNC_UPLOAD] [OK] File verified: {os.path.basename(video_file_path)} ({file_size} bytes)")
         
         # Find file input with adaptive search
         file_input = await find_file_input_adaptive_async(page)
         if not file_input:
-            log_info("[ASYNC_UPLOAD] ❌ Failed to find file input")
+            log_info("[ASYNC_UPLOAD] [FAIL] Failed to find file input")
             return False
         
         # Set file on input
         log_info(f"[ASYNC_UPLOAD] 📤 Setting file on input: {video_file_path}")
         await file_input.set_input_files(video_file_path)
-        log_info("[ASYNC_UPLOAD] ✅ Video file selected successfully")
+        log_info("[ASYNC_UPLOAD] [OK] Video file selected successfully")
         
         # Minimal wait for processing (ПОЛНАЯ КОПИЯ из sync)
         processing_delay = random.uniform(2, 3)
-        log_info(f"[ASYNC_UPLOAD] ⏳ Waiting {processing_delay:.1f}s for file processing...")
+        log_info(f"[ASYNC_UPLOAD] [WAIT] Waiting {processing_delay:.1f}s for file processing...")
         await asyncio.sleep(processing_delay)
         
         # 🔥 НОВАЯ ЛОГИКА: Обрабатываем диалог Reels если он появился
@@ -1893,21 +1893,21 @@ async def upload_video_core_async(page, video_file_path, video_obj):
         
         # Handle crop (FULL ADAPTIVE VERSION)
         if not await handle_crop_async(page):
-            log_info("[ASYNC_UPLOAD] ❌ Failed to handle crop")
+            log_info("[ASYNC_UPLOAD] [FAIL] Failed to handle crop")
             return False
         
         # 🔥 ИСПРАВЛЕННАЯ ЛОГИКА: Click Next buttons FIRST (like sync version)
         # В sync версии: for i in range(2): _click_next_button(i + 1)
-        log_info("[ASYNC_UPLOAD] 🔄 Clicking Next buttons (like sync version)...")
+        log_info("[ASYNC_UPLOAD] [RETRY] Clicking Next buttons (like sync version)...")
         for step in range(2):  # Click Next twice like sync version
             next_success = await click_next_button_async(page, step + 1)
             if not next_success:
-                log_info(f"[ASYNC_UPLOAD] ❌ Failed to click Next button {step + 1}")
+                log_info(f"[ASYNC_UPLOAD] [FAIL] Failed to click Next button {step + 1}")
                 return False
-            log_info(f"[ASYNC_UPLOAD] ✅ Successfully clicked Next button {step + 1}")
+            log_info(f"[ASYNC_UPLOAD] [OK] Successfully clicked Next button {step + 1}")
         
         # 🔥 ИСПРАВЛЕННАЯ ЛОГИКА: Now add description, location, mentions (like sync version)
-        log_info("[ASYNC_UPLOAD] 📝 Starting metadata addition (like sync version)...")
+        log_info("[ASYNC_UPLOAD] [TEXT] Starting metadata addition (like sync version)...")
         
         # Add caption if available (like sync _set_description_selenium_style)
         # ENHANCED: Comprehensive caption text extraction with detailed logging
@@ -1919,32 +1919,32 @@ async def upload_video_core_async(page, video_file_path, video_obj):
             # Strategy 1: Check for VideoData objects (new async version) - PRIORITY
             if hasattr(video_obj, 'title') and video_obj.title:
                 caption_text = str(video_obj.title).strip()
-                log_info(f"[ASYNC_UPLOAD] 📝 Found caption from VideoData.title: '{caption_text[:50]}...'")
+                log_info(f"[ASYNC_UPLOAD] [TEXT] Found caption from VideoData.title: '{caption_text[:50]}...'")
             elif hasattr(video_obj, 'description') and video_obj.description:
                 caption_text = str(video_obj.description).strip()
-                log_info(f"[ASYNC_UPLOAD] 📝 Found caption from VideoData.description: '{caption_text[:50]}...'")
+                log_info(f"[ASYNC_UPLOAD] [TEXT] Found caption from VideoData.description: '{caption_text[:50]}...'")
             
             # Strategy 2: Check for VideoTitle objects (from title_data relationship)
             elif hasattr(video_obj, 'title_data') and video_obj.title_data:
                 if hasattr(video_obj.title_data, 'title') and video_obj.title_data.title:
                     caption_text = str(video_obj.title_data.title).strip()
-                    log_info(f"[ASYNC_UPLOAD] 📝 Found caption from VideoTitle.title: '{caption_text[:50]}...'")
+                    log_info(f"[ASYNC_UPLOAD] [TEXT] Found caption from VideoTitle.title: '{caption_text[:50]}...'")
                 else:
-                    log_info(f"[ASYNC_UPLOAD] ⚠️ VideoTitle object has no title attribute")
+                    log_info(f"[ASYNC_UPLOAD] [WARN] VideoTitle object has no title attribute")
             
             # Strategy 3: Check for Django model objects (old async version)
             elif hasattr(video_obj, 'title_data') and video_obj.title_data:
                 if hasattr(video_obj.title_data, 'title') and video_obj.title_data.title:
                     caption_text = str(video_obj.title_data.title).strip()
-                    log_info(f"[ASYNC_UPLOAD] 📝 Found caption from Django model title_data.title: '{caption_text[:50]}...'")
+                    log_info(f"[ASYNC_UPLOAD] [TEXT] Found caption from Django model title_data.title: '{caption_text[:50]}...'")
                 elif hasattr(video_obj.title_data, 'description') and video_obj.title_data.description:
                     caption_text = str(video_obj.title_data.description).strip()
-                    log_info(f"[ASYNC_UPLOAD] 📝 Found caption from Django model title_data.description: '{caption_text[:50]}...'")
+                    log_info(f"[ASYNC_UPLOAD] [TEXT] Found caption from Django model title_data.description: '{caption_text[:50]}...'")
             
             # Strategy 4: Check for direct attributes on video_obj
             elif hasattr(video_obj, 'caption') and video_obj.caption:
                 caption_text = str(video_obj.caption).strip()
-                log_info(f"[ASYNC_UPLOAD] 📝 Found caption from video_obj.caption: '{caption_text[:50]}...'")
+                log_info(f"[ASYNC_UPLOAD] [TEXT] Found caption from video_obj.caption: '{caption_text[:50]}...'")
             
             # Strategy 5: Check for any text-like attributes
             else:
@@ -1959,48 +1959,48 @@ async def upload_video_core_async(page, video_file_path, video_obj):
                         value = getattr(video_obj, attr)
                         if value and str(value).strip():
                             caption_text = str(value).strip()
-                            log_info(f"[ASYNC_UPLOAD] 📝 Found caption from video_obj.{attr}: '{caption_text[:50]}...'")
+                            log_info(f"[ASYNC_UPLOAD] [TEXT] Found caption from video_obj.{attr}: '{caption_text[:50]}...'")
                             break
                 
                 if not caption_text:
-                    log_info(f"[ASYNC_UPLOAD] ⚠️ No caption text found in any attribute")
+                    log_info(f"[ASYNC_UPLOAD] [WARN] No caption text found in any attribute")
                     
         except Exception as caption_error:
-            log_info(f"[ASYNC_UPLOAD] ❌ Error extracting caption: {str(caption_error)}")
+            log_info(f"[ASYNC_UPLOAD] [FAIL] Error extracting caption: {str(caption_error)}")
             import traceback
             log_info(f"[ASYNC_UPLOAD] 🔍 Caption extraction traceback: {traceback.format_exc()}")
             caption_text = None
         
         # ENHANCED: Add caption if we found any text
         if caption_text and caption_text.strip():
-            log_info(f"[ASYNC_UPLOAD] 🎯 Adding caption: '{caption_text[:100]}...'")
+            log_info(f"[ASYNC_UPLOAD] [TARGET] Adding caption: '{caption_text[:100]}...'")
             caption_success = await add_video_caption_async(page, caption_text)
             if not caption_success:
-                log_info(f"[ASYNC_UPLOAD] ⚠️ Failed to add caption, but continuing...")
+                log_info(f"[ASYNC_UPLOAD] [WARN] Failed to add caption, but continuing...")
         else:
-            log_info(f"[ASYNC_UPLOAD] ⚠️ No caption text to add")
+            log_info(f"[ASYNC_UPLOAD] [WARN] No caption text to add")
         
         # Add location if available (like sync _set_location_selenium_style)
-        log_info(f"[ASYNC_UPLOAD] 📍 Adding location for video_obj: {type(video_obj)}")
+        log_info(f"[ASYNC_UPLOAD] [LOCATION] Adding location for video_obj: {type(video_obj)}")
         await add_video_location_async(page, video_obj)
         
         # Add mentions if available (like sync _set_mentions_selenium_style)
-        log_info(f"[ASYNC_UPLOAD] 👥 Adding mentions for video_obj: {type(video_obj)}")
+        log_info(f"[ASYNC_UPLOAD] [USERS] Adding mentions for video_obj: {type(video_obj)}")
         await add_video_mentions_async(page, video_obj)
         
         # Click Share button (like sync _post_video_selenium_style)
-        log_info("[ASYNC_UPLOAD] 🚀 Clicking Share button...")
+        log_info("[ASYNC_UPLOAD] [START] Clicking Share button...")
         share_success = await click_share_button_async(page)
         if not share_success:
-            log_info("[ASYNC_UPLOAD] ❌ Failed to click Share button")
+            log_info("[ASYNC_UPLOAD] [FAIL] Failed to click Share button")
             return False
         
         # Verify upload success (like sync _verify_video_posted)
-        log_info("[ASYNC_UPLOAD] ✅ Verifying upload success...")
+        log_info("[ASYNC_UPLOAD] [OK] Verifying upload success...")
         return await check_video_posted_successfully_async(page, video_file_path)
         
     except Exception as e:
-        log_info(f"[ASYNC_UPLOAD] ❌ Core upload failed: {str(e)}")
+        log_info(f"[ASYNC_UPLOAD] [FAIL] Core upload failed: {str(e)}")
         import traceback
         log_info(f"[ASYNC_UPLOAD] 🔍 Full traceback: {traceback.format_exc()}")
         return False
@@ -2010,7 +2010,7 @@ async def find_file_input_adaptive_async(page):
     try:
         log_info("[ASYNC_UPLOAD] 🔍 Starting adaptive file input search...")
         
-        # 🎯 СТРАТЕГИЯ 1: Поиск по семантическим атрибутам (ПОЛНАЯ КОПИЯ из sync)
+        # [TARGET] СТРАТЕГИЯ 1: Поиск по семантическим атрибутам (ПОЛНАЯ КОПИЯ из sync)
         log_info("[ASYNC_UPLOAD] 📋 Strategy 1: Semantic attributes search...")
         semantic_strategies = [
             'input[type="file"]',
@@ -2030,52 +2030,52 @@ async def find_file_input_adaptive_async(page):
                 
                 for element in elements:
                     if element and await is_valid_file_input_async(element):
-                        log_info(f"[ASYNC_UPLOAD] ✅ Found file input via semantic: {selector}")
+                        log_info(f"[ASYNC_UPLOAD] [OK] Found file input via semantic: {selector}")
                         return element
             except Exception as e:
                 log_info(f"[ASYNC_UPLOAD] Semantic selector failed: {selector} - {str(e)}")
                 continue
         
-        # 🎯 СТРАТЕГИЯ 2: Поиск через структуру диалога (ПОЛНАЯ КОПИЯ из sync)
+        # [TARGET] СТРАТЕГИЯ 2: Поиск через структуру диалога (ПОЛНАЯ КОПИЯ из sync)
         log_info("[ASYNC_UPLOAD] 🏗️ Strategy 2: Dialog structure search...")
         dialog_input = await find_input_via_dialog_structure_async(page)
         if dialog_input:
-            log_info("[ASYNC_UPLOAD] ✅ Found file input via dialog structure")
+            log_info("[ASYNC_UPLOAD] [OK] Found file input via dialog structure")
             return dialog_input
         
-        # 🎯 СТРАТЕГИЯ 3: Поиск через кнопку "Выбрать на компьютере" (ПОЛНАЯ КОПИЯ из sync)
+        # [TARGET] СТРАТЕГИЯ 3: Поиск через кнопку "Выбрать на компьютере" (ПОЛНАЯ КОПИЯ из sync)
         log_info("[ASYNC_UPLOAD] 🔘 Strategy 3: Button-based search...")
         button_input = await find_input_via_button_async(page)
         if button_input:
-            log_info("[ASYNC_UPLOAD] ✅ Found file input via button search")
+            log_info("[ASYNC_UPLOAD] [OK] Found file input via button search")
             return button_input
         
-        # 🎯 СТРАТЕГИЯ 4: Поиск по контексту формы (ПОЛНАЯ КОПИЯ из sync)
-        log_info("[ASYNC_UPLOAD] 📝 Strategy 4: Form context search...")
+        # [TARGET] СТРАТЕГИЯ 4: Поиск по контексту формы (ПОЛНАЯ КОПИЯ из sync)
+        log_info("[ASYNC_UPLOAD] [TEXT] Strategy 4: Form context search...")
         form_input = await find_input_via_form_context_async(page)
         if form_input:
-            log_info("[ASYNC_UPLOAD] ✅ Found file input via form context")
+            log_info("[ASYNC_UPLOAD] [OK] Found file input via form context")
             return form_input
         
-        # 🎯 СТРАТЕГИЯ 5: Поиск по характерным CSS-классам Instagram (ПОЛНАЯ КОПИЯ из sync)
+        # [TARGET] СТРАТЕГИЯ 5: Поиск по характерным CSS-классам Instagram (ПОЛНАЯ КОПИЯ из sync)
         log_info("[ASYNC_UPLOAD] 🎨 Strategy 5: Instagram CSS patterns...")
         css_input = await find_input_via_css_patterns_async(page)
         if css_input:
-            log_info("[ASYNC_UPLOAD] ✅ Found file input via CSS patterns")
+            log_info("[ASYNC_UPLOAD] [OK] Found file input via CSS patterns")
             return css_input
         
-        # 🎯 СТРАТЕГИЯ 6: Широкий поиск всех input и фильтрация (ПОЛНАЯ КОПИЯ из sync)
+        # [TARGET] СТРАТЕГИЯ 6: Широкий поиск всех input и фильтрация (ПОЛНАЯ КОПИЯ из sync)
         log_info("[ASYNC_UPLOAD] 🌐 Strategy 6: Broad search with filtering...")
         all_input = await find_input_via_broad_search_async(page)
         if all_input:
-            log_info("[ASYNC_UPLOAD] ✅ Found file input via broad search")
+            log_info("[ASYNC_UPLOAD] [OK] Found file input via broad search")
             return all_input
             
-        log_info("[ASYNC_UPLOAD] ⚠️ No file input found with any adaptive strategy")
+        log_info("[ASYNC_UPLOAD] [WARN] No file input found with any adaptive strategy")
         return None
         
     except Exception as e:
-        log_info(f"[ASYNC_UPLOAD] ❌ Adaptive file input search failed: {str(e)}")
+        log_info(f"[ASYNC_UPLOAD] [FAIL] Adaptive file input search failed: {str(e)}")
         return None
 
 async def is_valid_file_input_async(element):
@@ -2140,7 +2140,7 @@ async def find_input_via_dialog_structure_async(page):
                     # Ищем input внутри диалога (ПОЛНАЯ КОПИЯ из sync)
                     file_input = await dialog.query_selector('input[type="file"]')
                     if file_input and await is_valid_file_input_async(file_input):
-                        log_info("[ASYNC_UPLOAD] ✅ Found valid file input inside dialog")
+                        log_info("[ASYNC_UPLOAD] [OK] Found valid file input inside dialog")
                         return file_input
                     
                     # Также проверяем form внутри диалога (ПОЛНАЯ КОПИЯ из sync)
@@ -2148,7 +2148,7 @@ async def find_input_via_dialog_structure_async(page):
                     if form:
                         form_input = await form.query_selector('input[type="file"]')
                         if form_input and await is_valid_file_input_async(form_input):
-                            log_info("[ASYNC_UPLOAD] ✅ Found valid file input inside form within dialog")
+                            log_info("[ASYNC_UPLOAD] [OK] Found valid file input inside form within dialog")
                             return form_input
                             
             except Exception as e:
@@ -2239,7 +2239,7 @@ async def find_input_via_css_patterns_async(page):
                 
                 for element in elements:
                     if element and await is_valid_file_input_async(element):
-                        log_info(f"[ASYNC_UPLOAD] ✅ Valid file input found with CSS pattern: {pattern}")
+                        log_info(f"[ASYNC_UPLOAD] [OK] Valid file input found with CSS pattern: {pattern}")
                         return element
                         
             except Exception as e:
@@ -2311,7 +2311,7 @@ async def click_next_button_async(page, step_number):
                     # Verify this is actually a next button
                     button_text = await next_button.text_content() or ""
                     if any(keyword in button_text.lower() for keyword in ['далее', 'next', 'продолжить', 'continue']):
-                        log_info(f"[ASYNC_UPLOAD] 🎯 Found next button: '{button_text.strip()}'")
+                        log_info(f"[ASYNC_UPLOAD] [TARGET] Found next button: '{button_text.strip()}'")
                         break
                             
             except Exception as e:
@@ -2334,27 +2334,27 @@ async def click_next_button_async(page, step_number):
                 # Wait after click
                 await asyncio.sleep(random.uniform(4, 6))
                 
-                log_info(f"[ASYNC_UPLOAD] ✅ Successfully clicked next button for step {step_number}")
+                log_info(f"[ASYNC_UPLOAD] [OK] Successfully clicked next button for step {step_number}")
                 return True
                 
             except Exception as click_error:
-                log_info(f"[ASYNC_UPLOAD] ⚠️ Error clicking next button: {str(click_error)}")
+                log_info(f"[ASYNC_UPLOAD] [WARN] Error clicking next button: {str(click_error)}")
                 
                 # Fallback: try direct click
                 try:
                     await next_button.click()
                     await asyncio.sleep(random.uniform(4, 6))
-                    log_info(f"[ASYNC_UPLOAD] ✅ Successfully clicked next button (fallback) for step {step_number}")
+                    log_info(f"[ASYNC_UPLOAD] [OK] Successfully clicked next button (fallback) for step {step_number}")
                     return True
                 except Exception as fallback_error:
-                    log_info(f"[ASYNC_UPLOAD] ❌ Fallback click also failed: {str(fallback_error)}")
+                    log_info(f"[ASYNC_UPLOAD] [FAIL] Fallback click also failed: {str(fallback_error)}")
                     return False
         else:
-            log_info(f"[ASYNC_UPLOAD] ⚠️ Next button not found for step {step_number}")
+            log_info(f"[ASYNC_UPLOAD] [WARN] Next button not found for step {step_number}")
             return False
             
     except Exception as e:
-        log_info(f"[ASYNC_UPLOAD] ❌ Error in next button click: {str(e)}")
+        log_info(f"[ASYNC_UPLOAD] [FAIL] Error in next button click: {str(e)}")
         return False
 
 async def add_video_caption_async(page, caption_text):
@@ -2392,7 +2392,7 @@ async def add_video_caption_async(page, caption_text):
                     element = await page.query_selector(selector)
                 
                 if element and await element.is_visible():
-                    log_info(f"[ASYNC_UPLOAD] ✅ Found caption field: {selector}")
+                    log_info(f"[ASYNC_UPLOAD] [OK] Found caption field: {selector}")
                     caption_field = element
                     break
             except Exception as e:
@@ -2400,7 +2400,7 @@ async def add_video_caption_async(page, caption_text):
                 continue
         
         if not caption_field:
-            log_info("[ASYNC_UPLOAD] ⚠️ Caption field not found")
+            log_info("[ASYNC_UPLOAD] [WARN] Caption field not found")
             return False
         
         # Click field and wait (like sync version)
@@ -2419,17 +2419,17 @@ async def add_video_caption_async(page, caption_text):
         await caption_field.press('Enter')
         await asyncio.sleep(random.uniform(0.5, 1.0))
         
-        log_info("[ASYNC_UPLOAD] ✅ Caption set successfully")
+        log_info("[ASYNC_UPLOAD] [OK] Caption set successfully")
         return True
         
     except Exception as e:
-        log_info(f"[ASYNC_UPLOAD] ❌ Error setting caption: {str(e)}")
+        log_info(f"[ASYNC_UPLOAD] [FAIL] Error setting caption: {str(e)}")
         return False
 
 async def _type_like_human_async(page, element, text):
     """Type text like a human with mistakes, corrections, and realistic timing - async version"""
     try:
-        log_info("[ASYNC_UPLOAD] 🤖 Starting human-like typing...")
+        log_info("[ASYNC_UPLOAD] [BOT] Starting human-like typing...")
         
         i = 0
         while i < len(text):
@@ -2497,10 +2497,10 @@ async def _type_like_human_async(page, element, text):
             if char in '.!?,:;':
                 await asyncio.sleep(random.uniform(0.1, 0.4))
         
-        log_info("[ASYNC_UPLOAD] ✅ Human-like typing completed")
+        log_info("[ASYNC_UPLOAD] [OK] Human-like typing completed")
         
     except Exception as e:
-        log_info(f"[ASYNC_UPLOAD] ❌ Error in human-like typing: {str(e)}")
+        log_info(f"[ASYNC_UPLOAD] [FAIL] Error in human-like typing: {str(e)}")
         # Fallback to simple typing
         await element.type(text)
 
@@ -2526,7 +2526,7 @@ async def add_video_location_async(page, video_obj):
                     location = video_obj.bulk_task.default_location.strip()
                     log_info(f"[ASYNC_UPLOAD] Found Django model default_location: {location}")
         except Exception as location_error:
-            log_info(f"[ASYNC_UPLOAD] ❌ Error accessing location attributes: {str(location_error)}")
+            log_info(f"[ASYNC_UPLOAD] [FAIL] Error accessing location attributes: {str(location_error)}")
             log_info(f"[ASYNC_UPLOAD] 🔍 Video object type: {type(video_obj)}")
             location = None
         
@@ -2567,7 +2567,7 @@ async def add_video_location_async(page, video_obj):
                     element = await page.query_selector(selector)
                 
                 if element and await element.is_visible():
-                    log_info(f"[ASYNC_UPLOAD] ✅ Found location field: {selector}")
+                    log_info(f"[ASYNC_UPLOAD] [OK] Found location field: {selector}")
                     location_field = element
                     break
             except Exception as e:
@@ -2575,7 +2575,7 @@ async def add_video_location_async(page, video_obj):
                 continue
         
         if not location_field:
-            log_info("[ASYNC_UPLOAD] ⚠️ Location field not found")
+            log_info("[ASYNC_UPLOAD] [WARN] Location field not found")
             return False
         
         # Human-like interaction with location field
@@ -2619,7 +2619,7 @@ async def add_video_location_async(page, video_obj):
                 
                 if element and await element.is_visible():
                     suggestion = element
-                    log_info(f"[ASYNC_UPLOAD] ✅ Found location suggestion: {selector}")
+                    log_info(f"[ASYNC_UPLOAD] [OK] Found location suggestion: {selector}")
                     break
             except Exception as e:
                 log_info(f"[ASYNC_UPLOAD] Selector {selector} failed: {str(e)}")
@@ -2630,9 +2630,9 @@ async def add_video_location_async(page, video_obj):
             await asyncio.sleep(random.uniform(0.5, 1.0))
             await suggestion.click()
             await asyncio.sleep(random.uniform(1.0, 2.0))
-            log_info("[ASYNC_UPLOAD] ✅ Location set successfully")
+            log_info("[ASYNC_UPLOAD] [OK] Location set successfully")
         else:
-            log_info("[ASYNC_UPLOAD] ⚠️ Location suggestions not found")
+            log_info("[ASYNC_UPLOAD] [WARN] Location suggestions not found")
             # Press Enter to try to accept typed location
             await location_field.press('Enter')
             await asyncio.sleep(random.uniform(1.0, 1.5))
@@ -2640,7 +2640,7 @@ async def add_video_location_async(page, video_obj):
         return True
         
     except Exception as e:
-        log_info(f"[ASYNC_UPLOAD] ❌ Error setting location: {str(e)}")
+        log_info(f"[ASYNC_UPLOAD] [FAIL] Error setting location: {str(e)}")
         return False
 
 async def add_video_mentions_async(page, video_obj):
@@ -2665,7 +2665,7 @@ async def add_video_mentions_async(page, video_obj):
                     mentions = video_obj.bulk_task.default_mentions.strip()
                     log_info(f"[ASYNC_UPLOAD] Found Django model default_mentions: {mentions}")
         except Exception as mentions_error:
-            log_info(f"[ASYNC_UPLOAD] ❌ Error accessing mentions attributes: {str(mentions_error)}")
+            log_info(f"[ASYNC_UPLOAD] [FAIL] Error accessing mentions attributes: {str(mentions_error)}")
             log_info(f"[ASYNC_UPLOAD] 🔍 Video object type: {type(video_obj)}")
             mentions = None
         
@@ -2706,7 +2706,7 @@ async def add_video_mentions_async(page, video_obj):
                     element = await page.query_selector(selector)
                 
                 if element and await element.is_visible():
-                    log_info(f"[ASYNC_UPLOAD] ✅ Found mentions field: {selector}")
+                    log_info(f"[ASYNC_UPLOAD] [OK] Found mentions field: {selector}")
                     mentions_field = element
                     break
             except Exception as e:
@@ -2714,7 +2714,7 @@ async def add_video_mentions_async(page, video_obj):
                 continue
         
         if not mentions_field:
-            log_info("[ASYNC_UPLOAD] ⚠️ Mentions field not found")
+            log_info("[ASYNC_UPLOAD] [WARN] Mentions field not found")
             return False
         
         # Add each mention one by one
@@ -2766,7 +2766,7 @@ async def add_video_mentions_async(page, video_obj):
                     
                     if element and await element.is_visible():
                         mention_suggestion = element
-                        log_info(f"[ASYNC_UPLOAD] ✅ Found mention suggestion: {selector}")
+                        log_info(f"[ASYNC_UPLOAD] [OK] Found mention suggestion: {selector}")
                         break
                 except Exception as e:
                     log_info(f"[ASYNC_UPLOAD] Selector {selector} failed: {str(e)}")
@@ -2777,9 +2777,9 @@ async def add_video_mentions_async(page, video_obj):
                 try:
                     mention_text = await mention_suggestion.text_content()
                     if mention_text and mention.lower() in mention_text.lower():
-                        log_info(f"[ASYNC_UPLOAD] ✅ Verified mention text: '{mention_text}' contains '{mention}'")
+                        log_info(f"[ASYNC_UPLOAD] [OK] Verified mention text: '{mention_text}' contains '{mention}'")
                     else:
-                        log_info(f"[ASYNC_UPLOAD] ⚠️ Mention text mismatch: expected '{mention}', got '{mention_text}'")
+                        log_info(f"[ASYNC_UPLOAD] [WARN] Mention text mismatch: expected '{mention}', got '{mention_text}'")
                         # Попробуем найти более точный селектор
                         mention_suggestion = None
                         for fallback_selector in [
@@ -2798,26 +2798,26 @@ async def add_video_mentions_async(page, video_obj):
                                 element = await page.query_selector(f"xpath={fallback_selector}")
                                 if element and await element.is_visible():
                                     mention_suggestion = element
-                                    log_info(f"[ASYNC_UPLOAD] ✅ Found fallback mention suggestion: {fallback_selector}")
+                                    log_info(f"[ASYNC_UPLOAD] [OK] Found fallback mention suggestion: {fallback_selector}")
                                     break
                             except Exception:
                                 continue
                 except Exception as verify_error:
-                    log_info(f"[ASYNC_UPLOAD] ⚠️ Error verifying mention text: {str(verify_error)}")
+                    log_info(f"[ASYNC_UPLOAD] [WARN] Error verifying mention text: {str(verify_error)}")
                 
                 if mention_suggestion:
                     await mention_suggestion.hover()
                     await asyncio.sleep(random.uniform(0.5, 1.0))
                     await mention_suggestion.click()
                     await asyncio.sleep(random.uniform(1.0, 2.0))
-                    log_info(f"[ASYNC_UPLOAD] ✅ Mention '{mention}' added successfully")
+                    log_info(f"[ASYNC_UPLOAD] [OK] Mention '{mention}' added successfully")
                 else:
-                    log_info(f"[ASYNC_UPLOAD] ⚠️ Could not verify correct mention for '{mention}'")
+                    log_info(f"[ASYNC_UPLOAD] [WARN] Could not verify correct mention for '{mention}'")
                     # Press Enter to try to accept typed mention
                     await mentions_field.press('Enter')
                     await asyncio.sleep(random.uniform(1.0, 1.5))
             else:
-                log_info(f"[ASYNC_UPLOAD] ⚠️ Mention suggestion for '{mention}' not found")
+                log_info(f"[ASYNC_UPLOAD] [WARN] Mention suggestion for '{mention}' not found")
                 log_info(f"[ASYNC_UPLOAD] ℹ️ Continuing with publication - mention '{mention}' will be added as text")
                 # Press Enter to try to accept typed mention
                 await mentions_field.press('Enter')
@@ -2851,7 +2851,7 @@ async def add_video_mentions_async(page, video_obj):
                 
                 if element and await element.is_visible():
                     done_button = element
-                    log_info(f"[ASYNC_UPLOAD] ✅ Found 'Done' button: {selector}")
+                    log_info(f"[ASYNC_UPLOAD] [OK] Found 'Done' button: {selector}")
                     break
             except Exception as e:
                 log_info(f"[ASYNC_UPLOAD] Selector {selector} failed: {str(e)}")
@@ -2862,15 +2862,15 @@ async def add_video_mentions_async(page, video_obj):
             await asyncio.sleep(random.uniform(0.5, 1.0))
             await done_button.click()
             await asyncio.sleep(random.uniform(2.0, 3.0))
-            log_info("[ASYNC_UPLOAD] ✅ 'Done' button clicked successfully")
+            log_info("[ASYNC_UPLOAD] [OK] 'Done' button clicked successfully")
         else:
-            log_info("[ASYNC_UPLOAD] ⚠️ 'Done' button not found, trying to press Enter")
+            log_info("[ASYNC_UPLOAD] [WARN] 'Done' button not found, trying to press Enter")
             # Fallback: try to press Enter on mentions field
             await mentions_field.press('Enter')
             await asyncio.sleep(random.uniform(1.0, 2.0))
         
         # КРИТИЧЕСКОЕ ДОБАВЛЕНИЕ: Ожидание после mention для стабилизации страницы
-        log_info("[ASYNC_UPLOAD] ⏳ Waiting for page to stabilize after mentions...")
+        log_info("[ASYNC_UPLOAD] [WAIT] Waiting for page to stabilize after mentions...")
         await asyncio.sleep(random.uniform(3.0, 5.0))
         
         # КРИТИЧЕСКОЕ ДОБАВЛЕНИЕ: Проверяем, что мы все еще в контексте загрузки
@@ -2891,25 +2891,25 @@ async def add_video_mentions_async(page, video_obj):
                     element = await page.query_selector(indicator)
                     if element and await element.is_visible():
                         context_found = True
-                        log_info(f"[ASYNC_UPLOAD] ✅ Upload context confirmed: {indicator}")
+                        log_info(f"[ASYNC_UPLOAD] [OK] Upload context confirmed: {indicator}")
                         break
                 except Exception:
                     continue
             
             if not context_found:
-                log_info("[ASYNC_UPLOAD] ⚠️ Upload context lost after mentions, trying to restore...")
+                log_info("[ASYNC_UPLOAD] [WARN] Upload context lost after mentions, trying to restore...")
                 # Попытка восстановить контекст - нажать Tab для перехода к следующему элементу
                 await page.keyboard.press('Tab')
                 await asyncio.sleep(random.uniform(1.0, 2.0))
                 
         except Exception as context_error:
-            log_info(f"[ASYNC_UPLOAD] ⚠️ Error checking upload context: {str(context_error)}")
+            log_info(f"[ASYNC_UPLOAD] [WARN] Error checking upload context: {str(context_error)}")
         
-        log_info("[ASYNC_UPLOAD] ✅ All mentions processed")
+        log_info("[ASYNC_UPLOAD] [OK] All mentions processed")
         return True
         
     except Exception as e:
-        log_info(f"[ASYNC_UPLOAD] ❌ Error setting mentions: {str(e)}")
+        log_info(f"[ASYNC_UPLOAD] [FAIL] Error setting mentions: {str(e)}")
         return False
 
 async def click_share_button_async(page):
@@ -2934,13 +2934,13 @@ async def click_share_button_async(page):
                 element = await page.query_selector(indicator)
                 if element and await element.is_visible():
                     context_found = True
-                    log_info(f"[ASYNC_UPLOAD] ✅ Upload context found: {indicator}")
+                    log_info(f"[ASYNC_UPLOAD] [OK] Upload context found: {indicator}")
                     break
             except Exception:
                 continue
         
         if not context_found:
-            log_info("[ASYNC_UPLOAD] ⚠️ Upload context not found, trying to restore...")
+            log_info("[ASYNC_UPLOAD] [WARN] Upload context not found, trying to restore...")
             # Попытка восстановить контекст
             await page.keyboard.press('Tab')
             await asyncio.sleep(random.uniform(1.0, 2.0))
@@ -3006,17 +3006,17 @@ async def click_share_button_async(page):
                         # Проверяем что кнопка находится в диалоге загрузки
                         parent_dialog = await element.query_selector('xpath=ancestor::div[@role="dialog"]')
                         if parent_dialog:
-                            log_info(f"[ASYNC_UPLOAD] ✅ Found share button in upload dialog: {selector}")
+                            log_info(f"[ASYNC_UPLOAD] [OK] Found share button in upload dialog: {selector}")
                             share_button = element
                             break
                         else:
-                            log_info(f"[ASYNC_UPLOAD] ⚠️ Share button found but not in upload dialog: {selector}")
+                            log_info(f"[ASYNC_UPLOAD] [WARN] Share button found but not in upload dialog: {selector}")
                             # Продолжаем поиск
                             continue
                     except Exception as context_error:
-                        log_info(f"[ASYNC_UPLOAD] ⚠️ Error checking button context: {str(context_error)}")
+                        log_info(f"[ASYNC_UPLOAD] [WARN] Error checking button context: {str(context_error)}")
                         # Если не можем проверить контекст, все равно используем кнопку
-                        log_info(f"[ASYNC_UPLOAD] ✅ Found share button (context check failed): {selector}")
+                        log_info(f"[ASYNC_UPLOAD] [OK] Found share button (context check failed): {selector}")
                         share_button = element
                         break
             except Exception as e:
@@ -3031,9 +3031,9 @@ async def click_share_button_async(page):
             try:
                 await share_button.wait_for_element_state('visible', timeout=5000)
                 await share_button.wait_for_element_state('enabled', timeout=5000)
-                log_info("[ASYNC_UPLOAD] ✅ Share button is visible and enabled")
+                log_info("[ASYNC_UPLOAD] [OK] Share button is visible and enabled")
             except Exception as verify_error:
-                log_info(f"[ASYNC_UPLOAD] ⚠️ Share button verification failed: {str(verify_error)}")
+                log_info(f"[ASYNC_UPLOAD] [WARN] Share button verification failed: {str(verify_error)}")
             
             # Human-like interaction - УБИРАЕМ ПРОБЛЕМНЫЙ SCROLL
             # await share_button.scroll_into_view_if_needed()  # ← УДАЛЕНО - может скроллить за окном!
@@ -3045,19 +3045,19 @@ async def click_share_button_async(page):
             # Try JavaScript click first
             try:
                 await page.evaluate('(element) => element.click()', share_button)
-                log_info("[ASYNC_UPLOAD] ✅ Share button clicked with JavaScript")
+                log_info("[ASYNC_UPLOAD] [OK] Share button clicked with JavaScript")
             except Exception as e:
                 log_info(f"[ASYNC_UPLOAD] JavaScript click failed: {str(e)}")
                 # Fallback to direct click
                 await share_button.click()
-                log_info("[ASYNC_UPLOAD] ✅ Share button clicked with direct click")
+                log_info("[ASYNC_UPLOAD] [OK] Share button clicked with direct click")
             
             # КРИТИЧЕСКОЕ ДОБАВЛЕНИЕ: Увеличиваем время ожидания для загрузки видео
-            log_info("[ASYNC_UPLOAD] ⏳ Waiting for video to upload and process...")
+            log_info("[ASYNC_UPLOAD] [WAIT] Waiting for video to upload and process...")
             await asyncio.sleep(random.uniform(3, 5))  # Уменьшено с 8-12 до 3-5 секунд, поскольку проверка будет длительной
             return True
         else:
-            log_info("[ASYNC_UPLOAD] ❌ Share button not found")
+            log_info("[ASYNC_UPLOAD] [FAIL] Share button not found")
             
             # КРИТИЧЕСКОЕ ДОБАВЛЕНИЕ: Расширенная отладка
             try:
@@ -3091,7 +3091,7 @@ async def click_share_button_async(page):
             return False
             
     except Exception as e:
-        log_info(f"[ASYNC_UPLOAD] ❌ Error clicking share button: {str(e)}")
+        log_info(f"[ASYNC_UPLOAD] [FAIL] Error clicking share button: {str(e)}")
         return False
 
 async def check_video_posted_successfully_async(page, video_file_path):
@@ -3104,7 +3104,7 @@ async def check_video_posted_successfully_async(page, video_file_path):
         check_interval = 30   # Проверяем каждые 30 секунд
         total_checks = max_wait_time // check_interval  # 40 проверок
         
-        log_info(f"[ASYNC_UPLOAD] ⏳ Starting extended upload verification: {max_wait_time} seconds ({total_checks} checks every {check_interval}s)")
+        log_info(f"[ASYNC_UPLOAD] [WAIT] Starting extended upload verification: {max_wait_time} seconds ({total_checks} checks every {check_interval}s)")
         
         # STRICT POLICY: Check for explicit success indicators ONLY
         success_selectors = [
@@ -3138,8 +3138,8 @@ async def check_video_posted_successfully_async(page, video_file_path):
                     success_element = await page.query_selector(selector)
                     if success_element and await success_element.is_visible():
                         success_text = await success_element.text_content() or ""
-                        log_info(f"[ASYNC_UPLOAD] ✅ SUCCESS DETECTED on check {check_number}: '{success_text.strip()}'")
-                        log_info(f"[ASYNC_UPLOAD] ✅ Video {os.path.basename(video_file_path)} posted successfully")
+                        log_info(f"[ASYNC_UPLOAD] [OK] SUCCESS DETECTED on check {check_number}: '{success_text.strip()}'")
+                        log_info(f"[ASYNC_UPLOAD] [OK] Video {os.path.basename(video_file_path)} posted successfully")
                         return True
                 except:
                     continue
@@ -3150,21 +3150,21 @@ async def check_video_posted_successfully_async(page, video_file_path):
                     error_element = await page.query_selector(selector)
                     if error_element and await error_element.is_visible():
                         error_text = await error_element.text_content() or ""
-                        log_info(f"[ASYNC_UPLOAD] ❌ ERROR DETECTED on check {check_number}: '{error_text.strip()}'")
-                        log_info(f"[ASYNC_UPLOAD] ❌ Video {os.path.basename(video_file_path)} failed to post")
+                        log_info(f"[ASYNC_UPLOAD] [FAIL] ERROR DETECTED on check {check_number}: '{error_text.strip()}'")
+                        log_info(f"[ASYNC_UPLOAD] [FAIL] Video {os.path.basename(video_file_path)} failed to post")
                         return False
                 except:
                     continue
             
             # If this is not the last check, wait before next iteration
             if check_number < total_checks:
-                log_info(f"[ASYNC_UPLOAD] ⏳ No indicators found on check {check_number}, waiting {check_interval}s before next check...")
+                log_info(f"[ASYNC_UPLOAD] [WAIT] No indicators found on check {check_number}, waiting {check_interval}s before next check...")
                 await asyncio.sleep(check_interval)
             else:
-                log_info(f"[ASYNC_UPLOAD] ⏳ Final check {check_number} completed, no indicators found")
+                log_info(f"[ASYNC_UPLOAD] [WAIT] Final check {check_number} completed, no indicators found")
         
         # STRICT POLICY: If no explicit success indicators found after all checks, consider it a failure
-        log_info(f"[ASYNC_UPLOAD] ❌ UPLOAD FAILED: No explicit success indicators found after {total_checks} checks ({max_wait_time}s total) - cannot confirm video {os.path.basename(video_file_path)} was posted")
+        log_info(f"[ASYNC_UPLOAD] [FAIL] UPLOAD FAILED: No explicit success indicators found after {total_checks} checks ({max_wait_time}s total) - cannot confirm video {os.path.basename(video_file_path)} was posted")
         log_info(f"[ASYNC_UPLOAD] 🔍 Current page URL: {page.url}")
         
         return False
@@ -3299,7 +3299,7 @@ async def handle_cookie_consent_async(page):
                     
                     # Click the button
                     await element.click()
-                    log_info(f"✅ [ASYNC_COOKIES] Successfully clicked accept button: '{button_text}'")
+                    log_info(f"[OK] [ASYNC_COOKIES] Successfully clicked accept button: '{button_text}'")
                     
                     # Wait for modal to disappear (ПОЛНАЯ КОПИЯ из sync)
                     await asyncio.sleep(random.uniform(2, 4))
@@ -3318,23 +3318,23 @@ async def handle_cookie_consent_async(page):
                                 break
                         
                         if not modal_still_present:
-                            log_info("✅ [ASYNC_COOKIES] Cookie consent modal successfully dismissed")
+                            log_info("[OK] [ASYNC_COOKIES] Cookie consent modal successfully dismissed")
                             return True
                         else:
-                            log_info("⚠️ [ASYNC_COOKIES] Modal still present, trying next selector...")
+                            log_info("[WARN] [ASYNC_COOKIES] Modal still present, trying next selector...")
                             continue
                             
                     except:
                         # If we can't verify, assume success
-                        log_info("✅ [ASYNC_COOKIES] Cookie consent handling completed (verification skipped)")
+                        log_info("[OK] [ASYNC_COOKIES] Cookie consent handling completed (verification skipped)")
                         return True
                     
             except Exception as e:
-                log_error(f"❌ [ASYNC_COOKIES] Error with selector {i+1}: {str(e)}")
+                log_error(f"[FAIL] [ASYNC_COOKIES] Error with selector {i+1}: {str(e)}")
                 continue
         
         # If no button worked, try clicking outside the modal (ПОЛНАЯ КОПИЯ из sync)
-        log_info("⚠️ [ASYNC_COOKIES] No accept button worked, trying to click outside modal...")
+        log_info("[WARN] [ASYNC_COOKIES] No accept button worked, trying to click outside modal...")
         try:
             await page.click('body', position={'x': 50, 'y': 50})
             await asyncio.sleep(2)
@@ -3343,11 +3343,11 @@ async def handle_cookie_consent_async(page):
         except:
             pass
         
-        log_info("❌ [ASYNC_COOKIES] Could not handle cookie consent modal")
+        log_info("[FAIL] [ASYNC_COOKIES] Could not handle cookie consent modal")
         return False
         
     except Exception as e:
-        log_error(f"❌ [ASYNC_COOKIES] Cookie consent error: {str(e)}")
+        log_error(f"[FAIL] [ASYNC_COOKIES] Cookie consent error: {str(e)}")
         return False
 
 async def cleanup_browser_session_async(page, dolphin_browser, dolphin_profile_id, dolphin):
@@ -3359,17 +3359,17 @@ async def cleanup_browser_session_async(page, dolphin_browser, dolphin_profile_i
         if dolphin_browser:
             try:
                 await dolphin_browser.cleanup_async()
-                log_info("[ASYNC_CLEANUP] ✅ Dolphin browser cleanup completed")
+                log_info("[ASYNC_CLEANUP] [OK] Dolphin browser cleanup completed")
             except Exception as cleanup_error:
-                log_info(f"[ASYNC_CLEANUP] ⚠️ Dolphin browser cleanup error: {str(cleanup_error)}")
+                log_info(f"[ASYNC_CLEANUP] [WARN] Dolphin browser cleanup error: {str(cleanup_error)}")
         
         # Additional cleanup for page if still available
         if page and not dolphin_browser:
             try:
                 await page.close()
-                log_info("[ASYNC_CLEANUP] ✅ Page closed directly")
+                log_info("[ASYNC_CLEANUP] [OK] Page closed directly")
             except Exception as page_error:
-                log_info(f"[ASYNC_CLEANUP] ⚠️ Direct page cleanup error: {str(page_error)}")
+                log_info(f"[ASYNC_CLEANUP] [WARN] Direct page cleanup error: {str(page_error)}")
         
         # Try to stop Dolphin profile if we have dolphin instance and profile_id
         if dolphin and dolphin_profile_id:
@@ -3377,14 +3377,14 @@ async def cleanup_browser_session_async(page, dolphin_browser, dolphin_profile_i
                 from asgiref.sync import sync_to_async
                 stop_profile_sync = sync_to_async(dolphin.stop_profile)  
                 await stop_profile_sync(dolphin_profile_id)
-                log_info(f"[ASYNC_CLEANUP] ✅ Stopped Dolphin profile: {dolphin_profile_id}")
+                log_info(f"[ASYNC_CLEANUP] [OK] Stopped Dolphin profile: {dolphin_profile_id}")
             except Exception as dolphin_error:
-                log_info(f"[ASYNC_CLEANUP] ⚠️ Dolphin profile stop error: {str(dolphin_error)}")
+                log_info(f"[ASYNC_CLEANUP] [WARN] Dolphin profile stop error: {str(dolphin_error)}")
         
-        log_info("[ASYNC_CLEANUP] ✅ Comprehensive cleanup completed")
+        log_info("[ASYNC_CLEANUP] [OK] Comprehensive cleanup completed")
         
     except Exception as cleanup_error:
-        log_info(f"[ASYNC_CLEANUP] ❌ Critical cleanup error: {str(cleanup_error)}")
+        log_info(f"[ASYNC_CLEANUP] [FAIL] Critical cleanup error: {str(cleanup_error)}")
         
         # Emergency cleanup - force close everything
         try:
@@ -3407,7 +3407,7 @@ async def cleanup_browser_session_async(page, dolphin_browser, dolphin_profile_i
             log_info("[ASYNC_CLEANUP] 🚨 Emergency cleanup completed")
             
         except Exception as emergency_error:
-            log_info(f"[ASYNC_CLEANUP] 💥 Emergency cleanup also failed: {str(emergency_error)}")
+            log_info(f"[ASYNC_CLEANUP] [EXPLODE] Emergency cleanup also failed: {str(emergency_error)}")
 
 async def safely_close_all_windows_async(page, dolphin_browser, dolphin_profile_id=None):
     """Safely close all browser windows - updated async version"""
@@ -3417,13 +3417,13 @@ async def safely_close_all_windows_async(page, dolphin_browser, dolphin_profile_
         if dolphin_browser:
             try:
                 await dolphin_browser.cleanup_async()
-                log_info("✅ [ASYNC_BROWSER] Dolphin browser closed via cleanup")
+                log_info("[OK] [ASYNC_BROWSER] Dolphin browser closed via cleanup")
             except Exception as e:
                 log_info(f"[ASYNC_BROWSER] Dolphin browser cleanup error: {str(e)}")
         elif page:
             try:
                 await page.close()
-                log_info("✅ [ASYNC_BROWSER] Page closed directly")
+                log_info("[OK] [ASYNC_BROWSER] Page closed directly")
             except Exception as e:
                 log_info(f"[ASYNC_BROWSER] Direct page close error: {str(e)}")
                 
@@ -3441,15 +3441,15 @@ async def handle_recaptcha_if_present_async(page, account_details=None):
         result = await solve_recaptcha_if_present(page, account_details, max_attempts=3)
         
         if result:
-            log_info("✅ [ASYNC_RECAPTCHA] reCAPTCHA solved successfully or not detected")
+            log_info("[OK] [ASYNC_RECAPTCHA] reCAPTCHA solved successfully or not detected")
             return True
         else:
-            log_info("❌ [ASYNC_RECAPTCHA] Failed to solve reCAPTCHA after all attempts")
+            log_info("[FAIL] [ASYNC_RECAPTCHA] Failed to solve reCAPTCHA after all attempts")
             # Возвращаем False для завершения выполнения и установки статуса CAPTCHA
             return False
         
     except Exception as e:
-        log_warning(f"⚠️ [ASYNC_RECAPTCHA] Error handling reCAPTCHA: {str(e)}")
+        log_warning(f"[WARN] [ASYNC_RECAPTCHA] Error handling reCAPTCHA: {str(e)}")
         # При ошибке также возвращаем False для завершения выполнения
         return False
 
@@ -3481,13 +3481,13 @@ async def perform_instagram_login_optimized_async(page, account_details):
             try:
                 username_field = await page.query_selector(selector)
                 if username_field and await username_field.is_visible():
-                    log_info(f"✅ [ASYNC_LOGIN] Found username field: {selector}")
+                    log_info(f"[OK] [ASYNC_LOGIN] Found username field: {selector}")
                     break
             except:
                 continue
         
         if not username_field:
-            log_info("❌ [ASYNC_LOGIN] Username field not found")
+            log_info("[FAIL] [ASYNC_LOGIN] Username field not found")
             return False
         
         # Find password field
@@ -3504,17 +3504,17 @@ async def perform_instagram_login_optimized_async(page, account_details):
             try:
                 password_field = await page.query_selector(selector)
                 if password_field and await password_field.is_visible():
-                    log_info(f"✅ [ASYNC_LOGIN] Found password field: {selector}")
+                    log_info(f"[OK] [ASYNC_LOGIN] Found password field: {selector}")
                     break
             except:
                 continue
         
         if not password_field:
-            log_info("❌ [ASYNC_LOGIN] Password field not found")
+            log_info("[FAIL] [ASYNC_LOGIN] Password field not found")
             return False
         
         # Clear fields and enter credentials
-        log_info("📝 [ASYNC_LOGIN] Filling credentials...")
+        log_info("[TEXT] [ASYNC_LOGIN] Filling credentials...")
         await username_field.click()
         await username_field.fill("")
         await username_field.type(account_details['username'], delay=random.uniform(50, 150))
@@ -3539,13 +3539,13 @@ async def perform_instagram_login_optimized_async(page, account_details):
             try:
                 login_button = await page.query_selector(selector)
                 if login_button and await login_button.is_visible():
-                    log_info(f"✅ [ASYNC_LOGIN] Found login button: '{await login_button.text_content()}'")
+                    log_info(f"[OK] [ASYNC_LOGIN] Found login button: '{await login_button.text_content()}'")
                     break
             except:
                 continue
         
         if not login_button:
-            log_info("❌ [ASYNC_LOGIN] Login button not found")
+            log_info("[FAIL] [ASYNC_LOGIN] Login button not found")
             return False
         
         log_info("🔐 [ASYNC_LOGIN] Clicking login button...")
@@ -3557,14 +3557,14 @@ async def perform_instagram_login_optimized_async(page, account_details):
         # Check if login was successful
         current_url = page.url
         if '/accounts/login' not in current_url and 'instagram.com' in current_url:
-            log_info("✅ [ASYNC_LOGIN] Login successful")
+            log_info("[OK] [ASYNC_LOGIN] Login successful")
             return True
         else:
-            log_info("❌ [ASYNC_LOGIN] Login failed")
+            log_info("[FAIL] [ASYNC_LOGIN] Login failed")
             return False
             
     except Exception as e:
-        log_error(f"❌ [ASYNC_LOGIN] Enhanced login error: {str(e)}")
+        log_error(f"[FAIL] [ASYNC_LOGIN] Enhanced login error: {str(e)}")
         return False
 
 async def check_for_phone_verification_page_async(page):
@@ -3584,7 +3584,7 @@ async def check_for_phone_verification_page_async(page):
                 element = await page.query_selector(selector)
                 if element and await element.is_visible():
                     element_text = await element.text_content() or ""
-                    log_info(f"📱 [ASYNC_VERIFICATION] Phone verification detected: {element_text[:50]}")
+                    log_info(f"[PHONE] [ASYNC_VERIFICATION] Phone verification detected: {element_text[:50]}")
                     return {
                         'requires_phone_verification': True,
                         'message': f'Phone verification required: {element_text[:100]}'
@@ -3595,7 +3595,7 @@ async def check_for_phone_verification_page_async(page):
         return {'requires_phone_verification': False}
         
     except Exception as e:
-        log_error(f"❌ [ASYNC_VERIFICATION] Error checking phone verification: {str(e)}")
+        log_error(f"[FAIL] [ASYNC_VERIFICATION] Error checking phone verification: {str(e)}")
         return {'requires_phone_verification': False}
 
 async def check_for_human_verification_dialog_async(page, account_details):
@@ -3615,7 +3615,7 @@ async def check_for_human_verification_dialog_async(page, account_details):
                 element = await page.query_selector(selector)
                 if element and await element.is_visible():
                     element_text = await element.text_content() or ""
-                    log_info(f"🤖 [ASYNC_VERIFICATION] Human verification detected: {element_text[:50]}")
+                    log_info(f"[BOT] [ASYNC_VERIFICATION] Human verification detected: {element_text[:50]}")
                     return {
                         'requires_human_verification': True,
                         'message': f'Human verification required: {element_text[:100]}'
@@ -3626,7 +3626,7 @@ async def check_for_human_verification_dialog_async(page, account_details):
         return {'requires_human_verification': False}
         
     except Exception as e:
-        log_error(f"❌ [ASYNC_VERIFICATION] Error checking human verification: {str(e)}")
+        log_error(f"[FAIL] [ASYNC_VERIFICATION] Error checking human verification: {str(e)}")
         return {'requires_human_verification': False}
 
 async def check_for_account_suspension_async(page):
@@ -3645,7 +3645,7 @@ async def check_for_account_suspension_async(page):
                 element = await page.query_selector(selector)
                 if element and await element.is_visible():
                     element_text = await element.text_content() or ""
-                    log_info(f"🚫 [ASYNC_SUSPENSION] Account suspension detected: {element_text[:50]}")
+                    log_info(f"[BLOCK] [ASYNC_SUSPENSION] Account suspension detected: {element_text[:50]}")
                     return {
                         'account_suspended': True,
                         'message': f'Account suspended: {element_text[:100]}'
@@ -3656,7 +3656,7 @@ async def check_for_account_suspension_async(page):
         return {'account_suspended': False}
         
     except Exception as e:
-        log_error(f"❌ [ASYNC_SUSPENSION] Error checking account suspension: {str(e)}")
+        log_error(f"[FAIL] [ASYNC_SUSPENSION] Error checking account suspension: {str(e)}")
         return {'account_suspended': False}
 
 async def handle_crop_async(page):
@@ -3684,7 +3684,7 @@ async def handle_crop_async(page):
                 if reels_dialog and await reels_dialog.is_visible():
                     dialog_text = await reels_dialog.text_content()
                     if dialog_text and any(keyword in dialog_text for keyword in ['Reels', 'видео', 'Теперь', 'Now']):
-                        log_info("[ASYNC_CROP] ⚠️ Reels dialog still visible, trying to close it...")
+                        log_info("[ASYNC_CROP] [WARN] Reels dialog still visible, trying to close it...")
                         await handle_reels_dialog_async(page)
                         await asyncio.sleep(random.uniform(1, 2))
                         break
@@ -3693,7 +3693,7 @@ async def handle_crop_async(page):
         
         # Wait for crop page to load
         initial_wait = random.uniform(3, 5)
-        log_info(f"[ASYNC_CROP] ⏳ Waiting {initial_wait:.1f}s for crop page to load...")
+        log_info(f"[ASYNC_CROP] [WAIT] Waiting {initial_wait:.1f}s for crop page to load...")
         await asyncio.sleep(initial_wait)
         
         # First, verify if we're on a crop page using adaptive detection
@@ -3703,14 +3703,14 @@ async def handle_crop_async(page):
         
         # Use adaptive crop detection and handling
         if await _handle_crop_adaptive_async(page):
-            log_info("[ASYNC_CROP] ✅ Crop handled successfully with adaptive method")
+            log_info("[ASYNC_CROP] [OK] Crop handled successfully with adaptive method")
             return True
         else:
-            log_info("[ASYNC_CROP] ⚠️ Adaptive crop handling failed, video may proceed with default crop")
+            log_info("[ASYNC_CROP] [WARN] Adaptive crop handling failed, video may proceed with default crop")
             return True  # Don't fail the whole process
             
     except Exception as e:
-        log_info(f"[ASYNC_CROP] ❌ Crop handling failed: {str(e)}")
+        log_info(f"[ASYNC_CROP] [FAIL] Crop handling failed: {str(e)}")
         return True  # Don't fail the whole upload process
 
 async def _verify_crop_page_adaptive_async(page):
@@ -3734,16 +3734,16 @@ async def _verify_crop_page_adaptive_async(page):
             try:
                 element = await page.query_selector(selector)
                 if element and await element.is_visible():
-                    log_info(f"[ASYNC_CROP] ✅ Found crop indicator: {selector}")
+                    log_info(f"[ASYNC_CROP] [OK] Found crop indicator: {selector}")
                     return True
             except:
                 continue
         
-        log_info("[ASYNC_CROP] ⚠️ No crop indicators found")
+        log_info("[ASYNC_CROP] [WARN] No crop indicators found")
         return False
         
     except Exception as e:
-        log_info(f"[ASYNC_CROP] ❌ Crop page verification failed: {str(e)}")
+        log_info(f"[ASYNC_CROP] [FAIL] Crop page verification failed: {str(e)}")
         return False
 
 async def _handle_crop_adaptive_async(page):
@@ -3751,7 +3751,7 @@ async def _handle_crop_adaptive_async(page):
     try:
         log_info("[ASYNC_CROP] 📐 Starting adaptive crop handling...")
         
-        # 🎯 Адаптивная стратегия поиска (независимо от CSS-классов)
+        # [TARGET] Адаптивная стратегия поиска (независимо от CSS-классов)
         search_strategies = [
             _find_crop_by_semantic_attributes_async,
             _find_crop_by_svg_content_async,
@@ -3765,28 +3765,28 @@ async def _handle_crop_adaptive_async(page):
             try:
                 crop_button = await strategy(page)
                 if crop_button:
-                    log_info(f"[ASYNC_CROP] ✅ Found crop button using strategy {strategy_index}")
+                    log_info(f"[ASYNC_CROP] [OK] Found crop button using strategy {strategy_index}")
                     
                     # Клик с человеческим поведением
                     await _human_click_crop_button_async(page, crop_button)
                     
                     # Теперь ищем и выбираем "Оригинал"
                     if await _select_original_aspect_ratio_async(page):
-                        log_info("[ASYNC_CROP] ✅ Original aspect ratio selected successfully")
+                        log_info("[ASYNC_CROP] [OK] Original aspect ratio selected successfully")
                         return True
                     else:
-                        log_info("[ASYNC_CROP] ⚠️ Failed to select original aspect ratio")
+                        log_info("[ASYNC_CROP] [WARN] Failed to select original aspect ratio")
                         return True  # Continue anyway
                     
             except Exception as e:
                 log_info(f"[ASYNC_CROP] Strategy {strategy_index} failed: {str(e)}")
                 continue
         
-        log_info("[ASYNC_CROP] ❌ All strategies failed - crop button not found")
+        log_info("[ASYNC_CROP] [FAIL] All strategies failed - crop button not found")
         return False
         
     except Exception as e:
-        log_info(f"[ASYNC_CROP] ❌ Adaptive crop handling failed: {str(e)}")
+        log_info(f"[ASYNC_CROP] [FAIL] Adaptive crop handling failed: {str(e)}")
         return False
 
 async def _find_crop_by_semantic_attributes_async(page):
@@ -3810,7 +3810,7 @@ async def _find_crop_by_semantic_attributes_async(page):
             # Прямой поиск элемента
             element = await page.query_selector(selector)
             if element and await element.is_visible():
-                log_info(f"[ASYNC_CROP] 📐 [SEMANTIC] ✅ Found direct element: {selector}")
+                log_info(f"[ASYNC_CROP] 📐 [SEMANTIC] [OK] Found direct element: {selector}")
                 return element
             
             # Поиск родительского элемента
@@ -3823,7 +3823,7 @@ async def _find_crop_by_semantic_attributes_async(page):
             for parent_selector in parent_selectors:
                 parent_element = await page.query_selector(parent_selector)
                 if parent_element and await parent_element.is_visible():
-                    log_info(f"[ASYNC_CROP] 📐 [SEMANTIC] ✅ Found parent element: {parent_selector}")
+                    log_info(f"[ASYNC_CROP] 📐 [SEMANTIC] [OK] Found parent element: {parent_selector}")
                     return parent_element
                 
         except Exception as e:
@@ -3846,7 +3846,7 @@ async def _find_crop_by_svg_content_async(page):
                 # Проверяем aria-label
                 aria_label = await svg.get_attribute('aria-label') or ""
                 if any(keyword in aria_label.lower() for keyword in ['crop', 'обрез', 'размер', 'выбрать']):
-                    log_info(f"[ASYNC_CROP] 📐 [SVG] ✅ Found by aria-label: {aria_label}")
+                    log_info(f"[ASYNC_CROP] 📐 [SVG] [OK] Found by aria-label: {aria_label}")
                     
                     # Найти родительскую кнопку
                     parent_button = await svg.query_selector('xpath=ancestor::button[1] | xpath=ancestor::div[@role="button"][1]')
@@ -3860,7 +3860,7 @@ async def _find_crop_by_svg_content_async(page):
                     path_data = await path.get_attribute('d') or ""
                     # Характерные пути для иконки кропа (углы, рамки)
                     if any(pattern in path_data for pattern in ['M10 20H4v-6', 'M20.999 2H14', 'L', 'H', 'V']):
-                        log_info(f"[ASYNC_CROP] 📐 [SVG] ✅ Found by SVG path pattern")
+                        log_info(f"[ASYNC_CROP] 📐 [SVG] [OK] Found by SVG path pattern")
                         
                         # Найти родительскую кнопку
                         parent_button = await svg.query_selector('xpath=ancestor::button[1] | xpath=ancestor::div[@role="button"][1]')
@@ -3901,7 +3901,7 @@ async def _find_crop_by_context_analysis_async(page):
                         # Проверяем наличие SVG внутри
                         svg_inside = await button.query_selector('svg')
                         if svg_inside and await svg_inside.is_visible():
-                            log_info(f"[ASYNC_CROP] 📐 [CONTEXT] ✅ Found candidate button by context")
+                            log_info(f"[ASYNC_CROP] 📐 [CONTEXT] [OK] Found candidate button by context")
                             return button
                             
             except Exception as e:
@@ -3935,7 +3935,7 @@ async def _find_crop_by_fallback_patterns_async(page):
                 log_info(f"[ASYNC_CROP] 📐 [FALLBACK] Trying XPath: {xpath}")
                 element = await page.query_selector(f'xpath={xpath}')
                 if element and await element.is_visible():
-                    log_info(f"[ASYNC_CROP] 📐 [FALLBACK] ✅ Found by XPath: {xpath}")
+                    log_info(f"[ASYNC_CROP] 📐 [FALLBACK] [OK] Found by XPath: {xpath}")
                     return element
                     
             except Exception as e:
@@ -3968,17 +3968,17 @@ async def _human_click_crop_button_async(page, crop_button):
         # Человеческая задержка после клика
         await asyncio.sleep(random.uniform(0.8, 1.5))
         
-        log_info("[ASYNC_CROP] 📐 [CLICK] ✅ Successfully clicked crop button")
+        log_info("[ASYNC_CROP] 📐 [CLICK] [OK] Successfully clicked crop button")
         
     except Exception as e:
-        log_info(f"[ASYNC_CROP] 📐 [CLICK] ❌ Failed to click crop button: {str(e)}")
+        log_info(f"[ASYNC_CROP] 📐 [CLICK] [FAIL] Failed to click crop button: {str(e)}")
         raise
 
 async def _select_original_aspect_ratio_async(page):
     """Select the 'Оригинал' (Original) aspect ratio option - IMPROVED for dynamic selectors - async version"""
     log_info("[ASYNC_CROP] 📐 Looking for 'Оригинал' (Original) aspect ratio option...")
     
-    # 🎯 АДАПТИВНАЯ СТРАТЕГИЯ: Поиск по семантическим признакам
+    # [TARGET] АДАПТИВНАЯ СТРАТЕГИЯ: Поиск по семантическим признакам
     search_strategies = [
         _find_original_by_text_content_async,
         _find_original_by_svg_icon_async,
@@ -3992,14 +3992,14 @@ async def _select_original_aspect_ratio_async(page):
         try:
             original_element = await strategy(page)
             if original_element:
-                log_info(f"[ASYNC_CROP] 📐 [ORIGINAL] ✅ Found 'Оригинал' using strategy {strategy_index}")
+                log_info(f"[ASYNC_CROP] 📐 [ORIGINAL] [OK] Found 'Оригинал' using strategy {strategy_index}")
                 
                 # Human-like interaction with aspect ratio selection
                 await _human_click_with_timeout_async(page, original_element, "ASPECT_RATIO")
                 
                 # Wait for aspect ratio to be applied
                 aspect_ratio_wait = random.uniform(1.5, 2.5)
-                log_info(f"[ASYNC_CROP] ⏳ Waiting {aspect_ratio_wait:.1f}s for 'Оригинал' aspect ratio to be applied...")
+                log_info(f"[ASYNC_CROP] [WAIT] Waiting {aspect_ratio_wait:.1f}s for 'Оригинал' aspect ratio to be applied...")
                 await asyncio.sleep(aspect_ratio_wait)
                 
                 return True
@@ -4008,7 +4008,7 @@ async def _select_original_aspect_ratio_async(page):
             log_info(f"[ASYNC_CROP] 📐 [ORIGINAL] Strategy {strategy_index} failed: {str(e)}")
             continue
     
-    log_info("[ASYNC_CROP] 📐 [ORIGINAL] ⚠️ All strategies failed to find 'Оригинал' option")
+    log_info("[ASYNC_CROP] 📐 [ORIGINAL] [WARN] All strategies failed to find 'Оригинал' option")
     return False
 
 async def _find_original_by_text_content_async(page):
@@ -4056,10 +4056,10 @@ async def _find_original_by_text_content_async(page):
                 if selector.startswith('span:'):
                     parent_button = await element.query_selector('xpath=ancestor::*[@role="button"][1] | xpath=ancestor::button[1]')
                     if parent_button and await parent_button.is_visible():
-                        log_info(f"[ASYNC_CROP] 📐 [TEXT] ✅ Found 'Оригинал' parent button")
+                        log_info(f"[ASYNC_CROP] 📐 [TEXT] [OK] Found 'Оригинал' parent button")
                         return parent_button
                 
-                log_info(f"[ASYNC_CROP] 📐 [TEXT] ✅ Found 'Оригинал' element: {selector}")
+                log_info(f"[ASYNC_CROP] 📐 [TEXT] [OK] Found 'Оригинал' element: {selector}")
                 return element
                 
         except Exception as e:
@@ -4100,12 +4100,12 @@ async def _find_original_by_svg_icon_async(page):
                     svg_element = await page.query_selector(selector)
                 
                 if svg_element and await svg_element.is_visible():
-                    log_info(f"[ASYNC_CROP] 📐 [SVG] ✅ Found SVG icon: {selector}")
+                    log_info(f"[ASYNC_CROP] 📐 [SVG] [OK] Found SVG icon: {selector}")
                     
                     # Найти родительскую кнопку
                     parent_button = await svg_element.query_selector('xpath=ancestor::*[@role="button"][1] | xpath=ancestor::button[1]')
                     if parent_button and await parent_button.is_visible():
-                        log_info("[ASYNC_CROP] 📐 [SVG] ✅ Found parent button for SVG")
+                        log_info("[ASYNC_CROP] 📐 [SVG] [OK] Found parent button for SVG")
                         return parent_button
                     
                     return svg_element
@@ -4148,12 +4148,12 @@ async def _find_original_by_first_position_async(page):
                                 
                                 # Если содержит "Оригинал" - точное совпадение
                                 if 'Оригинал' in button_text or 'Original' in button_text:
-                                    log_info(f"[ASYNC_CROP] 📐 [POS] ✅ Found 'Оригинал' at position {i+1}: '{button_text.strip()}'")
+                                    log_info(f"[ASYNC_CROP] 📐 [POS] [OK] Found 'Оригинал' at position {i+1}: '{button_text.strip()}'")
                                     return button
                                 
                                 # Если первая кнопка - возможно это "Оригинал"
                                 if i == 0:
-                                    log_info(f"[ASYNC_CROP] 📐 [POS] ✅ Using first button as potential 'Оригинал': '{button_text.strip()}'")
+                                    log_info(f"[ASYNC_CROP] 📐 [POS] [OK] Using first button as potential 'Оригинал': '{button_text.strip()}'")
                                     return button
                                     
                         except Exception as e:
@@ -4198,7 +4198,7 @@ async def _find_any_available_option_async(page):
                 
                 if element and await element.is_visible():
                     element_text = await element.text_content() or ""
-                    log_info(f"[ASYNC_CROP] 📐 [ANY] ✅ Found fallback option: '{element_text.strip()}' with selector: {selector}")
+                    log_info(f"[ASYNC_CROP] 📐 [ANY] [OK] Found fallback option: '{element_text.strip()}' with selector: {selector}")
                     return element
                     
             except Exception as e:
@@ -4223,7 +4223,7 @@ async def _human_click_with_timeout_async(page, element, log_prefix="HUMAN_CLICK
             await asyncio.sleep(random.uniform(0.2, 0.5))
             await element.click()
             await asyncio.sleep(random.uniform(0.5, 1.0))
-            log_info(f"[{log_prefix}] ✅ Human click successful")
+            log_info(f"[{log_prefix}] [OK] Human click successful")
             
             # Restore original timeout
             page.set_default_timeout(original_timeout)
@@ -4246,22 +4246,22 @@ async def _quick_click_async(page, element, log_prefix="QUICK_CLICK"):
     try:
         # Try force click first (fastest)
         await element.click(force=True, timeout=3000)
-        log_info(f"[{log_prefix}] ✅ Quick click successful")
+        log_info(f"[{log_prefix}] [OK] Quick click successful")
         return True
     except Exception as e:
         try:
             # Fallback to JavaScript click
             await page.evaluate('(element) => element.click()', element)
-            log_info(f"[{log_prefix}] ✅ JavaScript click successful")
+            log_info(f"[{log_prefix}] [OK] JavaScript click successful")
             return True
         except Exception as e2:
             # Last resort: standard click with short timeout
             try:
                 await element.click(timeout=2000)
-                log_info(f"[{log_prefix}] ✅ Standard click successful")
+                log_info(f"[{log_prefix}] [OK] Standard click successful")
                 return True
             except Exception as e3:
-                log_info(f"[{log_prefix}] ⚠️ All click methods failed: {str(e3)[:100]}")
+                log_info(f"[{log_prefix}] [WARN] All click methods failed: {str(e3)[:100]}")
                 return False
 
 async def simulate_page_scan_async(page):
@@ -4352,14 +4352,14 @@ async def perform_final_cleanup_async(page, username):
         try:
             await page.goto("https://www.instagram.com/", wait_until="domcontentloaded", timeout=30000)
             await asyncio.sleep(random.uniform(2, 4))
-            log_info("[ASYNC_CLEANUP] ✅ Navigated to home page")
+            log_info("[ASYNC_CLEANUP] [OK] Navigated to home page")
         except Exception as nav_error:
             log_info(f"[ASYNC_CLEANUP] Navigation error: {str(nav_error)}")
         
         # Clear any temporary state
         try:
             await page.evaluate("localStorage.clear(); sessionStorage.clear();")
-            log_info("[ASYNC_CLEANUP] ✅ Cleared browser storage")
+            log_info("[ASYNC_CLEANUP] [OK] Cleared browser storage")
         except Exception as storage_error:
             log_info(f"[ASYNC_CLEANUP] Storage cleanup error: {str(storage_error)}")
         
@@ -4369,7 +4369,7 @@ async def perform_final_cleanup_async(page, username):
 async def log_video_info_async(video_index, total_videos, video_file_path, video_obj):
     """Log video information - async version"""
     try:
-        log_info(f"[ASYNC_UPLOAD] 📹 Processing video {video_index}/{total_videos}: {os.path.basename(video_file_path)}")
+        log_info(f"[ASYNC_UPLOAD] [CAMERA] Processing video {video_index}/{total_videos}: {os.path.basename(video_file_path)}")
         
         # Log video details if available - handle both VideoData and Django model objects
         title = None
@@ -4383,7 +4383,7 @@ async def log_video_info_async(video_index, total_videos, video_file_path, video
         
         if title:
             title_preview = title[:50] + "..." if len(title) > 50 else title
-            log_info(f"[ASYNC_UPLOAD] 📝 Title: {title_preview}")
+            log_info(f"[ASYNC_UPLOAD] [TEXT] Title: {title_preview}")
         
         # Log file size
         if os.path.exists(video_file_path):
@@ -4427,13 +4427,13 @@ async def perform_enhanced_instagram_login_async(page, account_details):
             try:
                 username_field = await page.query_selector(selector)
                 if username_field and await username_field.is_visible():
-                    log_info(f"✅ [ASYNC_LOGIN] Found username field: {selector}")
+                    log_info(f"[OK] [ASYNC_LOGIN] Found username field: {selector}")
                     break
             except:
                 continue
         
         if not username_field:
-            log_info("❌ [ASYNC_LOGIN] Username field not found")
+            log_info("[FAIL] [ASYNC_LOGIN] Username field not found")
             return False
         
         # Find password field with enhanced selectors
@@ -4452,17 +4452,17 @@ async def perform_enhanced_instagram_login_async(page, account_details):
             try:
                 password_field = await page.query_selector(selector)
                 if password_field and await password_field.is_visible():
-                    log_info(f"✅ [ASYNC_LOGIN] Found password field: {selector}")
+                    log_info(f"[OK] [ASYNC_LOGIN] Found password field: {selector}")
                     break
             except:
                 continue
         
         if not password_field:
-            log_info("❌ [ASYNC_LOGIN] Password field not found")
+            log_info("[FAIL] [ASYNC_LOGIN] Password field not found")
             return False
         
         # Clear fields and enter credentials with human-like behavior
-        log_info("📝 [ASYNC_LOGIN] Filling credentials...")
+        log_info("[TEXT] [ASYNC_LOGIN] Filling credentials...")
         
         # Focus and clear username field
         await username_field.click()
@@ -4489,7 +4489,7 @@ async def perform_enhanced_instagram_login_async(page, account_details):
         await asyncio.sleep(random.uniform(1, 2))
         
         # ДОПОЛНИТЕЛЬНАЯ ПАУЗА: Ждем после заполнения полей перед отправкой (like sync)
-        log_info("⏳ [ASYNC_LOGIN] Waiting after filling credentials before form submission...")
+        log_info("[WAIT] [ASYNC_LOGIN] Waiting after filling credentials before form submission...")
         await asyncio.sleep(random.uniform(3, 6))  # Дополнительная пауза для человекоподобного поведения
         
         # Find and click login button with enhanced selectors
@@ -4511,13 +4511,13 @@ async def perform_enhanced_instagram_login_async(page, account_details):
                     # Verify this is actually a login button
                     button_text = await login_button.text_content() or ""
                     if any(keyword in button_text.lower() for keyword in ['войти', 'log in', 'login', 'submit']):
-                        log_info(f"✅ [ASYNC_LOGIN] Found login button: '{button_text.strip()}'")
+                        log_info(f"[OK] [ASYNC_LOGIN] Found login button: '{button_text.strip()}'")
                         break
             except:
                 continue
         
         if not login_button:
-            log_info("❌ [ASYNC_LOGIN] Login button not found")
+            log_info("[FAIL] [ASYNC_LOGIN] Login button not found")
             return False
         
         # Human-like interaction before clicking
@@ -4536,10 +4536,10 @@ async def perform_enhanced_instagram_login_async(page, account_details):
     except Exception as e:
         error_message = str(e)
         if 'suspend' in error_message.lower():
-            log_info(f"🚫 [ASYNC_LOGIN] Account suspended during login: {error_message}")
+            log_info(f"[BLOCK] [ASYNC_LOGIN] Account suspended during login: {error_message}")
             return "SUSPENDED"
         else:
-            log_error(f"❌ [ASYNC_LOGIN] Enhanced login error: {error_message}")
+            log_error(f"[FAIL] [ASYNC_LOGIN] Enhanced login error: {error_message}")
             return False
 
 async def handle_login_completion_async(page, account_details):
@@ -4561,19 +4561,19 @@ async def handle_login_completion_async(page, account_details):
             # Пытаемся решить капчу на challenge-странице
             captcha_result = await handle_recaptcha_if_present_async(page, account_details)
             if captcha_result:
-                log_info("✅ [ASYNC_LOGIN] Captcha solved on challenge page")
+                log_info("[OK] [ASYNC_LOGIN] Captcha solved on challenge page")
                 # Ждем немного после решения капчи
                 await asyncio.sleep(random.uniform(3, 5))
                 # Проверяем, что мы больше не на challenge-странице
                 current_url = page.url
                 if '/challenge/' not in current_url:
-                    log_info("✅ [ASYNC_LOGIN] Successfully passed challenge page")
+                    log_info("[OK] [ASYNC_LOGIN] Successfully passed challenge page")
                     return True
                 else:
-                    log_info("⚠️ [ASYNC_LOGIN] Still on challenge page after captcha solving")
+                    log_info("[WARN] [ASYNC_LOGIN] Still on challenge page after captcha solving")
                     return False
             else:
-                log_info("❌ [ASYNC_LOGIN] Failed to solve captcha on challenge page")
+                log_info("[FAIL] [ASYNC_LOGIN] Failed to solve captcha on challenge page")
                 return False
         
         # Check for successful login (not on login page anymore)
@@ -4596,10 +4596,10 @@ async def handle_login_completion_async(page, account_details):
                 try:
                     element = await page.query_selector(indicator)
                     if element and await element.is_visible():
-                        log_info(f"✅ [ASYNC_LOGIN] Login successful - found logged-in indicator: {indicator}")
+                        log_info(f"[OK] [ASYNC_LOGIN] Login successful - found logged-in indicator: {indicator}")
                         return True
                 except Exception as e:
-                    log_warning(f"⚠️ [ASYNC_LOGIN] Error checking indicator {indicator}: {e}")
+                    log_warning(f"[WARN] [ASYNC_LOGIN] Error checking indicator {indicator}: {e}")
                     continue
                 except:
                     continue
@@ -4611,7 +4611,7 @@ async def handle_login_completion_async(page, account_details):
             # Check for suspension
             suspension_keywords = ['suspend', 'приостановлен', 'заблокирован', 'disabled']
             if any(keyword in page_text.lower() for keyword in suspension_keywords):
-                log_info("🚫 [ASYNC_LOGIN] Account suspension detected in login response")
+                log_info("[BLOCK] [ASYNC_LOGIN] Account suspension detected in login response")
                 return "SUSPENDED"
             
             # Check for other errors
@@ -4620,19 +4620,19 @@ async def handle_login_completion_async(page, account_details):
                 if await error_element.is_visible():
                     error_text = await error_element.text_content() or ""
                     if error_text.strip():
-                        log_error(f"❌ [ASYNC_LOGIN] Login error detected: {error_text}")
+                        log_error(f"[FAIL] [ASYNC_LOGIN] Login error detected: {error_text}")
                         
                         if any(keyword in error_text.lower() for keyword in ['suspend', 'disabled', 'заблокирован']):
                             return "SUSPENDED"
                         
         except Exception as e:
-            log_warning(f"⚠️ [ASYNC_LOGIN] Error checking for login errors: {str(e)}")
+            log_warning(f"[WARN] [ASYNC_LOGIN] Error checking for login errors: {str(e)}")
         
         # Check for verification requirements
         verification_type = await determine_verification_type_async(page)
         
         if verification_type == "authenticator":
-            log_info("📱 [ASYNC_LOGIN] 2FA/Authenticator verification required")
+            log_info("[PHONE] [ASYNC_LOGIN] 2FA/Authenticator verification required")
             return await handle_2fa_async(page, account_details)
         elif verification_type == "email_code":
             log_info("📧 [ASYNC_LOGIN] Email verification code required")
@@ -4641,20 +4641,20 @@ async def handle_login_completion_async(page, account_details):
             log_info("📧 [ASYNC_LOGIN] Email field input required")
             return await handle_email_field_verification_async(page, account_details)
         elif verification_type == "unknown":
-            log_info("✅ [ASYNC_LOGIN] No verification required or unknown verification type")
+            log_info("[OK] [ASYNC_LOGIN] No verification required or unknown verification type")
             return True
         
         # If we're still on login page, login probably failed
         if '/accounts/login' in current_url:
-            log_info("❌ [ASYNC_LOGIN] Still on login page - login likely failed")
+            log_info("[FAIL] [ASYNC_LOGIN] Still on login page - login likely failed")
             return False
         
         # Если мы дошли сюда, логин не завершен
-        log_info("❌ [ASYNC_LOGIN] Login not completed - unknown state")
+        log_info("[FAIL] [ASYNC_LOGIN] Login not completed - unknown state")
         return False
         
     except Exception as e:
-        log_error(f"❌ [ASYNC_LOGIN] Error in login completion: {str(e)}")
+        log_error(f"[FAIL] [ASYNC_LOGIN] Error in login completion: {str(e)}")
         return False
 
 async def handle_2fa_async(page, account_details):
@@ -4662,10 +4662,10 @@ async def handle_2fa_async(page, account_details):
     try:
         tfa_secret = account_details.get('tfa_secret')
         if not tfa_secret:
-            log_info("❌ [ASYNC_2FA] 2FA required but no secret provided")
+            log_info("[FAIL] [ASYNC_2FA] 2FA required but no secret provided")
             return False
         
-        log_info("📱 [ASYNC_2FA] Handling 2FA authentication...")
+        log_info("[PHONE] [ASYNC_2FA] Handling 2FA authentication...")
         
         # Find 2FA code input
         code_input = None
@@ -4685,16 +4685,16 @@ async def handle_2fa_async(page, account_details):
                 continue
         
         if not code_input:
-            log_info("❌ [ASYNC_2FA] 2FA code input not found")
+            log_info("[FAIL] [ASYNC_2FA] 2FA code input not found")
             return False
         
         # Get 2FA code from API
         code = await get_2fa_code_async(tfa_secret)
         if not code:
-            log_info("❌ [ASYNC_2FA] Failed to get 2FA code from API")
+            log_info("[FAIL] [ASYNC_2FA] Failed to get 2FA code from API")
             return False
         
-        log_info(f"📱 [ASYNC_2FA] Got 2FA code from API: {code}")
+        log_info(f"[PHONE] [ASYNC_2FA] Got 2FA code from API: {code}")
         
         # Enter 2FA code
         await code_input.click()
@@ -4711,14 +4711,14 @@ async def handle_2fa_async(page, account_details):
         # Check if 2FA was successful
         current_url = page.url
         if '/accounts/login' not in current_url and 'challenge' not in current_url:
-            log_info("✅ [ASYNC_2FA] 2FA authentication successful")
+            log_info("[OK] [ASYNC_2FA] 2FA authentication successful")
             return True
         else:
-            log_info("❌ [ASYNC_2FA] 2FA authentication failed")
+            log_info("[FAIL] [ASYNC_2FA] 2FA authentication failed")
             return False
             
     except Exception as e:
-        log_error(f"❌ [ASYNC_2FA] Error in 2FA handling: {str(e)}")
+        log_error(f"[FAIL] [ASYNC_2FA] Error in 2FA handling: {str(e)}")
         return False
 
 async def handle_email_verification_async(page, account_details):
@@ -4728,7 +4728,7 @@ async def handle_email_verification_async(page, account_details):
         email_password = account_details.get('email_password')
         
         if not email_login or not email_password:
-            log_info("❌ [ASYNC_EMAIL] Email credentials not provided for verification")
+            log_info("[FAIL] [ASYNC_EMAIL] Email credentials not provided for verification")
             return False
         
         log_info("📧 [ASYNC_EMAIL] Starting email verification...")
@@ -4754,7 +4754,7 @@ async def handle_email_verification_async(page, account_details):
                 continue
         
         if not code_input:
-            log_info("❌ [ASYNC_EMAIL] Email verification code input not found")
+            log_info("[FAIL] [ASYNC_EMAIL] Email verification code input not found")
             return False
         
         # Get verification code from email
@@ -4778,17 +4778,17 @@ async def handle_email_verification_async(page, account_details):
             # Check if verification was successful
             current_url = page.url
             if '/accounts/login' not in current_url and 'challenge' not in current_url:
-                log_info("✅ [ASYNC_EMAIL] Email verification successful")
+                log_info("[OK] [ASYNC_EMAIL] Email verification successful")
                 return True
             else:
-                log_info("❌ [ASYNC_EMAIL] Email verification failed")
+                log_info("[FAIL] [ASYNC_EMAIL] Email verification failed")
                 return False
         else:
-            log_info("❌ [ASYNC_EMAIL] Failed to get email verification code")
+            log_info("[FAIL] [ASYNC_EMAIL] Failed to get email verification code")
             return False
             
     except Exception as e:
-        log_error(f"❌ [ASYNC_EMAIL] Error in email verification: {str(e)}")
+        log_error(f"[FAIL] [ASYNC_EMAIL] Error in email verification: {str(e)}")
         return False
 
 async def handle_email_field_verification_async(page, account_details):
@@ -4797,7 +4797,7 @@ async def handle_email_field_verification_async(page, account_details):
         email_login = account_details.get('email_login')
         
         if not email_login:
-            log_info("❌ [ASYNC_EMAIL_FIELD] Email login not provided")
+            log_info("[FAIL] [ASYNC_EMAIL_FIELD] Email login not provided")
             return False
         
         log_info("📧 [ASYNC_EMAIL_FIELD] Starting email field verification...")
@@ -4821,7 +4821,7 @@ async def handle_email_field_verification_async(page, account_details):
                 continue
         
         if not email_input:
-            log_info("❌ [ASYNC_EMAIL_FIELD] Email input field not found")
+            log_info("[FAIL] [ASYNC_EMAIL_FIELD] Email input field not found")
             return False
         
         # Enter email address
@@ -4839,14 +4839,14 @@ async def handle_email_field_verification_async(page, account_details):
         # Check if email submission was successful
         current_url = page.url
         if '/accounts/login' not in current_url and 'challenge' not in current_url:
-            log_info("✅ [ASYNC_EMAIL_FIELD] Email field verification successful")
+            log_info("[OK] [ASYNC_EMAIL_FIELD] Email field verification successful")
             return True
         else:
-            log_info("❌ [ASYNC_EMAIL_FIELD] Email field verification failed")
+            log_info("[FAIL] [ASYNC_EMAIL_FIELD] Email field verification failed")
             return False
             
     except Exception as e:
-        log_error(f"❌ [ASYNC_EMAIL_FIELD] Error in email field verification: {str(e)}")
+        log_error(f"[FAIL] [ASYNC_EMAIL_FIELD] Error in email field verification: {str(e)}")
         return False
 
 async def handle_save_login_info_dialog_async(page):
@@ -4888,7 +4888,7 @@ async def handle_save_login_info_dialog_async(page):
                     if save_button and await save_button.is_visible():
                         button_text = await save_button.text_content() or ""
                         if any(keyword in button_text.lower() for keyword in ['сохранить', 'save']):
-                            log_info(f"[ASYNC_SAVE_LOGIN] ✅ Found save button: '{button_text.strip()}'")
+                            log_info(f"[ASYNC_SAVE_LOGIN] [OK] Found save button: '{button_text.strip()}'")
                             break
                 except:
                     continue
@@ -4899,13 +4899,13 @@ async def handle_save_login_info_dialog_async(page):
                     await asyncio.sleep(random.uniform(0.5, 1.0))
                     await save_button.click()
                     await asyncio.sleep(random.uniform(2, 4))
-                    log_info("[ASYNC_SAVE_LOGIN] ✅ Successfully clicked save login info button")
+                    log_info("[ASYNC_SAVE_LOGIN] [OK] Successfully clicked save login info button")
                     return True
                 except Exception as e:
-                    log_info(f"[ASYNC_SAVE_LOGIN] ❌ Error clicking save button: {str(e)}")
+                    log_info(f"[ASYNC_SAVE_LOGIN] [FAIL] Error clicking save button: {str(e)}")
             
             # If no save button, look for "Not now" button
-            log_info("[ASYNC_SAVE_LOGIN] ⚠️ Could not find save button, looking for 'Not now' button...")
+            log_info("[ASYNC_SAVE_LOGIN] [WARN] Could not find save button, looking for 'Not now' button...")
             not_now_selectors = [
                 'button:has-text("Не сейчас")',
                 'button:has-text("Not now")',
@@ -4925,7 +4925,7 @@ async def handle_save_login_info_dialog_async(page):
                         await asyncio.sleep(random.uniform(0.5, 1.0))
                         await not_now_button.click()
                         await asyncio.sleep(random.uniform(2, 4))
-                        log_info("[ASYNC_SAVE_LOGIN] ✅ Successfully clicked 'Not now' button")
+                        log_info("[ASYNC_SAVE_LOGIN] [OK] Successfully clicked 'Not now' button")
                         return True
                 except:
                     continue
@@ -4934,7 +4934,7 @@ async def handle_save_login_info_dialog_async(page):
         return True
         
     except Exception as e:
-        log_error(f"❌ [ASYNC_SAVE_LOGIN] Error handling save login dialog: {str(e)}")
+        log_error(f"[FAIL] [ASYNC_SAVE_LOGIN] Error handling save login dialog: {str(e)}")
         return True  # Continue anyway
 
 # Add configuration for parallel processing
@@ -4951,19 +4951,19 @@ async def run_bulk_upload_task_parallel_async(task_id):
     Main advantage over sync version: processes multiple accounts simultaneously
     """
     try:
-        log_info(f"🚀 [PARALLEL_ASYNC] Starting parallel bulk upload task {task_id}")
+        log_info(f"[START] [PARALLEL_ASYNC] Starting parallel bulk upload task {task_id}")
         
         # Get task and accounts
         task_data = await get_task_with_accounts_async(task_id)
         if not task_data:
-            log_error(f"❌ [PARALLEL_ASYNC] Task {task_id} not found")
+            log_error(f"[FAIL] [PARALLEL_ASYNC] Task {task_id} not found")
             return False
         
         task, account_tasks = task_data
         total_accounts = len(account_tasks)
         
         if total_accounts == 0:
-            log_warning(f"⚠️ [PARALLEL_ASYNC] No accounts found for task {task_id}")
+            log_warning(f"[WARN] [PARALLEL_ASYNC] No accounts found for task {task_id}")
             return True
         
         log_info(f"📊 [PARALLEL_ASYNC] Processing {total_accounts} accounts with max {PARALLEL_CONFIG['MAX_CONCURRENT_ACCOUNTS']} concurrent")
@@ -4996,42 +4996,42 @@ async def run_bulk_upload_task_parallel_async(task_id):
             # Delay between batches to avoid overwhelming Instagram
             if batch_num < len(account_batches):
                 delay = random.uniform(30, 60)  # 30-60 seconds between batches
-                log_info(f"⏳ [PARALLEL_ASYNC] Waiting {delay:.1f}s before next batch...")
+                log_info(f"[WAIT] [PARALLEL_ASYNC] Waiting {delay:.1f}s before next batch...")
                 await asyncio.sleep(delay)
         
         # Final summary
-        log_info(f"✅ [PARALLEL_ASYNC] Task {task_id} completed:")
+        log_info(f"[OK] [PARALLEL_ASYNC] Task {task_id} completed:")
         log_info(f"   📈 Successful: {results['successful']}")
-        log_info(f"   ❌ Failed: {results['failed']}")
-        log_info(f"   📱 Phone verification: {results['phone_verification']}")
-        log_info(f"   🤖 Human verification: {results['human_verification']}")
-        log_info(f"   🚫 Suspended: {results['suspended']}")
-        log_info(f"   🎬 Total uploaded: {results['total_uploaded']}")
+        log_info(f"   [FAIL] Failed: {results['failed']}")
+        log_info(f"   [PHONE] Phone verification: {results['phone_verification']}")
+        log_info(f"   [BOT] Human verification: {results['human_verification']}")
+        log_info(f"   [BLOCK] Suspended: {results['suspended']}")
+        log_info(f"   [VIDEO] Total uploaded: {results['total_uploaded']}")
         
         # Update task status
         await update_task_status_async(task_id, 'COMPLETED', results)
         
-        # 🧹 ОЧИСТКА: Удаляем оригинальные видео файлы из media/bot/bulk_videos/
+        # [CLEAN] ОЧИСТКА: Удаляем оригинальные видео файлы из media/bot/bulk_videos/
         try:
             deleted_files = await cleanup_original_video_files_async(task_id)
             if deleted_files > 0:
-                log_info(f"🗑️ [PARALLEL_ASYNC] Cleaned up {deleted_files} original video files from media directory")
+                log_info(f"[DELETE] [PARALLEL_ASYNC] Cleaned up {deleted_files} original video files from media directory")
         except Exception as e:
-            log_warning(f"⚠️ [PARALLEL_ASYNC] Failed to cleanup original video files: {str(e)}")
+            log_warning(f"[WARN] [PARALLEL_ASYNC] Failed to cleanup original video files: {str(e)}")
         
         return True
         
     except Exception as e:
-        log_info(f"💥 [PARALLEL_ASYNC] Critical error in parallel task {task_id}: {str(e)}")
+        log_info(f"[EXPLODE] [PARALLEL_ASYNC] Critical error in parallel task {task_id}: {str(e)}")
         await update_task_status_async(task_id, 'FAILED', {'error': str(e)})
         
-        # 🧹 ОЧИСТКА: Удаляем оригинальные видео файлы даже при ошибке
+        # [CLEAN] ОЧИСТКА: Удаляем оригинальные видео файлы даже при ошибке
         try:
             deleted_files = await cleanup_original_video_files_async(task_id)
             if deleted_files > 0:
-                log_info(f"🗑️ [PARALLEL_ASYNC] Cleaned up {deleted_files} original video files after error")
+                log_info(f"[DELETE] [PARALLEL_ASYNC] Cleaned up {deleted_files} original video files after error")
         except Exception as cleanup_error:
-            log_warning(f"⚠️ [PARALLEL_ASYNC] Failed to cleanup original video files after error: {str(cleanup_error)}")
+            log_warning(f"[WARN] [PARALLEL_ASYNC] Failed to cleanup original video files after error: {str(cleanup_error)}")
         
         return False
 
@@ -5078,7 +5078,7 @@ async def cleanup_original_video_files_async(task_id: int) -> int:
                             for other_video in other_videos_with_same_file:
                                 other_task = other_video.bulk_task
                                 if other_task.status in ['RUNNING', 'PENDING']:
-                                    return False, f'🚫 File {filename} is still used by running task "{other_task.name}" (ID: {other_task.id})'
+                                    return False, f'[BLOCK] File {filename} is still used by running task "{other_task.name}" (ID: {other_task.id})'
                             
                             return True, None
                         
@@ -5093,25 +5093,25 @@ async def cleanup_original_video_files_async(task_id: int) -> int:
                             
                             filename = await delete_file()
                             deleted_count += 1
-                            log_info(f"🗑️ [CLEANUP] Deleted original video file: {filename}")
+                            log_info(f"[DELETE] [CLEANUP] Deleted original video file: {filename}")
                         else:
-                            log_info(f"⏸️ [CLEANUP] Skipped deleting file (still in use by other tasks): {os.path.basename(file_path)}")
+                            log_info(f"[PAUSE] [CLEANUP] Skipped deleting file (still in use by other tasks): {os.path.basename(file_path)}")
                             if warning_msg:
-                                log_warning(f"⚠️ [CLEANUP] {warning_msg}")
+                                log_warning(f"[WARN] [CLEANUP] {warning_msg}")
                         
                 except Exception as e:
-                    log_warning(f"⚠️ [CLEANUP] Failed to delete video file {video.id}: {str(e)}")
+                    log_warning(f"[WARN] [CLEANUP] Failed to delete video file {video.id}: {str(e)}")
         
         return deleted_count
         
     except Exception as e:
-        log_error(f"❌ [CLEANUP] Error in cleanup process: {str(e)}")
+        log_error(f"[FAIL] [CLEANUP] Error in cleanup process: {str(e)}")
         return 0
 
 async def process_account_batch_async(account_tasks, task, batch_num):
     """Process a batch of accounts with controlled concurrency"""
     try:
-        log_info(f"🔄 [BATCH_{batch_num}] Starting batch processing with {len(account_tasks)} accounts")
+        log_info(f"[RETRY] [BATCH_{batch_num}] Starting batch processing with {len(account_tasks)} accounts")
         
         # Create semaphore to limit concurrent operations
         semaphore = asyncio.Semaphore(PARALLEL_CONFIG['MAX_CONCURRENT_ACCOUNTS'])
@@ -5141,7 +5141,7 @@ async def process_account_batch_async(account_tasks, task, batch_num):
         
         for i, result in enumerate(account_results):
             if isinstance(result, Exception):
-                log_info(f"💥 [BATCH_{batch_num}] Account {i+1} failed with exception: {str(result)}")
+                log_info(f"[EXPLODE] [BATCH_{batch_num}] Account {i+1} failed with exception: {str(result)}")
                 batch_results['failed'] += 1
             elif isinstance(result, tuple) and len(result) >= 3:
                 status, uploaded, failed = result[0], result[1], result[2]
@@ -5162,11 +5162,11 @@ async def process_account_batch_async(account_tasks, task, batch_num):
             else:
                 batch_results['failed'] += 1
         
-        log_info(f"✅ [BATCH_{batch_num}] Completed: {batch_results['successful']} successful, {batch_results['failed']} failed")
+        log_info(f"[OK] [BATCH_{batch_num}] Completed: {batch_results['successful']} successful, {batch_results['failed']} failed")
         return batch_results
         
     except Exception as e:
-        log_info(f"💥 [BATCH_{batch_num}] Batch processing error: {str(e)}")
+        log_info(f"[EXPLODE] [BATCH_{batch_num}] Batch processing error: {str(e)}")
         return {'failed': len(account_tasks)}
 
 async def process_single_account_with_semaphore_async(semaphore, account_task, task, batch_num):
@@ -5176,33 +5176,33 @@ async def process_single_account_with_semaphore_async(semaphore, account_task, t
             # Get account details
             account_details = await get_account_details_async(account_task.account_id)
             if not account_details:
-                log_error(f"❌ [BATCH_{batch_num}] Account {account_task.account_id} details not found")
+                log_error(f"[FAIL] [BATCH_{batch_num}] Account {account_task.account_id} details not found")
                 return ("ERROR", 0, 1)
             
             username = account_details['username']
-            log_info(f"🎯 [BATCH_{batch_num}] Starting account: {username}")
+            log_info(f"[TARGET] [BATCH_{batch_num}] Starting account: {username}")
             
             # Add random delay to avoid simultaneous starts
             start_delay = random.uniform(*PARALLEL_CONFIG['ACCOUNT_START_DELAY'])
-            log_info(f"⏳ [BATCH_{batch_num}] Account {username} waiting {start_delay:.1f}s before start...")
+            log_info(f"[WAIT] [BATCH_{batch_num}] Account {username} waiting {start_delay:.1f}s before start...")
             await asyncio.sleep(start_delay)
             
             # Get videos for this account
             videos = await get_assigned_videos_async(account_task.id)
             if not videos:
-                log_warning(f"⚠️ [BATCH_{batch_num}] No videos assigned to account {username}")
+                log_warning(f"[WARN] [BATCH_{batch_num}] No videos assigned to account {username}")
                 return ("SUCCESS", 0, 0)
             
             # Prepare uniquified videos
             video_files = await prepare_unique_videos_async(account_task, videos)
             if not video_files:
-                log_error(f"❌ [BATCH_{batch_num}] Failed to prepare videos for account {username}")
+                log_error(f"[FAIL] [BATCH_{batch_num}] Failed to prepare videos for account {username}")
                 return ("ERROR", 0, 1)
             
             # Process account with retries
             for attempt in range(1, PARALLEL_CONFIG['MAX_RETRIES_PER_ACCOUNT'] + 1):
                 try:
-                    log_info(f"🔄 [BATCH_{batch_num}] Account {username} attempt {attempt}/{PARALLEL_CONFIG['MAX_RETRIES_PER_ACCOUNT']}")
+                    log_info(f"[RETRY] [BATCH_{batch_num}] Account {username} attempt {attempt}/{PARALLEL_CONFIG['MAX_RETRIES_PER_ACCOUNT']}")
                     
                     result = await run_dolphin_browser_async(
                         account_details, videos, video_files, task.id, account_task.id
@@ -5210,27 +5210,27 @@ async def process_single_account_with_semaphore_async(semaphore, account_task, t
                     
                     # If successful or permanent failure, don't retry
                     if result[0] in ["SUCCESS", "SUSPENDED", "PHONE_VERIFICATION_REQUIRED", "HUMAN_VERIFICATION_REQUIRED"]:
-                        log_info(f"✅ [BATCH_{batch_num}] Account {username} completed: {result[0]}")
+                        log_info(f"[OK] [BATCH_{batch_num}] Account {username} completed: {result[0]}")
                         return result
                     
                     # If temporary failure and not last attempt, retry
                     if attempt < PARALLEL_CONFIG['MAX_RETRIES_PER_ACCOUNT']:
                         retry_delay = random.uniform(60, 120)  # 1-2 minutes between retries
-                        log_warning(f"⚠️ [BATCH_{batch_num}] Account {username} failed, retrying in {retry_delay:.1f}s...")
+                        log_warning(f"[WARN] [BATCH_{batch_num}] Account {username} failed, retrying in {retry_delay:.1f}s...")
                         await asyncio.sleep(retry_delay)
                     
                 except Exception as e:
-                    log_info(f"💥 [BATCH_{batch_num}] Account {username} attempt {attempt} exception: {str(e)}")
+                    log_info(f"[EXPLODE] [BATCH_{batch_num}] Account {username} attempt {attempt} exception: {str(e)}")
                     if attempt >= PARALLEL_CONFIG['MAX_RETRIES_PER_ACCOUNT']:
                         return ("ERROR", 0, 1)
                     await asyncio.sleep(random.uniform(30, 60))
             
             # All retries exhausted
-            log_error(f"❌ [BATCH_{batch_num}] Account {username} failed after all retries")
+            log_error(f"[FAIL] [BATCH_{batch_num}] Account {username} failed after all retries")
             return ("ERROR", 0, 1)
             
         except Exception as e:
-            log_info(f"💥 [BATCH_{batch_num}] Critical error processing account: {str(e)}")
+            log_info(f"[EXPLODE] [BATCH_{batch_num}] Critical error processing account: {str(e)}")
             return ("ERROR", 0, 1)
 
 # Helper functions for async operations
@@ -5252,7 +5252,7 @@ async def get_task_with_accounts_async(task_id):
         return await get_task_data()
         
     except Exception as e:
-        log_error(f"❌ [DATABASE] Error getting task data: {str(e)}")
+        log_error(f"[FAIL] [DATABASE] Error getting task data: {str(e)}")
         return None
 
 async def get_account_details_async(account_id):
@@ -5274,7 +5274,7 @@ async def get_account_details_async(account_id):
                     proxy_info = account_details['proxy']
                     log_info(f"🔒 [ACCOUNT_DETAILS] Proxy: {proxy_info.get('host')}:{proxy_info.get('port')} (type: {proxy_info.get('type', 'http')})")
                 else:
-                    log_warning(f"⚠️ [ACCOUNT_DETAILS] No proxy assigned to account {account.username}")
+                    log_warning(f"[WARN] [ACCOUNT_DETAILS] No proxy assigned to account {account.username}")
                 
                 return account_details
             except InstagramAccount.DoesNotExist:
@@ -5283,7 +5283,7 @@ async def get_account_details_async(account_id):
         return await get_account()
         
     except Exception as e:
-        log_error(f"❌ [DATABASE] Error getting account details: {str(e)}")
+        log_error(f"[FAIL] [DATABASE] Error getting account details: {str(e)}")
         return None
 
 async def get_assigned_videos_async(account_task_id):
@@ -5323,18 +5323,18 @@ async def get_assigned_videos_async(account_task_id):
                             
                             # Set title_data for immediate use
                             video.title_data = title
-                            log_info(f"[ASYNC_DATA] ✅ ASSIGNED title '{title.title[:50]}...' to video {i+1}")
+                            log_info(f"[ASYNC_DATA] [OK] ASSIGNED title '{title.title[:50]}...' to video {i+1}")
                         else:
                             # If more videos than titles, use last title
                             last_title = unassigned_titles[-1] if unassigned_titles else None
                             if last_title:
                                 video.title_data = last_title
-                                log_info(f"[ASYNC_DATA] ⚠️ Video {i+1} using last available title: '{last_title.title[:50]}...'")
+                                log_info(f"[ASYNC_DATA] [WARN] Video {i+1} using last available title: '{last_title.title[:50]}...'")
                             else:
                                 video.title_data = None
-                                log_info(f"[ASYNC_DATA] ❌ Video {i+1} has no title available")
+                                log_info(f"[ASYNC_DATA] [FAIL] Video {i+1} has no title available")
                 else:
-                    log_info(f"[ASYNC_DATA] ⚠️ No titles found for task")
+                    log_info(f"[ASYNC_DATA] [WARN] No titles found for task")
                     for video in videos:
                         video.title_data = None
                 
@@ -5348,7 +5348,7 @@ async def get_assigned_videos_async(account_task_id):
         return await get_videos()
         
     except Exception as e:
-        log_error(f"❌ [DATABASE] Error getting assigned videos: {str(e)}")
+        log_error(f"[FAIL] [DATABASE] Error getting assigned videos: {str(e)}")
         return []
 
 async def prepare_unique_videos_async(account_task, videos):
@@ -5360,7 +5360,7 @@ async def prepare_unique_videos_async(account_task, videos):
         from datetime import datetime
         from pathlib import Path
         
-        log_info(f"🎬 [ASYNC_UNIQUIFY] Starting video uniquification for account")
+        log_info(f"[VIDEO] [ASYNC_UNIQUIFY] Starting video uniquification for account")
         
         video_files = []
         temp_files = []
@@ -5368,7 +5368,7 @@ async def prepare_unique_videos_async(account_task, videos):
         for i, video in enumerate(videos):
             try:
                 if not (hasattr(video, 'video_file') and video.video_file):
-                    log_warning(f"⚠️ [ASYNC_UNIQUIFY] Video {i+1} has no video_file, skipping")
+                    log_warning(f"[WARN] [ASYNC_UNIQUIFY] Video {i+1} has no video_file, skipping")
                     continue
                 
                 # Create temporary file from original
@@ -5397,7 +5397,7 @@ async def prepare_unique_videos_async(account_task, videos):
                         for chunk in video.video_file.chunks():
                             tmp.write(chunk)
                     
-                    log_info(f"✅ [ASYNC_UNIQUIFY] Created temp file: {temp_path}")
+                    log_info(f"[OK] [ASYNC_UNIQUIFY] Created temp file: {temp_path}")
                     return temp_path
                 
                 temp_original = await create_temp_file()
@@ -5406,36 +5406,36 @@ async def prepare_unique_videos_async(account_task, videos):
                 if os.path.exists(temp_original) and os.path.getsize(temp_original) > 0:
                     temp_files.append(temp_original)
                     video_files.append(temp_original)
-                    log_info(f"✅ [ASYNC_UNIQUIFY] Verified temp file: {os.path.basename(temp_original)} ({os.path.getsize(temp_original)} bytes)")
+                    log_info(f"[OK] [ASYNC_UNIQUIFY] Verified temp file: {os.path.basename(temp_original)} ({os.path.getsize(temp_original)} bytes)")
                 else:
-                    log_error(f"❌ [ASYNC_UNIQUIFY] Temp file verification failed: {temp_original}")
+                    log_error(f"[FAIL] [ASYNC_UNIQUIFY] Temp file verification failed: {temp_original}")
                     if os.path.exists(temp_original):
-                        log_warning(f"⚠️ [ASYNC_UNIQUIFY] File exists but size is {os.path.getsize(temp_original)} bytes")
+                        log_warning(f"[WARN] [ASYNC_UNIQUIFY] File exists but size is {os.path.getsize(temp_original)} bytes")
                     else:
-                        log_warning(f"⚠️ [ASYNC_UNIQUIFY] File does not exist")
+                        log_warning(f"[WARN] [ASYNC_UNIQUIFY] File does not exist")
                     continue
                 
-                log_info(f"✅ [ASYNC_UNIQUIFY] Prepared video {i+1}/{len(videos)}: {os.path.basename(temp_original)}")
+                log_info(f"[OK] [ASYNC_UNIQUIFY] Prepared video {i+1}/{len(videos)}: {os.path.basename(temp_original)}")
                 
             except Exception as e:
-                log_error(f"❌ [ASYNC_UNIQUIFY] Error preparing video {i+1}: {str(e)}")
+                log_error(f"[FAIL] [ASYNC_UNIQUIFY] Error preparing video {i+1}: {str(e)}")
                 import traceback
                 log_debug(f"🔍 [ASYNC_UNIQUIFY] Traceback: {traceback.format_exc()}")
                 continue
         
-        log_info(f"🎯 [ASYNC_UNIQUIFY] Prepared {len(video_files)} videos for account")
+        log_info(f"[TARGET] [ASYNC_UNIQUIFY] Prepared {len(video_files)} videos for account")
         
         # Final verification - check all files exist
         for i, file_path in enumerate(video_files):
             if not os.path.exists(file_path):
-                log_error(f"❌ [ASYNC_UNIQUIFY] CRITICAL: File {i+1} does not exist: {file_path}")
+                log_error(f"[FAIL] [ASYNC_UNIQUIFY] CRITICAL: File {i+1} does not exist: {file_path}")
             else:
-                log_info(f"✅ [ASYNC_UNIQUIFY] File {i+1} verified: {os.path.basename(file_path)} ({os.path.getsize(file_path)} bytes)")
+                log_info(f"[OK] [ASYNC_UNIQUIFY] File {i+1} verified: {os.path.basename(file_path)} ({os.path.getsize(file_path)} bytes)")
         
         return video_files
         
     except Exception as e:
-        log_error(f"❌ [ASYNC_UNIQUIFY] Critical error preparing videos: {str(e)}")
+        log_error(f"[FAIL] [ASYNC_UNIQUIFY] Critical error preparing videos: {str(e)}")
         import traceback
         log_debug(f"🔍 [ASYNC_UNIQUIFY] Full traceback: {traceback.format_exc()}")
         return []
@@ -5461,7 +5461,7 @@ async def update_task_status_async(task_id, status, results=None):
         return await update_task()
         
     except Exception as e:
-        log_error(f"❌ [DATABASE] Error updating task status: {str(e)}")
+        log_error(f"[FAIL] [DATABASE] Error updating task status: {str(e)}")
         return False
 
 # Main entry point - use parallel version
@@ -5530,15 +5530,15 @@ async def handle_reels_dialog_async(page):
                     # Дополнительная проверка содержимого
                     dialog_text = await dialog_element.text_content()
                     if dialog_text and any(keyword in dialog_text for keyword in ['Reels', 'видео', 'Теперь', 'Now', 'общедоступный', 'public']):
-                        log_info(f"[ASYNC_REELS_DIALOG] ✅ Found Reels dialog with selector: {selector}")
-                        log_info(f"[ASYNC_REELS_DIALOG] 📝 Dialog text preview: {dialog_text[:100]}...")
+                        log_info(f"[ASYNC_REELS_DIALOG] [OK] Found Reels dialog with selector: {selector}")
+                        log_info(f"[ASYNC_REELS_DIALOG] [TEXT] Dialog text preview: {dialog_text[:100]}...")
                         dialog_found = True
                         break
             except Exception as e:
                 continue
         
         if not dialog_found:
-            log_info("[ASYNC_REELS_DIALOG] ⚠️ No Reels dialog found, continuing...")
+            log_info("[ASYNC_REELS_DIALOG] [WARN] No Reels dialog found, continuing...")
             return True
         
         # Ищем кнопку OK в диалоге
@@ -5566,7 +5566,7 @@ async def handle_reels_dialog_async(page):
                     # Проверяем, что кнопка действительно в диалоге
                     button_text = await ok_button.text_content()
                     if button_text and ('OK' in button_text.upper() or 'ОК' in button_text.upper()):
-                        log_info(f"[ASYNC_REELS_DIALOG] ✅ Found OK button with selector: {selector} (text: {button_text})")
+                        log_info(f"[ASYNC_REELS_DIALOG] [OK] Found OK button with selector: {selector} (text: {button_text})")
                         break
                     else:
                         ok_button = None
@@ -5580,7 +5580,7 @@ async def handle_reels_dialog_async(page):
             
             # Кликаем на кнопку
             await ok_button.click()
-            log_info("[ASYNC_REELS_DIALOG] ✅ Clicked OK button")
+            log_info("[ASYNC_REELS_DIALOG] [OK] Clicked OK button")
             
             # Ждем исчезновения диалога
             await asyncio.sleep(random.uniform(1, 2))
@@ -5589,21 +5589,21 @@ async def handle_reels_dialog_async(page):
             try:
                 still_visible = await ok_button.is_visible()
                 if not still_visible:
-                    log_info("[ASYNC_REELS_DIALOG] ✅ Dialog closed successfully")
+                    log_info("[ASYNC_REELS_DIALOG] [OK] Dialog closed successfully")
                 else:
-                    log_info("[ASYNC_REELS_DIALOG] ⚠️ Dialog still visible after click")
+                    log_info("[ASYNC_REELS_DIALOG] [WARN] Dialog still visible after click")
             except:
-                log_info("[ASYNC_REELS_DIALOG] ✅ Dialog closed (element no longer accessible)")
+                log_info("[ASYNC_REELS_DIALOG] [OK] Dialog closed (element no longer accessible)")
             
             return True
         else:
-            log_info("[ASYNC_REELS_DIALOG] ❌ Found dialog but no OK button")
+            log_info("[ASYNC_REELS_DIALOG] [FAIL] Found dialog but no OK button")
             # Попробуем кликнуть на любую кнопку в диалоге
             try:
                 any_button = await dialog_element.query_selector('button')
                 if any_button:
                     button_text = await any_button.text_content()
-                    log_info(f"[ASYNC_REELS_DIALOG] ⚠️ Clicking any button in dialog: {button_text}")
+                    log_info(f"[ASYNC_REELS_DIALOG] [WARN] Clicking any button in dialog: {button_text}")
                     await any_button.click()
                     await asyncio.sleep(random.uniform(1, 2))
                     return True
@@ -5612,7 +5612,7 @@ async def handle_reels_dialog_async(page):
             return False
         
     except Exception as e:
-        log_info(f"[ASYNC_REELS_DIALOG] ❌ Error handling Reels dialog: {str(e)}")
+        log_info(f"[ASYNC_REELS_DIALOG] [FAIL] Error handling Reels dialog: {str(e)}")
         return True  # Продолжаем в любом случае
 
 async def verify_page_elements_state_async(page) -> bool:
@@ -5623,27 +5623,27 @@ async def verify_page_elements_state_async(page) -> bool:
         # Quick check: document ready state
         ready_state = await page.evaluate("document.readyState")
         if ready_state != 'complete':
-            log_info(f"[ASYNC_UPLOAD] ⚠️ Document not ready: {ready_state}")
+            log_info(f"[ASYNC_UPLOAD] [WARN] Document not ready: {ready_state}")
             await asyncio.sleep(2)  # Faster check interval
             return False
         
         # Quick check: main navigation element
         nav_element = await page.query_selector('nav, [role="navigation"], [data-testid="navigation"]')
         if not nav_element:
-            log_info("[ASYNC_UPLOAD] ⚠️ No navigation element found")
+            log_info("[ASYNC_UPLOAD] [WARN] No navigation element found")
             return False
         
         # Quick check: upload button
         upload_button = await page.query_selector('[aria-label*="New post"], [aria-label*="Create"], [data-testid="new-post-button"]')
         if not upload_button or not await upload_button.is_visible():
-            log_info("[ASYNC_UPLOAD] ⚠️ Upload button not found or not visible")
+            log_info("[ASYNC_UPLOAD] [WARN] Upload button not found or not visible")
             return False
         
-        log_info("[ASYNC_UPLOAD] ✅ Page elements verified successfully")
+        log_info("[ASYNC_UPLOAD] [OK] Page elements verified successfully")
         return True
         
     except Exception as e:
-        log_info(f"[ASYNC_UPLOAD] ❌ Error in verify_page_elements_state_async: {str(e)}")
+        log_info(f"[ASYNC_UPLOAD] [FAIL] Error in verify_page_elements_state_async: {str(e)}")
         return False
 
 async def update_account_last_used_async(username: str):
@@ -5661,16 +5661,16 @@ async def update_account_last_used_async(username: str):
                 account.save(update_fields=['last_used'])
                 return True
             except InstagramAccount.DoesNotExist:
-                log_error(f"❌ [DATABASE] Account not found: {username}")
+                log_error(f"[FAIL] [DATABASE] Account not found: {username}")
                 return False
             except Exception as e:
-                log_error(f"❌ [DATABASE] Error updating last_used: {str(e)}")
+                log_error(f"[FAIL] [DATABASE] Error updating last_used: {str(e)}")
                 return False
         
         return await update_last_used()
         
     except Exception as e:
-        log_error(f"❌ [DATABASE] Error in update_account_last_used_async: {str(e)}")
+        log_error(f"[FAIL] [DATABASE] Error in update_account_last_used_async: {str(e)}")
         return False
 
 # Add this new retry function after the imports section (around line 100)
@@ -5687,41 +5687,41 @@ async def retry_navigation_async(page, url, max_attempts=3, base_delay=5):
             await page.goto(url, wait_until="domcontentloaded", timeout=60000)
             
             # Wait for page to fully load
-            log_info(f"⏳ [ASYNC_NAVIGATION] Waiting for page to fully load (attempt {attempt + 1})...")
+            log_info(f"[WAIT] [ASYNC_NAVIGATION] Waiting for page to fully load (attempt {attempt + 1})...")
             await asyncio.sleep(8)
             
             # Additional wait for network idle
             try:
                 await page.wait_for_load_state("networkidle", timeout=15000)
-                log_info(f"✅ [ASYNC_NAVIGATION] Network idle state reached (attempt {attempt + 1})")
+                log_info(f"[OK] [ASYNC_NAVIGATION] Network idle state reached (attempt {attempt + 1})")
             except Exception as e:
-                log_warning(f"⚠️ [ASYNC_NAVIGATION] Network idle timeout, continuing (attempt {attempt + 1}): {str(e)}")
+                log_warning(f"[WARN] [ASYNC_NAVIGATION] Network idle timeout, continuing (attempt {attempt + 1}): {str(e)}")
             
             # Wait for DOM to be interactive
             try:
                 await page.wait_for_selector("body", timeout=10000)
-                log_info(f"✅ [ASYNC_NAVIGATION] Page body loaded (attempt {attempt + 1})")
+                log_info(f"[OK] [ASYNC_NAVIGATION] Page body loaded (attempt {attempt + 1})")
             except Exception as e:
-                log_warning(f"⚠️ [ASYNC_NAVIGATION] Body load timeout, continuing (attempt {attempt + 1}): {str(e)}")
+                log_warning(f"[WARN] [ASYNC_NAVIGATION] Body load timeout, continuing (attempt {attempt + 1}): {str(e)}")
             
             # Additional safety wait
             await asyncio.sleep(3)
             
-            log_info(f"✅ [ASYNC_NAVIGATION] Successfully loaded {url} on attempt {attempt + 1}")
+            log_info(f"[OK] [ASYNC_NAVIGATION] Successfully loaded {url} on attempt {attempt + 1}")
             return True
             
         except Exception as e:
             error_msg = str(e)
-            log_error(f"❌ [ASYNC_NAVIGATION] Attempt {attempt + 1} failed: {error_msg}")
+            log_error(f"[FAIL] [ASYNC_NAVIGATION] Attempt {attempt + 1} failed: {error_msg}")
             
             # If this is the last attempt, don't wait
             if attempt == max_attempts - 1:
-                log_error(f"❌ [ASYNC_NAVIGATION] All {max_attempts} attempts failed. Giving up.")
+                log_error(f"[FAIL] [ASYNC_NAVIGATION] All {max_attempts} attempts failed. Giving up.")
                 return False
             
             # Calculate delay with exponential backoff
             delay = base_delay * (2 ** attempt)
-            log_info(f"⏳ [ASYNC_NAVIGATION] Waiting {delay}s before retry...")
+            log_info(f"[WAIT] [ASYNC_NAVIGATION] Waiting {delay}s before retry...")
             await asyncio.sleep(delay)
     
     return False

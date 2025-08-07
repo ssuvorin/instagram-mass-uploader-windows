@@ -105,13 +105,13 @@ def handle_verification_error(account_task, account_details, error_type, error_m
     
     # Map error types to emoji and messages
     display_map = {
-        'PHONE': ('📱', 'Phone verification required'),
-        'HUMAN': ('🤖', 'Human verification required'),
-        'SUSPENDED': ('🚫', 'Account suspended by Instagram')
+        'PHONE': ('[PHONE]', 'Phone verification required'),
+        'HUMAN': ('[BOT]', 'Human verification required'),
+        'SUSPENDED': ('[BLOCK]', 'Account suspended by Instagram')
     }
     
     status = status_map.get(error_type, TaskStatus.FAILED)
-    emoji, display_message = display_map.get(error_type, ('❌', 'Verification required'))
+    emoji, display_message = display_map.get(error_type, ('[FAIL]', 'Verification required'))
     
     # Update account task
     update_account_task(
@@ -147,11 +147,11 @@ def handle_task_completion(task, completed_count, failed_count, total_count):
     elif completed_count > 0:
         log_info(f"Some uploads completed. Completed: {completed_count}, Failed: {failed_count}")
         update_task_status(task, TaskStatus.PARTIALLY_COMPLETED,
-                          f"[{timestamp_str}] ⚠️ Some uploads completed. Completed: {completed_count}, Failed: {failed_count}\n")
+                          f"[{timestamp_str}] [WARN] Some uploads completed. Completed: {completed_count}, Failed: {failed_count}\n")
         return TaskStatus.PARTIALLY_COMPLETED
     else:
         log_error(f"All uploads failed for task: {task.name}")
-        update_task_status(task, TaskStatus.FAILED, f"[{timestamp_str}] ❌ All uploads failed\n")
+        update_task_status(task, TaskStatus.FAILED, f"[{timestamp_str}] [FAIL] All uploads failed\n")
         return TaskStatus.FAILED
 
 
@@ -169,11 +169,11 @@ def handle_emergency_cleanup(account_task, dolphin=None):
             log_info(f"[EMERGENCY_CLEANUP] Stopping Dolphin profile: {dolphin_profile_id}")
             try:
                 dolphin.stop_profile(dolphin_profile_id)
-                log_info(f"[EMERGENCY_CLEANUP] ✅ Dolphin profile {dolphin_profile_id} stopped successfully")
+                log_info(f"[EMERGENCY_CLEANUP] [OK] Dolphin profile {dolphin_profile_id} stopped successfully")
             except Exception as e:
-                log_warning(f"[EMERGENCY_CLEANUP] ⚠️ Error stopping Dolphin profile: {str(e)}")
+                log_warning(f"[EMERGENCY_CLEANUP] [WARN] Error stopping Dolphin profile: {str(e)}")
         else:
-            log_warning(f"[EMERGENCY_CLEANUP] ⚠️ Dolphin client not available for profile cleanup")
+            log_warning(f"[EMERGENCY_CLEANUP] [WARN] Dolphin client not available for profile cleanup")
         
         log_info("[EMERGENCY_CLEANUP] Emergency cleanup completed")
         
@@ -185,7 +185,7 @@ def handle_emergency_cleanup(account_task, dolphin=None):
         account_task,
         status=TaskStatus.FAILED,
         completed_at=timezone.now(),
-        log_message=f"[{timestamp_str}] ❌ Browser operation timed out or failed\n"
+        log_message=f"[{timestamp_str}] [FAIL] Browser operation timed out or failed\n"
     )
 
 
@@ -202,12 +202,12 @@ def process_browser_result(result, account_task, task):
                 account_task,
                 status=TaskStatus.COMPLETED,
                 completed_at=timezone.now(),
-                log_message=f"[{timestamp_str}] ✅ {message}\n"
+                log_message=f"[{timestamp_str}] [OK] {message}\n"
             )
             return 'completed', 1, 0
             
         elif status in ["PHONE_VERIFICATION_REQUIRED", "HUMAN_VERIFICATION_REQUIRED"]:
-            emoji = '📱' if status == "PHONE_VERIFICATION_REQUIRED" else '🤖'
+            emoji = '[PHONE]' if status == "PHONE_VERIFICATION_REQUIRED" else '[BOT]'
             update_account_task(
                 account_task,
                 status=status,
@@ -231,7 +231,7 @@ def process_browser_result(result, account_task, task):
             return 'failed', 0, 1
             
         elif status == "SUSPENDED":
-            emoji = '🚫'
+            emoji = '[BLOCK]'
             update_account_task(
                 account_task,
                 status=status,
@@ -260,7 +260,7 @@ def process_browser_result(result, account_task, task):
                 account_task,
                 status=TaskStatus.FAILED,
                 completed_at=timezone.now(),
-                log_message=f"[{timestamp_str}] ❌ {status}: {message}\n"
+                log_message=f"[{timestamp_str}] [FAIL] {status}: {message}\n"
             )
             return 'failed', 0, 1
     else:
@@ -269,7 +269,7 @@ def process_browser_result(result, account_task, task):
             account_task,
             status=TaskStatus.FAILED,
             completed_at=timezone.now(),
-            log_message=f"[{timestamp_str}] ❌ Unexpected result format from browser thread\n"
+            log_message=f"[{timestamp_str}] [FAIL] Unexpected result format from browser thread\n"
         )
         return 'failed', 0, 1
 
@@ -284,17 +284,17 @@ def handle_account_task_error(account_task, task, error):
         account_task,
         status=TaskStatus.FAILED,
         completed_at=timezone.now(),
-        log_message=f"[{timestamp_str}] ❌ Error: {str(error)}\n[{timestamp_str}] ❌ Traceback: {error_trace}\n"
+        log_message=f"[{timestamp_str}] [FAIL] Error: {str(error)}\n[{timestamp_str}] [FAIL] Traceback: {error_trace}\n"
     )
     
     # Get username safely and update task log
     try:
         username = get_account_username(account_task)
         log_error(f"Error processing account {username}: {str(error)}")
-        update_task_log(task, f"[{timestamp_str}] ❌ Error processing account {username}: {str(error)}\n")
+        update_task_log(task, f"[{timestamp_str}] [FAIL] Error processing account {username}: {str(error)}\n")
     except Exception:
         log_error(f"Error processing unnamed account: {str(error)}")
-        update_task_log(task, f"[{timestamp_str}] ❌ Error processing account: {str(error)}\n")
+        update_task_log(task, f"[{timestamp_str}] [FAIL] Error processing account: {str(error)}\n")
 
 
 def handle_critical_task_error(task, task_id, error):
@@ -304,4 +304,4 @@ def handle_critical_task_error(task, task_id, error):
     
     log_error(f"Critical error processing bulk upload task {task_id}: {str(error)}\n{error_trace}")
     update_task_status(task, TaskStatus.FAILED,
-                      f"[{timestamp_str}] ❌ Critical error: {str(error)}\n[{timestamp_str}] ❌ Traceback: {error_trace}\n") 
+                      f"[{timestamp_str}] [FAIL] Critical error: {str(error)}\n[{timestamp_str}] [FAIL] Traceback: {error_trace}\n") 

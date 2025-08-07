@@ -80,7 +80,7 @@ def safely_close_all_windows(page, dolphin_browser, dolphin_profile_id=None):
         except Exception as e:
             log_warning(f"[CLEANUP] Error stopping profile: {str(e)}")
         
-        log_success("[CLEANUP] ✅ Browser cleanup completed successfully")
+        log_success("[CLEANUP] [OK] Browser cleanup completed successfully")
         return True
         
     except Exception as e:
@@ -172,7 +172,7 @@ def simulate_extended_human_rest_behavior(page, total_duration):
             ]
             
             activity = random.choice(activity_types)
-            log_info(f"[EXTENDED_REST] 🎯 Activity {activity_count}: {activity} for {activity_duration:.1f}s")
+            log_info(f"[EXTENDED_REST] [TARGET] Activity {activity_count}: {activity} for {activity_duration:.1f}s")
             
             # Simplified activity implementation
             if activity == 'idle_pause':
@@ -191,7 +191,7 @@ def simulate_extended_human_rest_behavior(page, total_duration):
             log_info(f"[EXTENDED_REST] 😌 Final rest period: {remaining_time:.1f}s...")
             time.sleep(remaining_time)
         
-        log_info(f"[EXTENDED_REST] ✅ Extended rest period completed after {activity_count} activities")
+        log_info(f"[EXTENDED_REST] [OK] Extended rest period completed after {activity_count} activities")
         
     except Exception as e:
         log_warning(f"[EXTENDED_REST] Error during extended rest: {str(e)}")

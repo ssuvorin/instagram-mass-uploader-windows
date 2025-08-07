@@ -463,7 +463,7 @@ Examples:
     # Check if we have a Dolphin API token
     dolphin_token = os.environ.get("DOLPHIN_API_TOKEN")
     if not dolphin_token and not args.list and not args.status:
-        print(f"{Colors.YELLOW}⚠️ No DOLPHIN_API_TOKEN found in environment. Please set it in a .env file or enter it now.{Colors.END}")
+        print(f"{Colors.YELLOW}[WARN] No DOLPHIN_API_TOKEN found in environment. Please set it in a .env file or enter it now.{Colors.END}")
         dolphin_token = input("Enter your Dolphin API token (or press Enter to proceed anyway): ")
         if dolphin_token:
             # Set it for this session

@@ -27,13 +27,13 @@ def create_superuser():
             email='admin@example.com',
             password='admin123'
         )
-        print("✅ Superuser created successfully:")
+        print("[OK] Superuser created successfully:")
         print("   Username: admin")
         print("   Password: admin123")
         print("   Email: admin@example.com")
-        print("⚠️  ВАЖНО: Смените пароль после первого входа!")
+        print("[WARN]  ВАЖНО: Смените пароль после первого входа!")
     except Exception as e:
-        print(f"❌ Error creating superuser: {e}")
+        print(f"[FAIL] Error creating superuser: {e}")
         sys.exit(1)
 
 if __name__ == '__main__':

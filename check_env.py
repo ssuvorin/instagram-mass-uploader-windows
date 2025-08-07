@@ -30,30 +30,30 @@ errors = []
 warnings = []
 
 if dolphin_api_host == "http://host.docker.internal:3001":
-    errors.append("❌ DOLPHIN_API_HOST использует Docker настройки!")
-    print("❌ ОШИБКА: DOLPHIN_API_HOST=http://host.docker.internal:3001")
+    errors.append("[FAIL] DOLPHIN_API_HOST использует Docker настройки!")
+    print("[FAIL] ОШИБКА: DOLPHIN_API_HOST=http://host.docker.internal:3001")
     print("   Это настройка для Docker, а вы запускаете без Docker")
     print("   ИСПРАВЛЕНИЕ: Измените на DOLPHIN_API_HOST=http://localhost:3001")
 elif dolphin_api_host == "http://localhost:3001":
-    print("✅ DOLPHIN_API_HOST правильно настроен для Windows без Docker")
+    print("[OK] DOLPHIN_API_HOST правильно настроен для Windows без Docker")
 elif dolphin_api_host == "http://127.0.0.1:3001":
-    print("✅ DOLPHIN_API_HOST правильно настроен для Windows без Docker")
+    print("[OK] DOLPHIN_API_HOST правильно настроен для Windows без Docker")
 else:
-    warnings.append(f"⚠️ Нестандартный DOLPHIN_API_HOST: {dolphin_api_host}")
+    warnings.append(f"[WARN] Нестандартный DOLPHIN_API_HOST: {dolphin_api_host}")
 
 if docker_container == "1":
-    errors.append("❌ DOCKER_CONTAINER установлен в 1!")
-    print("❌ ОШИБКА: DOCKER_CONTAINER=1")
+    errors.append("[FAIL] DOCKER_CONTAINER установлен в 1!")
+    print("[FAIL] ОШИБКА: DOCKER_CONTAINER=1")
     print("   Это говорит системе что вы в Docker контейнере")
     print("   ИСПРАВЛЕНИЕ: Установите DOCKER_CONTAINER=0 или уберите эту переменную")
 elif docker_container == "0" or docker_container is None:
-    print("✅ DOCKER_CONTAINER правильно настроен для Windows без Docker")
+    print("[OK] DOCKER_CONTAINER правильно настроен для Windows без Docker")
 else:
-    warnings.append(f"⚠️ Нестандартное значение DOCKER_CONTAINER: {docker_container}")
+    warnings.append(f"[WARN] Нестандартное значение DOCKER_CONTAINER: {docker_container}")
 
 if not dolphin_api_token:
-    errors.append("❌ DOLPHIN_API_TOKEN не установлен!")
-    print("❌ ОШИБКА: DOLPHIN_API_TOKEN не найден")
+    errors.append("[FAIL] DOLPHIN_API_TOKEN не установлен!")
+    print("[FAIL] ОШИБКА: DOLPHIN_API_TOKEN не найден")
     print("   ИСПРАВЛЕНИЕ: Получите токен в Dolphin Anty и добавьте в .env")
 
 print("\n" + "=" * 60)
@@ -61,15 +61,15 @@ print("РЕЗУЛЬТАТ")
 print("=" * 60)
 
 if errors:
-    print("❌ НАЙДЕНЫ КРИТИЧЕСКИЕ ОШИБКИ:")
+    print("[FAIL] НАЙДЕНЫ КРИТИЧЕСКИЕ ОШИБКИ:")
     for error in errors:
         print(f"   {error}")
     print("\nИСПРАВЬТЕ ЭТИ ОШИБКИ В .env ФАЙЛЕ И ПЕРЕЗАПУСТИТЕ DJANGO")
 else:
-    print("✅ Все настройки выглядят правильно!")
+    print("[OK] Все настройки выглядят правильно!")
 
 if warnings:
-    print("\n⚠️ ПРЕДУПРЕЖДЕНИЯ:")
+    print("\n[WARN] ПРЕДУПРЕЖДЕНИЯ:")
     for warning in warnings:
         print(f"   {warning}")
 
@@ -90,15 +90,15 @@ try:
     
     response = requests.get(f"{test_host}/v1.0/browser_profiles", timeout=5)
     if response.status_code == 200:
-        print("✅ Dolphin Anty API отвечает!")
+        print("[OK] Dolphin Anty API отвечает!")
     else:
-        print(f"⚠️ Dolphin Anty API вернул статус: {response.status_code}")
+        print(f"[WARN] Dolphin Anty API вернул статус: {response.status_code}")
         
 except requests.exceptions.ConnectionError:
-    print("❌ Не удается подключиться к Dolphin Anty!")
+    print("[FAIL] Не удается подключиться к Dolphin Anty!")
     print("   Убедитесь что Dolphin Anty запущен и Local API включен")
 except Exception as e:
-    print(f"❌ Ошибка при подключении: {e}")
+    print(f"[FAIL] Ошибка при подключении: {e}")
 
 print("\n" + "=" * 60)
 print("РЕКОМЕНДУЕМЫЙ .env ФАЙЛ ДЛЯ WINDOWS БЕЗ DOCKER")

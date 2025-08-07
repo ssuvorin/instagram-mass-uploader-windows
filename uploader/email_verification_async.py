@@ -21,11 +21,11 @@ def log_info(message: str, category: str = None):
 
 def log_error(message: str, category: str = None):
     """Async-compatible error logging function"""
-    print(f"❌ [EMAIL_ASYNC] {message}")
+    print(f"[FAIL] [EMAIL_ASYNC] {message}")
 
 def log_warning(message: str, category: str = None):
     """Async-compatible warning logging function"""
-    print(f"⚠️ [EMAIL_ASYNC] {message}")
+    print(f"[WARN] [EMAIL_ASYNC] {message}")
 
 async def get_email_verification_code_async(email_login: str, email_password: str, max_retries: int = 3) -> Optional[str]:
     """Get verification code from email using the Email class with enhanced logging and retry logic - ASYNC VERSION"""
@@ -51,7 +51,7 @@ async def get_email_verification_code_async(email_login: str, email_password: st
         connection_test = email_client.test_connection()
         
         if not connection_test:
-            log_error(f"❌ Email connection test failed")
+            log_error(f"[FAIL] Email connection test failed")
             log_error(f"Please check:")
             log_error(f"- Email address: {email_login}")
             log_error(f"- Password is correct")
@@ -59,23 +59,23 @@ async def get_email_verification_code_async(email_login: str, email_password: st
             log_error(f"- Two-factor authentication is disabled for email")
             return None
         
-        log_info(f"✅ Email connection test successful")
+        log_info(f"[OK] Email connection test successful")
         
         # Now try to get verification code with retry logic
         verification_code = email_client.get_verification_code(max_retries=max_retries, retry_delay=30)
         
         if verification_code:
-            log_info(f"✅ Successfully retrieved email verification code: {verification_code}")
+            log_info(f"[OK] Successfully retrieved email verification code: {verification_code}")
             
             # Validate the code format (Instagram codes are 6 digits)
             if len(verification_code) == 6 and verification_code.isdigit():
-                log_info(f"✅ Code format validation passed")
+                log_info(f"[OK] Code format validation passed")
                 return verification_code
             else:
-                log_warning(f"⚠️ Invalid code format: {verification_code} (expected 6 digits)")
+                log_warning(f"[WARN] Invalid code format: {verification_code} (expected 6 digits)")
                 return None
         else:
-            log_warning("❌ No verification code found in email after all retries")
+            log_warning("[FAIL] No verification code found in email after all retries")
             log_warning("Possible reasons:")
             log_warning("- Email not received yet (Instagram delays)")
             log_warning("- Code is in a different email format")
@@ -84,7 +84,7 @@ async def get_email_verification_code_async(email_login: str, email_password: st
             return None
             
     except Exception as e:
-        log_error(f"❌ Error getting email verification code: {str(e)}")
+        log_error(f"[FAIL] Error getting email verification code: {str(e)}")
         log_error(f"Exception type: {type(e).__name__}")
         return None
 

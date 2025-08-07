@@ -219,13 +219,13 @@ class WebLogger:
         # Add emoji prefixes based on category
         category_emojis = {
             LogCategories.VERIFICATION: '🔐',
-            LogCategories.CAPTCHA: '🤖',
+            LogCategories.CAPTCHA: '[BOT]',
             LogCategories.LOGIN: '🔑',
             LogCategories.UPLOAD: '📤',
             LogCategories.DOLPHIN: '🐬',
             LogCategories.NAVIGATION: '🧭',
             LogCategories.HUMAN: '👤',
-            LogCategories.CLEANUP: '🧹',
+            LogCategories.CLEANUP: '[CLEAN]',
             LogCategories.DATABASE: '💾'
         }
         
@@ -233,9 +233,9 @@ class WebLogger:
         
         # Add level indicators
         level_indicators = {
-            'ERROR': '❌',
-            'WARNING': '⚠️',
-            'SUCCESS': '✅',
+            'ERROR': '[FAIL]',
+            'WARNING': '[WARN]',
+            'SUCCESS': '[OK]',
             'INFO': 'ℹ️'
         }
         
@@ -360,7 +360,7 @@ def get_email_verification_code(email_login, email_password, max_retries=3):
         connection_test = email_client.test_connection()
         
         if not connection_test:
-            log_error(f"📧 [EMAIL_CODE] ❌ Email connection test failed")
+            log_error(f"📧 [EMAIL_CODE] [FAIL] Email connection test failed")
             log_error(f"📧 [EMAIL_CODE] Please check:")
             log_error(f"📧 [EMAIL_CODE] - Email address: {email_login}")
             log_error(f"📧 [EMAIL_CODE] - Password is correct")
@@ -368,23 +368,23 @@ def get_email_verification_code(email_login, email_password, max_retries=3):
             log_error(f"📧 [EMAIL_CODE] - Two-factor authentication is disabled for email")
             return None
         
-        log_info(f"📧 [EMAIL_CODE] ✅ Email connection test successful")
+        log_info(f"📧 [EMAIL_CODE] [OK] Email connection test successful")
         
         # Now try to get verification code with retry logic
         verification_code = email_client.get_verification_code(max_retries=max_retries, retry_delay=30)
         
         if verification_code:
-            log_info(f"📧 [EMAIL_CODE] ✅ Successfully retrieved email verification code: {verification_code}")
+            log_info(f"📧 [EMAIL_CODE] [OK] Successfully retrieved email verification code: {verification_code}")
             
             # Validate the code format (Instagram codes are 6 digits)
             if len(verification_code) == 6 and verification_code.isdigit():
-                log_info(f"📧 [EMAIL_CODE] ✅ Code format validation passed")
+                log_info(f"📧 [EMAIL_CODE] [OK] Code format validation passed")
                 return verification_code
             else:
-                log_warning(f"📧 [EMAIL_CODE] ⚠️ Invalid code format: {verification_code} (expected 6 digits)")
+                log_warning(f"📧 [EMAIL_CODE] [WARN] Invalid code format: {verification_code} (expected 6 digits)")
                 return None
         else:
-            log_warning("📧 [EMAIL_CODE] ❌ No verification code found in email after all retries")
+            log_warning("📧 [EMAIL_CODE] [FAIL] No verification code found in email after all retries")
             log_warning("📧 [EMAIL_CODE] Possible reasons:")
             log_warning("📧 [EMAIL_CODE] - Email not received yet (Instagram delays)")
             log_warning("📧 [EMAIL_CODE] - Code is in a different email format")
@@ -393,14 +393,14 @@ def get_email_verification_code(email_login, email_password, max_retries=3):
             return None
             
     except Exception as e:
-        log_error(f"📧 [EMAIL_CODE] ❌ Error getting email verification code: {str(e)}")
+        log_error(f"📧 [EMAIL_CODE] [FAIL] Error getting email verification code: {str(e)}")
         log_error(f"📧 [EMAIL_CODE] Exception type: {type(e).__name__}")
         return None
 
 def navigate_to_upload_with_human_behavior(page):
     """Navigate to upload page with advanced human behavior - Handles both menu and direct file dialog scenarios"""
     try:
-        log_info("[UPLOAD] 🚀 Starting enhanced navigation to upload interface", LogCategories.NAVIGATION)
+        log_info("[UPLOAD] [START] Starting enhanced navigation to upload interface", LogCategories.NAVIGATION)
         
         # Initialize human behavior
         init_human_behavior(page)
@@ -412,8 +412,8 @@ def navigate_to_upload_with_human_behavior(page):
         try:
             current_url = page.url
             page_title = page.title()
-            log_info(f"[UPLOAD] 📍 Current page: {current_url}", LogCategories.NAVIGATION)
-            log_info(f"[UPLOAD] 📄 Page title: {page_title}", LogCategories.NAVIGATION)
+            log_info(f"[UPLOAD] [LOCATION] Current page: {current_url}", LogCategories.NAVIGATION)
+            log_info(f"[UPLOAD] [FILE] Page title: {page_title}", LogCategories.NAVIGATION)
         except Exception as debug_error:
             log_warning(f"[UPLOAD] Could not get page info: {str(debug_error)}", LogCategories.NAVIGATION)
         
@@ -424,16 +424,16 @@ def navigate_to_upload_with_human_behavior(page):
         success = navigator.navigate_to_upload()
         
         if success:
-            log_success("[UPLOAD] ✅ Successfully navigated to upload interface", LogCategories.NAVIGATION)
+            log_success("[UPLOAD] [OK] Successfully navigated to upload interface", LogCategories.NAVIGATION)
             
             # Additional verification - check for file input immediately
             try:
                 final_url = page.url
-                log_info(f"[UPLOAD] 📍 Final URL: {final_url}", LogCategories.NAVIGATION)
+                log_info(f"[UPLOAD] [LOCATION] Final URL: {final_url}", LogCategories.NAVIGATION)
                 
                 # Check if we can see file input elements immediately
                 file_inputs = page.query_selector_all('input[type="file"]')
-                log_info(f"[UPLOAD] 📁 Found {len(file_inputs)} file input elements", LogCategories.NAVIGATION)
+                log_info(f"[UPLOAD] [FOLDER] Found {len(file_inputs)} file input elements", LogCategories.NAVIGATION)
                 
                 # Also check for semantic file input selectors (не зависящие от динамических CSS-классов)
                 semantic_file_inputs = []
@@ -452,7 +452,7 @@ def navigate_to_upload_with_human_behavior(page):
                     except:
                         continue
                         
-                log_info(f"[UPLOAD] 📁 Found {len(semantic_file_inputs)} semantic file input elements", LogCategories.NAVIGATION)
+                log_info(f"[UPLOAD] [FOLDER] Found {len(semantic_file_inputs)} semantic file input elements", LogCategories.NAVIGATION)
                 
                 if len(file_inputs) > 0 or len(semantic_file_inputs) > 0:
                     for i, inp in enumerate(file_inputs + semantic_file_inputs):
@@ -464,25 +464,25 @@ def navigate_to_upload_with_human_behavior(page):
                         except:
                             pass
                     
-                    log_success("[UPLOAD] ✅ File input elements are ready for upload", LogCategories.NAVIGATION)
+                    log_success("[UPLOAD] [OK] File input elements are ready for upload", LogCategories.NAVIGATION)
                 else:
-                    log_warning("[UPLOAD] ⚠️ No file input elements found after navigation", LogCategories.NAVIGATION)
+                    log_warning("[UPLOAD] [WARN] No file input elements found after navigation", LogCategories.NAVIGATION)
                             
             except Exception as verify_error:
                 log_warning(f"[UPLOAD] Could not verify upload interface: {str(verify_error)}", LogCategories.NAVIGATION)
         else:
-            log_error("[UPLOAD] ❌ Failed to navigate to upload interface", LogCategories.NAVIGATION)
+            log_error("[UPLOAD] [FAIL] Failed to navigate to upload interface", LogCategories.NAVIGATION)
         
         return success
         
     except Exception as e:
-        log_error(f"[UPLOAD] ❌ Navigation failed: {str(e)}", LogCategories.NAVIGATION)
+        log_error(f"[UPLOAD] [FAIL] Navigation failed: {str(e)}", LogCategories.NAVIGATION)
         return False
 
 def upload_video_with_human_behavior(page, video_file_path, video_obj):
     """Upload video with advanced human behavior - Now follows exact Selenium pipeline"""
     try:
-        log_info(f"[UPLOAD] 🎬 Starting video upload following exact Selenium pipeline: {os.path.basename(video_file_path)}")
+        log_info(f"[UPLOAD] [VIDEO] Starting video upload following exact Selenium pipeline: {os.path.basename(video_file_path)}")
         
         # Ensure human behavior is initialized
         human_behavior = get_human_behavior()
@@ -506,7 +506,7 @@ def upload_video_with_human_behavior(page, video_file_path, video_obj):
         return uploader.upload_video(video_file_path, video_obj)
         
     except Exception as e:
-        log_error(f"[UPLOAD] ❌ Upload failed: {str(e)}")
+        log_error(f"[UPLOAD] [FAIL] Upload failed: {str(e)}")
         return False
 
 def click_next_button(page, step_number):
@@ -534,12 +534,12 @@ def click_next_button(page, step_number):
                     # Verify this is actually a next/далее button
                     button_text = next_button.text_content() or ""
                     if any(keyword in button_text.lower() for keyword in ['далее', 'next', 'продолжить', 'continue']):
-                        log_info(f"[UPLOAD] 🎯 Found text-based next button: '{button_text.strip()}' with selector: {selector}")
+                        log_info(f"[UPLOAD] [TARGET] Found text-based next button: '{button_text.strip()}' with selector: {selector}")
                         used_selector = selector
                         break
                     elif selector.startswith('div[class*="x1i10hfl"]') and button_text.strip():
                         # For Instagram-specific selectors, if we find a button with any text, it might be the next button
-                        log_info(f"[UPLOAD] 🎯 Found potential Instagram next button: '{button_text.strip()}' with selector: {selector}")
+                        log_info(f"[UPLOAD] [TARGET] Found potential Instagram next button: '{button_text.strip()}' with selector: {selector}")
                         used_selector = selector
                         break
                             
@@ -564,23 +564,23 @@ def click_next_button(page, step_number):
                 # Wait longer after click
                 time.sleep(random.uniform(4, 6))  # Увеличено с 2, 3
                 
-                log_info(f"[UPLOAD] ✅ Successfully clicked next button for step {step_number}")
+                log_info(f"[UPLOAD] [OK] Successfully clicked next button for step {step_number}")
                 return True
                 
             except Exception as click_error:
-                log_warning(f"[UPLOAD] ⚠️ Error clicking next button: {str(click_error)}")
+                log_warning(f"[UPLOAD] [WARN] Error clicking next button: {str(click_error)}")
                 
                 # Fallback: try direct click
                 try:
                     next_button.click()
                     time.sleep(random.uniform(4, 6))  # Увеличено с 2, 3
-                    log_info(f"[UPLOAD] ✅ Successfully clicked next button (fallback) for step {step_number}")
+                    log_info(f"[UPLOAD] [OK] Successfully clicked next button (fallback) for step {step_number}")
                     return True
                 except Exception as fallback_error:
-                    log_error(f"[UPLOAD] ❌ Fallback click also failed: {str(fallback_error)}")
+                    log_error(f"[UPLOAD] [FAIL] Fallback click also failed: {str(fallback_error)}")
                     return False
         else:
-            log_warning(f"[UPLOAD] ⚠️ Next button not found for step {step_number}")
+            log_warning(f"[UPLOAD] [WARN] Next button not found for step {step_number}")
             
             # Debug: log available buttons with semantic selectors instead of Instagram-specific classes
             try:
@@ -605,7 +605,7 @@ def click_next_button(page, step_number):
             return False
             
     except Exception as e:
-        log_error(f"[UPLOAD] ❌ Error clicking next button for step {step_number}: {str(e)}")
+        log_error(f"[UPLOAD] [FAIL] Error clicking next button for step {step_number}: {str(e)}")
         return False
 
 def simulate_human_rest_behavior(page, duration):
@@ -751,7 +751,7 @@ def detect_and_fill_email_field(page, email_login):
                     if not is_code_field:
                         email_field = element
                         used_selector = selector
-                        log_info(f"📧 [EMAIL_FIELD] ✅ Selected email field: {selector}")
+                        log_info(f"📧 [EMAIL_FIELD] [OK] Selected email field: {selector}")
                         break
                     else:
                         log_info(f"📧 [EMAIL_FIELD] Skipped code/verification field: {selector}")
@@ -761,7 +761,7 @@ def detect_and_fill_email_field(page, email_login):
                 continue
         
         if not email_field:
-            log_warning("📧 [EMAIL_FIELD] ❌ No suitable email field found")
+            log_warning("📧 [EMAIL_FIELD] [FAIL] No suitable email field found")
             return False
         
         # Fill the email field
@@ -779,7 +779,7 @@ def detect_and_fill_email_field(page, email_login):
                 email_field.type(char)
                 time.sleep(random.uniform(0.05, 0.12))
             
-            log_info("📧 [EMAIL_FIELD] ✅ Email field filled successfully")
+            log_info("📧 [EMAIL_FIELD] [OK] Email field filled successfully")
             
             # Try to submit if there's a submit button
             submit_selectors = [
@@ -805,7 +805,7 @@ def detect_and_fill_email_field(page, email_login):
             if submit_button:
                 time.sleep(random.uniform(1.0, 2.0))
                 submit_button.click()
-                log_info("📧 [EMAIL_FIELD] ✅ Submit button clicked")
+                log_info("📧 [EMAIL_FIELD] [OK] Submit button clicked")
                 time.sleep(random.uniform(2, 4))
             else:
                 log_info("📧 [EMAIL_FIELD] No submit button found, trying Enter key")
@@ -815,11 +815,11 @@ def detect_and_fill_email_field(page, email_login):
             return True
             
         except Exception as e:
-            log_error(f"📧 [EMAIL_FIELD] ❌ Error filling email field: {str(e)}")
+            log_error(f"📧 [EMAIL_FIELD] [FAIL] Error filling email field: {str(e)}")
             return False
             
     except Exception as e:
-        log_error(f"📧 [EMAIL_FIELD] ❌ Error in email field detection: {str(e)}")
+        log_error(f"📧 [EMAIL_FIELD] [FAIL] Error in email field detection: {str(e)}")
         return False
 
 def find_submit_button(page):
@@ -831,14 +831,14 @@ def find_submit_button(page):
         if button:
             button_text = button.text_content() or 'no-text'
             button_type = button.get_attribute('type') or 'unknown'
-            log_info(f"✅ [SUBMIT_BTN] Found submit button: '{button_text.strip()}' (type: {button_type})")
+            log_info(f"[OK] [SUBMIT_BTN] Found submit button: '{button_text.strip()}' (type: {button_type})")
             return button
         
-        log_warning("❌ [SUBMIT_BTN] No submit button found")
+        log_warning("[FAIL] [SUBMIT_BTN] No submit button found")
         return None
         
     except Exception as e:
-        log_error(f"❌ [SUBMIT_BTN] Error in submit button detection: {str(e)}")
+        log_error(f"[FAIL] [SUBMIT_BTN] Error in submit button detection: {str(e)}")
         return None
 
 def find_verification_code_input(page):
@@ -861,18 +861,18 @@ def find_verification_code_input(page):
             if input_field:
                 field_name = input_field.get_attribute('name') or 'unknown'
                 field_type = input_field.get_attribute('type') or 'unknown'
-                log_info(f"✅ [CODE_INPUT] Found input field: name={field_name}, type={field_type}")
+                log_info(f"[OK] [CODE_INPUT] Found input field: name={field_name}, type={field_type}")
                 return input_field
         else:
             input_field = _find_element(page, InstagramSelectors.VERIFICATION_CODE_FIELDS_RESTRICTIVE)
             if input_field:
                 return input_field
         
-        log_warning("❌ [CODE_INPUT] No verification code input found")
+        log_warning("[FAIL] [CODE_INPUT] No verification code input found")
         return None
         
     except Exception as e:
-        log_error(f"❌ [CODE_INPUT] Error in code input detection: {str(e)}")
+        log_error(f"[FAIL] [CODE_INPUT] Error in code input detection: {str(e)}")
         return None
 
 def handle_save_login_info_dialog(page):
@@ -899,20 +899,20 @@ def handle_save_login_info_dialog(page):
             if save_button and save_button.is_visible():
                 button_text = save_button.text_content() or ""
                 if any(keyword in button_text.lower() for keyword in ['сохранить', 'save']):
-                    log_info(f"[SAVE_LOGIN] ✅ Found save button: '{button_text.strip()}'")
+                    log_info(f"[SAVE_LOGIN] [OK] Found save button: '{button_text.strip()}'")
                     
                     try:
                         save_button.hover()
                         time.sleep(random.uniform(0.5, 1.0))
                         save_button.click()
                         time.sleep(random.uniform(2, 4))
-                        log_info("[SAVE_LOGIN] ✅ Successfully clicked save login info button")
+                        log_info("[SAVE_LOGIN] [OK] Successfully clicked save login info button")
                         return True
                     except Exception as e:
-                        log_error(f"[SAVE_LOGIN] ❌ Error clicking save button: {str(e)}")
+                        log_error(f"[SAVE_LOGIN] [FAIL] Error clicking save button: {str(e)}")
             
             # If no save button, look for "Not now" button
-            log_warning("[SAVE_LOGIN] ⚠️ Could not find save button, looking for 'Not now' button...")
+            log_warning("[SAVE_LOGIN] [WARN] Could not find save button, looking for 'Not now' button...")
             not_now_button = _find_element(page, InstagramSelectors.NOT_NOW_BUTTONS)
             
             if not_now_button and not_now_button.is_visible():
@@ -921,17 +921,17 @@ def handle_save_login_info_dialog(page):
                 time.sleep(random.uniform(0.5, 1.0))
                 not_now_button.click()
                 time.sleep(random.uniform(2, 4))
-                log_info("[SAVE_LOGIN] ✅ Dismissed save login dialog with 'Not now'")
+                log_info("[SAVE_LOGIN] [OK] Dismissed save login dialog with 'Not now'")
                 return True
             
-            log_warning("[SAVE_LOGIN] ⚠️ Could not find any button to handle save login dialog")
+            log_warning("[SAVE_LOGIN] [WARN] Could not find any button to handle save login dialog")
             return False
         else:
             log_info("[SAVE_LOGIN] No save login info dialog found")
             return True
             
     except Exception as e:
-        log_error(f"[SAVE_LOGIN] ❌ Error handling save login dialog: {str(e)}")
+        log_error(f"[SAVE_LOGIN] [FAIL] Error handling save login dialog: {str(e)}")
         return False
 
 def check_video_posted_successfully(page, video_file_path):
@@ -944,8 +944,8 @@ def check_video_posted_successfully(page, video_file_path):
         success_element = _find_element(page, InstagramSelectors.SUCCESS_INDICATORS)
         if success_element:
             element_text = success_element.text_content() or ""
-            log_success(f"[UPLOAD] ✅ SUCCESS CONFIRMED: Found explicit success indicator: '{element_text.strip()}'")
-            log_success(f"[UPLOAD] ✅ Video {os.path.basename(video_file_path)} successfully posted")
+            log_success(f"[UPLOAD] [OK] SUCCESS CONFIRMED: Found explicit success indicator: '{element_text.strip()}'")
+            log_success(f"[UPLOAD] [OK] Video {os.path.basename(video_file_path)} successfully posted")
             return True
         
         # Additional wait and second check for success indicators
@@ -955,27 +955,27 @@ def check_video_posted_successfully(page, video_file_path):
         success_element = _find_element(page, InstagramSelectors.SUCCESS_INDICATORS)
         if success_element:
             element_text = success_element.text_content() or ""
-            log_success(f"[UPLOAD] ✅ SUCCESS CONFIRMED (delayed): Found explicit success indicator: '{element_text.strip()}'")
-            log_success(f"[UPLOAD] ✅ Video {os.path.basename(video_file_path)} successfully posted")
+            log_success(f"[UPLOAD] [OK] SUCCESS CONFIRMED (delayed): Found explicit success indicator: '{element_text.strip()}'")
+            log_success(f"[UPLOAD] [OK] Video {os.path.basename(video_file_path)} successfully posted")
             return True
         
         # Check for explicit error messages
         error_element = _find_element(page, InstagramSelectors.ERROR_INDICATORS)
         if error_element:
             error_text = error_element.text_content() or ""
-            log_error(f"[UPLOAD] ❌ ERROR DETECTED: '{error_text.strip()}'")
-            log_error(f"[UPLOAD] ❌ Video {os.path.basename(video_file_path)} failed to post")
+            log_error(f"[UPLOAD] [FAIL] ERROR DETECTED: '{error_text.strip()}'")
+            log_error(f"[UPLOAD] [FAIL] Video {os.path.basename(video_file_path)} failed to post")
             return False
         
         # Check if still on upload page (indicates failure)
         upload_element = _find_element(page, InstagramSelectors.UPLOAD_PAGE_INDICATORS)
         if upload_element:
-            log_error(f"[UPLOAD] ❌ UPLOAD FAILED: Still on upload page - video {os.path.basename(video_file_path)} was NOT posted")
+            log_error(f"[UPLOAD] [FAIL] UPLOAD FAILED: Still on upload page - video {os.path.basename(video_file_path)} was NOT posted")
             return False
         
         # STRICT POLICY: If no explicit success indicators found, consider it a failure
         # This ensures COMPLETED status is only set when we can CONFIRM successful upload
-        log_error(f"[UPLOAD] ❌ UPLOAD FAILED: No explicit success indicators found - cannot confirm video {os.path.basename(video_file_path)} was posted")
+        log_error(f"[UPLOAD] [FAIL] UPLOAD FAILED: No explicit success indicators found - cannot confirm video {os.path.basename(video_file_path)} was posted")
         log_info(f"[UPLOAD] 🔍 Current page URL: {page.url}")
         
         return False
@@ -1008,7 +1008,7 @@ def handle_success_dialog_and_close(page, video_file_path):
                 success_dialog = page.query_selector(selector)
                 if success_dialog and success_dialog.is_visible():
                     dialog_text = success_dialog.text_content() or ""
-                    log_success(f"[SUCCESS] ✅ SUCCESS CONFIRMED: Found success dialog: '{dialog_text.strip()}'")
+                    log_success(f"[SUCCESS] [OK] SUCCESS CONFIRMED: Found success dialog: '{dialog_text.strip()}'")
                     break
             except:
                 continue
@@ -1047,19 +1047,19 @@ def handle_success_dialog_and_close(page, video_file_path):
                 page.click('body', position={'x': 50, 'y': 50})
                 time.sleep(random.uniform(2, 3))
             
-            log_success(f"[SUCCESS] ✅ Video {os.path.basename(video_file_path)} posted successfully!")
+            log_success(f"[SUCCESS] [OK] Video {os.path.basename(video_file_path)} posted successfully!")
             return True
         
         # If no success dialog found, check for other success indicators
         success_element = _find_element(page, InstagramSelectors.SUCCESS_INDICATORS)
         if success_element:
             element_text = success_element.text_content() or ""
-            log_success(f"[SUCCESS] ✅ SUCCESS CONFIRMED: Found success indicator: '{element_text.strip()}'")
-            log_success(f"[SUCCESS] ✅ Video {os.path.basename(video_file_path)} posted successfully!")
+            log_success(f"[SUCCESS] [OK] SUCCESS CONFIRMED: Found success indicator: '{element_text.strip()}'")
+            log_success(f"[SUCCESS] [OK] Video {os.path.basename(video_file_path)} posted successfully!")
             return True
         
         # STRICT POLICY: If no explicit success indicators found, consider it a failure
-        log_error(f"[SUCCESS] ❌ UPLOAD FAILED: No success dialog or indicators found - cannot confirm video {os.path.basename(video_file_path)} was posted")
+        log_error(f"[SUCCESS] [FAIL] UPLOAD FAILED: No success dialog or indicators found - cannot confirm video {os.path.basename(video_file_path)} was posted")
         
         # Check if back to main interface (but this alone is not enough for success confirmation)
         main_element = _find_element(page, InstagramSelectors.MAIN_INTERFACE_INDICATORS)
@@ -1069,12 +1069,12 @@ def handle_success_dialog_and_close(page, video_file_path):
         # Check if still on upload page (indicates failure)
         upload_element = _find_element(page, InstagramSelectors.UPLOAD_PAGE_INDICATORS)
         if upload_element:
-            log_error(f"[SUCCESS] ❌ UPLOAD FAILED: Still on upload page - video {os.path.basename(video_file_path)} was NOT posted")
+            log_error(f"[SUCCESS] [FAIL] UPLOAD FAILED: Still on upload page - video {os.path.basename(video_file_path)} was NOT posted")
             
         return False
             
     except Exception as e:
-        log_error(f"[SUCCESS] ❌ Error handling success dialog: {str(e)}")
+        log_error(f"[SUCCESS] [FAIL] Error handling success dialog: {str(e)}")
         return False
 
 def cleanup_hanging_browser_processes():
@@ -1114,7 +1114,7 @@ def simulate_extended_human_rest_behavior(page, total_duration):
             ]
             
             activity = random.choice(activity_types)
-            log_info(f"[EXTENDED_REST] 🎯 Activity {activity_count}: {activity} for {activity_duration:.1f}s")
+            log_info(f"[EXTENDED_REST] [TARGET] Activity {activity_count}: {activity} for {activity_duration:.1f}s")
             
             # Simplified activity implementation
             if activity == 'idle_pause':
@@ -1133,7 +1133,7 @@ def simulate_extended_human_rest_behavior(page, total_duration):
             log_info(f"[EXTENDED_REST] 😌 Final rest period: {remaining_time:.1f}s...")
             time.sleep(remaining_time)
         
-        log_info(f"[EXTENDED_REST] ✅ Extended rest period completed after {activity_count} activities")
+        log_info(f"[EXTENDED_REST] [OK] Extended rest period completed after {activity_count} activities")
         
     except Exception as e:
         log_warning(f"[EXTENDED_REST] Error during extended rest: {str(e)}")
@@ -1154,20 +1154,20 @@ def run_bulk_upload_task(task_id):
         
         # Task initialization
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        update_task_status(task, TaskStatus.RUNNING, f"[{timestamp}] 🚀 Starting enhanced bulk upload task '{task.name}'\\n")
+        update_task_status(task, TaskStatus.RUNNING, f"[{timestamp}] [START] Starting enhanced bulk upload task '{task.name}'\\n")
         
         log_info(f"📋 [TASK_INFO] Task '{task.name}' - Processing {task.accounts.count()} accounts", LogCategories.TASK_INFO)
         
         # Get all videos and titles for the task
-        all_videos = get_all_task_videos(task)  # ✅ ВСЕ видео - будут переданы каждому аккаунту
+        all_videos = get_all_task_videos(task)  # [OK] ВСЕ видео - будут переданы каждому аккаунту
         all_titles = get_all_task_titles(task)
         
-        log_info(f"📹 [TASK_INFO] Found {len(all_videos)} videos and {len(all_titles)} titles", LogCategories.TASK_INFO)
+        log_info(f"[CAMERA] [TASK_INFO] Found {len(all_videos)} videos and {len(all_titles)} titles", LogCategories.TASK_INFO)
         
         if not all_videos:
             error_msg = "No videos found for this task"
             log_error(error_msg, LogCategories.TASK_INFO)
-            update_task_status(task, TaskStatus.FAILED, f"[{timestamp}] ❌ {error_msg}\n")
+            update_task_status(task, TaskStatus.FAILED, f"[{timestamp}] [FAIL] {error_msg}\n")
             return False
         
         # Enhanced account processing with health monitoring
@@ -1184,11 +1184,11 @@ def run_bulk_upload_task(task_id):
             account = account_task.account
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             
-            log_info(f"🔄 [ACCOUNT_PROCESS] Processing account {i}/{len(account_tasks)}: {account.username}", LogCategories.TASK_INFO)
+            log_info(f"[RETRY] [ACCOUNT_PROCESS] Processing account {i}/{len(account_tasks)}: {account.username}", LogCategories.TASK_INFO)
             
             # Pre-flight account health check
             if account.status != 'ACTIVE':
-                log_message = f"[{timestamp}] ⚠️ Account {account.username} skipped - Status: {account.status} (Only ACTIVE accounts allowed for bulk upload)\n"
+                log_message = f"[{timestamp}] [WARN] Account {account.username} skipped - Status: {account.status} (Only ACTIVE accounts allowed for bulk upload)\n"
                 log_warning(f"Account {account.username} has non-ACTIVE status: {account.status}", LogCategories.VERIFICATION)
                 update_task_log(task, log_message)
                 
@@ -1219,10 +1219,10 @@ def run_bulk_upload_task(task_id):
                 
                 if account_result:
                     successful_accounts += 1
-                    log_success(f"✅ [ACCOUNT_SUCCESS] Account {account.username} processed successfully", LogCategories.TASK_INFO)
+                    log_success(f"[OK] [ACCOUNT_SUCCESS] Account {account.username} processed successfully", LogCategories.TASK_INFO)
                 else:
                     failed_accounts += 1
-                    log_error(f"❌ [ACCOUNT_FAILED] Account {account.username} processing failed", LogCategories.TASK_INFO)
+                    log_error(f"[FAIL] [ACCOUNT_FAILED] Account {account.username} processing failed", LogCategories.TASK_INFO)
                     
                     # Check if it's a verification issue
                     if account_task.status in ['PHONE_VERIFICATION_REQUIRED', 'HUMAN_VERIFICATION_REQUIRED']:
@@ -1238,7 +1238,7 @@ def run_bulk_upload_task(task_id):
                 failed_accounts += 1
                 error_msg = str(account_error)
                 
-                log_error(f"❌ [ACCOUNT_ERROR] Exception processing account {account.username}: {error_msg}", LogCategories.TASK_INFO)
+                log_error(f"[FAIL] [ACCOUNT_ERROR] Exception processing account {account.username}: {error_msg}", LogCategories.TASK_INFO)
                 
                 # Categorize the error
                 if "PHONE_VERIFICATION_REQUIRED" in error_msg:
@@ -1264,7 +1264,7 @@ def run_bulk_upload_task(task_id):
                 
                 # Update account task status
                 update_account_task(account_task, TaskStatus.FAILED, error_msg)
-                update_task_log(task, f"[{timestamp}] ❌ Account {account.username} failed: {error_msg}\n")
+                update_task_log(task, f"[{timestamp}] [FAIL] Account {account.username} failed: {error_msg}\n")
         
         # Final task summary and status determination
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -1288,15 +1288,15 @@ def run_bulk_upload_task(task_id):
         # Determine final task status based on results
         if successful_accounts == 0:
             final_status = TaskStatus.FAILED
-            status_emoji = "❌"
+            status_emoji = "[FAIL]"
             status_message = "All accounts failed"
         elif successful_accounts == len(account_tasks):
             final_status = TaskStatus.COMPLETED
-            status_emoji = "✅"
+            status_emoji = "[OK]"
             status_message = "All accounts completed successfully"
         else:
             final_status = TaskStatus.PARTIALLY_COMPLETED
-            status_emoji = "⚠️"
+            status_emoji = "[WARN]"
             status_message = f"Partial completion: {successful_accounts}/{len(account_tasks)} accounts succeeded"
         
         # Generate health report for critical issues
@@ -1329,9 +1329,9 @@ def run_bulk_upload_task(task_id):
         try:
             deleted_files = cleanup_original_video_files_sync(task)
             if deleted_files > 0:
-                log_info(f"🗑️ [CLEANUP] Cleaned up {deleted_files} original video files from media directory", LogCategories.CLEANUP)
+                log_info(f"[DELETE] [CLEANUP] Cleaned up {deleted_files} original video files from media directory", LogCategories.CLEANUP)
         except Exception as cleanup_error:
-            log_warning(f"⚠️ [CLEANUP] Failed to cleanup original video files: {str(cleanup_error)}", LogCategories.CLEANUP)
+            log_warning(f"[WARN] [CLEANUP] Failed to cleanup original video files: {str(cleanup_error)}", LogCategories.CLEANUP)
         
         return final_status in [TaskStatus.COMPLETED, TaskStatus.PARTIALLY_COMPLETED]
         
@@ -1339,12 +1339,12 @@ def run_bulk_upload_task(task_id):
         error_message = str(e)
         error_trace = traceback.format_exc()
         
-        log_error(f"💥 [TASK_CRITICAL] Critical error in bulk upload task {task_id}: {error_message}", LogCategories.TASK_INFO)
-        log_error(f"💥 [TASK_CRITICAL] Stack trace: {error_trace}", LogCategories.TASK_INFO)
+        log_error(f"[EXPLODE] [TASK_CRITICAL] Critical error in bulk upload task {task_id}: {error_message}", LogCategories.TASK_INFO)
+        log_error(f"[EXPLODE] [TASK_CRITICAL] Stack trace: {error_trace}", LogCategories.TASK_INFO)
         
         if task:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            update_task_status(task, TaskStatus.FAILED, f"[{timestamp}] 💥 Critical task error: {error_message}\n")
+            update_task_status(task, TaskStatus.FAILED, f"[{timestamp}] [EXPLODE] Critical task error: {error_message}\n")
         
         return False
     
@@ -1352,22 +1352,22 @@ def run_bulk_upload_task(task_id):
         # Cleanup any hanging processes
         try:
             cleanup_hanging_browser_processes()
-            log_info("🧹 [CLEANUP] Browser cleanup completed", LogCategories.CLEANUP)
+            log_info("[CLEAN] [CLEANUP] Browser cleanup completed", LogCategories.CLEANUP)
         except Exception as cleanup_error:
-            log_warning(f"⚠️ [CLEANUP] Browser cleanup had issues: {str(cleanup_error)}", LogCategories.CLEANUP)
+            log_warning(f"[WARN] [CLEANUP] Browser cleanup had issues: {str(cleanup_error)}", LogCategories.CLEANUP)
         
         # Also cleanup original video files if task exists
         if 'task' in locals() and task:
             try:
                 deleted_files = cleanup_original_video_files_sync(task)
                 if deleted_files > 0:
-                    log_info(f"🗑️ [CLEANUP] Finally cleanup: removed {deleted_files} original video files", LogCategories.CLEANUP)
+                    log_info(f"[DELETE] [CLEANUP] Finally cleanup: removed {deleted_files} original video files", LogCategories.CLEANUP)
             except Exception as cleanup_error:
-                log_warning(f"⚠️ [CLEANUP] Finally cleanup failed for original video files: {str(cleanup_error)}", LogCategories.CLEANUP)
+                log_warning(f"[WARN] [CLEANUP] Finally cleanup failed for original video files: {str(cleanup_error)}", LogCategories.CLEANUP)
 
 def process_account_videos(account_task, task, all_videos, all_titles, task_id):
     """Process videos for a single account"""
-    # ✅ ВАЖНО: Каждый аккаунт получает ВСЕ видео задачи, а не только назначенные ему
+    # [OK] ВАЖНО: Каждый аккаунт получает ВСЕ видео задачи, а не только назначенные ему
     # Это означает, что одно видео будет загружено на все аккаунты
     videos_for_account = list(all_videos)
     random.shuffle(videos_for_account)
@@ -1399,7 +1399,7 @@ def process_account_videos(account_task, task, all_videos, all_titles, task_id):
             account_task,
             status=TaskStatus.FAILED,
             completed_at=timezone.now(),
-            log_message=f"[{timestamp}] ❌ No valid video files to upload\n"
+            log_message=f"[{timestamp}] [FAIL] No valid video files to upload\n"
         )
         return 'failed', 0, 1
     
@@ -1434,7 +1434,7 @@ def prepare_video_files(videos_for_account, account_task):
     video_files_to_upload = []
     account_username = account_task.account.username
     
-    log_info(f"🎬 Starting video uniquification for account {account_username}")
+    log_info(f"[VIDEO] Starting video uniquification for account {account_username}")
     
     for i, video in enumerate(videos_for_account):
         video_filename = os.path.basename(video.video_file.name)
@@ -1457,7 +1457,7 @@ def prepare_video_files(videos_for_account, account_task):
                 log_info(f"Created temporary file: {tmp.name}")
                 update_account_task(
                     account_task,
-                    log_message=f"[{timestamp}] ✅ Created temporary file\n"
+                    log_message=f"[{timestamp}] [OK] Created temporary file\n"
                 )
                 
                 # Теперь уникализируем видео для этого аккаунта
@@ -1489,42 +1489,42 @@ def prepare_video_files(videos_for_account, account_task):
                         temp_files.append(unique_video_path)
                         
                         timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
-                        log_info(f"✅ Created unique video for {account_username}: {os.path.basename(unique_video_path)}")
+                        log_info(f"[OK] Created unique video for {account_username}: {os.path.basename(unique_video_path)}")
                         update_account_task(
                             account_task,
-                            log_message=f"[{timestamp}] ✅ Created unique video: {os.path.basename(unique_video_path)}\n"
+                            log_message=f"[{timestamp}] [OK] Created unique video: {os.path.basename(unique_video_path)}\n"
                         )
                     else:
                         # Если уникализация не удалась, используем оригинальный файл
-                        log_warning(f"⚠️ Video uniquification failed, using original file")
+                        log_warning(f"[WARN] Video uniquification failed, using original file")
                         video_files_to_upload.append(tmp.name)
                         
                         timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
                         update_account_task(
                             account_task,
-                            log_message=f"[{timestamp}] ⚠️ Uniquification failed, using original\n"
+                            log_message=f"[{timestamp}] [WARN] Uniquification failed, using original\n"
                         )
                         
                 except Exception as uniquify_error:
                     # Если уникализация не удалась, используем оригинальный файл
-                    log_warning(f"⚠️ Video uniquification failed: {str(uniquify_error)}, using original file")
+                    log_warning(f"[WARN] Video uniquification failed: {str(uniquify_error)}, using original file")
                     video_files_to_upload.append(tmp.name)
                     
                     timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
                     update_account_task(
                         account_task,
-                        log_message=f"[{timestamp}] ⚠️ Uniquification error: {str(uniquify_error)}\n"
+                        log_message=f"[{timestamp}] [WARN] Uniquification error: {str(uniquify_error)}\n"
                     )
                 
         except Exception as e:
-            log_error(f"❌ Error creating temporary file for {video_filename}: {str(e)}")
+            log_error(f"[FAIL] Error creating temporary file for {video_filename}: {str(e)}")
             timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
             update_account_task(
                 account_task,
-                log_message=f"[{timestamp}] ❌ Error creating temporary file: {str(e)}\n"
+                log_message=f"[{timestamp}] [FAIL] Error creating temporary file: {str(e)}\n"
             )
     
-    log_info(f"🎯 Prepared {len(video_files_to_upload)} unique videos for account {account_username}")
+    log_info(f"[TARGET] Prepared {len(video_files_to_upload)} unique videos for account {account_username}")
     return temp_files, video_files_to_upload
 
 def cleanup_temp_files(temp_files):
@@ -1554,7 +1554,7 @@ def run_dolphin_browser(account_details, videos, video_files_to_upload, result_q
         # Pre-flight checks
         if not video_files_to_upload:
             error_msg = "No video files provided for upload"
-            log_error(f"❌ [DOLPHIN_ERROR] {error_msg}", LogCategories.DOLPHIN)
+            log_error(f"[FAIL] [DOLPHIN_ERROR] {error_msg}", LogCategories.DOLPHIN)
             result_queue.put(("ERROR", error_msg))
             return
         
@@ -1562,7 +1562,7 @@ def run_dolphin_browser(account_details, videos, video_files_to_upload, result_q
         dolphin_token = os.environ.get("DOLPHIN_API_TOKEN")
         if not dolphin_token:
             error_msg = "No Dolphin API token found in environment variables"
-            log_error(f"❌ [DOLPHIN_ERROR] {error_msg}", LogCategories.DOLPHIN)
+            log_error(f"[FAIL] [DOLPHIN_ERROR] {error_msg}", LogCategories.DOLPHIN)
             send_critical_notification(task_id, f"Dolphin API token missing for task {task_id}", 'ERROR')
             result_queue.put(("DOLPHIN_ERROR", error_msg))
             return
@@ -1586,16 +1586,16 @@ def run_dolphin_browser(account_details, videos, video_files_to_upload, result_q
         
         while auth_attempts < max_auth_attempts:
             if authenticate_dolphin(dolphin):
-                log_success(f"✅ [DOLPHIN_AUTH] Authentication successful on attempt {auth_attempts + 1}", LogCategories.DOLPHIN)
+                log_success(f"[OK] [DOLPHIN_AUTH] Authentication successful on attempt {auth_attempts + 1}", LogCategories.DOLPHIN)
                 break
             else:
                 auth_attempts += 1
                 if auth_attempts < max_auth_attempts:
-                    log_warning(f"⚠️ [DOLPHIN_AUTH] Authentication failed, retrying... (attempt {auth_attempts}/{max_auth_attempts})", LogCategories.DOLPHIN)
+                    log_warning(f"[WARN] [DOLPHIN_AUTH] Authentication failed, retrying... (attempt {auth_attempts}/{max_auth_attempts})", LogCategories.DOLPHIN)
                     time.sleep(random.uniform(2, 5))
                 else:
                     error_msg = "Failed to authenticate with Dolphin Anty API after multiple attempts"
-                    log_error(f"❌ [DOLPHIN_AUTH] {error_msg}", LogCategories.DOLPHIN)
+                    log_error(f"[FAIL] [DOLPHIN_AUTH] {error_msg}", LogCategories.DOLPHIN)
                     send_critical_notification(task_id, f"Dolphin authentication failed for account {username}", 'ERROR')
                     result_queue.put(("DOLPHIN_ERROR", error_msg))
                     return
@@ -1605,7 +1605,7 @@ def run_dolphin_browser(account_details, videos, video_files_to_upload, result_q
         dolphin_profile_id = get_dolphin_profile_id(username)
         if not dolphin_profile_id:
             error_msg = f"No Dolphin profile found for account: {username}"
-            log_error(f"❌ [DOLPHIN_PROFILE] {error_msg}", LogCategories.DOLPHIN)
+            log_error(f"[FAIL] [DOLPHIN_PROFILE] {error_msg}", LogCategories.DOLPHIN)
             send_critical_notification(task_id, f"Missing Dolphin profile for account {username}", 'ERROR')
             result_queue.put(("PROFILE_ERROR", error_msg))
             return
@@ -1624,18 +1624,18 @@ def run_dolphin_browser(account_details, videos, video_files_to_upload, result_q
             try:
                 page = dolphin_browser.connect_to_profile(dolphin_profile_id, headless=False)
                 if page:
-                    log_success(f"✅ [DOLPHIN_BROWSER] Successfully connected to profile: {dolphin_profile_id}", LogCategories.DOLPHIN)
+                    log_success(f"[OK] [DOLPHIN_BROWSER] Successfully connected to profile: {dolphin_profile_id}", LogCategories.DOLPHIN)
                     break
                 else:
                     raise Exception("Page object is None")
             except Exception as connect_error:
                 connection_attempts += 1
                 if connection_attempts < max_connection_attempts:
-                    log_warning(f"⚠️ [DOLPHIN_BROWSER] Connection failed, retrying... (attempt {connection_attempts}/{max_connection_attempts}): {str(connect_error)}", LogCategories.DOLPHIN)
+                    log_warning(f"[WARN] [DOLPHIN_BROWSER] Connection failed, retrying... (attempt {connection_attempts}/{max_connection_attempts}): {str(connect_error)}", LogCategories.DOLPHIN)
                     time.sleep(random.uniform(3, 7))
                 else:
                     error_msg = f"Failed to connect to profile {dolphin_profile_id} after {max_connection_attempts} attempts: {str(connect_error)}"
-                    log_error(f"❌ [DOLPHIN_BROWSER] {error_msg}", LogCategories.DOLPHIN)
+                    log_error(f"[FAIL] [DOLPHIN_BROWSER] {error_msg}", LogCategories.DOLPHIN)
                     send_critical_notification(task_id, f"Browser connection failed for account {username}", 'ERROR')
                     result_queue.put(("PROFILE_ERROR", error_msg))
                     return
@@ -1659,17 +1659,17 @@ def run_dolphin_browser(account_details, videos, video_files_to_upload, result_q
             result_queue.put(("SUCCESS", success_message))
         else:
             error_msg = f"Instagram operations failed for account {username} after {operation_duration:.1f}s"
-            log_error(f"❌ [INSTAGRAM_FAILED] {error_msg}", LogCategories.UPLOAD)
+            log_error(f"[FAIL] [INSTAGRAM_FAILED] {error_msg}", LogCategories.UPLOAD)
             result_queue.put(("LOGIN_ERROR", error_msg))
         
     except Exception as e:
         error_message = str(e)
         
-        log_error(f"💥 [DOLPHIN_EXCEPTION] Critical error in Dolphin browser for account {username}: {error_message}", LogCategories.DOLPHIN)
+        log_error(f"[EXPLODE] [DOLPHIN_EXCEPTION] Critical error in Dolphin browser for account {username}: {error_message}", LogCategories.DOLPHIN)
         
         # Enhanced error categorization and handling
         if "PHONE_VERIFICATION_REQUIRED" in error_message:
-            log_error(f"📱 [VERIFICATION_PHONE] Phone verification required for account: {username}", LogCategories.VERIFICATION)
+            log_error(f"[PHONE] [VERIFICATION_PHONE] Phone verification required for account: {username}", LogCategories.VERIFICATION)
             send_critical_notification(task_id, f"Phone verification required for account {username} - manual intervention needed", 'VERIFICATION')
             result_queue.put(("PHONE_VERIFICATION_REQUIRED", f"Phone verification required for account: {username}"))
             
@@ -1696,7 +1696,7 @@ def run_dolphin_browser(account_details, videos, video_files_to_upload, result_q
                 log_error(f"💾 [DATABASE_ERROR] Failed to update account status: {str(db_error)}", LogCategories.DATABASE)
                 
         elif "HUMAN_VERIFICATION_REQUIRED" in error_message:
-            log_error(f"🤖 [VERIFICATION_HUMAN] Human verification required for account: {username}", LogCategories.VERIFICATION)
+            log_error(f"[BOT] [VERIFICATION_HUMAN] Human verification required for account: {username}", LogCategories.VERIFICATION)
             send_critical_notification(task_id, f"Human verification required for account {username} - manual intervention needed", 'VERIFICATION')
             result_queue.put(("HUMAN_VERIFICATION_REQUIRED", f"Human verification required for account: {username}"))
             
@@ -1723,7 +1723,7 @@ def run_dolphin_browser(account_details, videos, video_files_to_upload, result_q
                 log_error(f"💾 [DATABASE_ERROR] Failed to update account status: {str(db_error)}", LogCategories.DATABASE)
                 
         elif "SUSPENDED" in error_message:
-            log_error(f"🚫 [VERIFICATION_SUSPENDED] Account suspended for account: {username}", LogCategories.VERIFICATION)
+            log_error(f"[BLOCK] [VERIFICATION_SUSPENDED] Account suspended for account: {username}", LogCategories.VERIFICATION)
             send_critical_notification(task_id, f"Account {username} has been suspended by Instagram - manual review needed", 'VERIFICATION')
             result_queue.put(("SUSPENDED", f"Account suspended: {username}"))
             
@@ -1798,27 +1798,27 @@ def perform_instagram_operations(page, account_details, videos, video_files_to_u
         page.goto("https://www.instagram.com/", wait_until="domcontentloaded", timeout=60000)
         
         # CRITICAL: Wait for page to fully load before proceeding
-        log_info("⏳ [NAVIGATION] Waiting for page to fully load...", LogCategories.NAVIGATION)
+        log_info("[WAIT] [NAVIGATION] Waiting for page to fully load...", LogCategories.NAVIGATION)
         time.sleep(8)  # Increased from immediate to 8 seconds
         
         # Additional wait for network idle (all resources loaded)
         try:
             page.wait_for_load_state("networkidle", timeout=15000)
-            log_info("✅ [NAVIGATION] Network idle state reached", LogCategories.NAVIGATION)
+            log_info("[OK] [NAVIGATION] Network idle state reached", LogCategories.NAVIGATION)
         except Exception as e:
-            log_warning(f"⚠️ [NAVIGATION] Network idle timeout, continuing: {str(e)}", LogCategories.NAVIGATION)
+            log_warning(f"[WARN] [NAVIGATION] Network idle timeout, continuing: {str(e)}", LogCategories.NAVIGATION)
         
         # Wait for DOM to be interactive
         try:
             page.wait_for_function("document.readyState === 'complete'", timeout=10000)
-            log_info("✅ [NAVIGATION] Document ready state complete", LogCategories.NAVIGATION)
+            log_info("[OK] [NAVIGATION] Document ready state complete", LogCategories.NAVIGATION)
         except Exception as e:
-            log_warning(f"⚠️ [NAVIGATION] Document ready timeout, continuing: {str(e)}", LogCategories.NAVIGATION)
+            log_warning(f"[WARN] [NAVIGATION] Document ready timeout, continuing: {str(e)}", LogCategories.NAVIGATION)
         
         # Additional safety wait
         time.sleep(3)
         
-        log_success("✅ [NAVIGATION] Successfully loaded Instagram.com", LogCategories.NAVIGATION)
+        log_success("[OK] [NAVIGATION] Successfully loaded Instagram.com", LogCategories.NAVIGATION)
         
         # Initialize human behavior after page is fully loaded
         init_human_behavior(page)
@@ -1886,7 +1886,7 @@ def cleanup_browser_session(page, dolphin_browser, dolphin_profile_id, dolphin):
         log_info("[CLEANUP] Starting comprehensive browser cleanup")
         if page and dolphin_browser:
             BrowserManager.safely_close_browser(page, dolphin_browser, dolphin_profile_id)
-            log_info("[CLEANUP] ✅ Browser cleanup completed successfully")
+            log_info("[CLEANUP] [OK] Browser cleanup completed successfully")
         else:
             log_info("[CLEANUP] Browser objects not initialized, skipping cleanup")
     except Exception as cleanup_error:
@@ -1898,32 +1898,32 @@ def handle_login_flow(page, account_details):
         log_info("🔑 Need to login to Instagram", LogCategories.LOGIN)
         
         # Wait for page to be fully interactive before checking login status
-        log_info("⏳ [LOGIN] Ensuring page is fully loaded before login check...", LogCategories.LOGIN)
+        log_info("[WAIT] [LOGIN] Ensuring page is fully loaded before login check...", LogCategories.LOGIN)
         time.sleep(3)  # Additional wait for page stability
         
         # Only check for reCAPTCHA before attempting login (it can appear on login page)
         log_info("🔍 Checking for reCAPTCHA on login page...", LogCategories.CAPTCHA)
         handle_recaptcha_if_present(page)
-        log_success("✅ reCAPTCHA handling completed", LogCategories.CAPTCHA)
+        log_success("[OK] reCAPTCHA handling completed", LogCategories.CAPTCHA)
         
         # Perform login FIRST
         login_result = perform_instagram_login_optimized(page, account_details)
         
         if login_result == "SUSPENDED":
-            log_error("🚫 Account suspended detected during login check", LogCategories.VERIFICATION)
+            log_error("[BLOCK] Account suspended detected during login check", LogCategories.VERIFICATION)
             raise Exception(f"SUSPENDED: Account suspended by Instagram")
         elif not login_result:
-            log_error("❌ Failed to login to Instagram", LogCategories.LOGIN)
+            log_error("[FAIL] Failed to login to Instagram", LogCategories.LOGIN)
             return False
         
-        log_success("✅ Login completed successfully", LogCategories.LOGIN)
+        log_success("[OK] Login completed successfully", LogCategories.LOGIN)
         
         # NOW check for post-login verification requirements
         log_info("🔍 Checking for phone verification requirement...", LogCategories.VERIFICATION)
         phone_verification_result = check_for_phone_verification_page(page)
         
         if phone_verification_result.get('requires_phone_verification', False):
-            log_error(f"📱 Phone verification required after login: {phone_verification_result.get('message', 'Unknown reason')}", LogCategories.VERIFICATION)
+            log_error(f"[PHONE] Phone verification required after login: {phone_verification_result.get('message', 'Unknown reason')}", LogCategories.VERIFICATION)
             raise Exception(f"PHONE_VERIFICATION_REQUIRED: {phone_verification_result.get('message', 'Phone verification required')}")
         
         # Check for human verification after login
@@ -1931,7 +1931,7 @@ def handle_login_flow(page, account_details):
         human_verification_result = check_for_human_verification_dialog(page, account_details)
         
         if human_verification_result.get('requires_human_verification', False):
-            log_error(f"🤖 Human verification required after login: {human_verification_result.get('message', 'Unknown reason')}", LogCategories.VERIFICATION)
+            log_error(f"[BOT] Human verification required after login: {human_verification_result.get('message', 'Unknown reason')}", LogCategories.VERIFICATION)
             raise Exception(f"HUMAN_VERIFICATION_REQUIRED: {human_verification_result.get('message', 'Human verification required')}")
         
         # Check for account suspension after login
@@ -1940,7 +1940,7 @@ def handle_login_flow(page, account_details):
         
         if suspension_result.get('account_suspended', False):
             suspension_message = suspension_result.get('message', 'Account suspended by Instagram')
-            log_error(f"🚫 Account suspension detected after login: {suspension_message}", LogCategories.VERIFICATION)
+            log_error(f"[BLOCK] Account suspension detected after login: {suspension_message}", LogCategories.VERIFICATION)
             
             # Raise exception to trigger account status update
             raise Exception(f"SUSPENDED: {suspension_message}")
@@ -1949,7 +1949,7 @@ def handle_login_flow(page, account_details):
         log_info("🔍 Checking for post-login reCAPTCHA...", LogCategories.CAPTCHA)
         handle_recaptcha_if_present(page)
         
-        log_success("✅ Login flow completed successfully", LogCategories.LOGIN)
+        log_success("[OK] Login flow completed successfully", LogCategories.LOGIN)
         return True
         
     except Exception as e:
@@ -1959,10 +1959,10 @@ def handle_login_flow(page, account_details):
         if ("SUSPENDED:" in error_message or 
             "PHONE_VERIFICATION_REQUIRED:" in error_message or 
             "HUMAN_VERIFICATION_REQUIRED:" in error_message):
-            log_error(f"❌ Error in login flow (re-raising for status update): {error_message}", LogCategories.LOGIN)
+            log_error(f"[FAIL] Error in login flow (re-raising for status update): {error_message}", LogCategories.LOGIN)
             raise e  # Re-raise the exception so it reaches run_dolphin_browser
         else:
-            log_error(f"❌ Error in login flow: {error_message}", LogCategories.LOGIN)
+            log_error(f"[FAIL] Error in login flow: {error_message}", LogCategories.LOGIN)
             return False
 
 def log_video_info(video_index, total_videos, video_file_path, video_obj):
@@ -1999,22 +1999,22 @@ def add_human_delay_between_uploads(page, video_index, total_videos=None, accoun
 def perform_final_cleanup(page, username):
     """Perform final cleanup activities"""
     try:
-        log_info(f"🧹 [CLEANUP] Starting final cleanup for user: {username}")
+        log_info(f"[CLEAN] [CLEANUP] Starting final cleanup for user: {username}")
         
         # Try to navigate away from any sensitive pages
         try:
             # Go to main Instagram page
             page.goto('https://www.instagram.com/', wait_until='load', timeout=15000)
-            log_info("🧹 [CLEANUP] Navigated to main page")
+            log_info("[CLEAN] [CLEANUP] Navigated to main page")
         except Exception as e:
-            log_warning(f"🧹 [CLEANUP] Could not navigate to main page: {str(e)}")
+            log_warning(f"[CLEAN] [CLEANUP] Could not navigate to main page: {str(e)}")
         
         # Wait a moment
         time.sleep(random.uniform(1, 3))
-        log_info("🧹 [CLEANUP] Final cleanup completed")
+        log_info("[CLEAN] [CLEANUP] Final cleanup completed")
         
     except Exception as e:
-        log_warning(f"🧹 [CLEANUP] Error during final cleanup: {str(e)}")
+        log_warning(f"[CLEAN] [CLEANUP] Error during final cleanup: {str(e)}")
 
 def perform_instagram_login(page, account_details):
     """Redirect to optimized login function"""
@@ -2048,21 +2048,21 @@ def check_for_phone_verification_page(page):
         phone_verification_detected = len(detected_keywords) > 0
         
         if phone_verification_detected:
-            log_error(f"📱 [PHONE_VERIFY] Phone verification requirement detected!", LogCategories.VERIFICATION)
+            log_error(f"[PHONE] [PHONE_VERIFY] Phone verification requirement detected!", LogCategories.VERIFICATION)
             return {
                 'requires_phone_verification': True,
                 'message': f"Phone verification required",
                 'detected_keywords': detected_keywords[:3]
             }
         else:
-            log_info(f"✅ [PHONE_VERIFY] No phone verification requirement detected", LogCategories.VERIFICATION)
+            log_info(f"[OK] [PHONE_VERIFY] No phone verification requirement detected", LogCategories.VERIFICATION)
             return {
                 'requires_phone_verification': False,
                 'message': f"No phone verification required"
             }
             
     except Exception as e:
-        log_warning(f"❌ [PHONE_VERIFY] Error checking for phone verification: {str(e)}", LogCategories.VERIFICATION)
+        log_warning(f"[FAIL] [PHONE_VERIFY] Error checking for phone verification: {str(e)}", LogCategories.VERIFICATION)
         return {
             'requires_phone_verification': False,
             'message': f"Error checking phone verification: {str(e)}"
@@ -2096,21 +2096,21 @@ def check_for_human_verification_dialog(page, account_details=None):
         human_verification_detected = len(detected_keywords) > 0
         
         if human_verification_detected:
-            log_error(f"🤖 [HUMAN_VERIFY] Human verification requirement detected!", LogCategories.VERIFICATION)
+            log_error(f"[BOT] [HUMAN_VERIFY] Human verification requirement detected!", LogCategories.VERIFICATION)
             return {
                 'requires_human_verification': True,
                 'message': f"Human verification required",
                 'detected_keywords': detected_keywords[:3]
             }
         else:
-            log_info(f"✅ [HUMAN_VERIFY] No human verification requirement detected", LogCategories.VERIFICATION)
+            log_info(f"[OK] [HUMAN_VERIFY] No human verification requirement detected", LogCategories.VERIFICATION)
             return {
                 'requires_human_verification': False,
                 'message': f"No human verification required"
             }
             
     except Exception as e:
-        log_warning(f"❌ [HUMAN_VERIFY] Error checking for human verification: {str(e)}", LogCategories.VERIFICATION)
+        log_warning(f"[FAIL] [HUMAN_VERIFY] Error checking for human verification: {str(e)}", LogCategories.VERIFICATION)
         return {
             'requires_human_verification': False,
             'message': f"Error checking human verification: {str(e)}"
@@ -2185,9 +2185,9 @@ def check_for_account_suspension(page):
         url_suspension_detected = any(pattern in current_url for pattern in suspension_url_patterns)
         
         if suspension_detected or url_suspension_detected:
-            log_error(f"🚫 [SUSPENSION_CHECK] ACCOUNT SUSPENSION DETECTED!", LogCategories.VERIFICATION)
-            log_error(f"🚫 [SUSPENSION_CHECK] URL: {page.url}", LogCategories.VERIFICATION)
-            log_error(f"🚫 [SUSPENSION_CHECK] Keywords found: {detected_keywords[:5]}", LogCategories.VERIFICATION)
+            log_error(f"[BLOCK] [SUSPENSION_CHECK] ACCOUNT SUSPENSION DETECTED!", LogCategories.VERIFICATION)
+            log_error(f"[BLOCK] [SUSPENSION_CHECK] URL: {page.url}", LogCategories.VERIFICATION)
+            log_error(f"[BLOCK] [SUSPENSION_CHECK] Keywords found: {detected_keywords[:5]}", LogCategories.VERIFICATION)
             
             suspension_reason = "Account suspended by Instagram"
             if detected_keywords:
@@ -2201,14 +2201,14 @@ def check_for_account_suspension(page):
                 'page_url': page.url
             }
         else:
-            log_info(f"✅ [SUSPENSION_CHECK] No account suspension detected", LogCategories.VERIFICATION)
+            log_info(f"[OK] [SUSPENSION_CHECK] No account suspension detected", LogCategories.VERIFICATION)
             return {
                 'account_suspended': False,
                 'message': "No account suspension detected"
             }
             
     except Exception as e:
-        log_error(f"❌ [SUSPENSION_CHECK] Error checking for account suspension: {str(e)}", LogCategories.VERIFICATION)
+        log_error(f"[FAIL] [SUSPENSION_CHECK] Error checking for account suspension: {str(e)}", LogCategories.VERIFICATION)
         return {
             'account_suspended': False,
             'message': f"Error checking suspension: {str(e)}"
@@ -2254,7 +2254,7 @@ def _human_click_with_timeout(page, element, log_prefix="HUMAN_CLICK"):
             
             try:
                 human_behavior.advanced_element_interaction(element, 'click')
-                log_info(f"[{log_prefix}] ✅ Human click successful")
+                log_info(f"[{log_prefix}] [OK] Human click successful")
                 
                 # Restore original timeout
                 page.set_default_timeout(original_timeout)
@@ -2280,7 +2280,7 @@ def _human_click_with_timeout(page, element, log_prefix="HUMAN_CLICK"):
 def ensure_single_tab_only(page):
     """Ensure only one tab is open in the browser profile"""
     try:
-        log_info("[TAB_CLEANUP] 🧹 Checking for multiple tabs...")
+        log_info("[TAB_CLEANUP] [CLEAN] Checking for multiple tabs...")
         
         # Get browser context
         context = page.context
@@ -2298,19 +2298,19 @@ def ensure_single_tab_only(page):
                     try:
                         log_info(f"[TAB_CLEANUP] Closing tab: {p.url}")
                         p.close()
-                        log_info("[TAB_CLEANUP] ✅ Tab closed successfully")
+                        log_info("[TAB_CLEANUP] [OK] Tab closed successfully")
                     except Exception as e:
-                        log_warning(f"[TAB_CLEANUP] ⚠️ Could not close tab: {str(e)}")
+                        log_warning(f"[TAB_CLEANUP] [WARN] Could not close tab: {str(e)}")
                         continue
             
-            log_info(f"[TAB_CLEANUP] ✅ Tab cleanup completed - {len(pages) - 1} tabs closed")
+            log_info(f"[TAB_CLEANUP] [OK] Tab cleanup completed - {len(pages) - 1} tabs closed")
         else:
-            log_info("[TAB_CLEANUP] ✅ Only one tab open - no cleanup needed")
+            log_info("[TAB_CLEANUP] [OK] Only one tab open - no cleanup needed")
         
         return True
         
     except Exception as e:
-        log_error(f"[TAB_CLEANUP] ❌ Error during tab cleanup: {str(e)}")
+        log_error(f"[TAB_CLEANUP] [FAIL] Error during tab cleanup: {str(e)}")
         return False
 
 def send_critical_notification(task_id, message, notification_type='ERROR'):
@@ -2662,7 +2662,7 @@ def handle_cookie_consent(page):
                     
                     # Click the button
                     element.click()
-                    log_success(f"✅ [COOKIES] Successfully clicked accept button: '{button_text}'", LogCategories.LOGIN)
+                    log_success(f"[OK] [COOKIES] Successfully clicked accept button: '{button_text}'", LogCategories.LOGIN)
                     
                     # Wait for modal to disappear
                     time.sleep(random.uniform(2, 4))
@@ -2683,19 +2683,19 @@ def handle_cookie_consent(page):
                             continue
                     
                     if not modal_still_present:
-                        log_success("✅ [COOKIES] Cookie consent modal successfully dismissed", LogCategories.LOGIN)
+                        log_success("[OK] [COOKIES] Cookie consent modal successfully dismissed", LogCategories.LOGIN)
                         return True
                     else:
-                        log_warning("⚠️ [COOKIES] Modal still present after clicking button", LogCategories.LOGIN)
+                        log_warning("[WARN] [COOKIES] Modal still present after clicking button", LogCategories.LOGIN)
                     
                     break
                     
             except Exception as e:
-                log_warning(f"⚠️ [COOKIES] Selector {i+1} failed: {str(e)}")
+                log_warning(f"[WARN] [COOKIES] Selector {i+1} failed: {str(e)}")
                 continue
         
         # If we get here, we couldn't find the accept button
-        log_warning("⚠️ [COOKIES] Could not find accept cookies button, trying decline", LogCategories.LOGIN)
+        log_warning("[WARN] [COOKIES] Could not find accept cookies button, trying decline", LogCategories.LOGIN)
         
         # Try decline buttons as fallback (better than nothing)
         for i, selector in enumerate(SelectorConfig.COOKIE_DECLINE_BUTTONS):
@@ -2716,17 +2716,17 @@ def handle_cookie_consent(page):
                     log_info(f"🍪 [COOKIES] Found decline button: '{button_text}', clicking as fallback")
                     element.click()
                     time.sleep(random.uniform(2, 4))
-                    log_info(f"✅ [COOKIES] Clicked decline button as fallback: '{button_text}'", LogCategories.LOGIN)
+                    log_info(f"[OK] [COOKIES] Clicked decline button as fallback: '{button_text}'", LogCategories.LOGIN)
                     return True
                     
             except Exception:
                 continue
         
-        log_warning("⚠️ [COOKIES] Could not handle cookie consent modal", LogCategories.LOGIN)
+        log_warning("[WARN] [COOKIES] Could not handle cookie consent modal", LogCategories.LOGIN)
         return False
         
     except Exception as e:
-        log_error(f"❌ [COOKIES] Error handling cookie consent: {str(e)}", LogCategories.LOGIN)
+        log_error(f"[FAIL] [COOKIES] Error handling cookie consent: {str(e)}", LogCategories.LOGIN)
         return False
 
 def cleanup_original_video_files_sync(task) -> int:
@@ -2763,7 +2763,7 @@ def cleanup_original_video_files_sync(task) -> int:
                             for other_video in other_videos_with_same_file:
                                 other_task = other_video.bulk_task
                                 if other_task.status in ['RUNNING', 'PENDING']:
-                                    return False, f'🚫 File {filename} is still used by running task "{other_task.name}" (ID: {other_task.id})'
+                                    return False, f'[BLOCK] File {filename} is still used by running task "{other_task.name}" (ID: {other_task.id})'
                             
                             return True, None
                         
@@ -2774,16 +2774,16 @@ def cleanup_original_video_files_sync(task) -> int:
                             filename = os.path.basename(file_path)
                             os.unlink(file_path)
                             deleted_count += 1
-                            log_debug(f"🗑️ [CLEANUP] Deleted original video file: {filename}", LogCategories.CLEANUP)
+                            log_debug(f"[DELETE] [CLEANUP] Deleted original video file: {filename}", LogCategories.CLEANUP)
                         else:
-                            log_info(f"⏸️ [CLEANUP] Skipped deleting file (still in use by other tasks): {os.path.basename(file_path)}", LogCategories.CLEANUP)
+                            log_info(f"[PAUSE] [CLEANUP] Skipped deleting file (still in use by other tasks): {os.path.basename(file_path)}", LogCategories.CLEANUP)
                             if warning_msg:
                                 log_warning(warning_msg, LogCategories.CLEANUP)
                         
                 except Exception as e:
-                    log_warning(f"⚠️ [CLEANUP] Failed to delete video file {video.id}: {str(e)}", LogCategories.CLEANUP)
+                    log_warning(f"[WARN] [CLEANUP] Failed to delete video file {video.id}: {str(e)}", LogCategories.CLEANUP)
     
     except Exception as e:
-        log_error(f"❌ [CLEANUP] Error in cleanup_original_video_files_sync: {str(e)}", LogCategories.CLEANUP)
+        log_error(f"[FAIL] [CLEANUP] Error in cleanup_original_video_files_sync: {str(e)}", LogCategories.CLEANUP)
     
     return deleted_count

@@ -6,14 +6,14 @@ class InstagramSelectors:
     
     # Upload button selectors - SEMANTIC APPROACH
     UPLOAD_BUTTON = [
-        # 🎯 ПРИОРИТЕТ 1: Семантические атрибуты (самые устойчивые)
+        # [TARGET] ПРИОРИТЕТ 1: Семантические атрибуты (самые устойчивые)
         'svg[aria-label="Новая публикация"]',
         'svg[aria-label*="Новая публикация"]',
         'svg[aria-label*="New post"]',
         'svg[aria-label*="Create"]',
         'svg[aria-label*="Создать"]',
         
-        # 🎯 ПРИОРИТЕТ 2: Родительские элементы с семантическими SVG
+        # [TARGET] ПРИОРИТЕТ 2: Родительские элементы с семантическими SVG
         'a:has(svg[aria-label="Новая публикация"])',
         'button:has(svg[aria-label="Новая публикация"])',
         'div[role="button"]:has(svg[aria-label="Новая публикация"])',
@@ -21,7 +21,7 @@ class InstagramSelectors:
         'button:has(svg[aria-label*="New post"])',
         'div[role="button"]:has(svg[aria-label*="New post"])',
         
-        # 🎯 ПРИОРИТЕТ 3: Текстовые селекторы
+        # [TARGET] ПРИОРИТЕТ 3: Текстовые селекторы
         'span:has-text("Создать")',
         'a:has(span:has-text("Создать"))',
         'div[role="button"]:has-text("Создать")',
@@ -31,7 +31,7 @@ class InstagramSelectors:
         'div[role="button"]:has-text("Create")',
         'button:has-text("Create")',
         
-        # 🎯 ПРИОРИТЕТ 4: XPath семантические
+        # [TARGET] ПРИОРИТЕТ 4: XPath семантические
         '//svg[@aria-label="Новая публикация"]',
         '//svg[contains(@aria-label, "Новая публикация")]',
         '//svg[contains(@aria-label, "New post")]',
@@ -41,7 +41,7 @@ class InstagramSelectors:
         '//button[.//svg[@aria-label="Новая публикация"]]',
         '//div[@role="button" and .//svg[@aria-label="Новая публикация"]]',
         
-        # 🎯 ПРИОРИТЕТ 5: XPath текстовые
+        # [TARGET] ПРИОРИТЕТ 5: XPath текстовые
         '//span[contains(text(), "Создать")]',
         '//a[.//span[contains(text(), "Создать")]]',
         '//div[@role="button" and contains(text(), "Создать")]',
@@ -51,7 +51,7 @@ class InstagramSelectors:
         '//div[@role="button" and contains(text(), "Create")]',
         '//button[contains(text(), "Create")]',
         
-        # 🎯 ПРИОРИТЕТ 6: Универсальные aria-label
+        # [TARGET] ПРИОРИТЕТ 6: Универсальные aria-label
         '[aria-label*="Создать"]',
         '[aria-label*="Новая публикация"]',
         '[aria-label*="Create"]',
@@ -64,7 +64,7 @@ class InstagramSelectors:
     
     # Post option selectors - SEMANTIC APPROACH
     POST_OPTION = [
-        # 🎯 ПРИОРИТЕТ 1: Семантические SVG селекторы
+        # [TARGET] ПРИОРИТЕТ 1: Семантические SVG селекторы
         'svg[aria-label="Публикация"]',
         'svg[aria-label*="Публикация"]',
         'svg[aria-label*="Post"]',
@@ -76,7 +76,7 @@ class InstagramSelectors:
         'div[role="menuitem"]:has(svg[aria-label="Post"])',
         'div[role="button"]:has(svg[aria-label="Post"])',
         
-        # 🎯 ПРИОРИТЕТ 2: Текстовые селекторы
+        # [TARGET] ПРИОРИТЕТ 2: Текстовые селекторы
         'a:has(span:has-text("Публикация"))',
         'div[role="menuitem"]:has(span:has-text("Публикация"))',
         'div[role="button"]:has(span:has-text("Публикация"))',
@@ -86,7 +86,7 @@ class InstagramSelectors:
         'div[role="button"]:has(span:has-text("Post"))',
         'span:has-text("Post")',
         
-        # 🎯 ПРИОРИТЕТ 3: XPath семантические
+        # [TARGET] ПРИОРИТЕТ 3: XPath семантические
         '//svg[@aria-label="Публикация"]',
         '//svg[contains(@aria-label, "Публикация")]',
         '//svg[contains(@aria-label, "Post")]',
@@ -96,7 +96,7 @@ class InstagramSelectors:
         '//a[.//svg[@aria-label="Post"]]',
         '//div[@role="menuitem" and .//svg[@aria-label="Post"]]',
         
-        # 🎯 ПРИОРИТЕТ 4: XPath текстовые
+        # [TARGET] ПРИОРИТЕТ 4: XPath текстовые
         '//a[.//span[text()="Публикация"]]',
         '//div[@role="menuitem" and .//span[text()="Публикация"]]',
         '//span[text()="Публикация"]',
@@ -104,7 +104,7 @@ class InstagramSelectors:
         '//div[@role="menuitem" and .//span[text()="Post"]]',
         '//span[text()="Post"]',
         
-        # 🎯 ПРИОРИТЕТ 5: Универсальные
+        # [TARGET] ПРИОРИТЕТ 5: Универсальные
         '[aria-label*="Публикация"]',
         '[aria-label*="Post"]',
         'button[aria-label*="Публикация"]',
@@ -113,7 +113,7 @@ class InstagramSelectors:
     
     # File input selectors - SEMANTIC APPROACH
     FILE_INPUT = [
-        # 🎯 ПРИОРИТЕТ 1: Стандартные HTML атрибуты (самые устойчивые)
+        # [TARGET] ПРИОРИТЕТ 1: Стандартные HTML атрибуты (самые устойчивые)
         'input[type="file"]',
         'input[accept*="video"]',
         'input[accept*="image"]',
@@ -126,12 +126,12 @@ class InstagramSelectors:
         'input[accept*="avif"]',
         'input[multiple]',
         
-        # 🎯 ПРИОРИТЕТ 2: Семантические формы
+        # [TARGET] ПРИОРИТЕТ 2: Семантические формы
         'form[enctype="multipart/form-data"] input[type="file"]',
         'form[method="POST"] input[type="file"]',
         'form[role="presentation"] input[type="file"]',
         
-        # 🎯 ПРИОРИТЕТ 3: Текстовые кнопки (самые надежные)
+        # [TARGET] ПРИОРИТЕТ 3: Текстовые кнопки (самые надежные)
         'button:has-text("Выбрать на компьютере")',
         'div[role="button"]:has-text("Выбрать на компьютере")',
         'button:has-text("Выбрать файлы")',
@@ -139,7 +139,7 @@ class InstagramSelectors:
         'button:has-text("Выбрать с компьютера")',
         'div[role="button"]:has-text("Выбрать с компьютера")',
         
-        # 🎯 ПРИОРИТЕТ 4: Английские тексты
+        # [TARGET] ПРИОРИТЕТ 4: Английские тексты
         'button:has-text("Select from computer")',
         'div[role="button"]:has-text("Select from computer")',
         'button:has-text("Select files")',
@@ -147,7 +147,7 @@ class InstagramSelectors:
         'button:has-text("Choose files")',
         'div[role="button"]:has-text("Choose files")',
         
-        # 🎯 ПРИОРИТЕТ 5: XPath тексты
+        # [TARGET] ПРИОРИТЕТ 5: XPath тексты
         '//button[contains(text(), "Выбрать на компьютере")]',
         '//div[@role="button" and contains(text(), "Выбрать на компьютере")]',
         '//button[contains(text(), "Выбрать файлы")]',
@@ -157,7 +157,7 @@ class InstagramSelectors:
         '//button[contains(text(), "Select files")]',
         '//div[@role="button" and contains(text(), "Select files")]',
         
-        # 🎯 ПРИОРИТЕТ 6: Aria-label семантические
+        # [TARGET] ПРИОРИТЕТ 6: Aria-label семантические
         'button[aria-label*="Выбрать"]',
         'button[aria-label*="Select"]',
         'button[aria-label*="Choose"]',
@@ -165,18 +165,18 @@ class InstagramSelectors:
         '[aria-label*="Select file"]',
         '[aria-label*="Choose file"]',
         
-        # 🎯 ПРИОРИТЕТ 7: Drag and drop области
+        # [TARGET] ПРИОРИТЕТ 7: Drag and drop области
         'div:has-text("Перетащите фото и видео сюда")',
         'div:has-text("Drag photos and videos here")',
         'div[role="button"]:has-text("Перетащите")',
         'div[role="button"]:has-text("Drag")',
         
-        # 🎯 ПРИОРИТЕТ 8: Универсальные файловые input
+        # [TARGET] ПРИОРИТЕТ 8: Универсальные файловые input
         'input[type="file"]:not([style*="display: none"]):not([hidden])',
         'input[type="file"][style*="display: block"]',
         'input[type="file"][style*="visibility: visible"]',
         
-        # 🎯 ПРИОРИТЕТ 9: Последний resort - современные классы (ТОЛЬКО если ничего не работает)
+        # [TARGET] ПРИОРИТЕТ 9: Последний resort - современные классы (ТОЛЬКО если ничего не работает)
         'input[class*="_ac69"]',  # Оставляем только как последний вариант
         'form input[class*="_ac"]',  # Широкий паттерн Instagram
     ]
@@ -193,7 +193,7 @@ class InstagramSelectors:
     
     # Next button selectors - SEMANTIC APPROACH
     NEXT_BUTTON = [
-        # 🎯 ПРИОРИТЕТ 1: Текстовые селекторы (самые надежные)
+        # [TARGET] ПРИОРИТЕТ 1: Текстовые селекторы (самые надежные)
         'button:has-text("Далее")',
         'button:has-text("Next")',
         'button:has-text("Продолжить")',
@@ -203,7 +203,7 @@ class InstagramSelectors:
         'div[role="button"]:has-text("Продолжить")',
         'div[role="button"]:has-text("Continue")',
         
-        # 🎯 ПРИОРИТЕТ 2: XPath текстовые
+        # [TARGET] ПРИОРИТЕТ 2: XPath текстовые
         '//button[contains(text(), "Далее")]',
         '//button[contains(text(), "Next")]',
         '//button[contains(text(), "Продолжить")]',
@@ -211,7 +211,7 @@ class InstagramSelectors:
         '//div[@role="button" and contains(text(), "Далее")]',
         '//div[@role="button" and contains(text(), "Next")]',
         
-        # 🎯 ПРИОРИТЕТ 3: Aria-label
+        # [TARGET] ПРИОРИТЕТ 3: Aria-label
         'button[aria-label*="Далее"]',
         'button[aria-label*="Next"]',
         'button[aria-label*="Продолжить"]',
@@ -219,7 +219,7 @@ class InstagramSelectors:
         '[role="button"][aria-label*="Далее"]',
         '[role="button"][aria-label*="Next"]',
         
-        # 🎯 ПРИОРИТЕТ 4: Универсальные роли
+        # [TARGET] ПРИОРИТЕТ 4: Универсальные роли
         '[role="button"]:has-text("Далее")',
         '[role="button"][tabindex="0"]:has-text("Далее")',
         '[role="button"]:has-text("Next")',
@@ -228,7 +228,7 @@ class InstagramSelectors:
     
     # Share button selectors - SEMANTIC APPROACH
     SHARE_BUTTON = [
-        # 🎯 ПРИОРИТЕТ 1: Текстовые селекторы
+        # [TARGET] ПРИОРИТЕТ 1: Текстовые селекторы
         'button:has-text("Поделиться")',
         'button:has-text("Share")',
         'button:has-text("Опубликовать")',
@@ -239,7 +239,7 @@ class InstagramSelectors:
         'div[role="button"]:has-text("Опубликовать")',
         'div[role="button"]:has-text("Post")',
         
-        # 🎯 ПРИОРИТЕТ 2: XPath текстовые
+        # [TARGET] ПРИОРИТЕТ 2: XPath текстовые
         '//button[contains(text(), "Поделиться")]',
         '//button[contains(text(), "Share")]',
         '//button[contains(text(), "Опубликовать")]',
@@ -247,7 +247,7 @@ class InstagramSelectors:
         '//div[@role="button" and contains(text(), "Поделиться")]',
         '//div[@role="button" and contains(text(), "Share")]',
         
-        # 🎯 ПРИОРИТЕТ 3: Aria-label
+        # [TARGET] ПРИОРИТЕТ 3: Aria-label
         'button[aria-label*="Поделиться"]',
         'button[aria-label*="Share"]',
         'button[aria-label*="Опубликовать"]',
@@ -258,25 +258,25 @@ class InstagramSelectors:
     
     # Caption textarea selectors - SEMANTIC APPROACH
     CAPTION_TEXTAREA = [
-        # 🎯 ПРИОРИТЕТ 1: Семантические aria-label
+        # [TARGET] ПРИОРИТЕТ 1: Семантические aria-label
         'textarea[aria-label*="Напишите подпись"]',
         'textarea[aria-label*="Write a caption"]',
         'textarea[aria-label*="подпись"]',
         'textarea[aria-label*="caption"]',
         
-        # 🎯 ПРИОРИТЕТ 2: Placeholder атрибуты
+        # [TARGET] ПРИОРИТЕТ 2: Placeholder атрибуты
         'textarea[placeholder*="Напишите подпись"]',
         'textarea[placeholder*="Write a caption"]',
         'textarea[placeholder*="подпись"]',
         'textarea[placeholder*="caption"]',
         
-        # 🎯 ПРИОРИТЕТ 3: Contenteditable div
+        # [TARGET] ПРИОРИТЕТ 3: Contenteditable div
         'div[contenteditable="true"][aria-label*="подпись"]',
         'div[contenteditable="true"][aria-label*="caption"]',
         'div[contenteditable="true"][placeholder*="подпись"]',
         'div[contenteditable="true"][placeholder*="caption"]',
         
-        # 🎯 ПРИОРИТЕТ 4: XPath
+        # [TARGET] ПРИОРИТЕТ 4: XPath
         '//textarea[contains(@aria-label, "подпись")]',
         '//textarea[contains(@aria-label, "caption")]',
         '//div[@contenteditable="true" and contains(@aria-label, "подпись")]',
@@ -399,7 +399,7 @@ class InstagramSelectors:
 
     # Crop/Size selection selectors - FULLY ADAPTIVE VERSION (независимо от CSS-классов)
     CROP_SIZE_BUTTON = [
-        # 🎯 ПРИОРИТЕТ 1: Семантические селекторы (самые устойчивые)
+        # [TARGET] ПРИОРИТЕТ 1: Семантические селекторы (самые устойчивые)
         'svg[aria-label="Выбрать размер и обрезать"]',
         'svg[aria-label*="Выбрать размер"]',
         'svg[aria-label*="обрезать"]',
@@ -408,7 +408,7 @@ class InstagramSelectors:
         'svg[aria-label*="Crop"]',
         'svg[aria-label*="Select size"]',
         
-        # 🎯 ПРИОРИТЕТ 2: Родительские элементы SVG (работают всегда)
+        # [TARGET] ПРИОРИТЕТ 2: Родительские элементы SVG (работают всегда)
         'button:has(svg[aria-label="Выбрать размер и обрезать"])',
         'div[role="button"]:has(svg[aria-label="Выбрать размер и обрезать"])',
         'button:has(svg[aria-label*="Выбрать размер"])',
@@ -420,7 +420,7 @@ class InstagramSelectors:
         'div[role="button"]:has(svg[aria-label*="Select crop"])',
         'div[role="button"]:has(svg[aria-label*="Crop"])',
         
-        # 🎯 ПРИОРИТЕТ 3: Универсальные aria-label (без привязки к SVG)
+        # [TARGET] ПРИОРИТЕТ 3: Универсальные aria-label (без привязки к SVG)
         '[aria-label*="Выбрать размер и обрезать"]',
         '[aria-label*="Выбрать размер"]',
         '[aria-label*="обрезать"]',
@@ -431,7 +431,7 @@ class InstagramSelectors:
         'button[aria-label*="Select crop"]',
         'button[aria-label*="Crop"]',
         
-        # 🎯 ПРИОРИТЕТ 4: XPath семантические (очень устойчивые)
+        # [TARGET] ПРИОРИТЕТ 4: XPath семантические (очень устойчивые)
         '//svg[@aria-label="Выбрать размер и обрезать"]',
         '//svg[contains(@aria-label, "Выбрать размер")]',
         '//svg[contains(@aria-label, "обрезать")]',
@@ -447,26 +447,26 @@ class InstagramSelectors:
         '//div[@role="button" and .//svg[contains(@aria-label, "Select crop")]]',
         '//div[@role="button" and .//svg[contains(@aria-label, "Crop")]]',
         
-        # 🎯 ПРИОРИТЕТ 5: Текстовые селекторы (fallback)
+        # [TARGET] ПРИОРИТЕТ 5: Текстовые селекторы (fallback)
         'button:has-text("Обрезка")',
         'button:has-text("Crop")',
         'div[role="button"]:has-text("Обрезка")',
         'div[role="button"]:has-text("Crop")',
         
-        # 🎯 ПРИОРИТЕТ 6: Универсальные паттерны
+        # [TARGET] ПРИОРИТЕТ 6: Универсальные паттерны
         'button[type="button"]:has(svg[aria-label*="размер"])',
         'button[type="button"]:has(svg[aria-label*="crop"])',
         'div[role="button"]:has(button:has(svg[aria-label*="размер"]))',
         'div[role="button"]:has(button:has(svg[aria-label*="crop"]))',
         
-        # 🎯 ПРИОРИТЕТ 7: Широкие селекторы (если ничего не работает)
+        # [TARGET] ПРИОРИТЕТ 7: Широкие селекторы (если ничего не работает)
         'button:has(svg)',  # Любая кнопка с SVG
         'div[role="button"]:has(svg)',  # Любой div-кнопка с SVG
     ]
     
     # Original aspect ratio selectors - FULLY ADAPTIVE VERSION
     ORIGINAL_ASPECT_RATIO = [
-        # 🎯 ПРИОРИТЕТ 1: Семантические текстовые селекторы (самые надежные)
+        # [TARGET] ПРИОРИТЕТ 1: Семантические текстовые селекторы (самые надежные)
         'span:has-text("Оригинал")',
         'span:has-text("Original")',
         'div[role="button"]:has(span:has-text("Оригинал"))',
@@ -474,13 +474,13 @@ class InstagramSelectors:
         'div[role="button"]:has(span:has-text("Original"))',
         'button:has(span:has-text("Original"))',
         
-        # 🎯 ПРИОРИТЕТ 2: Прямые текстовые селекторы
+        # [TARGET] ПРИОРИТЕТ 2: Прямые текстовые селекторы
         'div[role="button"]:has-text("Оригинал")',
         'button:has-text("Оригинал")',
         'div[role="button"]:has-text("Original")',
         'button:has-text("Original")',
         
-        # 🎯 ПРИОРИТЕТ 3: SVG с семантическими атрибутами
+        # [TARGET] ПРИОРИТЕТ 3: SVG с семантическими атрибутами
         'svg[aria-label="Значок контура фото"]',
         'svg[aria-label*="контур"]',
         'svg[aria-label*="фото"]',
@@ -489,7 +489,7 @@ class InstagramSelectors:
         'div[role="button"]:has(svg[aria-label="Значок контура фото"])',
         'button:has(svg[aria-label="Значок контура фото"])',
         
-        # 🎯 ПРИОРИТЕТ 4: XPath семантические (самые точные)
+        # [TARGET] ПРИОРИТЕТ 4: XPath семантические (самые точные)
         '//span[text()="Оригинал"]',
         '//span[text()="Original"]',
         '//div[@role="button" and .//span[text()="Оригинал"]]',
@@ -501,7 +501,7 @@ class InstagramSelectors:
         '//div[@role="button" and contains(., "Original")]',
         '//button[contains(., "Original")]',
         
-        # 🎯 ПРИОРИТЕТ 5: SVG XPath
+        # [TARGET] ПРИОРИТЕТ 5: SVG XPath
         '//svg[@aria-label="Значок контура фото"]',
         '//svg[contains(@aria-label, "контур")]',
         '//svg[contains(@aria-label, "фото")]',
@@ -510,7 +510,7 @@ class InstagramSelectors:
         '//button[.//svg[@aria-label="Значок контура фото"]]',
         '//div[@role="button" and .//svg[@aria-label="Значок контура фото"]]',
         
-        # 🎯 ПРИОРИТЕТ 6: Универсальные aria-label
+        # [TARGET] ПРИОРИТЕТ 6: Универсальные aria-label
         '[aria-label*="Оригинал"]',
         '[aria-label*="Original"]',
         'button[aria-label*="Оригинал"]',
@@ -518,7 +518,7 @@ class InstagramSelectors:
         '[title*="Оригинал"]',
         '[title*="Original"]',
         
-        # 🎯 ПРИОРИТЕТ 7: Позиционные селекторы (обычно "Оригинал" первый)
+        # [TARGET] ПРИОРИТЕТ 7: Позиционные селекторы (обычно "Оригинал" первый)
         '(//div[@role="button" and @tabindex="0"])[1]',
         '(//button[@tabindex="0"])[1]',
         'div[role="button"][tabindex="0"]:first-child',
@@ -730,7 +730,7 @@ class InstagramSelectors:
 
     # Cookie consent modal selectors - RUSSIAN + ENGLISH SUPPORT
     COOKIE_CONSENT_BUTTONS = [
-        # 🎯 ПРИОРИТЕТ 1: Русские селекторы для кнопки "Разрешить все cookie"
+        # [TARGET] ПРИОРИТЕТ 1: Русские селекторы для кнопки "Разрешить все cookie"
         'button:has-text("Разрешить все cookie")',
         'button:has-text("Разрешить все файлы cookie")', 
         'button[class*="_asz1"]:has-text("Разрешить")',
@@ -738,7 +738,7 @@ class InstagramSelectors:
         'button[tabindex="0"]:has-text("Разрешить все")',
         'button[tabindex="0"]:has-text("Разрешить")',
         
-        # 🎯 ПРИОРИТЕТ 2: Английские селекторы
+        # [TARGET] ПРИОРИТЕТ 2: Английские селекторы
         'button:has-text("Allow all cookies")',
         'button:has-text("Accept all cookies")',
         'button[class*="_asz1"]:has-text("Allow")',
@@ -746,7 +746,7 @@ class InstagramSelectors:
         'button[tabindex="0"]:has-text("Allow all")',
         'button[tabindex="0"]:has-text("Accept")',
         
-        # 🎯 ПРИОРИТЕТ 3: XPath селекторы для русского текста
+        # [TARGET] ПРИОРИТЕТ 3: XPath селекторы для русского текста
         '//button[contains(text(), "Разрешить все cookie")]',
         '//button[contains(text(), "Разрешить все файлы cookie")]',
         '//button[contains(@class, "_asz1") and contains(text(), "Разрешить")]',
@@ -754,7 +754,7 @@ class InstagramSelectors:
         '//button[@tabindex="0" and contains(text(), "Разрешить все")]',
         '//button[@tabindex="0" and contains(text(), "Разрешить")]',
         
-        # 🎯 ПРИОРИТЕТ 4: XPath селекторы для английского текста
+        # [TARGET] ПРИОРИТЕТ 4: XPath селекторы для английского текста
         '//button[contains(text(), "Allow all cookies")]',
         '//button[contains(text(), "Accept all cookies")]',
         '//button[contains(@class, "_asz1") and contains(text(), "Allow")]',
@@ -762,24 +762,24 @@ class InstagramSelectors:
         '//button[@tabindex="0" and contains(text(), "Allow all")]',
         '//button[@tabindex="0" and contains(text(), "Accept")]',
         
-        # 🎯 ПРИОРИТЕТ 5: Универсальные CSS классы Instagram
+        # [TARGET] ПРИОРИТЕТ 5: Универсальные CSS классы Instagram
         'button[class*="_asz1"]',  # Основной класс кнопки cookies
         'button[class*="_a9--"][class*="_asz1"]',  # Комбинированные классы
         '[class*="_a9--"][class*="_asz1"]',  # Любой элемент с этими классами
         
-        # 🎯 ПРИОРИТЕТ 6: Текст в div с role="button"
+        # [TARGET] ПРИОРИТЕТ 6: Текст в div с role="button"
         'div[role="button"]:has-text("Разрешить все cookie")',
         'div[role="button"]:has-text("Allow all cookies")',
         'div[tabindex="0"]:has-text("Разрешить все cookie")',
         'div[tabindex="0"]:has-text("Allow all cookies")',
         
-        # 🎯 ПРИОРИТЕТ 7: XPath для div кнопок
+        # [TARGET] ПРИОРИТЕТ 7: XPath для div кнопок
         '//div[@role="button" and contains(text(), "Разрешить все cookie")]',
         '//div[@role="button" and contains(text(), "Allow all cookies")]',
         '//div[@tabindex="0" and contains(text(), "Разрешить все cookie")]',
         '//div[@tabindex="0" and contains(text(), "Allow all cookies")]',
         
-        # 🎯 ПРИОРИТЕТ 8: Широкие селекторы (fallback)
+        # [TARGET] ПРИОРИТЕТ 8: Широкие селекторы (fallback)
         'button:has-text("Разрешить")',
         'button:has-text("Allow")',
         'div[role="button"]:has-text("Разрешить")',
@@ -787,7 +787,7 @@ class InstagramSelectors:
         '[tabindex="0"]:has-text("Разрешить")',
         '[tabindex="0"]:has-text("Allow")',
         
-        # 🎯 ПРИОРИТЕТ 9: Универсальные XPath (последний резерв)
+        # [TARGET] ПРИОРИТЕТ 9: Универсальные XPath (последний резерв)
         '//button[contains(text(), "Разрешить")]',
         '//button[contains(text(), "Allow")]',
         '//div[@role="button" and contains(text(), "Разрешить")]',
@@ -883,7 +883,7 @@ class SelectorUtils:
                     element = page.query_selector(selector)
                 
                 if element and element.is_visible():
-                    log_info(f"[{log_prefix}] ✅ Found element with selector: {selector}")
+                    log_info(f"[{log_prefix}] [OK] Found element with selector: {selector}")
                     return element
                     
             except Exception as e:

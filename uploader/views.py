@@ -60,15 +60,15 @@ def safe_log_message(message):
         # Replace common emoji characters with safe alternatives
         emoji_replacements = {
             '🔍': '[SEARCH]',
-            '✅': '[SUCCESS]',
-            '❌': '[ERROR]',
-            '🚀': '[START]',
-            '🔄': '[PROCESS]',
-            '⚠️': '[WARNING]',
-            '🔧': '[TOOL]',
+            '[OK]': '[SUCCESS]',
+            '[FAIL]': '[ERROR]',
+            '[START]': '[START]',
+            '[RETRY]': '[PROCESS]',
+            '[WARN]': '[WARNING]',
+            '[TOOL]': '[TOOL]',
             '🖼️': '[IMAGE]',
             '📋': '[LIST]',
-            '🗑️': '[DELETE]',
+            '[DELETE]': '[DELETE]',
             '📧': '[EMAIL]'
         }
         

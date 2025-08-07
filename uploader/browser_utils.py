@@ -16,22 +16,22 @@ class BrowserManager:
     @staticmethod
     def cleanup_hanging_processes():
         """Clean up hanging browser processes - DEPRECATED: Too aggressive"""
-        log_warning("[CLEANUP] ⚠️ cleanup_hanging_processes is deprecated - use safe_cleanup_profile instead")
+        log_warning("[CLEANUP] [WARN] cleanup_hanging_processes is deprecated - use safe_cleanup_profile instead")
         # Don't kill all processes - this is too dangerous
-        log_info("[CLEANUP] ✅ Skipping aggressive cleanup to preserve other browser instances")
+        log_info("[CLEANUP] [OK] Skipping aggressive cleanup to preserve other browser instances")
     
     @staticmethod
     def safe_cleanup_profile(dolphin_profile_id=None, page=None):
         """Safely cleanup only the specific profile without affecting other instances"""
         try:
-            log_info(f"[CLEANUP] 🧹 Starting safe cleanup for profile: {dolphin_profile_id}")
+            log_info(f"[CLEANUP] [CLEAN] Starting safe cleanup for profile: {dolphin_profile_id}")
             
             cleanup_success = True
             
             # Step 1: Close page gracefully if provided
             if page:
                 try:
-                    log_info("[CLEANUP] 📄 Closing page gracefully...")
+                    log_info("[CLEANUP] [FILE] Closing page gracefully...")
                     if not page.is_closed():
                         # Try to navigate away first (more graceful)
                         try:
@@ -42,11 +42,11 @@ class BrowserManager:
                         
                         # Close the page
                         page.close()
-                        log_info("[CLEANUP] ✅ Page closed successfully")
+                        log_info("[CLEANUP] [OK] Page closed successfully")
                     else:
                         log_info("[CLEANUP] ℹ️ Page was already closed")
                 except Exception as e:
-                    log_warning(f"[CLEANUP] ⚠️ Error closing page: {str(e)}")
+                    log_warning(f"[CLEANUP] [WARN] Error closing page: {str(e)}")
                     cleanup_success = False
             
             # Step 2: Stop Dolphin profile via API (safest method)
@@ -68,30 +68,30 @@ class BrowserManager:
                         stop_result = dolphin.stop_profile(dolphin_profile_id)
                         
                         if stop_result:
-                            log_info(f"[CLEANUP] ✅ Dolphin profile {dolphin_profile_id} stopped successfully via API")
+                            log_info(f"[CLEANUP] [OK] Dolphin profile {dolphin_profile_id} stopped successfully via API")
                         else:
-                            log_warning(f"[CLEANUP] ⚠️ Failed to stop profile {dolphin_profile_id} via API")
+                            log_warning(f"[CLEANUP] [WARN] Failed to stop profile {dolphin_profile_id} via API")
                             cleanup_success = False
                     else:
-                        log_warning("[CLEANUP] ⚠️ No Dolphin API token available for profile cleanup")
+                        log_warning("[CLEANUP] [WARN] No Dolphin API token available for profile cleanup")
                         cleanup_success = False
                         
                 except Exception as e:
-                    log_warning(f"[CLEANUP] ⚠️ Error stopping Dolphin profile via API: {str(e)}")
+                    log_warning(f"[CLEANUP] [WARN] Error stopping Dolphin profile via API: {str(e)}")
                     cleanup_success = False
             
             # Step 3: Wait for graceful shutdown
             if cleanup_success:
-                log_info("[CLEANUP] ⏳ Waiting for graceful shutdown...")
+                log_info("[CLEANUP] [WAIT] Waiting for graceful shutdown...")
                 time.sleep(3)  # Give time for processes to close naturally
-                log_info("[CLEANUP] ✅ Safe cleanup completed successfully")
+                log_info("[CLEANUP] [OK] Safe cleanup completed successfully")
             else:
-                log_warning("[CLEANUP] ⚠️ Safe cleanup had some issues, but continuing...")
+                log_warning("[CLEANUP] [WARN] Safe cleanup had some issues, but continuing...")
             
             return cleanup_success
             
         except Exception as e:
-            log_error(f"[CLEANUP] ❌ Error during safe cleanup: {str(e)}")
+            log_error(f"[CLEANUP] [FAIL] Error during safe cleanup: {str(e)}")
             return False
     
     @staticmethod
@@ -109,14 +109,14 @@ class BrowserManager:
                     # Try to stop via the browser object as well
                     if hasattr(dolphin_browser, 'stop_profile'):
                         dolphin_browser.stop_profile()
-                        log_info("[CLEANUP] ✅ Dolphin browser object stopped")
+                        log_info("[CLEANUP] [OK] Dolphin browser object stopped")
                 except Exception as e:
-                    log_warning(f"[CLEANUP] ⚠️ Error stopping Dolphin browser object: {str(e)}")
+                    log_warning(f"[CLEANUP] [WARN] Error stopping Dolphin browser object: {str(e)}")
             
             return cleanup_success
             
         except Exception as e:
-            log_error(f"[CLEANUP] ❌ Error during safe browser closure: {str(e)}")
+            log_error(f"[CLEANUP] [FAIL] Error during safe browser closure: {str(e)}")
             return False
 
 
@@ -127,12 +127,12 @@ class PageUtils:
     def wait_for_page_load(page, timeout=30000):
         """Wait for page to fully load"""
         try:
-            log_info("[PAGE] ⏳ Waiting for page to load...")
+            log_info("[PAGE] [WAIT] Waiting for page to load...")
             page.wait_for_load_state('networkidle', timeout=timeout)
-            log_info("[PAGE] ✅ Page loaded successfully")
+            log_info("[PAGE] [OK] Page loaded successfully")
             return True
         except Exception as e:
-            log_warning(f"[PAGE] ⚠️ Page load timeout: {str(e)}")
+            log_warning(f"[PAGE] [WARN] Page load timeout: {str(e)}")
             return False
     
     @staticmethod
@@ -175,7 +175,7 @@ class ErrorHandler:
     @staticmethod
     def _handle_rate_limit(page):
         """Handle rate limiting"""
-        log_warning("[ERROR] 🚫 Rate limit detected")
+        log_warning("[ERROR] [BLOCK] Rate limit detected")
         # Wait longer and retry
         time.sleep(300)  # 5 minutes
         return "retry"
@@ -183,19 +183,19 @@ class ErrorHandler:
     @staticmethod
     def _handle_captcha(page):
         """Handle CAPTCHA challenges"""
-        log_warning("[ERROR] 🤖 CAPTCHA detected")
+        log_warning("[ERROR] [BOT] CAPTCHA detected")
         return "manual_intervention"
     
     @staticmethod
     def _handle_phone_verification(page):
         """Handle phone verification requirement"""
-        log_warning("[ERROR] 📱 Phone verification required")
+        log_warning("[ERROR] [PHONE] Phone verification required")
         return "phone_verification_required"
     
     @staticmethod
     def _handle_suspicious_activity(page):
         """Handle suspicious activity warnings"""
-        log_warning("[ERROR] ⚠️ Suspicious activity detected")
+        log_warning("[ERROR] [WARN] Suspicious activity detected")
         # Wait and retry with different behavior
         time.sleep(600)  # 10 minutes
         return "retry_with_caution"
@@ -227,11 +227,11 @@ class NetworkUtils:
             
             # This would be implemented based on your proxy setup
             # For now, just log the attempt
-            log_info("[PROXY] ✅ Proxy setup completed")
+            log_info("[PROXY] [OK] Proxy setup completed")
             return True
             
         except Exception as e:
-            log_error(f"[PROXY] ❌ Proxy setup failed: {str(e)}")
+            log_error(f"[PROXY] [FAIL] Proxy setup failed: {str(e)}")
             return False
     
     @staticmethod
@@ -253,12 +253,12 @@ class FileUtils:
         """Validate video file exists and is accessible"""
         try:
             if not os.path.exists(file_path):
-                log_error(f"[FILE] ❌ Video file not found: {file_path}")
+                log_error(f"[FILE] [FAIL] Video file not found: {file_path}")
                 return False
             
             file_size = os.path.getsize(file_path)
             if file_size == 0:
-                log_error(f"[FILE] ❌ Video file is empty: {file_path}")
+                log_error(f"[FILE] [FAIL] Video file is empty: {file_path}")
                 return False
             
             # Check file extension
@@ -266,13 +266,13 @@ class FileUtils:
             file_ext = os.path.splitext(file_path)[1].lower()
             
             if file_ext not in valid_extensions:
-                log_warning(f"[FILE] ⚠️ Unusual video format: {file_ext}")
+                log_warning(f"[FILE] [WARN] Unusual video format: {file_ext}")
             
-            log_info(f"[FILE] ✅ Video file validated: {file_path} ({file_size} bytes)")
+            log_info(f"[FILE] [OK] Video file validated: {file_path} ({file_size} bytes)")
             return True
             
         except Exception as e:
-            log_error(f"[FILE] ❌ Error validating video file: {str(e)}")
+            log_error(f"[FILE] [FAIL] Error validating video file: {str(e)}")
             return False
     
     @staticmethod
@@ -285,12 +285,12 @@ class FileUtils:
                 if os.path.exists(temp_file):
                     os.remove(temp_file)
                     cleaned_count += 1
-                    log_info(f"[CLEANUP] 🗑️ Removed temp file: {temp_file}")
+                    log_info(f"[CLEANUP] [DELETE] Removed temp file: {temp_file}")
             except Exception as e:
                 log_warning(f"[CLEANUP] Failed to remove temp file {temp_file}: {str(e)}")
         
         if cleaned_count > 0:
-            log_info(f"[CLEANUP] ✅ Cleaned up {cleaned_count} temporary files")
+            log_info(f"[CLEANUP] [OK] Cleaned up {cleaned_count} temporary files")
 
 
 class DebugUtils:
@@ -355,7 +355,7 @@ class DebugUtils:
                 'viewport': page.viewport_size,
                 'is_closed': page.is_closed()
             }
-            log_info(f"[DEBUG] 📄 Page info: {info}")
+            log_info(f"[DEBUG] [FILE] Page info: {info}")
             return info
         except Exception as e:
             log_warning(f"[DEBUG] Failed to get page info: {str(e)}")

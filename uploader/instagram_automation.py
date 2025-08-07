@@ -92,19 +92,19 @@ class InstagramAutomationBase:
         try:
             # Try force click first (fastest)
             element.click(force=True, timeout=3000)
-            log_info(f"[{log_prefix}] ✅ Quick click successful")
+            log_info(f"[{log_prefix}] [OK] Quick click successful")
         except Exception as e:
             try:
                 # Fallback to JavaScript click
                 self.page.evaluate('(element) => element.click()', element)
-                log_info(f"[{log_prefix}] ✅ JavaScript click successful")
+                log_info(f"[{log_prefix}] [OK] JavaScript click successful")
             except Exception as e2:
                 # Last resort: standard click with short timeout
                 try:
                     element.click(timeout=2000)
-                    log_info(f"[{log_prefix}] ✅ Standard click successful")
+                    log_info(f"[{log_prefix}] [OK] Standard click successful")
                 except Exception as e3:
-                    log_warning(f"[{log_prefix}] ⚠️ All click methods failed: {str(e3)[:100]}")
+                    log_warning(f"[{log_prefix}] [WARN] All click methods failed: {str(e3)[:100]}")
     
     def type_text(self, element, text, log_prefix="TYPE"):
         """Type text with human behavior if available"""
@@ -139,7 +139,7 @@ class InstagramNavigator(InstagramAutomationBase):
     def navigate_to_upload(self):
         """Navigate to upload page with human behavior - handles both menu and direct file dialog scenarios"""
         try:
-            log_info("[UPLOAD] 🧠 Starting navigation to upload page")
+            log_info("[UPLOAD] [BRAIN] Starting navigation to upload page")
             
             # Simulate page assessment
             self.simulate_page_scan()
@@ -151,34 +151,34 @@ class InstagramNavigator(InstagramAutomationBase):
             )
             
             if not upload_button:
-                log_warning("[UPLOAD] ⚠️ Upload button not found, trying alternative navigation...")
+                log_warning("[UPLOAD] [WARN] Upload button not found, trying alternative navigation...")
                 return self._navigate_to_upload_alternative()
             
             # Click upload button
             self.click_element(upload_button, "UPLOAD_BTN")
             
             # Wait and observe page changes
-            log_info("[UPLOAD] 👀 Observing page changes...")
+            log_info("[UPLOAD] [EYES] Observing page changes...")
             self.simulate_page_scan()
             
             # Check what happened after clicking upload button
             success = self._handle_post_upload_click()
             
             if not success:
-                log_warning("[UPLOAD] ⚠️ Standard navigation failed, trying alternative...")
+                log_warning("[UPLOAD] [WARN] Standard navigation failed, trying alternative...")
                 return self._navigate_to_upload_alternative()
             
             return success
             
         except Exception as e:
-            log_error(f"[UPLOAD] ❌ Navigation failed: {str(e)}")
-            log_info("[UPLOAD] 🔄 Trying alternative navigation method...")
+            log_error(f"[UPLOAD] [FAIL] Navigation failed: {str(e)}")
+            log_info("[UPLOAD] [RETRY] Trying alternative navigation method...")
             return self._navigate_to_upload_alternative()
     
     def _navigate_to_upload_alternative(self):
         """Alternative navigation method - direct URL"""
         try:
-            log_info("[UPLOAD] 🔄 Using alternative navigation: direct URL")
+            log_info("[UPLOAD] [RETRY] Using alternative navigation: direct URL")
             
             # Navigate directly to create page
             current_url = self.page.url
@@ -190,21 +190,21 @@ class InstagramNavigator(InstagramAutomationBase):
                 
                 # Wait for page to load
                 load_wait = self.human_wait(3.0, 1.0)
-                log_info(f"[UPLOAD] ⏳ Waiting {load_wait:.1f}s for page load...")
+                log_info(f"[UPLOAD] [WAIT] Waiting {load_wait:.1f}s for page load...")
                 
                 # Check if we're on upload page
                 if self._check_for_file_dialog():
-                    log_success("[UPLOAD] ✅ Successfully navigated to upload page via direct URL")
+                    log_success("[UPLOAD] [OK] Successfully navigated to upload page via direct URL")
                     return True
                 else:
-                    log_warning("[UPLOAD] ⚠️ Direct URL navigation didn't show file dialog")
+                    log_warning("[UPLOAD] [WARN] Direct URL navigation didn't show file dialog")
                     return False
             else:
-                log_error("[UPLOAD] ❌ Not on Instagram domain, cannot use direct URL")
+                log_error("[UPLOAD] [FAIL] Not on Instagram domain, cannot use direct URL")
                 return False
                 
         except Exception as e:
-            log_error(f"[UPLOAD] ❌ Alternative navigation failed: {str(e)}")
+            log_error(f"[UPLOAD] [FAIL] Alternative navigation failed: {str(e)}")
             return False
     
     def _handle_post_upload_click(self):
@@ -212,11 +212,11 @@ class InstagramNavigator(InstagramAutomationBase):
         try:
             # Wait for interface response
             initial_wait = self.human_wait(3.0, 1.0)
-            log_info(f"[UPLOAD] ⏳ Waiting {initial_wait:.1f}s for interface response...")
+            log_info(f"[UPLOAD] [WAIT] Waiting {initial_wait:.1f}s for interface response...")
             
             # Check for file dialog first
             if self._check_for_file_dialog():
-                log_info("[UPLOAD] 📁 File dialog opened directly - no menu needed")
+                log_info("[UPLOAD] [FOLDER] File dialog opened directly - no menu needed")
                 return True
             
             # Check for dropdown menu
@@ -226,10 +226,10 @@ class InstagramNavigator(InstagramAutomationBase):
             
             # Wait additional time and check again
             additional_wait = self.human_wait(2.0, 0.5)
-            log_info(f"[UPLOAD] ⏳ Waiting additional {additional_wait:.1f}s...")
+            log_info(f"[UPLOAD] [WAIT] Waiting additional {additional_wait:.1f}s...")
             
             if self._check_for_file_dialog():
-                log_info("[UPLOAD] 📁 File dialog appeared after delay")
+                log_info("[UPLOAD] [FOLDER] File dialog appeared after delay")
                 return True
             
             if self._check_for_dropdown_menu():
@@ -237,11 +237,11 @@ class InstagramNavigator(InstagramAutomationBase):
                 return self._click_post_option()
             
             # Try broader detection
-            log_warning("[UPLOAD] ⚠️ Neither menu nor file dialog detected, trying broader detection...")
+            log_warning("[UPLOAD] [WARN] Neither menu nor file dialog detected, trying broader detection...")
             return self._try_broader_upload_detection()
             
         except Exception as e:
-            log_error(f"[UPLOAD] ❌ Error handling post-upload click: {str(e)}")
+            log_error(f"[UPLOAD] [FAIL] Error handling post-upload click: {str(e)}")
             return False
     
     def _check_for_file_dialog(self):
@@ -259,7 +259,7 @@ class InstagramNavigator(InstagramAutomationBase):
                     
                     for element in elements:
                         if element.is_visible():
-                            log_info(f"[UPLOAD] ✅ File dialog indicator found: {selector}")
+                            log_info(f"[UPLOAD] [OK] File dialog indicator found: {selector}")
                             return True
                 except Exception as e:
                     log_debug(f"[UPLOAD] Selector failed: {selector} - {str(e)}")
@@ -286,12 +286,12 @@ class InstagramNavigator(InstagramAutomationBase):
                 
                 for keyword in upload_keywords:
                     if keyword in page_text.lower():
-                        log_info(f"[UPLOAD] ✅ Upload interface detected via keyword: '{keyword}'")
+                        log_info(f"[UPLOAD] [OK] Upload interface detected via keyword: '{keyword}'")
                         return True
             except:
                 pass
             
-            log_info("[UPLOAD] ❌ No file dialog detected")
+            log_info("[UPLOAD] [FAIL] No file dialog detected")
             return False
             
         except Exception as e:
@@ -307,7 +307,7 @@ class InstagramNavigator(InstagramAutomationBase):
             )
             
             if menu_element:
-                log_info("[UPLOAD] ✅ Dropdown menu detected")
+                log_info("[UPLOAD] [OK] Dropdown menu detected")
                 return True
             
             # Check for specific menu items
@@ -319,7 +319,7 @@ class InstagramNavigator(InstagramAutomationBase):
                         post_option = self.page.query_selector(selector)
                     
                     if post_option and post_option.is_visible():
-                        log_info(f"[UPLOAD] ✅ Post option visible in menu")
+                        log_info(f"[UPLOAD] [OK] Post option visible in menu")
                         return True
                 except:
                     continue
@@ -333,7 +333,7 @@ class InstagramNavigator(InstagramAutomationBase):
     def _try_broader_upload_detection(self):
         """Try broader detection methods when standard methods fail"""
         try:
-            log_info("[UPLOAD] 🔄 Attempting broader upload interface detection...")
+            log_info("[UPLOAD] [RETRY] Attempting broader upload interface detection...")
             
             upload_indicators = [
                 'div:has-text("Создать")',
@@ -350,7 +350,7 @@ class InstagramNavigator(InstagramAutomationBase):
                 try:
                     element = self.page.query_selector(indicator)
                     if element and element.is_visible():
-                        log_info(f"[UPLOAD] 🎯 Found upload indicator: {indicator}")
+                        log_info(f"[UPLOAD] [TARGET] Found upload indicator: {indicator}")
                         
                         if 'button' in indicator.lower():
                             self.click_element(element, "UPLOAD_INDICATOR")
@@ -366,16 +366,16 @@ class InstagramNavigator(InstagramAutomationBase):
                 upload_keywords = ['выбрать на компьютере', 'select from computer', 'перетащите', 'drag']
                 
                 if any(keyword in page_text.lower() for keyword in upload_keywords):
-                    log_info("[UPLOAD] ✅ Upload interface detected via page content")
+                    log_info("[UPLOAD] [OK] Upload interface detected via page content")
                     return True
             except:
                 pass
             
-            log_warning("[UPLOAD] ⚠️ Could not detect upload interface")
+            log_warning("[UPLOAD] [WARN] Could not detect upload interface")
             return False
             
         except Exception as e:
-            log_error(f"[UPLOAD] ❌ Error in broader detection: {str(e)}")
+            log_error(f"[UPLOAD] [FAIL] Error in broader detection: {str(e)}")
             return False
     
     def _click_post_option(self):
@@ -412,7 +412,7 @@ class InstagramNavigator(InstagramAutomationBase):
                             
                             post_keywords = ['публикация', 'post', 'создать публикацию', 'create post']
                             if any(keyword in combined_text for keyword in post_keywords):
-                                log_info(f"[UPLOAD] ✅ Found 'Публикация' option: '{element_text.strip()}'")
+                                log_info(f"[UPLOAD] [OK] Found 'Публикация' option: '{element_text.strip()}'")
                                 found_selector = selector
                                 break
                             else:
@@ -420,7 +420,7 @@ class InstagramNavigator(InstagramAutomationBase):
                                 post_option = None
                                 continue
                         except:
-                            log_info(f"[UPLOAD] ✅ Found potential 'Публикация' option (no text check)")
+                            log_info(f"[UPLOAD] [OK] Found potential 'Публикация' option (no text check)")
                             found_selector = selector
                             break
                     
@@ -439,7 +439,7 @@ class InstagramNavigator(InstagramAutomationBase):
                     self.click_element(post_option, "POST_OPTION")
                 
                     wait_time = self.human_wait(5.0, 1.5)
-                    log_info(f"[UPLOAD] ⏳ Waiting {wait_time:.1f}s for upload interface...")
+                    log_info(f"[UPLOAD] [WAIT] Waiting {wait_time:.1f}s for upload interface...")
                 
                     return True
                 
@@ -453,16 +453,16 @@ class InstagramNavigator(InstagramAutomationBase):
                         log_error(f"[UPLOAD] Fallback click failed: {str(fallback_e)}")
                         return False
             else:
-                log_warning("[UPLOAD] ⚠️ 'Публикация' option not found in menu")
+                log_warning("[UPLOAD] [WARN] 'Публикация' option not found in menu")
                 return self._try_broader_search()
                 
         except Exception as e:
-            log_error(f"[UPLOAD] ❌ Error in _click_post_option: {str(e)}")
+            log_error(f"[UPLOAD] [FAIL] Error in _click_post_option: {str(e)}")
             return False
     
     def _try_broader_search(self):
         """Try broader search for clickable menu items"""
-        log_info("[UPLOAD] 🔄 Attempting broader search...")
+        log_info("[UPLOAD] [RETRY] Attempting broader search...")
         
         try:
             clickable_elements = self.page.query_selector_all(
@@ -474,7 +474,7 @@ class InstagramNavigator(InstagramAutomationBase):
                     try:
                         text_content = element.inner_text().strip()
                         if text_content and ("Публикация" in text_content or "Post" in text_content):
-                            log_info(f"[UPLOAD] 🎯 Found potential option: '{text_content}'")
+                            log_info(f"[UPLOAD] [TARGET] Found potential option: '{text_content}'")
                             self.click_element(element, "BROAD_SEARCH")
                             time.sleep(3)
                             return True
@@ -497,7 +497,7 @@ class InstagramUploader(InstagramAutomationBase):
                 log_error(f"[UPLOAD] Video file not found: {video_file_path}")
                 return False
             
-            log_info(f"[UPLOAD] 🎬 Starting video upload: {os.path.basename(video_file_path)}")
+            log_info(f"[UPLOAD] [VIDEO] Starting video upload: {os.path.basename(video_file_path)}")
             
             # Step 1: Select video file IMMEDIATELY (while browser is still open)
             if not self._select_video_file_immediate(video_file_path):
@@ -542,7 +542,7 @@ class InstagramUploader(InstagramAutomationBase):
     def _select_video_file_immediate(self, video_file_path):
         """Select video file immediately after navigation - ADAPTIVE VERSION"""
         try:
-            log_info("[UPLOAD] 📁 Selecting video file with adaptive search...")
+            log_info("[UPLOAD] [FOLDER] Selecting video file with adaptive search...")
             
             # Validate file exists first
             if not os.path.exists(video_file_path):
@@ -551,26 +551,26 @@ class InstagramUploader(InstagramAutomationBase):
             
             log_info(f"[UPLOAD] File exists: {os.path.basename(video_file_path)} ({os.path.getsize(video_file_path)} bytes)")
             
-            # 🎯 АДАПТИВНАЯ СТРАТЕГИЯ ПОИСКА FILE INPUT
+            # [TARGET] АДАПТИВНАЯ СТРАТЕГИЯ ПОИСКА FILE INPUT
             file_input = self._find_file_input_adaptive()
             
             if not file_input:
-                log_error("[UPLOAD] ❌ File input not found with any adaptive strategy")
+                log_error("[UPLOAD] [FAIL] File input not found with any adaptive strategy")
                 return False
             
             # Set files on input IMMEDIATELY
             log_info(f"[UPLOAD] 📤 Setting file on input: {video_file_path}")
             file_input.set_input_files(video_file_path)
-            log_success("[UPLOAD] ✅ Video file selected successfully")
+            log_success("[UPLOAD] [OK] Video file selected successfully")
             
             # Minimal wait for processing
             processing_delay = random.uniform(2, 3)
-            log_info(f"[UPLOAD] ⏳ Waiting {processing_delay:.1f}s for file processing...")
+            log_info(f"[UPLOAD] [WAIT] Waiting {processing_delay:.1f}s for file processing...")
             time.sleep(processing_delay)
             return True
             
         except Exception as e:
-            log_error(f"[UPLOAD] ❌ Error selecting video file: {str(e)}")
+            log_error(f"[UPLOAD] [FAIL] Error selecting video file: {str(e)}")
             return False
     
     def _find_file_input_adaptive(self):
@@ -578,7 +578,7 @@ class InstagramUploader(InstagramAutomationBase):
         try:
             log_info("[UPLOAD] 🔍 Starting adaptive file input search...")
             
-            # 🎯 СТРАТЕГИЯ 1: Поиск по семантическим атрибутам (самый надежный)
+            # [TARGET] СТРАТЕГИЯ 1: Поиск по семантическим атрибутам (самый надежный)
             log_info("[UPLOAD] 📋 Strategy 1: Semantic attributes search...")
             semantic_strategies = [
                 'input[type="file"]',
@@ -598,52 +598,52 @@ class InstagramUploader(InstagramAutomationBase):
                     
                     for element in elements:
                         if element and self._is_valid_file_input(element):
-                            log_success(f"[UPLOAD] ✅ Found file input via semantic: {selector}")
+                            log_success(f"[UPLOAD] [OK] Found file input via semantic: {selector}")
                             return element
                 except Exception as e:
                     log_debug(f"[UPLOAD] Semantic selector failed: {selector} - {str(e)}")
                     continue
             
-            # 🎯 СТРАТЕГИЯ 2: Поиск через структуру диалога "Создание публикации"
+            # [TARGET] СТРАТЕГИЯ 2: Поиск через структуру диалога "Создание публикации"
             log_info("[UPLOAD] 🏗️ Strategy 2: Dialog structure search...")
             dialog_input = self._find_input_via_dialog_structure()
             if dialog_input:
-                log_success("[UPLOAD] ✅ Found file input via dialog structure")
+                log_success("[UPLOAD] [OK] Found file input via dialog structure")
                 return dialog_input
             
-            # 🎯 СТРАТЕГИЯ 3: Поиск через кнопку "Выбрать на компьютере"
+            # [TARGET] СТРАТЕГИЯ 3: Поиск через кнопку "Выбрать на компьютере"
             log_info("[UPLOAD] 🔘 Strategy 3: Button-based search...")
             button_input = self._find_input_via_button()
             if button_input:
-                log_success("[UPLOAD] ✅ Found file input via button search")
+                log_success("[UPLOAD] [OK] Found file input via button search")
                 return button_input
             
-            # 🎯 СТРАТЕГИЯ 4: Поиск по контексту формы
-            log_info("[UPLOAD] 📝 Strategy 4: Form context search...")
+            # [TARGET] СТРАТЕГИЯ 4: Поиск по контексту формы
+            log_info("[UPLOAD] [TEXT] Strategy 4: Form context search...")
             form_input = self._find_input_via_form_context()
             if form_input:
-                log_success("[UPLOAD] ✅ Found file input via form context")
+                log_success("[UPLOAD] [OK] Found file input via form context")
                 return form_input
             
-            # 🎯 СТРАТЕГИЯ 5: Поиск по характерным CSS-классам Instagram
+            # [TARGET] СТРАТЕГИЯ 5: Поиск по характерным CSS-классам Instagram
             log_info("[UPLOAD] 🎨 Strategy 5: Instagram CSS patterns...")
             css_input = self._find_input_via_css_patterns()
             if css_input:
-                log_success("[UPLOAD] ✅ Found file input via CSS patterns")
+                log_success("[UPLOAD] [OK] Found file input via CSS patterns")
                 return css_input
             
-            # 🎯 СТРАТЕГИЯ 6: Широкий поиск всех input и фильтрация
+            # [TARGET] СТРАТЕГИЯ 6: Широкий поиск всех input и фильтрация
             log_info("[UPLOAD] 🌐 Strategy 6: Broad search with filtering...")
             all_input = self._find_input_via_broad_search()
             if all_input:
-                log_success("[UPLOAD] ✅ Found file input via broad search")
+                log_success("[UPLOAD] [OK] Found file input via broad search")
                 return all_input
                 
-            log_warning("[UPLOAD] ⚠️ No file input found with any adaptive strategy")
+            log_warning("[UPLOAD] [WARN] No file input found with any adaptive strategy")
             return None
             
         except Exception as e:
-            log_error(f"[UPLOAD] ❌ Adaptive file input search failed: {str(e)}")
+            log_error(f"[UPLOAD] [FAIL] Adaptive file input search failed: {str(e)}")
             return None
     
     def _find_input_via_css_patterns(self):
@@ -670,7 +670,7 @@ class InstagramUploader(InstagramAutomationBase):
                     
                     for element in elements:
                         if element and self._is_valid_file_input(element):
-                            log_info(f"[UPLOAD] ✅ Valid file input found with CSS pattern: {pattern}")
+                            log_info(f"[UPLOAD] [OK] Valid file input found with CSS pattern: {pattern}")
                             return element
                             
                 except Exception as e:
@@ -706,7 +706,7 @@ class InstagramUploader(InstagramAutomationBase):
                         # Ищем input внутри диалога
                         file_input = dialog.query_selector('input[type="file"]')
                         if file_input and self._is_valid_file_input(file_input):
-                            log_info("[UPLOAD] ✅ Found valid file input inside dialog")
+                            log_info("[UPLOAD] [OK] Found valid file input inside dialog")
                             return file_input
                         
                         # Также проверяем form внутри диалога
@@ -714,7 +714,7 @@ class InstagramUploader(InstagramAutomationBase):
                         if form:
                             form_input = form.query_selector('input[type="file"]')
                             if form_input and self._is_valid_file_input(form_input):
-                                log_info("[UPLOAD] ✅ Found valid file input inside form within dialog")
+                                log_info("[UPLOAD] [OK] Found valid file input inside form within dialog")
                                 return form_input
                                 
                 except Exception as e:
@@ -826,14 +826,14 @@ class InstagramUploader(InstagramAutomationBase):
             
             # Use adaptive crop detection and handling
             if self._handle_crop_adaptive():
-                log_success("📐 [CROP] ✅ Crop handled successfully with adaptive method")
+                log_success("📐 [CROP] [OK] Crop handled successfully with adaptive method")
                 return True
             else:
-                log_warning("📐 [CROP] ⚠️ Adaptive crop handling failed, video may proceed with default crop")
+                log_warning("📐 [CROP] [WARN] Adaptive crop handling failed, video may proceed with default crop")
                 return True  # Don't fail the whole process
                 
         except Exception as e:
-            log_error(f"📐 [CROP] ❌ Crop handling failed: {str(e)}")
+            log_error(f"📐 [CROP] [FAIL] Crop handling failed: {str(e)}")
             return True  # Don't fail the whole upload process
     
     def _verify_crop_page_adaptive(self):
@@ -872,7 +872,7 @@ class InstagramUploader(InstagramAutomationBase):
                         element = self.page.locator(indicator).first
                         
                     if element.is_visible(timeout=1000):
-                        log_success(f"📐 [VERIFY] ✅ Found crop page indicator: {indicator}")
+                        log_success(f"📐 [VERIFY] [OK] Found crop page indicator: {indicator}")
                         return True
                         
                 except Exception as e:
@@ -896,7 +896,7 @@ class InstagramUploader(InstagramAutomationBase):
                 from .crop_handler import CropHandler
                 crop_handler = CropHandler(self.page, self.human_behavior)
                 if crop_handler.handle_crop():
-                    log_success("📐 [ADAPTIVE] ✅ Crop handled by CropHandler")
+                    log_success("📐 [ADAPTIVE] [OK] Crop handled by CropHandler")
                     return True
             except Exception as e:
                 log_warning(f"📐 [ADAPTIVE] CropHandler failed: {str(e)}")
@@ -904,20 +904,20 @@ class InstagramUploader(InstagramAutomationBase):
             # Strategy 2: Direct adaptive search and click
             try:
                 if self._find_and_click_crop_button_adaptive():
-                    log_success("📐 [ADAPTIVE] ✅ Crop button found and clicked directly")
+                    log_success("📐 [ADAPTIVE] [OK] Crop button found and clicked directly")
                     
                     # Wait for crop options to appear
                     time.sleep(random.uniform(2, 4))
                     
                     # Try to select appropriate crop option
                     if self._select_crop_option_adaptive():
-                        log_success("📐 [ADAPTIVE] ✅ Crop option selected")
+                        log_success("📐 [ADAPTIVE] [OK] Crop option selected")
                         return True
             except Exception as e:
                 log_warning(f"📐 [ADAPTIVE] Direct crop handling failed: {str(e)}")
             
             # Strategy 3: Fallback - continue without crop
-            log_warning("📐 [ADAPTIVE] ⚠️ All crop strategies failed, continuing without crop adjustment")
+            log_warning("📐 [ADAPTIVE] [WARN] All crop strategies failed, continuing without crop adjustment")
             return True
             
         except Exception as e:
@@ -969,7 +969,7 @@ class InstagramUploader(InstagramAutomationBase):
                         element = self.page.locator(selector).first
                     
                     if element.is_visible(timeout=1000):
-                        log_success(f"📐 [SEARCH] ✅ Found crop element: {selector}")
+                        log_success(f"📐 [SEARCH] [OK] Found crop element: {selector}")
                         
                         # If it's an SVG, find the parent button
                         if 'svg' in selector and not 'has(' in selector:
@@ -984,14 +984,14 @@ class InstagramUploader(InstagramAutomationBase):
                         element.click()
                         time.sleep(random.uniform(0.5, 1.0))
                         
-                        log_success("📐 [SEARCH] ✅ Successfully clicked crop button")
+                        log_success("📐 [SEARCH] [OK] Successfully clicked crop button")
                         return True
                 
                 except Exception as e:
                     log_debug(f"📐 [SEARCH] Selector {selector} failed: {str(e)}")
                     continue
         
-        log_warning("📐 [SEARCH] ⚠️ All search levels failed")
+        log_warning("📐 [SEARCH] [WARN] All search levels failed")
         return False
     
     def _select_crop_option_adaptive(self):
@@ -1002,7 +1002,7 @@ class InstagramUploader(InstagramAutomationBase):
             # Wait for crop menu to appear
             time.sleep(random.uniform(1, 2))
             
-            # 🎯 АДАПТИВНАЯ СТРАТЕГИЯ: Поиск по семантическим признакам (не по CSS-классам)
+            # [TARGET] АДАПТИВНАЯ СТРАТЕГИЯ: Поиск по семантическим признакам (не по CSS-классам)
             search_strategies = [
                 self._find_original_by_text,
                 self._find_original_by_svg,
@@ -1016,7 +1016,7 @@ class InstagramUploader(InstagramAutomationBase):
                 try:
                     crop_option = strategy()
                     if crop_option:
-                        log_success(f"📐 [OPTION] ✅ Found crop option using strategy {strategy_index}")
+                        log_success(f"📐 [OPTION] [OK] Found crop option using strategy {strategy_index}")
                         
                         # Human-like selection
                         crop_option.hover()
@@ -1024,7 +1024,7 @@ class InstagramUploader(InstagramAutomationBase):
                         crop_option.click()
                         time.sleep(random.uniform(0.5, 1.0))
                         
-                        log_success("📐 [OPTION] ✅ Successfully selected crop option")
+                        log_success("📐 [OPTION] [OK] Successfully selected crop option")
                         return True
                         
                 except Exception as e:
@@ -1084,10 +1084,10 @@ class InstagramUploader(InstagramAutomationBase):
                     if 'span' in selector and not 'button' in selector and not 'role="button"' in selector:
                         parent_button = element.locator('xpath=ancestor::*[@role="button"][1] | xpath=ancestor::button[1]').first
                         if parent_button.is_visible():
-                            log_success(f"📐 [TEXT] ✅ Found 'Оригинал' parent button: {selector}")
+                            log_success(f"📐 [TEXT] [OK] Found 'Оригинал' parent button: {selector}")
                             return parent_button
                     
-                    log_success(f"📐 [TEXT] ✅ Found 'Оригинал' element: {selector}")
+                    log_success(f"📐 [TEXT] [OK] Found 'Оригинал' element: {selector}")
                     return element
             
             except Exception as e:
@@ -1125,12 +1125,12 @@ class InstagramUploader(InstagramAutomationBase):
                         svg_element = self.page.locator(selector).first
                     
                     if svg_element.is_visible(timeout=1000):
-                        log_success(f"📐 [SVG] ✅ Found SVG icon: {selector}")
+                        log_success(f"📐 [SVG] [OK] Found SVG icon: {selector}")
                         
                         # Найти родительскую кнопку
                         parent_button = svg_element.locator('xpath=ancestor::*[@role="button"][1] | xpath=ancestor::button[1]').first
                         if parent_button.is_visible():
-                            log_success("📐 [SVG] ✅ Found parent button for SVG")
+                            log_success("📐 [SVG] [OK] Found parent button for SVG")
                             return parent_button
                         
                         return svg_element
@@ -1162,12 +1162,12 @@ class InstagramUploader(InstagramAutomationBase):
                             # Проверить содержимое кнопки
                             button_text = button.text_content() or ""
                             if 'Оригинал' in button_text or 'Original' in button_text:
-                                log_success(f"📐 [POS] ✅ Found 'Оригинал' at position {i+1}")
+                                log_success(f"📐 [POS] [OK] Found 'Оригинал' at position {i+1}")
                                 return button
                             
                             # Если первая кнопка и нет явного текста - возможно это "Оригинал"
                             if i == 0 and not button_text.strip():
-                                log_info(f"📐 [POS] ✅ Using first button as potential 'Оригинал'")
+                                log_info(f"📐 [POS] [OK] Using first button as potential 'Оригинал'")
                                 return button
             
                     except Exception as e:
@@ -1215,7 +1215,7 @@ class InstagramUploader(InstagramAutomationBase):
                     
                     if element.is_visible(timeout=1000):
                         element_text = element.text_content() or ""
-                        log_info(f"📐 [ANY] ✅ Found fallback crop option: '{element_text.strip()}' with selector: {selector}")
+                        log_info(f"📐 [ANY] [OK] Found fallback crop option: '{element_text.strip()}' with selector: {selector}")
                         return element
                         
                 except Exception as e:
@@ -1230,7 +1230,7 @@ class InstagramUploader(InstagramAutomationBase):
     def _click_next_button(self, step_number):
         """Click next button (like Selenium _next_page)"""
         try:
-            log_info(f"🔄 Next button click {step_number}/2")
+            log_info(f"[RETRY] Next button click {step_number}/2")
             
             # Human delay before clicking
             time.sleep(random.uniform(3, 5))
@@ -1255,10 +1255,10 @@ class InstagramUploader(InstagramAutomationBase):
                 self.page.evaluate('(element) => element.click()', next_button)
                 
                 time.sleep(random.uniform(4, 6))
-                log_success(f"✅ Successfully clicked next button for step {step_number}")
+                log_success(f"[OK] Successfully clicked next button for step {step_number}")
                 return True
             else:
-                log_error(f"❌ Next button not found for step {step_number}")
+                log_error(f"[FAIL] Next button not found for step {step_number}")
                 return False
             
         except Exception as e:
@@ -1308,17 +1308,17 @@ class InstagramUploader(InstagramAutomationBase):
             description_field.press('Enter')
             time.sleep(random.uniform(0.5, 1.0))
             
-            log_success("[ОПИСАНИЕ] ✅ Описание установлено успешно")
+            log_success("[ОПИСАНИЕ] [OK] Описание установлено успешно")
             return True
             
         except Exception as e:
-            log_error(f"[ОПИСАНИЕ] ❌ Ошибка установки описания: {str(e)}")
+            log_error(f"[ОПИСАНИЕ] [FAIL] Ошибка установки описания: {str(e)}")
             return False
     
     def _type_like_human(self, element, text):
         """Type text like a human with mistakes, corrections, and realistic timing"""
         try:
-            log_info("[ПЕЧАТЬ] 🤖 Начинаем человеческую печать...")
+            log_info("[ПЕЧАТЬ] [BOT] Начинаем человеческую печать...")
             
             i = 0
             while i < len(text):
@@ -1386,10 +1386,10 @@ class InstagramUploader(InstagramAutomationBase):
                 if char in '.!?,:;':
                     time.sleep(random.uniform(0.1, 0.4))
             
-            log_success("[ПЕЧАТЬ] ✅ Человеческая печать завершена")
+            log_success("[ПЕЧАТЬ] [OK] Человеческая печать завершена")
             
         except Exception as e:
-            log_error(f"[ПЕЧАТЬ] ❌ Ошибка человеческой печати: {str(e)}")
+            log_error(f"[ПЕЧАТЬ] [FAIL] Ошибка человеческой печати: {str(e)}")
             # Fallback to simple typing
             element.type(text)
     
@@ -1471,7 +1471,7 @@ class InstagramUploader(InstagramAutomationBase):
                         element = self.page.query_selector(selector)
                     
                     if element and element.is_visible():
-                        log_success(f"[ЛОКАЦИЯ] ✅ Найдено поле локации: {selector}")
+                        log_success(f"[ЛОКАЦИЯ] [OK] Найдено поле локации: {selector}")
                         location_field = element
                         break
                 except Exception as e:
@@ -1479,7 +1479,7 @@ class InstagramUploader(InstagramAutomationBase):
                     continue
             
             if not location_field:
-                log_warning("[ЛОКАЦИЯ] ⚠️ Поле локации не найдено")
+                log_warning("[ЛОКАЦИЯ] [WARN] Поле локации не найдено")
                 return False
             
             # Human-like interaction with location field
@@ -1528,7 +1528,7 @@ class InstagramUploader(InstagramAutomationBase):
                     
                     if element and element.is_visible():
                         suggestion = element
-                        log_success(f"[ЛОКАЦИЯ] ✅ Найдено предложение локации: {selector}")
+                        log_success(f"[ЛОКАЦИЯ] [OK] Найдено предложение локации: {selector}")
                         break
                 except Exception as e:
                     log_debug(f"[ЛОКАЦИЯ] Селектор {selector} не сработал: {str(e)}")
@@ -1539,9 +1539,9 @@ class InstagramUploader(InstagramAutomationBase):
                 time.sleep(random.uniform(0.5, 1.0))
                 suggestion.click()
                 time.sleep(random.uniform(1.0, 2.0))
-                log_success("[ЛОКАЦИЯ] ✅ Локация установлена успешно")
+                log_success("[ЛОКАЦИЯ] [OK] Локация установлена успешно")
             else:
-                log_warning("[ЛОКАЦИЯ] ⚠️ Предложения локации не найдены")
+                log_warning("[ЛОКАЦИЯ] [WARN] Предложения локации не найдены")
                 # Press Enter to try to accept typed location
                 location_field.press('Enter')
                 time.sleep(random.uniform(1.0, 1.5))
@@ -1549,7 +1549,7 @@ class InstagramUploader(InstagramAutomationBase):
             return True
             
         except Exception as e:
-            log_error(f"[ЛОКАЦИЯ] ❌ Ошибка установки локации: {str(e)}")
+            log_error(f"[ЛОКАЦИЯ] [FAIL] Ошибка установки локации: {str(e)}")
             return False
     
     def _set_mentions_selenium_style(self, video_obj):
@@ -1644,7 +1644,7 @@ class InstagramUploader(InstagramAutomationBase):
                         element = self.page.query_selector(selector)
                     
                     if element and element.is_visible():
-                        log_success(f"[УПОМИНАНИЯ] ✅ Найдено поле упоминаний: {selector}")
+                        log_success(f"[УПОМИНАНИЯ] [OK] Найдено поле упоминаний: {selector}")
                         mention_field = element
                         break
                 except Exception as e:
@@ -1652,10 +1652,10 @@ class InstagramUploader(InstagramAutomationBase):
                     continue
             
             if not mention_field:
-                log_warning("[УПОМИНАНИЯ] ⚠️ Поле упоминаний не найдено")
+                log_warning("[УПОМИНАНИЯ] [WARN] Поле упоминаний не найдено")
                 
                 # Try to add mentions to description field as alternative
-                log_info("[УПОМИНАНИЯ] 📝 Пробуем добавить упоминания в описание...")
+                log_info("[УПОМИНАНИЯ] [TEXT] Пробуем добавить упоминания в описание...")
                 description_field_selectors = [
                     'div[contenteditable="true"][aria-label*="подпись" i]',
                     'div[contenteditable="true"][data-lexical-editor="true"]',
@@ -1669,13 +1669,13 @@ class InstagramUploader(InstagramAutomationBase):
                         element = self.page.query_selector(selector)
                         if element and element.is_visible():
                             description_field = element
-                            log_success(f"[УПОМИНАНИЯ] ✅ Найдено поле описания: {selector}")
+                            log_success(f"[УПОМИНАНИЯ] [OK] Найдено поле описания: {selector}")
                             break
                     except:
                         continue
                 
                 if description_field:
-                    log_info("[УПОМИНАНИЯ] 📝 Добавляем упоминания в описание...")
+                    log_info("[УПОМИНАНИЯ] [TEXT] Добавляем упоминания в описание...")
                     description_field.click()
                     time.sleep(random.uniform(0.5, 1.0))
                     
@@ -1687,7 +1687,7 @@ class InstagramUploader(InstagramAutomationBase):
                     mention_text = f" {mentions}" if not mentions.startswith('@') else f" @{mentions.replace('@', '')}"
                     self._type_like_human(description_field, mention_text)
                     
-                    log_success("[УПОМИНАНИЯ] ✅ Упоминания добавлены в описание")
+                    log_success("[УПОМИНАНИЯ] [OK] Упоминания добавлены в описание")
                     return True
                 
                 return False
@@ -1702,7 +1702,7 @@ class InstagramUploader(InstagramAutomationBase):
             # Process mentions ONE BY ONE (ИСПРАВЛЕНО!)
             mention_list = [m.strip() for m in str(mentions).split(',') if m.strip()]
             
-            log_info(f"[УПОМИНАНИЯ] 📝 Обрабатываем {len(mention_list)} упоминаний по одному...")
+            log_info(f"[УПОМИНАНИЯ] [TEXT] Обрабатываем {len(mention_list)} упоминаний по одному...")
             
             for i, mention in enumerate(mention_list):
                 if not mention.startswith('@'):
@@ -1711,7 +1711,7 @@ class InstagramUploader(InstagramAutomationBase):
                 log_info(f"[УПОМИНАНИЯ] 👤 Добавляем упоминание {i+1}/{len(mention_list)}: {mention}")
                 
                 # ВАЖНО: Очищаем поле перед каждым новым упоминанием
-                log_info(f"[УПОМИНАНИЯ] 🧹 Очищаем поле для упоминания {mention}")
+                log_info(f"[УПОМИНАНИЯ] [CLEAN] Очищаем поле для упоминания {mention}")
                 mention_field.click()
                 time.sleep(random.uniform(0.3, 0.5))
                 mention_field.fill('')
@@ -1723,7 +1723,7 @@ class InstagramUploader(InstagramAutomationBase):
                 self._type_like_human(mention_field, mention_username)
                 
                 # Wait for suggestions to appear
-                log_info(f"[УПОМИНАНИЯ] ⏳ Ждем предложения для {mention_username}...")
+                log_info(f"[УПОМИНАНИЯ] [WAIT] Ждем предложения для {mention_username}...")
                 time.sleep(random.uniform(2.0, 4.0))
                 
                 # ИСПРАВЛЕННЫЕ СЕЛЕКТОРЫ для выбора предложений упоминаний
@@ -1765,7 +1765,7 @@ class InstagramUploader(InstagramAutomationBase):
                         if element and element.is_visible():
                             suggestion = element
                             found_suggestion_selector = selector
-                            log_success(f"[УПОМИНАНИЯ] ✅ Найдено предложение: {selector}")
+                            log_success(f"[УПОМИНАНИЯ] [OK] Найдено предложение: {selector}")
                             break
                     except Exception as e:
                         log_debug(f"[УПОМИНАНИЯ] Селектор {selector} не сработал: {str(e)}")
@@ -1777,28 +1777,28 @@ class InstagramUploader(InstagramAutomationBase):
                     time.sleep(random.uniform(0.5, 1.0))
                     suggestion.click()
                     time.sleep(random.uniform(1.5, 2.5))
-                    log_success(f"[УПОМИНАНИЯ] ✅ Упоминание {mention} добавлено успешно")
+                    log_success(f"[УПОМИНАНИЯ] [OK] Упоминание {mention} добавлено успешно")
                     
                     # Дополнительное ожидание для обработки выбора
                     time.sleep(random.uniform(1.0, 2.0))
                     
                 else:
                     # Fallback: Press Enter to try to accept
-                    log_warning(f"[УПОМИНАНИЯ] ⚠️ Предложение для {mention_username} не найдено, пробуем Enter")
+                    log_warning(f"[УПОМИНАНИЯ] [WARN] Предложение для {mention_username} не найдено, пробуем Enter")
                     mention_field.press('Enter')
                     time.sleep(random.uniform(1.0, 1.5))
                     
                     # Check if anything was added
                     current_value = mention_field.input_value() or ""
                     if current_value.strip():
-                        log_info(f"[УПОМИНАНИЯ] ✅ Упоминание {mention} добавлено через Enter")
+                        log_info(f"[УПОМИНАНИЯ] [OK] Упоминание {mention} добавлено через Enter")
                     else:
-                        log_warning(f"[УПОМИНАНИЯ] ❌ Не удалось добавить упоминание {mention}")
+                        log_warning(f"[УПОМИНАНИЯ] [FAIL] Не удалось добавить упоминание {mention}")
                 
                 # Небольшая пауза между упоминаниями
                 if i < len(mention_list) - 1:
                     pause_time = random.uniform(1.0, 2.0)
-                    log_info(f"[УПОМИНАНИЯ] ⏸️ Пауза {pause_time:.1f}с перед следующим упоминанием...")
+                    log_info(f"[УПОМИНАНИЯ] [PAUSE] Пауза {pause_time:.1f}с перед следующим упоминанием...")
                     time.sleep(pause_time)
             
             # ИСПРАВЛЕННАЯ кнопка Done для упоминаний
@@ -1835,7 +1835,7 @@ class InstagramUploader(InstagramAutomationBase):
                     
                     if element and element.is_visible():
                         done_button = element
-                        log_success(f"[УПОМИНАНИЯ] ✅ Найдена кнопка Done: {selector}")
+                        log_success(f"[УПОМИНАНИЯ] [OK] Найдена кнопка Done: {selector}")
                         break
                 except Exception as e:
                     log_debug(f"[УПОМИНАНИЯ] Селектор Done {selector} не сработал: {str(e)}")
@@ -1846,18 +1846,18 @@ class InstagramUploader(InstagramAutomationBase):
                 time.sleep(random.uniform(0.5, 1.0))
                 done_button.click()
                 time.sleep(random.uniform(1.5, 2.5))
-                log_success("[УПОМИНАНИЯ] ✅ Нажали кнопку 'Done'")
+                log_success("[УПОМИНАНИЯ] [OK] Нажали кнопку 'Done'")
             else:
-                log_warning("[УПОМИНАНИЯ] ⚠️ Кнопка 'Done' не найдена, пробуем продолжить без неё")
+                log_warning("[УПОМИНАНИЯ] [WARN] Кнопка 'Done' не найдена, пробуем продолжить без неё")
                 # Try pressing Escape to close any open dialogs
                 self.page.keyboard.press('Escape')
                 time.sleep(random.uniform(0.5, 1.0))
             
-            log_success("[УПОМИНАНИЯ] ✅ Упоминания установлены успешно")
+            log_success("[УПОМИНАНИЯ] [OK] Упоминания установлены успешно")
             return True
             
         except Exception as e:
-            log_error(f"[УПОМИНАНИЯ] ❌ Ошибка установки упоминаний: {str(e)}")
+            log_error(f"[УПОМИНАНИЯ] [FAIL] Ошибка установки упоминаний: {str(e)}")
             return False
     
     def _post_video_selenium_style(self):
@@ -1936,7 +1936,7 @@ class InstagramUploader(InstagramAutomationBase):
                     
                     if element and element.is_visible():
                         button_text = element.text_content() or ""
-                        log_success(f"[ПУБЛИКАЦИЯ] ✅ Найдена кнопка: '{button_text.strip()}' с селектором: {selector}")
+                        log_success(f"[ПУБЛИКАЦИЯ] [OK] Найдена кнопка: '{button_text.strip()}' с селектором: {selector}")
                         share_button = element
                         found_selector = selector
                         break
@@ -1946,7 +1946,7 @@ class InstagramUploader(InstagramAutomationBase):
                     continue
             
             if not share_button:
-                log_error("[ПУБЛИКАЦИЯ] ❌ Кнопка публикации не найдена")
+                log_error("[ПУБЛИКАЦИЯ] [FAIL] Кнопка публикации не найдена")
                 
                 # Debug: show available buttons
                 try:
@@ -1983,28 +1983,28 @@ class InstagramUploader(InstagramAutomationBase):
                 
                 # Wait for processing
                 processing_time = random.uniform(3.0, 6.0)
-                log_info(f"[ПУБЛИКАЦИЯ] ⏳ Ожидаем обработки публикации... {processing_time:.1f}с")
+                log_info(f"[ПУБЛИКАЦИЯ] [WAIT] Ожидаем обработки публикации... {processing_time:.1f}с")
                 time.sleep(processing_time)
                 
-                log_success("[ПУБЛИКАЦИЯ] ✅ Кнопка публикации нажата успешно")
+                log_success("[ПУБЛИКАЦИЯ] [OK] Кнопка публикации нажата успешно")
                 return True
             
             except Exception as e:
-                log_error(f"[ПУБЛИКАЦИЯ] ❌ Ошибка нажатия кнопки: {str(e)}")
+                log_error(f"[ПУБЛИКАЦИЯ] [FAIL] Ошибка нажатия кнопки: {str(e)}")
                 
                 # Fallback: try JavaScript click
                 try:
-                    log_info("[ПУБЛИКАЦИЯ] 🔄 Пробуем JavaScript клик...")
+                    log_info("[ПУБЛИКАЦИЯ] [RETRY] Пробуем JavaScript клик...")
                     self.page.evaluate('(element) => element.click()', share_button)
                     time.sleep(random.uniform(3.0, 5.0))
-                    log_success("[ПУБЛИКАЦИЯ] ✅ JavaScript клик выполнен")
+                    log_success("[ПУБЛИКАЦИЯ] [OK] JavaScript клик выполнен")
                     return True
                 except Exception as js_error:
-                    log_error(f"[ПУБЛИКАЦИЯ] ❌ JavaScript клик тоже не сработал: {str(js_error)}")
+                    log_error(f"[ПУБЛИКАЦИЯ] [FAIL] JavaScript клик тоже не сработал: {str(js_error)}")
                     return False
             
         except Exception as e:
-            log_error(f"[ПУБЛИКАЦИЯ] ❌ Ошибка публикации видео: {str(e)}")
+            log_error(f"[ПУБЛИКАЦИЯ] [FAIL] Ошибка публикации видео: {str(e)}")
             return False
     
     def _verify_video_posted(self):
@@ -2014,7 +2014,7 @@ class InstagramUploader(InstagramAutomationBase):
             
             # УВЕЛИЧЕННОЕ ВРЕМЯ ОЖИДАНИЯ - Instagram нужно время на обработку видео
             initial_wait = random.uniform(15, 20) 
-            log_info(f"[VERIFY] ⏳ Ожидаем обработки видео Instagram... {initial_wait:.1f}с")
+            log_info(f"[VERIFY] [WAIT] Ожидаем обработки видео Instagram... {initial_wait:.1f}с")
             time.sleep(initial_wait)
             
             # Look for explicit success indicators ONLY
@@ -2048,7 +2048,7 @@ class InstagramUploader(InstagramAutomationBase):
                         
                     if element and element.is_visible():
                         element_text = element.text_content() or ""
-                        log_success(f"[VERIFY] ✅ SUCCESS CONFIRMED: Found explicit success indicator: '{element_text.strip()}'")
+                        log_success(f"[VERIFY] [OK] SUCCESS CONFIRMED: Found explicit success indicator: '{element_text.strip()}'")
                         return True
                 except Exception as e:
                     log_debug(f"[VERIFY] Error checking indicator {indicator}: {str(e)}")
@@ -2068,7 +2068,7 @@ class InstagramUploader(InstagramAutomationBase):
                         
                     if element and element.is_visible():
                         element_text = element.text_content() or ""
-                        log_success(f"[VERIFY] ✅ SUCCESS CONFIRMED (delayed): Found explicit success indicator: '{element_text.strip()}'")
+                        log_success(f"[VERIFY] [OK] SUCCESS CONFIRMED (delayed): Found explicit success indicator: '{element_text.strip()}'")
                         return True
                 except Exception as e:
                     log_debug(f"[VERIFY] Error checking indicator {indicator} (second attempt): {str(e)}")
@@ -2091,7 +2091,7 @@ class InstagramUploader(InstagramAutomationBase):
                     element = self.page.query_selector(indicator)
                     if element and element.is_visible():
                         error_text = element.text_content() or ""
-                        log_error(f"[VERIFY] ❌ ERROR DETECTED: '{error_text.strip()}'")
+                        log_error(f"[VERIFY] [FAIL] ERROR DETECTED: '{error_text.strip()}'")
                         return False
                 except:
                     continue
@@ -2120,18 +2120,18 @@ class InstagramUploader(InstagramAutomationBase):
                     continue
             
             if still_on_upload:
-                log_error("[VERIFY] ❌ UPLOAD FAILED: Still on upload page - video was NOT posted successfully")
+                log_error("[VERIFY] [FAIL] UPLOAD FAILED: Still on upload page - video was NOT posted successfully")
                 return False
             
             # ПРОВЕРКА URL - если мы на главной странице, это может означать успех
             current_url = self.page.url
             if current_url and ('instagram.com/' == current_url.rstrip('/') or 'instagram.com' in current_url and len(current_url.split('/')) <= 4):
                 log_info(f"[VERIFY] 🔍 Redirected to main page: {current_url}")
-                log_info("[VERIFY] ✅ LIKELY SUCCESS: Redirected to main Instagram page after posting")
+                log_info("[VERIFY] [OK] LIKELY SUCCESS: Redirected to main Instagram page after posting")
                 
                 # Дополнительная проверка - ждем еще немного и проверяем, что мы не вернулись на страницу загрузки
                 final_wait = random.uniform(3, 5)
-                log_info(f"[VERIFY] ⏳ Final verification wait: {final_wait:.1f}s...")
+                log_info(f"[VERIFY] [WAIT] Final verification wait: {final_wait:.1f}s...")
                 time.sleep(final_wait)
                 
                 # Проверяем, что мы все еще не на странице загрузки
@@ -2139,20 +2139,20 @@ class InstagramUploader(InstagramAutomationBase):
                     try:
                         element = self.page.query_selector(indicator)
                         if element and element.is_visible():
-                            log_warning("[VERIFY] ⚠️ Returned to upload page - upload may have failed")
+                            log_warning("[VERIFY] [WARN] Returned to upload page - upload may have failed")
                             return False
                     except:
                         continue
                 
-                log_success("[VERIFY] ✅ SUCCESS CONFIRMED: Video appears to be posted successfully")
+                log_success("[VERIFY] [OK] SUCCESS CONFIRMED: Video appears to be posted successfully")
                 return True
             
             # МЯГКАЯ ПОЛИТИКА: Если нет явных ошибок и мы не на странице загрузки, считаем успехом
-            log_warning("[VERIFY] ⚠️ No explicit success indicators found, but no errors detected either")
+            log_warning("[VERIFY] [WARN] No explicit success indicators found, but no errors detected either")
             log_info(f"[VERIFY] 🔍 Current page URL: {current_url}")
             
             # Если мы не на странице загрузки и нет ошибок, вероятно загрузка прошла успешно
-            log_success("[VERIFY] ✅ PROBABLE SUCCESS: No errors detected and not on upload page")
+            log_success("[VERIFY] [OK] PROBABLE SUCCESS: No errors detected and not on upload page")
             return True
                 
         except Exception as e:

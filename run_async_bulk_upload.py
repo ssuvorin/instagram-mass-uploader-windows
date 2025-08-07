@@ -109,7 +109,7 @@ def configure_async_settings(args):
         settings_changed = True
     
     if settings_changed:
-        print(f"{Colors.GREEN}✅ Async configuration updated{Colors.END}")
+        print(f"{Colors.GREEN}[OK] Async configuration updated{Colors.END}")
         print_async_config()
     
     return settings_changed
@@ -363,11 +363,11 @@ def run_sync_vs_async_comparison(task_id):
     print(f"{Colors.BOLD}Accounts:{Colors.END} {task.accounts.count()}")
     print(f"{Colors.BOLD}Videos:{Colors.END} {task.videos.count()}")
     
-    print(f"\n{Colors.YELLOW}⚠️  ВНИМАНИЕ: Это тест производительности, не реальная загрузка!{Colors.END}")
-    print(f"{Colors.YELLOW}⚠️  Для реального теста используйте отдельные задачи{Colors.END}")
+    print(f"\n{Colors.YELLOW}[WARN]  ВНИМАНИЕ: Это тест производительности, не реальная загрузка!{Colors.END}")
+    print(f"{Colors.YELLOW}[WARN]  Для реального теста используйте отдельные задачи{Colors.END}")
     
     # Run async performance test
-    print(f"\n{Colors.BLUE}🚀 Running ASYNC performance test...{Colors.END}")
+    print(f"\n{Colors.BLUE}[START] Running ASYNC performance test...{Colors.END}")
     async_result = asyncio.run(test_async_performance(task_id))
     
     print(f"\n{Colors.BOLD}ASYNC Results:{Colors.END}")
@@ -550,7 +550,7 @@ Examples:
     # Check if we have a Dolphin API token
     dolphin_token = os.environ.get("DOLPHIN_API_TOKEN")
     if not dolphin_token and not args.list and not args.config and not args.create:
-        print(f"{Colors.YELLOW}⚠️ No DOLPHIN_API_TOKEN found in environment. Please set it in a .env file or enter it now.{Colors.END}")
+        print(f"{Colors.YELLOW}[WARN] No DOLPHIN_API_TOKEN found in environment. Please set it in a .env file or enter it now.{Colors.END}")
         dolphin_token = input("Enter your Dolphin API token (or press Enter to proceed anyway): ")
         if dolphin_token:
             # Set it for this session
@@ -572,23 +572,23 @@ Examples:
             if run_now.lower() == 'y':
                 result = asyncio.run(run_async_task_with_monitoring(task.id))
                 if result:
-                    print(f"{Colors.GREEN}✅ Async task completed successfully{Colors.END}")
+                    print(f"{Colors.GREEN}[OK] Async task completed successfully{Colors.END}")
                 else:
-                    print(f"{Colors.RED}❌ Async task failed{Colors.END}")
+                    print(f"{Colors.RED}[FAIL] Async task failed{Colors.END}")
         
     elif args.list:
         list_suitable_tasks()
     
     elif args.run_async:
-        print(f"{Colors.BOLD}🚀 Starting ASYNC bulk upload task {args.run_async}{Colors.END}")
+        print(f"{Colors.BOLD}[START] Starting ASYNC bulk upload task {args.run_async}{Colors.END}")
         result = asyncio.run(run_async_task_with_monitoring(args.run_async))
         if result:
-            print(f"{Colors.GREEN}✅ Async task completed successfully{Colors.END}")
+            print(f"{Colors.GREEN}[OK] Async task completed successfully{Colors.END}")
         else:
-            print(f"{Colors.RED}❌ Async task failed{Colors.END}")
+            print(f"{Colors.RED}[FAIL] Async task failed{Colors.END}")
     
     elif args.run_sync:
-        print(f"{Colors.BOLD}🔄 Starting SYNC bulk upload task {args.run_sync}{Colors.END}")
+        print(f"{Colors.BOLD}[RETRY] Starting SYNC bulk upload task {args.run_sync}{Colors.END}")
         from uploader.bulk_tasks_playwright import run_bulk_upload_task
         
         start_time = time.time()
@@ -599,9 +599,9 @@ Examples:
         print(f"{Colors.BOLD}Sync Execution Time:{Colors.END} {Colors.colorize(f'{execution_time:.2f}s', Colors.CYAN)}")
         
         if result:
-            print(f"{Colors.GREEN}✅ Sync task completed successfully{Colors.END}")
+            print(f"{Colors.GREEN}[OK] Sync task completed successfully{Colors.END}")
         else:
-            print(f"{Colors.RED}❌ Sync task failed{Colors.END}")
+            print(f"{Colors.RED}[FAIL] Sync task failed{Colors.END}")
     
     elif args.compare:
         run_sync_vs_async_comparison(args.compare)

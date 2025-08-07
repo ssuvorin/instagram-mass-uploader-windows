@@ -124,7 +124,7 @@ class Email:
             print(f"📧 [EMAIL_CLIENT] Extracted domain: {domain}")
             return domain
         except IndexError:
-            print(f"📧 [EMAIL_CLIENT] ❌ Invalid email format: {email_address}")
+            print(f"📧 [EMAIL_CLIENT] [FAIL] Invalid email format: {email_address}")
             return None
 
     def _get_server_config(self):
@@ -137,7 +137,7 @@ class Email:
             print(f"📧 [EMAIL_CLIENT] Found server config for {self.domain}: {config['server']}:{config['port']} ({config['type']})")
             return config
         else:
-            print(f"📧 [EMAIL_CLIENT] ⚠️ No specific config for {self.domain}, will try common servers")
+            print(f"📧 [EMAIL_CLIENT] [WARN] No specific config for {self.domain}, will try common servers")
             return None
 
     def get_verification_code(self, max_retries=3, retry_delay=30):
@@ -151,10 +151,10 @@ class Email:
             
             code = self._attempt_get_verification_code()
             if code:
-                print(f"📧 [EMAIL_CLIENT] ✅ Successfully retrieved code: {code}")
+                print(f"📧 [EMAIL_CLIENT] [OK] Successfully retrieved code: {code}")
                 return code
         
-        print(f'📧 [EMAIL_CLIENT] ❌ Failed to get verification code after {max_retries} attempts')
+        print(f'📧 [EMAIL_CLIENT] [FAIL] Failed to get verification code after {max_retries} attempts')
         return None
 
     def _attempt_get_verification_code(self):
@@ -218,12 +218,12 @@ class Email:
                     code = self._get_verification_pop3(server, port)
                 
                 if code:
-                    print(f"📧 [EMAIL_CLIENT] ✅ Success with {server}:{port}")
+                    print(f"📧 [EMAIL_CLIENT] [OK] Success with {server}:{port}")
                     return code
                 else:
-                    print(f"📧 [EMAIL_CLIENT] ⚠️ No code found with {server}:{port}")
+                    print(f"📧 [EMAIL_CLIENT] [WARN] No code found with {server}:{port}")
             except Exception as e:
-                print(f"📧 [EMAIL_CLIENT] ❌ {server}:{port} failed: {str(e)}")
+                print(f"📧 [EMAIL_CLIENT] [FAIL] {server}:{port} failed: {str(e)}")
                 continue
         
         return None
@@ -253,7 +253,7 @@ class Email:
                     code = match.group(1)
                     # Validate code (should be 6 digits for Instagram)
                     if len(code) == 6 and code.isdigit():
-                        print(f"📧 [CODE_EXTRACT] ✅ Found valid code with pattern {i+1}: {code}")
+                        print(f"📧 [CODE_EXTRACT] [OK] Found valid code with pattern {i+1}: {code}")
                         return code
                     else:
                         print(f"📧 [CODE_EXTRACT] Invalid code format: {code} (pattern {i+1})")
@@ -261,7 +261,7 @@ class Email:
                 print(f"📧 [CODE_EXTRACT] Pattern {i+1} failed: {str(e)}")
                 continue
         
-        print(f"📧 [CODE_EXTRACT] ❌ No valid code found in {source}")
+        print(f"📧 [CODE_EXTRACT] [FAIL] No valid code found in {source}")
         return None
 
     def _get_verification_imap(self, server, port):
@@ -275,7 +275,7 @@ class Email:
             
             print(f"📧 [IMAP] Logging in with user: {self.login}")
             mail.login(self.login, self.password)
-            print(f"📧 [IMAP] ✅ Login successful")
+            print(f"📧 [IMAP] [OK] Login successful")
             
             print(f"📧 [IMAP] Selecting inbox...")
             mail.select("inbox")
@@ -288,12 +288,12 @@ class Email:
             status, messages = mail.search(None, f'(SINCE "{since_date}")')
             
             if status != "OK":
-                print(f"📧 [IMAP] ❌ Search failed with status: {status}")
+                print(f"📧 [IMAP] [FAIL] Search failed with status: {status}")
                 return None
 
             message_ids = messages[0].split()
             if not message_ids:
-                print(f"📧 [IMAP] ❌ No recent emails found")
+                print(f"📧 [IMAP] [FAIL] No recent emails found")
                 return None
 
             print(f"📧 [IMAP] Found {len(message_ids)} recent emails")
@@ -353,11 +353,11 @@ class Email:
                 if code:
                     return code
             
-            print(f"📧 [IMAP] ❌ No verification code found in recent emails")
+            print(f"📧 [IMAP] [FAIL] No verification code found in recent emails")
             return None
 
         except Exception as e:
-            print(f"📧 [IMAP] ❌ Error: {str(e)}")
+            print(f"📧 [IMAP] [FAIL] Error: {str(e)}")
             return None
         finally:
             try:
@@ -380,7 +380,7 @@ class Email:
             print(f"📧 [POP3] Authenticating user: {self.login}")
             mail.user(self.login)
             mail.pass_(self.password)
-            print(f"📧 [POP3] ✅ Authentication successful")
+            print(f"📧 [POP3] [OK] Authentication successful")
 
             # Получаем статистику почтового ящика
             print(f"📧 [POP3] Getting mailbox statistics...")
@@ -388,7 +388,7 @@ class Email:
             print(f"📧 [POP3] Found {num_messages} messages in mailbox")
             
             if num_messages == 0:
-                print("📧 [POP3] ❌ Mailbox is empty")
+                print("📧 [POP3] [FAIL] Mailbox is empty")
                 mail.quit()
                 return None
 
@@ -448,11 +448,11 @@ class Email:
                     return code
 
             mail.quit()
-            print(f"📧 [POP3] ❌ No verification code found in recent messages")
+            print(f"📧 [POP3] [FAIL] No verification code found in recent messages")
             return None
 
         except Exception as e:
-            print(f"📧 [POP3] ❌ Error: {str(e)}")
+            print(f"📧 [POP3] [FAIL] Error: {str(e)}")
             if 'mail' in locals():
                 try:
                     mail.quit()
@@ -500,7 +500,7 @@ class Email:
                     if self._test_pop3_connection(server, port):
                         return True
             
-            print(f"📧 [TEST] ❌ All server tests failed")
+            print(f"📧 [TEST] [FAIL] All server tests failed")
             return False
 
     def _test_imap_connection(self, server, port):
@@ -511,22 +511,22 @@ class Email:
             print(f"📧 [TEST_IMAP] SSL connection established")
             
             mail.login(self.login, self.password)
-            print(f"📧 [TEST_IMAP] ✅ Login successful")
+            print(f"📧 [TEST_IMAP] [OK] Login successful")
             
             mail.select("inbox")
-            print(f"📧 [TEST_IMAP] ✅ Inbox selected")
+            print(f"📧 [TEST_IMAP] [OK] Inbox selected")
             
             status, messages = mail.search(None, "ALL")
             if status == "OK":
                 message_count = len(messages[0].split()) if messages[0] else 0
-                print(f"📧 [TEST_IMAP] ✅ Found {message_count} emails in inbox")
+                print(f"📧 [TEST_IMAP] [OK] Found {message_count} emails in inbox")
             
             mail.logout()
-            print(f"📧 [TEST_IMAP] ✅ Connection test successful")
+            print(f"📧 [TEST_IMAP] [OK] Connection test successful")
             return True
             
         except Exception as e:
-            print(f"📧 [TEST_IMAP] ❌ Connection test failed: {str(e)}")
+            print(f"📧 [TEST_IMAP] [FAIL] Connection test failed: {str(e)}")
             return False
 
     def _test_pop3_connection(self, server, port):
@@ -538,15 +538,15 @@ class Email:
             
             mail.user(self.login)
             mail.pass_(self.password)
-            print(f"📧 [TEST_POP3] ✅ Authentication successful")
+            print(f"📧 [TEST_POP3] [OK] Authentication successful")
             
             num_messages = len(mail.list()[1])
-            print(f"📧 [TEST_POP3] ✅ Found {num_messages} messages in mailbox")
+            print(f"📧 [TEST_POP3] [OK] Found {num_messages} messages in mailbox")
             
             mail.quit()
-            print(f"📧 [TEST_POP3] ✅ Connection test successful")
+            print(f"📧 [TEST_POP3] [OK] Connection test successful")
             return True
             
         except Exception as e:
-            print(f"📧 [TEST_POP3] ❌ Connection test failed: {str(e)}")
+            print(f"📧 [TEST_POP3] [FAIL] Connection test failed: {str(e)}")
             return False

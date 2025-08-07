@@ -593,7 +593,7 @@ class AdvancedHumanBehavior:
     
     def simulate_attention_shifts(self, page):
         """Симулируем естественные переключения внимания"""
-        log_info("👀 [HUMAN] Natural attention shifts...")
+        log_info("[EYES] [HUMAN] Natural attention shifts...")
         
         try:
             # Случайно переключаем внимание между элементами

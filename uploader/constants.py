@@ -474,7 +474,7 @@ class InstagramSelectors:
     
     # Кнопка "Далее" - SEMANTIC VERSION (без динамических CSS-классов)
     NEXT_BUTTONS = [
-        # 🎯 ПРИОРИТЕТ 1: Текстовые селекторы (самые надежные)
+        # [TARGET] ПРИОРИТЕТ 1: Текстовые селекторы (самые надежные)
         'button:has-text("Далее")',
         'button:has-text("Next")',
         'button:has-text("Продолжить")',
@@ -484,7 +484,7 @@ class InstagramSelectors:
         'div[role="button"]:has-text("Продолжить")',
         'div[role="button"]:has-text("Continue")',
         
-        # 🎯 ПРИОРИТЕТ 2: Роли и табиндексы (семантические)
+        # [TARGET] ПРИОРИТЕТ 2: Роли и табиндексы (семантические)
         '[role="button"]:has-text("Далее")',
         '[role="button"][tabindex="0"]:has-text("Далее")',
         '[role="button"]:has-text("Next")',
@@ -492,7 +492,7 @@ class InstagramSelectors:
         '[role="button"]:has-text("Продолжить")',
         '[role="button"]:has-text("Continue")',
         
-        # 🎯 ПРИОРИТЕТ 3: Aria-label атрибуты
+        # [TARGET] ПРИОРИТЕТ 3: Aria-label атрибуты
         'button[aria-label*="Далее"]',
         'button[aria-label*="Next"]',
         'button[aria-label*="Продолжить"]',
@@ -500,7 +500,7 @@ class InstagramSelectors:
         '[role="button"][aria-label*="Далее"]',
         '[role="button"][aria-label*="Next"]',
         
-        # 🎯 ПРИОРИТЕТ 4: XPath текстовые (очень точные)
+        # [TARGET] ПРИОРИТЕТ 4: XPath текстовые (очень точные)
         '//button[contains(text(), "Далее")]',
         '//button[contains(text(), "Next")]',
         '//button[contains(text(), "Продолжить")]',
@@ -510,7 +510,7 @@ class InstagramSelectors:
         '//div[@role="button" and contains(text(), "Продолжить")]',
         '//div[@role="button" and contains(text(), "Continue")]',
         
-        # 🎯 ПРИОРИТЕТ 5: XPath с span (для сложной структуры)
+        # [TARGET] ПРИОРИТЕТ 5: XPath с span (для сложной структуры)
         '//button[.//span[contains(text(), "Далее")]]',
         '//div[@role="button" and .//span[contains(text(), "Далее")]]',
         '//button[.//span[contains(text(), "Next")]]',
@@ -518,7 +518,7 @@ class InstagramSelectors:
         '//button[.//span[contains(text(), "Продолжить")]]',
         '//div[@role="button" and .//span[contains(text(), "Продолжить")]]',
         
-        # 🎯 ПРИОРИТЕТ 6: Универсальные семантические селекторы
+        # [TARGET] ПРИОРИТЕТ 6: Универсальные семантические селекторы
         'div[role="button"][tabindex="0"]',  # Любая кнопка с табиндексом
         'button[type="button"]',  # Любая кнопка
     ]
@@ -668,7 +668,7 @@ class InstagramSelectors:
     
     # Кнопки сохранения данных входа - SEMANTIC VERSION
     SAVE_LOGIN_BUTTONS = [
-        # 🎯 ПРИОРИТЕТ 1: Текстовые селекторы (самые надежные)
+        # [TARGET] ПРИОРИТЕТ 1: Текстовые селекторы (самые надежные)
         'button:has-text("Сохранить данные")',
         'button:has-text("Save Info")',
         'button:has-text("Save")',
@@ -676,28 +676,28 @@ class InstagramSelectors:
         'button:has-text("Сохранить информацию")',
         'button:has-text("Save Information")',
         
-        # 🎯 ПРИОРИТЕТ 2: Тип кнопки с текстом
+        # [TARGET] ПРИОРИТЕТ 2: Тип кнопки с текстом
         'button[type="button"]:has-text("Сохранить")',
         'button[type="button"]:has-text("Save")',
         
-        # 🎯 ПРИОРИТЕТ 3: XPath текстовые
+        # [TARGET] ПРИОРИТЕТ 3: XPath текстовые
         '//button[contains(text(), "Сохранить данные")]',
         '//button[contains(text(), "Save Info")]',
         '//button[contains(text(), "Save")]',
         '//button[contains(text(), "Сохранить")]',
         
-        # 🎯 ПРИОРИТЕТ 4: Aria-label атрибуты
+        # [TARGET] ПРИОРИТЕТ 4: Aria-label атрибуты
         'button[aria-label*="Save"]',
         'button[aria-label*="Сохранить"]',
         '[role="button"][aria-label*="Save"]',
         '[role="button"][aria-label*="Сохранить"]',
         
-        # 🎯 ПРИОРИТЕТ 5: Контекстные селекторы
+        # [TARGET] ПРИОРИТЕТ 5: Контекстные селекторы
         'main button[type="button"]',
         'section button[type="button"]',
         'form button[type="button"]',
         
-        # 🎯 ПРИОРИТЕТ 6: Широкие селекторы (fallback)
+        # [TARGET] ПРИОРИТЕТ 6: Широкие селекторы (fallback)
         'button[type="button"]',
         'div[role="button"]',
     ]
@@ -1013,7 +1013,7 @@ class APIConstants:
 class CropSelectors:
     # ПОЛНОСТЬЮ АДАПТИВНЫЕ селекторы (независимы от CSS-классов Instagram)
     CROP_BUTTON_SELECTORS = [
-        # 🎯 ПРИОРИТЕТ 1: Семантические SVG селекторы (самые устойчивые)
+        # [TARGET] ПРИОРИТЕТ 1: Семантические SVG селекторы (самые устойчивые)
         'svg[aria-label="Выбрать размер и обрезать"]',
         'svg[aria-label*="Выбрать размер"]',
         'svg[aria-label*="обрезать"]',
@@ -1022,7 +1022,7 @@ class CropSelectors:
         'svg[aria-label*="Crop"]',
         'svg[aria-label*="Select size"]',
         
-        # 🎯 ПРИОРИТЕТ 2: Родительские элементы с семантическими SVG
+        # [TARGET] ПРИОРИТЕТ 2: Родительские элементы с семантическими SVG
         'button:has(svg[aria-label="Выбрать размер и обрезать"])',
         'div[role="button"]:has(svg[aria-label="Выбрать размер и обрезать"])',
         'button:has(svg[aria-label*="Выбрать размер"])',
@@ -1034,7 +1034,7 @@ class CropSelectors:
         'div[role="button"]:has(svg[aria-label*="Select crop"])',
         'div[role="button"]:has(svg[aria-label*="Crop"])',
         
-        # 🎯 ПРИОРИТЕТ 3: Универсальные aria-label
+        # [TARGET] ПРИОРИТЕТ 3: Универсальные aria-label
         '[aria-label*="Выбрать размер и обрезать"]',
         '[aria-label*="Выбрать размер"]',
         '[aria-label*="обрезать"]',
@@ -1045,7 +1045,7 @@ class CropSelectors:
         'button[aria-label*="Select crop"]',
         'button[aria-label*="Crop"]',
         
-        # 🎯 ПРИОРИТЕТ 4: XPath семантические селекторы
+        # [TARGET] ПРИОРИТЕТ 4: XPath семантические селекторы
         '//svg[@aria-label="Выбрать размер и обрезать"]',
         '//svg[contains(@aria-label, "Выбрать размер")]',
         '//svg[contains(@aria-label, "обрезать")]',
@@ -1061,26 +1061,26 @@ class CropSelectors:
         '//div[@role="button" and .//svg[contains(@aria-label, "Select crop")]]',
         '//div[@role="button" and .//svg[contains(@aria-label, "Crop")]]',
         
-        # 🎯 ПРИОРИТЕТ 5: Текстовые селекторы
+        # [TARGET] ПРИОРИТЕТ 5: Текстовые селекторы
         'button:has-text("Обрезка")',
         'button:has-text("Crop")',
         'div[role="button"]:has-text("Обрезка")',
         'div[role="button"]:has-text("Crop")',
         
-        # 🎯 ПРИОРИТЕТ 6: Универсальные паттерны
+        # [TARGET] ПРИОРИТЕТ 6: Универсальные паттерны
         'button[type="button"]:has(svg[aria-label*="размер"])',
         'button[type="button"]:has(svg[aria-label*="crop"])',
         'div[role="button"]:has(button:has(svg[aria-label*="размер"]))',
         'div[role="button"]:has(button:has(svg[aria-label*="crop"]))',
         
-        # 🎯 ПРИОРИТЕТ 7: Широкие селекторы (последний resort)
+        # [TARGET] ПРИОРИТЕТ 7: Широкие селекторы (последний resort)
         'button:has(svg)',  # Любая кнопка с SVG
         'div[role="button"]:has(svg)',  # Любой div-кнопка с SVG
     ]
     
     # Селекторы для опции "Оригинал" - ПОЛНОСТЬЮ АДАПТИВНЫЕ
     ORIGINAL_CROP_SELECTORS = [
-        # 🎯 ПРИОРИТЕТ 1: Семантические текстовые селекторы (самые надежные)
+        # [TARGET] ПРИОРИТЕТ 1: Семантические текстовые селекторы (самые надежные)
         'span:has-text("Оригинал")',
         'span:has-text("Original")',
         'div[role="button"]:has(span:has-text("Оригинал"))',
@@ -1088,13 +1088,13 @@ class CropSelectors:
         'div[role="button"]:has(span:has-text("Original"))',
         'button:has(span:has-text("Original"))',
         
-        # 🎯 ПРИОРИТЕТ 2: Прямые текстовые селекторы
+        # [TARGET] ПРИОРИТЕТ 2: Прямые текстовые селекторы
         'button:has-text("Оригинал")',
         'div[role="button"]:has-text("Оригинал")',
         'button:has-text("Original")',
         'div[role="button"]:has-text("Original")',
         
-        # 🎯 ПРИОРИТЕТ 3: SVG с семантическими атрибутами
+        # [TARGET] ПРИОРИТЕТ 3: SVG с семантическими атрибутами
         'svg[aria-label="Значок контура фото"]',
         'svg[aria-label*="контур"]',
         'svg[aria-label*="фото"]',
@@ -1103,7 +1103,7 @@ class CropSelectors:
         'div[role="button"]:has(svg[aria-label="Значок контура фото"])',
         'button:has(svg[aria-label="Значок контура фото"])',
         
-        # 🎯 ПРИОРИТЕТ 4: XPath семантические (самые точные)
+        # [TARGET] ПРИОРИТЕТ 4: XPath семантические (самые точные)
         '//span[text()="Оригинал"]',
         '//span[text()="Original"]',
         '//div[@role="button" and .//span[text()="Оригинал"]]',
@@ -1115,7 +1115,7 @@ class CropSelectors:
         '//button[contains(text(), "Original")]',
         '//div[@role="button" and contains(text(), "Original")]',
         
-        # 🎯 ПРИОРИТЕТ 5: SVG XPath
+        # [TARGET] ПРИОРИТЕТ 5: SVG XPath
         '//svg[@aria-label="Значок контура фото"]',
         '//svg[contains(@aria-label, "контур")]',
         '//svg[contains(@aria-label, "фото")]',
@@ -1124,7 +1124,7 @@ class CropSelectors:
         '//button[.//svg[@aria-label="Значок контура фото"]]',
         '//div[@role="button" and .//svg[@aria-label="Значок контура фото"]]',
         
-        # 🎯 ПРИОРИТЕТ 6: Универсальные aria-label
+        # [TARGET] ПРИОРИТЕТ 6: Универсальные aria-label
         '[aria-label*="Оригинал"]',
         '[aria-label*="Original"]',
         'button[aria-label*="Оригинал"]',
@@ -1132,7 +1132,7 @@ class CropSelectors:
         '[title*="Оригинал"]',
         '[title*="Original"]',
         
-        # 🎯 ПРИОРИТЕТ 7: Позиционные селекторы (обычно "Оригинал" первый)
+        # [TARGET] ПРИОРИТЕТ 7: Позиционные селекторы (обычно "Оригинал" первый)
         '(//div[@role="button" and @tabindex="0"])[1]',
         '(//button[@tabindex="0"])[1]',
         'div[role="button"][tabindex="0"]:first-child',
@@ -1160,7 +1160,7 @@ class CropSelectors:
         'div:has-text("Crop")',
     ]
     
-    # 🤖 АДАПТИВНЫЕ МЕТОДЫ ПОИСКА (независимо от CSS-классов)
+    # [BOT] АДАПТИВНЫЕ МЕТОДЫ ПОИСКА (независимо от CSS-классов)
     
     @staticmethod
     def find_adaptive_crop_elements(page):

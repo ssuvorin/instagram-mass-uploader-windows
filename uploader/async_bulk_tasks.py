@@ -184,7 +184,7 @@ class AsyncTaskRepository:
             title = ""
             if hasattr(video, 'title_data') and video.title_data:
                 title = video.title_data.title or ""
-                print(f"[ASYNC_DATA] ✅ Found title from title_data: '{title[:50]}...'")
+                print(f"[ASYNC_DATA] [OK] Found title from title_data: '{title[:50]}...'")
             else:
                 # CRITICAL FIX: If no title_data, try to assign one from task titles
                 if hasattr(video, 'bulk_task') and video.bulk_task:
@@ -204,7 +204,7 @@ class AsyncTaskRepository:
                             title = assigned_title.title or ""
                             print(f"[ASYNC_DATA] 🔥 ASSIGNED title '{title[:50]}...' to video {video.id}")
                         else:
-                            print(f"[ASYNC_DATA] ⚠️ No unassigned titles available for video {video.id}")
+                            print(f"[ASYNC_DATA] [WARN] No unassigned titles available for video {video.id}")
             
             # FIXED: Handle location with task defaults (like sync version)
             location = ""
@@ -428,7 +428,7 @@ class AsyncLogger:
             cache.set(f"task_last_update_{self.task_id}", timestamp, timeout=3600)
             
         except Exception as e:
-            print(f"❌ [ASYNC_LOGGER] Error saving to cache: {str(e)}")
+            print(f"[FAIL] [ASYNC_LOGGER] Error saving to cache: {str(e)}")
         
         # Сохраняем в базу данных для критических событий
         if self._is_critical_event(level, message, category):
@@ -440,7 +440,7 @@ class AsyncLogger:
                     # Здесь нужно получить account_task по account_id
                     pass
             except Exception as e:
-                print(f"❌ [ASYNC_LOGGER] Error saving log to database: {str(e)}")
+                print(f"[FAIL] [ASYNC_LOGGER] Error saving log to database: {str(e)}")
     
     def _is_critical_event(self, level: str, message: str, category: Optional[str]) -> bool:
         """Проверяет, является ли событие критическим"""
@@ -484,7 +484,7 @@ class AsyncAccountProcessor:
         self.start_time = time.time()
         
         try:
-            await self.logger.log('INFO', f"🚀 Starting async processing for account task {self.account_task.id}")
+            await self.logger.log('INFO', f"[START] Starting async processing for account task {self.account_task.id}")
             
             # Получаем данные аккаунта
             account = self.account_task.account
@@ -576,15 +576,15 @@ class AsyncAccountProcessor:
                     video.title = str(title_obj)
         
         # КРИТИЧЕСКОЕ ДОБАВЛЕНИЕ: Выводим описания видео перед загрузкой
-        await self.logger.log('INFO', f"🎬 PREPARING VIDEOS FOR ACCOUNT {self.account_task.account.username}:")
+        await self.logger.log('INFO', f"[VIDEO] PREPARING VIDEOS FOR ACCOUNT {self.account_task.account.username}:")
         for i, video in enumerate(videos_for_account):
             video_filename = os.path.basename(video.file_path)
-            await self.logger.log('INFO', f"📹 Video {i+1}: {video_filename}")
-            await self.logger.log('INFO', f"📝 Description: '{video.title[:100]}{'...' if len(video.title) > 100 else ''}'")
+            await self.logger.log('INFO', f"[CAMERA] Video {i+1}: {video_filename}")
+            await self.logger.log('INFO', f"[TEXT] Description: '{video.title[:100]}{'...' if len(video.title) > 100 else ''}'")
             if video.location:
-                await self.logger.log('INFO', f"📍 Location: {video.location}")
+                await self.logger.log('INFO', f"[LOCATION] Location: {video.location}")
             if video.mentions:
-                await self.logger.log('INFO', f"👥 Mentions: {video.mentions}")
+                await self.logger.log('INFO', f"[USERS] Mentions: {video.mentions}")
         
         await self.logger.log('INFO', f"Prepared {len(videos_for_account)} videos for account")
         return videos_for_account
@@ -595,7 +595,7 @@ class AsyncAccountProcessor:
         video_files_to_upload = []
         account_username = self.account_task.account.username
         
-        await self.logger.log('INFO', f"🎬 Starting video uniquification for account {account_username}")
+        await self.logger.log('INFO', f"[VIDEO] Starting video uniquification for account {account_username}")
         
         for i, video in enumerate(videos_for_account):
             video_filename = os.path.basename(video.file_path)
@@ -625,19 +625,19 @@ class AsyncAccountProcessor:
                     video_files_to_upload.append(unique_video_path)
                     temp_files.append(unique_video_path)
                     
-                    await self.logger.log('SUCCESS', f"✅ Created unique video for {account_username}: {os.path.basename(unique_video_path)}")
+                    await self.logger.log('SUCCESS', f"[OK] Created unique video for {account_username}: {os.path.basename(unique_video_path)}")
                     
                 except Exception as uniquify_error:
                     # Если уникализация не удалась, используем оригинальный файл
-                    await self.logger.log('WARNING', f"⚠️ Video uniquification failed: {str(uniquify_error)}, using original file")
+                    await self.logger.log('WARNING', f"[WARN] Video uniquification failed: {str(uniquify_error)}, using original file")
                     video_files_to_upload.append(original_temp_file)
                 
             except Exception as e:
-                await self.logger.log('ERROR', f"❌ Error preparing video file {video_filename}: {str(e)}")
+                await self.logger.log('ERROR', f"[FAIL] Error preparing video file {video_filename}: {str(e)}")
                 # Пропускаем это видео и продолжаем с другими
                 continue
         
-        await self.logger.log('SUCCESS', f"🎯 Prepared {len(video_files_to_upload)} unique videos for account {account_username}")
+        await self.logger.log('SUCCESS', f"[TARGET] Prepared {len(video_files_to_upload)} unique videos for account {account_username}")
         return temp_files, video_files_to_upload
     
     async def _run_browser_async(self, account_details: Dict, videos: List[VideoData], 
@@ -647,28 +647,28 @@ class AsyncAccountProcessor:
             await self.logger.log('INFO', f"Starting browser for account: {account_details['username']}")
             
             # КРИТИЧЕСКОЕ ДОБАВЛЕНИЕ: Выводим описания видео перед загрузкой в браузере
-            await self.logger.log('INFO', f"🎯 FINAL VIDEO DESCRIPTIONS FOR {account_details['username']}:")
+            await self.logger.log('INFO', f"[TARGET] FINAL VIDEO DESCRIPTIONS FOR {account_details['username']}:")
             for i, video in enumerate(videos):
                 video_filename = os.path.basename(video.file_path)
-                await self.logger.log('INFO', f"📹 Video {i+1}: {video_filename}")
-                await self.logger.log('INFO', f"📝 FINAL Description: '{video.title[:100]}{'...' if len(video.title) > 100 else ''}'")
+                await self.logger.log('INFO', f"[CAMERA] Video {i+1}: {video_filename}")
+                await self.logger.log('INFO', f"[TEXT] FINAL Description: '{video.title[:100]}{'...' if len(video.title) > 100 else ''}'")
                 if video.location:
-                    await self.logger.log('INFO', f"📍 Location: {video.location}")
+                    await self.logger.log('INFO', f"[LOCATION] Location: {video.location}")
                 if video.mentions:
-                    await self.logger.log('INFO', f"👥 Mentions: {video.mentions}")
+                    await self.logger.log('INFO', f"[USERS] Mentions: {video.mentions}")
             
             # Логируем информацию о файлах для отладки
-            await self.logger.log('INFO', f"📁 Files to upload: {len(video_files_to_upload)}")
+            await self.logger.log('INFO', f"[FOLDER] Files to upload: {len(video_files_to_upload)}")
             for i, file_path in enumerate(video_files_to_upload):
                 if os.path.exists(file_path):
                     file_size = os.path.getsize(file_path)
-                    await self.logger.log('INFO', f"📄 File {i+1}: {os.path.basename(file_path)} ({file_size} bytes)")
+                    await self.logger.log('INFO', f"[FILE] File {i+1}: {os.path.basename(file_path)} ({file_size} bytes)")
                 else:
-                    await self.logger.log('ERROR', f"❌ File {i+1} not found: {file_path}")
+                    await self.logger.log('ERROR', f"[FAIL] File {i+1} not found: {file_path}")
             
             # Проверяем соответствие видео и файлов
             if len(videos) != len(video_files_to_upload):
-                await self.logger.log('WARNING', f"⚠️ Mismatch: {len(videos)} videos vs {len(video_files_to_upload)} files")
+                await self.logger.log('WARNING', f"[WARN] Mismatch: {len(videos)} videos vs {len(video_files_to_upload)} files")
             
             # Импортируем асинхронную версию браузера
             from .bulk_tasks_playwright_async import run_dolphin_browser_async
@@ -690,13 +690,13 @@ class AsyncAccountProcessor:
             
             # Обрабатываем специальные случаи верификации и блокировок
             if "PHONE_VERIFICATION_REQUIRED" in error_message:
-                await self.logger.log('WARNING', f"📱 Phone verification required for account {account_details['username']}")
+                await self.logger.log('WARNING', f"[PHONE] Phone verification required for account {account_details['username']}")
                 return 'phone_verification_required', 0, 1
             elif "HUMAN_VERIFICATION_REQUIRED" in error_message:
-                await self.logger.log('WARNING', f"🤖 Human verification required for account {account_details['username']}")
+                await self.logger.log('WARNING', f"[BOT] Human verification required for account {account_details['username']}")
                 return 'human_verification_required', 0, 1
             elif "SUSPENDED" in error_message:
-                await self.logger.log('WARNING', f"🚫 Account {account_details['username']} is suspended")
+                await self.logger.log('WARNING', f"[BLOCK] Account {account_details['username']} is suspended")
                 return 'suspended', 0, 1
             else:
                 return 'failed', 0, 1
@@ -758,7 +758,7 @@ class AsyncTaskCoordinator:
             await self.task_repo.update_task_status(
                 task, 
                 TaskStatus.RUNNING, 
-                f"[{timestamp}] 🚀 Starting ASYNC bulk upload task '{task_props['name']}'\n"
+                f"[{timestamp}] [START] Starting ASYNC bulk upload task '{task_props['name']}'\n"
             )
             
             await logger.log('INFO', f"Starting async task '{task_props['name']}'")
@@ -771,7 +771,7 @@ class AsyncTaskCoordinator:
             if await self.task_repo.check_videos_empty(all_videos):
                 error_msg = "No videos found for this task"
                 await logger.log('ERROR', error_msg)
-                await self.task_repo.update_task_status(task, TaskStatus.FAILED, f"[{timestamp}] ❌ {error_msg}\n")
+                await self.task_repo.update_task_status(task, TaskStatus.FAILED, f"[{timestamp}] [FAIL] {error_msg}\n")
                 return False
             
             videos_count = await self.task_repo.get_videos_count(all_videos)
@@ -817,11 +817,11 @@ class AsyncTaskCoordinator:
                 await self.task_repo.update_task_status(
                     task, 
                     TaskStatus.FAILED, 
-                    f"[{timestamp}] 💥 Critical task error: {error_msg}\n"
+                    f"[{timestamp}] [EXPLODE] Critical task error: {error_msg}\n"
                 )
-                print(f"✅ Updated task {self.task_id} status to FAILED")
+                print(f"[OK] Updated task {self.task_id} status to FAILED")
             except Exception as update_error:
-                print(f"❌ Failed to update task status: {str(update_error)}")
+                print(f"[FAIL] Failed to update task status: {str(update_error)}")
             
             return False
     
@@ -966,19 +966,19 @@ class AsyncTaskCoordinator:
         
         # Очищаем все временные файлы уникализации
         await cleanup_uniquifier_temp_files()
-        await logger.log('INFO', '🧹 Cleaned up all uniquification temp files')
+        await logger.log('INFO', '[CLEAN] Cleaned up all uniquification temp files')
         
         # Очищаем оригинальные файлы видео из media/bot/bulk_videos/
         try:
             deleted_files = await self._cleanup_original_video_files(task, logger)
             if deleted_files > 0:
-                await logger.log('INFO', f'🗑️ Cleaned up {deleted_files} original video files from media directory')
+                await logger.log('INFO', f'[DELETE] Cleaned up {deleted_files} original video files from media directory')
         except Exception as e:
             await logger.log('WARNING', f'Failed to cleanup original video files: {str(e)}')
         
         await self.task_repo.update_task_log(
             task,
-            f"[{timestamp}] 🏁 ASYNC task completed\n"
+            f"[{timestamp}] [FINISH] ASYNC task completed\n"
         )
     
     async def _cleanup_original_video_files(self, task: BulkUploadTask, logger: AsyncLogger) -> int:
@@ -1022,7 +1022,7 @@ class AsyncTaskCoordinator:
                             for other_video in other_videos_with_same_file:
                                 other_task = other_video.bulk_task
                                 if other_task.status in ['RUNNING', 'PENDING']:
-                                    return False, f'🚫 File {filename} is still used by running task "{other_task.name}" (ID: {other_task.id})'
+                                    return False, f'[BLOCK] File {filename} is still used by running task "{other_task.name}" (ID: {other_task.id})'
                             
                             return True, None
                         
@@ -1037,9 +1037,9 @@ class AsyncTaskCoordinator:
                             
                             filename = await delete_file()
                             deleted_count += 1
-                            await logger.log('INFO', f'🗑️ Deleted original video file: {filename}')
+                            await logger.log('INFO', f'[DELETE] Deleted original video file: {filename}')
                         else:
-                            await logger.log('INFO', f'⏸️ Skipped deleting file (still in use by other tasks): {os.path.basename(file_path)}')
+                            await logger.log('INFO', f'[PAUSE] Skipped deleting file (still in use by other tasks): {os.path.basename(file_path)}')
                             if warning_msg:
                                 await logger.log('WARNING', warning_msg)
                         
@@ -1063,7 +1063,7 @@ async def run_async_bulk_upload_task(task_id: int) -> bool:
     # Обработчик сигналов для асинхронной функции
     def signal_handler(signum, frame):
         """Обработчик сигналов для корректного завершения"""
-        print(f"\n⚠️ Received signal {signum}, gracefully shutting down async task {task_id}...")
+        print(f"\n[WARN] Received signal {signum}, gracefully shutting down async task {task_id}...")
         
         # Создаем задачу для обновления статуса
         async def update_task_status_on_signal():
@@ -1076,12 +1076,12 @@ async def run_async_bulk_upload_task(task_id: int) -> bool:
                 timestamp = current_time.strftime("%Y-%m-%d %H:%M:%S")
                 
                 task.status = 'FAILED'
-                task.log += f"[{timestamp}] ⚠️ Async task interrupted by signal {signum}\n"
+                task.log += f"[{timestamp}] [WARN] Async task interrupted by signal {signum}\n"
                 task.save()
                 
-                print(f"✅ Updated task {task_id} status to FAILED due to signal interruption")
+                print(f"[OK] Updated task {task_id} status to FAILED due to signal interruption")
             except Exception as e:
-                print(f"❌ Failed to update task status on signal interruption: {str(e)}")
+                print(f"[FAIL] Failed to update task status on signal interruption: {str(e)}")
         
         # Запускаем обновление статуса в отдельной задаче
         asyncio.create_task(update_task_status_on_signal())
@@ -1099,15 +1099,15 @@ async def run_async_bulk_upload_task(task_id: int) -> bool:
             os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'instagram_uploader.settings')
             django.setup()
         
-        print(f"🚀 Starting async bulk upload task {task_id}")
+        print(f"[START] Starting async bulk upload task {task_id}")
         
         coordinator = AsyncTaskCoordinator(task_id)
         result = await coordinator.run()
         
         if result:
-            print(f"✅ Async bulk upload task {task_id} completed successfully")
+            print(f"[OK] Async bulk upload task {task_id} completed successfully")
         else:
-            print(f"❌ Async bulk upload task {task_id} failed")
+            print(f"[FAIL] Async bulk upload task {task_id} failed")
         
         return result
         
@@ -1128,12 +1128,12 @@ async def run_async_bulk_upload_task(task_id: int) -> bool:
             
             # Обновляем статус и логи
             task.status = 'FAILED'
-            task.log += f"[{timestamp}] 💥 Critical task error: {error_msg}\n"
+            task.log += f"[{timestamp}] [EXPLODE] Critical task error: {error_msg}\n"
             task.save()
             
-            print(f"✅ Updated task {task_id} status to FAILED")
+            print(f"[OK] Updated task {task_id} status to FAILED")
         except Exception as update_error:
-            print(f"❌ Failed to update task status: {str(update_error)}")
+            print(f"[FAIL] Failed to update task status: {str(update_error)}")
         
         return False
     finally:
@@ -1145,14 +1145,14 @@ async def run_async_bulk_upload_task(task_id: int) -> bool:
             except AttributeError:
                 loop = asyncio.get_running_loop()
                 await loop.run_in_executor(None, cleanup_hanging_ffmpeg)
-            print("🔧 Cleaned up hanging FFmpeg processes")
+            print("[TOOL] Cleaned up hanging FFmpeg processes")
         except Exception as e:
             print(f"Warning: Failed to cleanup FFmpeg processes: {str(e)}")
         
         # Always cleanup uniquification temp files
         try:
             await cleanup_uniquifier_temp_files()
-            print("🧹 Cleaned up uniquification temp files")
+            print("[CLEAN] Cleaned up uniquification temp files")
         except Exception as e:
             print(f"Warning: Failed to cleanup uniquification temp files: {str(e)}")
         
@@ -1162,7 +1162,7 @@ async def run_async_bulk_upload_task(task_id: int) -> bool:
             task = BulkUploadTask.objects.get(id=task_id)
             coordinator = AsyncTaskCoordinator(task_id)
             deleted_count = await coordinator._cleanup_original_video_files(task, AsyncLogger(task_id))
-            print(f"🗑️ Cleaned up {deleted_count} original video files from bulk_videos folder")
+            print(f"[DELETE] Cleaned up {deleted_count} original video files from bulk_videos folder")
         except Exception as e:
             print(f"Warning: Failed to cleanup original video files: {str(e)}")
         
@@ -1183,7 +1183,7 @@ def run_async_bulk_upload_task_sync(task_id: int) -> bool:
     def signal_handler(signum, frame):
         """Обработчик сигналов для корректного завершения"""
         nonlocal current_task
-        print(f"\n⚠️ Received signal {signum}, gracefully shutting down task {task_id}...")
+        print(f"\n[WARN] Received signal {signum}, gracefully shutting down task {task_id}...")
         
         if current_task:
             try:
@@ -1206,47 +1206,40 @@ def run_async_bulk_upload_task_sync(task_id: int) -> bool:
     
     try:
         # Проверяем, находимся ли мы в async контексте
-        try:
-            import asyncio
-            loop = asyncio.get_running_loop()
-            # Если мы в async контексте, запускаем в отдельном потоке
-            import concurrent.futures
-            
-            def run_in_thread():
-                """Запускает async задачу в отдельном потоке с новым event loop"""
-                try:
-                    # Ensure Django is properly configured for this thread
-                    import django
-                    from django.conf import settings
-                    if not settings.configured:
-                        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'instagram_uploader.settings')
-                        django.setup()
-                    
-                    # Создаем новый event loop для этого потока
-                    new_loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(new_loop)
-                    
-                    # Запускаем async задачу
-                    result = new_loop.run_until_complete(run_async_bulk_upload_task(task_id))
-                    
-                    # Закрываем loop
-                    new_loop.close()
-                    return result
-                except Exception as e:
-                    print(f"❌ Error in thread: {str(e)}")
-                    return False
-            
-            # Запускаем в отдельном потоке
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(run_in_thread)
-                return future.result()
+        import asyncio
+        import concurrent.futures
+        
+        def run_in_thread():
+            """Запускает async задачу в отдельном потоке с новым event loop"""
+            try:
+                # Ensure Django is properly configured for this thread
+                import django
+                from django.conf import settings
+                if not settings.configured:
+                    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'instagram_uploader.settings')
+                    django.setup()
                 
-        except RuntimeError:
-            # Нет активного event loop, можем запустить напрямую
-            return asyncio.run(run_async_bulk_upload_task(task_id))
+                # Создаем новый event loop для этого потока
+                new_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(new_loop)
+                
+                # Запускаем async задачу
+                result = new_loop.run_until_complete(run_async_bulk_upload_task(task_id))
+                
+                # Закрываем loop
+                new_loop.close()
+                return result
+            except Exception as e:
+                print(f"[FAIL] Error in thread: {str(e)}")
+                return False
+        
+        # Всегда запускаем в отдельном потоке для Windows совместимости
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(run_in_thread)
+            return future.result()
             
     except Exception as e:
-        print(f"❌ Error running async task {task_id}: {str(e)}")
+        print(f"[FAIL] Error running async task {task_id}: {str(e)}")
         return False
 
 # Конфигурационные функции
@@ -1255,7 +1248,7 @@ def set_async_config(**kwargs) -> None:
     for key, value in kwargs.items():
         if hasattr(AsyncConfig, key.upper()):
             setattr(AsyncConfig, key.upper(), value)
-            print(f"🔧 Set {key.upper()} = {value}")
+            print(f"[TOOL] Set {key.upper()} = {value}")
 
 def get_async_config() -> Dict[str, Any]:
     """Получить текущую конфигурацию"""

@@ -48,13 +48,13 @@ def send_captcha_notification_to_dashboard(bulk_upload_id):
             if response.status_code == 200:
                 print(f"📢 Captcha notification sent to dashboard for bulk upload {bulk_upload_id}")
             else:
-                print(f"⚠️ Failed to send captcha notification: {response.status_code}")
+                print(f"[WARN] Failed to send captcha notification: {response.status_code}")
         except requests.exceptions.RequestException:
             # Если API недоступен, просто логируем
             print(f"📢 Captcha detected for bulk upload {bulk_upload_id} - notification logged")
                 
     except Exception as e:
-        print(f"❌ Error sending captcha notification: {e}")
+        print(f"[FAIL] Error sending captcha notification: {e}")
 
 
 async def detect_recaptcha_on_page_async(page):
@@ -74,11 +74,11 @@ async def detect_recaptcha_on_page_async(page):
                 fb_recaptcha_iframe = page.locator('iframe[src*="fbsbx.com/captcha/recaptcha/iframe"]')
                 if await fb_recaptcha_iframe.count() > 0:
                     iframe_src = await fb_recaptcha_iframe.first.get_attribute('src')
-                    print(f"✅ Found Facebook's reCAPTCHA iframe")
+                    print(f"[OK] Found Facebook's reCAPTCHA iframe")
                 else:
-                    print("⚠️ Facebook's reCAPTCHA iframe not found")
+                    print("[WARN] Facebook's reCAPTCHA iframe not found")
             except Exception as e:
-                print(f"⚠️ Error in Facebook's reCAPTCHA detection: {e}")
+                print(f"[WARN] Error in Facebook's reCAPTCHA detection: {e}")
             
             return {
                 "site_key": None,  # Не нужен для ручного решения
@@ -93,7 +93,7 @@ async def detect_recaptcha_on_page_async(page):
         return None
         
     except Exception as e:
-        print(f"❌ Error detecting reCAPTCHA: {str(e)}")
+        print(f"[FAIL] Error detecting reCAPTCHA: {str(e)}")
         return None
 
 
@@ -102,13 +102,13 @@ async def solve_recaptcha_if_present(page, account_details=None, max_attempts=3)
     РУЧНОЕ решение reCAPTCHA с ожиданием действий пользователя
     """
     try:
-        print("🤖 Starting MANUAL reCAPTCHA solving")
+        print("[BOT] Starting MANUAL reCAPTCHA solving")
             
         # Определяем капчу
         captcha_params = await detect_recaptcha_on_page_async(page)
             
         if not captcha_params:
-            print("✅ No reCAPTCHA detected")
+            print("[OK] No reCAPTCHA detected")
             return True
         
         page_url = captcha_params.get("page_url")
@@ -131,9 +131,9 @@ async def solve_recaptcha_if_present(page, account_details=None, max_attempts=3)
         timeout_seconds = 5 * 60  # 5 минут
         check_interval_seconds = 30  # Проверяем каждые 30 секунд
         
-        print(f"⏳ Waiting for manual solution... (timeout: 5 minutes)")
+        print(f"[WAIT] Waiting for manual solution... (timeout: 5 minutes)")
         print(f"📋 Please solve the reCAPTCHA manually in the browser")
-        print(f"🔄 Will check every {check_interval_seconds} seconds for page change")
+        print(f"[RETRY] Will check every {check_interval_seconds} seconds for page change")
         
         check_count = 0
         
@@ -148,8 +148,8 @@ async def solve_recaptcha_if_present(page, account_details=None, max_attempts=3)
                 # Проверяем изменился ли URL (успешное решение)
                 current_url = page.url
                 if current_url != initial_url:
-                    print(f"✅ Page URL changed from {initial_url} to {current_url}")
-                    print(f"✅ Manual reCAPTCHA solution successful!")
+                    print(f"[OK] Page URL changed from {initial_url} to {current_url}")
+                    print(f"[OK] Manual reCAPTCHA solution successful!")
                     return True
             
                 # Ждем до следующей проверки
@@ -157,20 +157,20 @@ async def solve_recaptcha_if_present(page, account_details=None, max_attempts=3)
                 remaining_minutes = int(remaining_time / 60)
                 remaining_seconds = int(remaining_time % 60)
                 
-                print(f"⏳ Next check in {check_interval_seconds}s (remaining: {remaining_minutes}m {remaining_seconds}s)")
+                print(f"[WAIT] Next check in {check_interval_seconds}s (remaining: {remaining_minutes}m {remaining_seconds}s)")
                 await page.wait_for_timeout(check_interval_seconds * 1000)
                 
             except Exception as e:
-                print(f"❌ Error during manual captcha check: {e}")
+                print(f"[FAIL] Error during manual captcha check: {e}")
                 await page.wait_for_timeout(check_interval_seconds * 1000)
         
         # Таймаут достигнут
-        print(f"❌ Manual reCAPTCHA solving timeout after 5 minutes")
-        print(f"❌ User did not solve the reCAPTCHA in time")
+        print(f"[FAIL] Manual reCAPTCHA solving timeout after 5 minutes")
+        print(f"[FAIL] User did not solve the reCAPTCHA in time")
         return False
         
     except Exception as e:
-        print(f"❌ Error in manual reCAPTCHA solving: {e}")
+        print(f"[FAIL] Error in manual reCAPTCHA solving: {e}")
         return False
 
 
@@ -215,7 +215,7 @@ def detect_recaptcha_on_page(page):
         return None
                             
     except Exception as e:
-        print(f"❌ Error detecting reCAPTCHA: {str(e)}")
+        print(f"[FAIL] Error detecting reCAPTCHA: {str(e)}")
         return None
 
 
@@ -235,8 +235,8 @@ def solve_recaptcha_if_present_sync(page, account_details=None, max_attempts=3):
         page_url = captcha_params.get('page_url')
         is_challenge_page = captcha_params.get('is_challenge_page', False)
         
-        print(f"🔧 reCAPTCHA detected on: {page_url}")
-        print(f"🔧 Challenge page: {is_challenge_page}")
+        print(f"[TOOL] reCAPTCHA detected on: {page_url}")
+        print(f"[TOOL] Challenge page: {is_challenge_page}")
         
         # Звуковое оповещение
         play_sound_notification()
@@ -251,9 +251,9 @@ def solve_recaptcha_if_present_sync(page, account_details=None, max_attempts=3):
         timeout_seconds = 5 * 60  # 5 минут
         check_interval_seconds = 30  # Проверяем каждые 30 секунд
         
-        print(f"⏳ Waiting for manual solution... (timeout: 5 minutes)")
+        print(f"[WAIT] Waiting for manual solution... (timeout: 5 minutes)")
         print(f"📋 Please solve the reCAPTCHA manually in the browser")
-        print(f"🔄 Will check every {check_interval_seconds} seconds for page change")
+        print(f"[RETRY] Will check every {check_interval_seconds} seconds for page change")
         
         check_count = 0
         
@@ -268,8 +268,8 @@ def solve_recaptcha_if_present_sync(page, account_details=None, max_attempts=3):
                 # Проверяем изменился ли URL (успешное решение)
                 current_url = page.url
                 if current_url != initial_url:
-                    print(f"✅ Page URL changed from {initial_url} to {current_url}")
-                    print(f"✅ Manual reCAPTCHA solution successful!")
+                    print(f"[OK] Page URL changed from {initial_url} to {current_url}")
+                    print(f"[OK] Manual reCAPTCHA solution successful!")
                     return True
                 
                 # Ждем до следующей проверки
@@ -277,19 +277,19 @@ def solve_recaptcha_if_present_sync(page, account_details=None, max_attempts=3):
                 remaining_minutes = int(remaining_time / 60)
                 remaining_seconds = int(remaining_time % 60)
                 
-                print(f"⏳ Next check in {check_interval_seconds}s (remaining: {remaining_minutes}m {remaining_seconds}s)")
+                print(f"[WAIT] Next check in {check_interval_seconds}s (remaining: {remaining_minutes}m {remaining_seconds}s)")
                 time.sleep(check_interval_seconds)
                         
             except Exception as e:
-                print(f"❌ Error during manual captcha check: {e}")
+                print(f"[FAIL] Error during manual captcha check: {e}")
                 time.sleep(check_interval_seconds)
         
         # Таймаут достигнут
-        print(f"❌ Manual reCAPTCHA solving timeout after 5 minutes")
-        print(f"❌ User did not solve the reCAPTCHA in time")
+        print(f"[FAIL] Manual reCAPTCHA solving timeout after 5 minutes")
+        print(f"[FAIL] User did not solve the reCAPTCHA in time")
         return False
         
     except Exception as e:
-        print(f"❌ Unexpected error in sync reCAPTCHA solving: {e}")
+        print(f"[FAIL] Unexpected error in sync reCAPTCHA solving: {e}")
         return False
 

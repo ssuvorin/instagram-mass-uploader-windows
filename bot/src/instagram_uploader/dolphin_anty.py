@@ -51,25 +51,25 @@ def safe_log_message(message):
         # Expanded emoji replacements for comprehensive coverage
         emoji_replacements = {
             '🔍': '[SEARCH]',
-            '✅': '[SUCCESS]',
-            '❌': '[ERROR]',
-            '🚀': '[START]',
-            '🔄': '[PROCESS]',
+            '[OK]': '[SUCCESS]',
+            '[FAIL]': '[ERROR]',
+            '[START]': '[START]',
+            '[RETRY]': '[PROCESS]',
             '🔗': '[LINK]',
             '🖼️': '[IMAGE]',
             '🛑': '[STOP]',
             '🖱️': '[MOUSE]',
-            '⏸️': '[PAUSE]',
-            '⚠️': '[WARNING]',
-            '📝': '[TEXT]',
+            '[PAUSE]': '[PAUSE]',
+            '[WARN]': '[WARNING]',
+            '[TEXT]': '[TEXT]',
             '⬅️': '[BACK]',
             '🗂️': '[TABS]',
             '📋': '[LIST]',
-            '🗑️': '[DELETE]',
-            '🔧': '[TOOL]',
+            '[DELETE]': '[DELETE]',
+            '[TOOL]': '[TOOL]',
             '📧': '[EMAIL]',
             '🌐': '[WEB]',
-            '📍': '[LOCATION]',
+            '[LOCATION]': '[LOCATION]',
             '🎭': '[SIMULATION]',
             '📊': '[STATS]',
             '…': '...',
@@ -81,14 +81,14 @@ def safe_log_message(message):
             '💡': '[IDEA]',
             '🔥': '[FIRE]',
             '💻': '[COMPUTER]',
-            '📱': '[MOBILE]',
+            '[PHONE]': '[MOBILE]',
             '🌟': '[STAR]',
-            '🎯': '[TARGET]',
+            '[TARGET]': '[TARGET]',
             '🚨': '[ALERT]',
             '🔔': '[NOTIFICATION]',
             '💬': '[CHAT]',
             '📂': '[FOLDER]',
-            '📁': '[DIRECTORY]',
+            '[FOLDER]': '[DIRECTORY]',
             '🔑': '[KEY]',
             '🆔': '[ID]',
             '⌚': '[TIME]',
@@ -235,9 +235,9 @@ class DolphinAnty:
         resp = self._make_request("get", "/fingerprints/useragent", params=params)
         if resp and "data" in resp:
             ua = resp["data"]
-            logger.info(f"✅ Generated UA ({browser_version}): {ua[:40]}…")
+            logger.info(f"[OK] Generated UA ({browser_version}): {ua[:40]}…")
             return ua
-        logger.error(f"❌ UA generation failed: {resp}")
+        logger.error(f"[FAIL] UA generation failed: {resp}")
         return None
 
     def generate_webgl_info(self,
@@ -283,7 +283,7 @@ class DolphinAnty:
             }
 
         # отладочный лог
-        logger.error(f"❌ WebGL parsing failed, payload was: {json.dumps(payload)}")
+        logger.error(f"[FAIL] WebGL parsing failed, payload was: {json.dumps(payload)}")
         return None
 
     def create_profile(
@@ -447,14 +447,14 @@ class DolphinAnty:
         try:
             resp = self._make_request("post", "/browser_profiles", data=payload)
         except DolphinAntyAPIError as e:
-            logger.error(f"❌ Profile creation failed: {e.message}")
+            logger.error(f"[FAIL] Profile creation failed: {e.message}")
             return {"success": False, "error": e.message}
 
         # 14) Log result
         if resp and ("browserProfileId" in resp or resp.get("data", {}).get("id")):
-            logger.info(f"✅ Profile created: {resp}")
+            logger.info(f"[OK] Profile created: {resp}")
         else:
-            logger.error(f"❌ Profile creation failed: {resp}")
+            logger.error(f"[FAIL] Profile creation failed: {resp}")
 
         return resp
 
@@ -467,7 +467,7 @@ class DolphinAnty:
         Delete a browser profile by ID permanently (forceDelete=1 required on Free plan).
         Returns a dict with success flag and either message or error.
         """
-        logger.info(f"🗑️ Attempting to delete Dolphin profile: {profile_id} (forceDelete=1)")
+        logger.info(f"[DELETE] Attempting to delete Dolphin profile: {profile_id} (forceDelete=1)")
         try:
             resp = self._make_request(
                 method="delete",
@@ -475,7 +475,7 @@ class DolphinAnty:
                 params={"forceDelete": 1}
             )
         except DolphinAntyAPIError as e:
-            logger.error(f"❌ API error deleting profile {profile_id}: {e.message}")
+            logger.error(f"[FAIL] API error deleting profile {profile_id}: {e.message}")
             return {"success": False, "error": e.message}
 
         # Determine success
@@ -487,7 +487,7 @@ class DolphinAnty:
             )
 
         if success_flag:
-            logger.info(f"✅ Successfully deleted Dolphin profile: {profile_id}")
+            logger.info(f"[OK] Successfully deleted Dolphin profile: {profile_id}")
             return {"success": True, "message": f"Profile {profile_id} deleted successfully."}
 
         # Extract error details
@@ -509,10 +509,10 @@ class DolphinAnty:
                 error_msg = str(detail)
 
             if status_code == 403:
-                logger.warning(f"⚠️ Permission denied (403) deleting profile {profile_id}")
+                logger.warning(f"[WARN] Permission denied (403) deleting profile {profile_id}")
                 error_msg = f"Permission denied (403 Forbidden) for profile {profile_id}."
 
-        logger.error(f"❌ {error_msg}")
+        logger.error(f"[FAIL] {error_msg}")
         return {"success": False, "error": error_msg, "status_code": status_code}
 
     def create_profile_for_account(self, account_data: Dict[str, Any], proxy_data: Optional[Dict[str, Any]] = None) -> Optional[str]:
@@ -530,7 +530,7 @@ class DolphinAnty:
             elif isinstance(account_data['tags'], str):
                 tags.append(account_data['tags'])
         
-        logger.info(f"🔧 Creating profile for Instagram account: {username}")
+        logger.info(f"[TOOL] Creating profile for Instagram account: {username}")
         response = self.create_profile(name=name, proxy=proxy_data, tags=tags)
         
         # Extract profile ID from response
@@ -542,10 +542,10 @@ class DolphinAnty:
                 profile_id = response["data"].get("id")
         
         if profile_id:
-            logger.info(f"✅ Successfully created profile for {username}: {profile_id}")
+            logger.info(f"[OK] Successfully created profile for {username}: {profile_id}")
             return profile_id
         else:
-            logger.error(f"❌ Failed to create profile for {username}")
+            logger.error(f"[FAIL] Failed to create profile for {username}")
             return None
 
     def start_profile(
@@ -558,7 +558,7 @@ class DolphinAnty:
         GET {local_api_base}/browser_profiles/{profile_id}/start?automation=1[&headless=1]
         Returns (success, automation_data) or (False, None).
         """
-        logger.info(f"🚀 Starting Dolphin profile {profile_id} (headless={headless})")
+        logger.info(f"[START] Starting Dolphin profile {profile_id} (headless={headless})")
         
         # Step 1: Check if Dolphin Anty local API is available
         logger.info(f"🔍 [Step 1/3] Checking Dolphin Anty local API availability...")
@@ -572,16 +572,16 @@ class DolphinAnty:
                 timeout=5
             )
             if status_resp.status_code == 200:
-                logger.info(f"✅ Dolphin Anty local API is responding and authenticated")
+                logger.info(f"[OK] Dolphin Anty local API is responding and authenticated")
             elif status_resp.status_code == 401:
-                logger.error(f"❌ Dolphin Anty API authentication failed - invalid token")
+                logger.error(f"[FAIL] Dolphin Anty API authentication failed - invalid token")
                 return False, None
             else:
-                logger.error(f"❌ Dolphin Anty local API error (HTTP {status_resp.status_code})")
+                logger.error(f"[FAIL] Dolphin Anty local API error (HTTP {status_resp.status_code})")
                 logger.error("💡 Please make sure Dolphin Anty application is running")
                 return False, None
         except requests.exceptions.RequestException as e:
-            logger.error(f"❌ Cannot connect to Dolphin Anty local API: {e}")
+            logger.error(f"[FAIL] Cannot connect to Dolphin Anty local API: {e}")
             logger.error("💡 Please make sure Dolphin Anty application is running on port 3001")
             return False, None
         
@@ -594,7 +594,7 @@ class DolphinAnty:
         headers = {"Authorization": f"Bearer {self.api_key}"}
         
         # Step 3: Start the profile directly (no Remote API validation to avoid 403 errors)
-        logger.info(f"🔄 [Step 2/3] Sending request to start profile {profile_id}")
+        logger.info(f"[RETRY] [Step 2/3] Sending request to start profile {profile_id}")
         try:
             resp = requests.get(url, params=params, headers=headers, timeout=30)
             
@@ -603,42 +603,42 @@ class DolphinAnty:
                     data = resp.json()
                     if data.get("success") and isinstance(data.get("automation"), dict):
                         automation_data = data["automation"]
-                        logger.info(f"✅ [Step 3/3] Profile {profile_id} started successfully")
+                        logger.info(f"[OK] [Step 3/3] Profile {profile_id} started successfully")
                         logger.info(f"🔗 Connection details: port={automation_data.get('port')}, wsEndpoint={automation_data.get('wsEndpoint')}")
                         return True, automation_data
                     else:
-                        logger.error(f"❌ API returned success=false or missing automation data: {data}")
+                        logger.error(f"[FAIL] API returned success=false or missing automation data: {data}")
                         if "error" in data:
-                            logger.error(f"💥 API Error: {data['error']}")
+                            logger.error(f"[EXPLODE] API Error: {data['error']}")
                         return False, None
                 except json.JSONDecodeError:
-                    logger.error(f"❌ Invalid JSON response from Dolphin API: {resp.text[:200]}")
+                    logger.error(f"[FAIL] Invalid JSON response from Dolphin API: {resp.text[:200]}")
                     return False, None
             elif resp.status_code == 404:
-                logger.error(f"❌ Profile {profile_id} not found (HTTP 404)")
+                logger.error(f"[FAIL] Profile {profile_id} not found (HTTP 404)")
                 logger.error("💡 The profile may have been deleted from Dolphin Anty or doesn't exist")
                 return False, None
             elif resp.status_code == 400:
-                logger.error(f"❌ Bad request (HTTP 400): {resp.text[:200]}")
+                logger.error(f"[FAIL] Bad request (HTTP 400): {resp.text[:200]}")
                 logger.error("💡 Check if profile is already running or has invalid configuration")
                 return False, None
             else:
-                logger.error(f"❌ Start profile failed with HTTP {resp.status_code}: {resp.text[:200]}")
+                logger.error(f"[FAIL] Start profile failed with HTTP {resp.status_code}: {resp.text[:200]}")
                 return False, None
                 
         except requests.exceptions.Timeout:
-            logger.error(f"❌ Timeout (30s) starting profile {profile_id}")
+            logger.error(f"[FAIL] Timeout (30s) starting profile {profile_id}")
             logger.error("💡 Profile may be taking too long to start, try again later")
             return False, None
         except requests.exceptions.ConnectionError as e:
-            logger.error(f"❌ Connection error starting profile {profile_id}: {e}")
+            logger.error(f"[FAIL] Connection error starting profile {profile_id}: {e}")
             logger.error("💡 Make sure Dolphin Anty application is running")
             return False, None
         except requests.exceptions.RequestException as e:
-            logger.error(f"❌ Request error starting profile {profile_id}: {e}")
+            logger.error(f"[FAIL] Request error starting profile {profile_id}: {e}")
             return False, None
         except Exception as e:
-            logger.error(f"❌ Unexpected error starting profile {profile_id}: {e}")
+            logger.error(f"[FAIL] Unexpected error starting profile {profile_id}: {e}")
             return False, None
 
     def stop_profile(self, profile_id: Union[str, int]) -> bool:
@@ -659,24 +659,24 @@ class DolphinAnty:
                 try:
                     data = response.json()
                     if data.get("success", True):  # Some versions may not return success field
-                        logger.info(f"✅ Successfully stopped profile: {profile_id}")
+                        logger.info(f"[OK] Successfully stopped profile: {profile_id}")
                         return True
                     else:
-                        logger.error(f"❌ Failed to stop profile {profile_id}: {data}")
+                        logger.error(f"[FAIL] Failed to stop profile {profile_id}: {data}")
                         return False
                 except json.JSONDecodeError:
                     # If response is not JSON, assume success if status is 200
-                    logger.info(f"✅ Successfully stopped profile: {profile_id} (non-JSON response)")
+                    logger.info(f"[OK] Successfully stopped profile: {profile_id} (non-JSON response)")
                     return True
             else:
-                logger.error(f"❌ Failed to stop profile {profile_id}, HTTP {response.status_code}: {response.text}")
+                logger.error(f"[FAIL] Failed to stop profile {profile_id}, HTTP {response.status_code}: {response.text}")
                 return False
                 
         except requests.exceptions.RequestException as e:
-            logger.error(f"❌ Network error stopping profile {profile_id}: {str(e)}")
+            logger.error(f"[FAIL] Network error stopping profile {profile_id}: {str(e)}")
             return False
         except Exception as e:
-            logger.error(f"❌ Unexpected error stopping profile {profile_id}: {str(e)}")
+            logger.error(f"[FAIL] Unexpected error stopping profile {profile_id}: {str(e)}")
             return False
 
     def update_profile_proxy(self, profile_id: Union[str, int], proxy: Dict) -> Dict:
@@ -694,7 +694,7 @@ class DolphinAnty:
         missing_fields = [field for field in required_fields if field not in proxy]
         if missing_fields:
             error_msg = f"Missing required proxy fields: {', '.join(missing_fields)}"
-            logger.error(f"❌ {error_msg}")
+            logger.error(f"[FAIL] {error_msg}")
             return {"success": False, "error": error_msg}
         
         # Prepare proxy data in the format expected by the PATCH API
@@ -728,34 +728,34 @@ class DolphinAnty:
                 if isinstance(response, dict):
                     # Check for explicit success field
                     if response.get("success") is True:
-                        logger.info(f"✅ Successfully updated proxy for profile {profile_id}")
+                        logger.info(f"[OK] Successfully updated proxy for profile {profile_id}")
                         return {"success": True, "message": f"Proxy updated for profile {profile_id}"}
                     # Check for error field
                     elif "error" in response:
                         error_msg = response.get("error", "Unknown API error")
-                        logger.error(f"❌ API error updating proxy for profile {profile_id}: {error_msg}")
+                        logger.error(f"[FAIL] API error updating proxy for profile {profile_id}: {error_msg}")
                         return {"success": False, "error": error_msg}
                     # If no explicit success/error, assume success if we got a response
                     else:
-                        logger.info(f"✅ Successfully updated proxy for profile {profile_id} (assumed from response)")
+                        logger.info(f"[OK] Successfully updated proxy for profile {profile_id} (assumed from response)")
                         return {"success": True, "message": f"Proxy updated for profile {profile_id}"}
                 else:
                     # Non-dict response, assume success if we got any response
-                    logger.info(f"✅ Successfully updated proxy for profile {profile_id}")
+                    logger.info(f"[OK] Successfully updated proxy for profile {profile_id}")
                     return {"success": True, "message": f"Proxy updated for profile {profile_id}"}
             else:
                 # No response or empty response
                 error_msg = "No response from API"
-                logger.error(f"❌ Failed to update proxy for profile {profile_id}: {error_msg}")
+                logger.error(f"[FAIL] Failed to update proxy for profile {profile_id}: {error_msg}")
                 return {"success": False, "error": error_msg}
             
         except DolphinAntyAPIError as e:
             error_msg = f"API error updating proxy for profile {profile_id}: {e.message}"
-            logger.error(f"❌ {error_msg}")
+            logger.error(f"[FAIL] {error_msg}")
             return {"success": False, "error": error_msg}
         except Exception as e:
             error_msg = f"Unexpected error updating proxy for profile {profile_id}: {str(e)}"
-            logger.error(f"❌ {error_msg}")
+            logger.error(f"[FAIL] {error_msg}")
             return {"success": False, "error": error_msg}
 
     def _local_api_auth(self) -> Tuple[bool, Optional[str]]:
@@ -769,7 +769,7 @@ class DolphinAnty:
             Tuple[bool, Optional[str]]: (успех, сообщение об ошибке)
         """
         if not self.api_key:
-            logger.error("❌ No API token provided for local API authentication")
+            logger.error("[FAIL] No API token provided for local API authentication")
             return False, "No API token provided"
             
         endpoint = f"{self.local_api_base}/auth/login-with-token"
@@ -786,12 +786,12 @@ class DolphinAnty:
                     timeout=5
                 )
                 if response.status_code != 200:
-                    logger.warning(f"⚠️ Local API is not responding correctly: {response.status_code}")
+                    logger.warning(f"[WARN] Local API is not responding correctly: {response.status_code}")
                     # В некоторых случаях API может работать и без авторизации
                     # или авторизация уже была выполнена ранее
                     return True, None
             except requests.exceptions.RequestException as e:
-                logger.warning(f"⚠️ Could not connect to local API server: {e}")
+                logger.warning(f"[WARN] Could not connect to local API server: {e}")
                 # Для локального API на старых версиях, продолжаем работу без авторизации
                 return True, None
             
@@ -804,37 +804,37 @@ class DolphinAnty:
                     try:
                         resp_data = response.json()
                         if resp_data.get("success") or resp_data.get("status") == "ok":
-                            logger.info("✅ Successfully authenticated with local Dolphin API")
+                            logger.info("[OK] Successfully authenticated with local Dolphin API")
                             return True, None
                         else:
                             # Несмотря на ошибку в ответе, продолжаем выполнение
                             # В некоторых версиях API статус не возвращается, но авторизация проходит
-                            logger.warning(f"⚠️ API returned success=false, but continuing: {resp_data}")
+                            logger.warning(f"[WARN] API returned success=false, but continuing: {resp_data}")
                             return True, None
                     except json.JSONDecodeError:
                         # Если не смогли распарсить JSON, продолжаем без авторизации
-                        logger.warning(f"⚠️ Invalid JSON response from auth endpoint: {response.text}")
+                        logger.warning(f"[WARN] Invalid JSON response from auth endpoint: {response.text}")
                         return True, None
                         
                 elif response.status_code == 401:
                     # Неверный токен - это критическая ошибка
                     error_msg = f"Invalid API token: {response.text}"
-                    logger.error(f"❌ {error_msg}")
+                    logger.error(f"[FAIL] {error_msg}")
                     return False, error_msg
                     
                 else:
                     # Другие ошибки - пытаемся продолжить работу
-                    logger.warning(f"⚠️ Auth request failed with status {response.status_code}: {response.text}")
+                    logger.warning(f"[WARN] Auth request failed with status {response.status_code}: {response.text}")
                     return True, None
                     
             except requests.exceptions.RequestException as e:
                 # Ошибка при запросе к API - не критичная
-                logger.warning(f"⚠️ Auth request failed: {e}")
+                logger.warning(f"[WARN] Auth request failed: {e}")
                 return True, None
                 
         except Exception as e:
             # Общая ошибка - продолжаем работу
-            logger.warning(f"⚠️ Authentication process error: {str(e)}")
+            logger.warning(f"[WARN] Authentication process error: {str(e)}")
             return True, None
 
     async def _ensure_page_available(self, context, page, imageless=False, task_logger=None):
@@ -860,23 +860,23 @@ class DolphinAnty:
                     await page.evaluate("() => document.readyState")
                     return page  # Страница в порядке
                 except Exception:
-                    log_action("⚠️ Page evaluation failed, recreating page", "warning")
+                    log_action("[WARN] Page evaluation failed, recreating page", "warning")
             else:
-                log_action("⚠️ Page is closed, creating new page", "warning")
+                log_action("[WARN] Page is closed, creating new page", "warning")
             
             # Создаем новую страницу
             page = await context.new_page()
-            log_action("✅ Created new browser page", "info")
+            log_action("[OK] Created new browser page", "info")
             
             # Применяем настройки imageless если нужно
             if imageless:
                 await page.route("**/*.{png,jpg,jpeg,gif,webp,svg,ico}", lambda route: route.abort())
-                log_action("🚫 Images blocked for new page", "info")
+                log_action("[BLOCK] Images blocked for new page", "info")
             
             return page
             
         except Exception as e:
-            log_action(f"❌ Critical error ensuring page availability: {str(e)}", "error")
+            log_action(f"[FAIL] Critical error ensuring page availability: {str(e)}", "error")
             raise e
 
     async def _check_for_human_verification_dialog_async(self, page, task_logger=None):
@@ -928,7 +928,7 @@ class DolphinAnty:
             verification_detected = any(keyword.lower() in page_text.lower() for keyword in human_verification_keywords)
             
             if verification_detected:
-                log_action("⚠️ Human verification keywords found in page text", "warning")
+                log_action("[WARN] Human verification keywords found in page text", "warning")
                 
                 # Дополнительная проверка на специфические элементы диалога
                 verification_selectors = [
@@ -968,7 +968,7 @@ class DolphinAnty:
                         continue
                 
                 if dialog_elements_found:
-                    log_action(f"❌ Human verification dialog confirmed! Found elements: {dialog_elements_found[:3]}", "error")
+                    log_action(f"[FAIL] Human verification dialog confirmed! Found elements: {dialog_elements_found[:3]}", "error")
                     
                     # Логируем образец текста для отладки
                     verification_text_sample = page_text[:500] if page_text else "No text found"
@@ -976,14 +976,14 @@ class DolphinAnty:
                     
                     return True
                 else:
-                    log_action("✅ Verification keywords found but no dialog elements detected", "info")
+                    log_action("[OK] Verification keywords found but no dialog elements detected", "info")
                     return False
             else:
-                log_action("✅ No human verification dialog detected", "info")
+                log_action("[OK] No human verification dialog detected", "info")
                 return False
                 
         except Exception as e:
-            log_action(f"⚠️ Error checking for human verification dialog: {str(e)}", "warning")
+            log_action(f"[WARN] Error checking for human verification dialog: {str(e)}", "warning")
             return False
 
     async def run_cookie_robot(
@@ -1016,9 +1016,9 @@ class DolphinAnty:
         automation_data = None
         
         try:
-            logger.info(f"🔄 Starting Dolphin profile {profile_id}...")
+            logger.info(f"[RETRY] Starting Dolphin profile {profile_id}...")
             if task_logger:
-                task_logger(f"🔄 Starting Dolphin profile {profile_id}...")
+                task_logger(f"[RETRY] Starting Dolphin profile {profile_id}...")
             
             # Debug: check Dolphin status before starting profile
             dolphin_status = self.check_dolphin_status()
@@ -1030,27 +1030,27 @@ class DolphinAnty:
             profile_started = success
             automation_data = profile_data
             
-            logger.info(f"🔄 Profile start result - Success: {success}, Data: {profile_data}")
+            logger.info(f"[RETRY] Profile start result - Success: {success}, Data: {profile_data}")
             if task_logger:
-                task_logger(f"🔄 Profile start result - Success: {success}")
+                task_logger(f"[RETRY] Profile start result - Success: {success}")
             
             if success and automation_data:
-                logger.info(f"✅ Profile {profile_id} started successfully")
+                logger.info(f"[OK] Profile {profile_id} started successfully")
                 logger.info(f"🔗 Automation data: {automation_data}")
                 if task_logger:
-                    task_logger(f"✅ Profile {profile_id} started successfully")
+                    task_logger(f"[OK] Profile {profile_id} started successfully")
             else:
-                logger.error(f"❌ Could not start profile {profile_id} or get automation data")
-                logger.error(f"❌ Success: {success}, Profile data: {profile_data}")
+                logger.error(f"[FAIL] Could not start profile {profile_id} or get automation data")
+                logger.error(f"[FAIL] Success: {success}, Profile data: {profile_data}")
                 if task_logger:
-                    task_logger(f"❌ Failed to start profile {profile_id}")
-                    task_logger(f"❌ Success: {success}, Profile data: {profile_data}")
+                    task_logger(f"[FAIL] Failed to start profile {profile_id}")
+                    task_logger(f"[FAIL] Success: {success}, Profile data: {profile_data}")
                 return {"success": False, "error": "Failed to start profile or get automation data"}
                 
         except Exception as e:
-            logger.error(f"❌ Exception during profile start: {e}")
+            logger.error(f"[FAIL] Exception during profile start: {e}")
             if task_logger:
-                task_logger(f"❌ Profile start error: {str(e)}")
+                task_logger(f"[FAIL] Profile start error: {str(e)}")
             return {"success": False, "error": f"Profile start error: {str(e)}"}
 
         # 2) Подключаемся к браузеру через Playwright
@@ -1061,7 +1061,7 @@ class DolphinAnty:
             ws_endpoint = automation_data.get("wsEndpoint")
             
             if not port or not ws_endpoint:
-                logger.error(f"❌ Missing connection data: port={port}, wsEndpoint={ws_endpoint}")
+                logger.error(f"[FAIL] Missing connection data: port={port}, wsEndpoint={ws_endpoint}")
                 if profile_started:
                     self.stop_profile(profile_id)
                 return {"success": False, "error": "Missing port or wsEndpoint in automation data"}
@@ -1073,17 +1073,17 @@ class DolphinAnty:
             async with async_playwright() as p:
                 # Подключаемся к уже запущенному браузеру
                 browser = await p.chromium.connect_over_cdp(ws_url)
-                logger.info(f"✅ Successfully connected to Dolphin browser")
+                logger.info(f"[OK] Successfully connected to Dolphin browser")
                 
                 try:
                     # Получаем существующий контекст или создаем новый
                     contexts = browser.contexts
                     if contexts:
                         context = contexts[0]
-                        logger.info(f"📄 Using existing browser context")
+                        logger.info(f"[FILE] Using existing browser context")
                     else:
                         context = await browser.new_context()
-                        logger.info(f"📄 Created new browser context")
+                        logger.info(f"[FILE] Created new browser context")
                     
                     # Создаем новую страницу
                     page = await context.new_page()
@@ -1097,7 +1097,7 @@ class DolphinAnty:
                     # Настройки для imageless режима
                     if imageless:
                         await page.route("**/*.{png,jpg,jpeg,gif,webp,svg,ico}", lambda route: route.abort())
-                        logger.info(f"🚫 Images blocked (imageless mode)")
+                        logger.info(f"[BLOCK] Images blocked (imageless mode)")
                     
                     successful_visits = 0
                     failed_visits = 0
@@ -1110,24 +1110,24 @@ class DolphinAnty:
                         task_logger(f"🔀 URL order randomized for natural behavior")
                         task_logger(f"📋 Processing {len(shuffled_urls)} URLs")
                         task_logger(f"⏱️ Total duration: {duration} seconds")
-                        task_logger(f"🎯 Starting Cookie Robot simulation...")
+                        task_logger(f"[TARGET] Starting Cookie Robot simulation...")
                     
                     # Обходим каждый URL
                     for i, url in enumerate(shuffled_urls, 1):
                         try:
                             if task_logger:
-                                task_logger(f"🔄 [{i}/{len(shuffled_urls)}] Starting: {url}")
+                                task_logger(f"[RETRY] [{i}/{len(shuffled_urls)}] Starting: {url}")
                             
                             # Убеждаемся, что у нас есть рабочая страница перед каждым URL
                             try:
                                 page = await self._ensure_page_available(context, page, imageless, task_logger)
                             except Exception as page_error:
-                                logger.error(f"❌ Cannot ensure page availability for URL {i}/{len(shuffled_urls)}: {url}")
-                                logger.error(f"💥 Page recovery failed: {str(page_error)}")
+                                logger.error(f"[FAIL] Cannot ensure page availability for URL {i}/{len(shuffled_urls)}: {url}")
+                                logger.error(f"[EXPLODE] Page recovery failed: {str(page_error)}")
                                 
                                 if task_logger:
-                                    task_logger(f"❌ [{i}/{len(shuffled_urls)}] Page recovery failed for: {url}")
-                                    task_logger(f"💥 Error: {str(page_error)}")
+                                    task_logger(f"[FAIL] [{i}/{len(shuffled_urls)}] Page recovery failed for: {url}")
+                                    task_logger(f"[EXPLODE] Error: {str(page_error)}")
                                 
                                 failed_visits += 1
                                 continue
@@ -1153,36 +1153,36 @@ class DolphinAnty:
                                     
                                     # Если страница была закрыта или контекст потерян
                                     if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                                        logger.warning(f"⚠️ Navigation attempt {attempt + 1}/{max_nav_attempts} failed due to page/context loss: {url}")
+                                        logger.warning(f"[WARN] Navigation attempt {attempt + 1}/{max_nav_attempts} failed due to page/context loss: {url}")
                                         
                                         if task_logger:
-                                            task_logger(f"⚠️ [{i}/{len(shuffled_urls)}] Navigation attempt {attempt + 1}/{max_nav_attempts} failed")
+                                            task_logger(f"[WARN] [{i}/{len(shuffled_urls)}] Navigation attempt {attempt + 1}/{max_nav_attempts} failed")
                                         
                                         if attempt < max_nav_attempts - 1:  # Не последняя попытка
                                             try:
                                                 # Пытаемся восстановить страницу
                                                 page = await self._ensure_page_available(context, page, imageless, task_logger)
-                                                logger.debug(f"🔄 Page recovered, retrying navigation to: {url}")
+                                                logger.debug(f"[RETRY] Page recovered, retrying navigation to: {url}")
                                                 continue
                                             except Exception as recovery_error:
-                                                logger.error(f"❌ Page recovery failed on attempt {attempt + 1}: {str(recovery_error)}")
+                                                logger.error(f"[FAIL] Page recovery failed on attempt {attempt + 1}: {str(recovery_error)}")
                                                 break
                                         else:
-                                            logger.error(f"❌ All navigation attempts failed for: {url}")
+                                            logger.error(f"[FAIL] All navigation attempts failed for: {url}")
                                             break
                                     else:
                                         # Другая ошибка навигации
-                                        logger.error(f"❌ Navigation error (attempt {attempt + 1}/{max_nav_attempts}): {str(nav_error)}")
+                                        logger.error(f"[FAIL] Navigation error (attempt {attempt + 1}/{max_nav_attempts}): {str(nav_error)}")
                                         if attempt == max_nav_attempts - 1:
                                             raise nav_error
                                         await asyncio.sleep(1)  # Небольшая пауза перед повтором
                             
                             if not navigation_success:
                                 failed_visits += 1
-                                logger.error(f"❌ Failed to navigate to {url} after {max_nav_attempts} attempts")
+                                logger.error(f"[FAIL] Failed to navigate to {url} after {max_nav_attempts} attempts")
                                 
                                 if task_logger:
-                                    task_logger(f"❌ [{i}/{len(shuffled_urls)}] Navigation failed after {max_nav_attempts} attempts: {url}")
+                                    task_logger(f"[FAIL] [{i}/{len(shuffled_urls)}] Navigation failed after {max_nav_attempts} attempts: {url}")
                                 
                                 continue
                             
@@ -1191,10 +1191,10 @@ class DolphinAnty:
                             random_delay = random.uniform(base_duration * 0.8, base_duration * 1.2)
                             
                             # Убираем избыточные логи о времени
-                            logger.debug(f"⏳ Staying on {url} for {random_delay:.1f} seconds")
+                            logger.debug(f"[WAIT] Staying on {url} for {random_delay:.1f} seconds")
                             
                             if task_logger:
-                                task_logger(f"⏳ [{i}/{len(shuffled_urls)}] Simulating user activity for {random_delay:.1f} seconds")
+                                task_logger(f"[WAIT] [{i}/{len(shuffled_urls)}] Simulating user activity for {random_delay:.1f} seconds")
                             
                             # Имитируем активность пользователя с улучшенной обработкой ошибок
                             try:
@@ -1203,26 +1203,26 @@ class DolphinAnty:
                                 error_str = str(activity_error).lower()
                                 
                                 if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                                    logger.warning(f"⚠️ User activity stopped due to page/context loss: {str(activity_error)}")
+                                    logger.warning(f"[WARN] User activity stopped due to page/context loss: {str(activity_error)}")
                                     
                                     if task_logger:
-                                        task_logger(f"⚠️ [{i}/{len(shuffled_urls)}] User activity interrupted by page closure")
+                                        task_logger(f"[WARN] [{i}/{len(shuffled_urls)}] User activity interrupted by page closure")
                                     
                                     # Пытаемся восстановить страницу для следующего URL
                                     try:
                                         page = await self._ensure_page_available(context, page, imageless, task_logger)
-                                        logger.debug(f"🔄 Page recovered after activity interruption")
+                                        logger.debug(f"[RETRY] Page recovered after activity interruption")
                                     except Exception as recovery_error:
-                                        logger.error(f"❌ Failed to recover page after activity interruption: {str(recovery_error)}")
+                                        logger.error(f"[FAIL] Failed to recover page after activity interruption: {str(recovery_error)}")
                                         # Продолжаем с текущей страницей (может быть None)
                                 else:
-                                    logger.warning(f"⚠️ Non-critical error in user activity simulation: {str(activity_error)}")
+                                    logger.warning(f"[WARN] Non-critical error in user activity simulation: {str(activity_error)}")
                             
                             successful_visits += 1
-                            logger.info(f"✅ Successfully processed {url}")
+                            logger.info(f"[OK] Successfully processed {url}")
                             
                             if task_logger:
-                                task_logger(f"✅ [{i}/{len(shuffled_urls)}] Successfully completed: {url}")
+                                task_logger(f"[OK] [{i}/{len(shuffled_urls)}] Successfully completed: {url}")
                             
                             # Очищаем все вкладки кроме текущей после каждого сайта для оптимизации памяти
                             try:
@@ -1234,39 +1234,39 @@ class DolphinAnty:
                                         if p != page and not p.is_closed():
                                             try:
                                                 await p.close()
-                                                logger.debug(f"📄 Closed extra tab")
+                                                logger.debug(f"[FILE] Closed extra tab")
                                             except Exception as e:
-                                                logger.warning(f"⚠️ Could not close extra tab: {str(e)}")
+                                                logger.warning(f"[WARN] Could not close extra tab: {str(e)}")
                                     
                                     if task_logger:
                                         task_logger(f"🗂️ Cleaned up extra tabs after: {url}")
                             except Exception as cleanup_error:
-                                logger.warning(f"⚠️ Error during tab cleanup: {str(cleanup_error)}")
+                                logger.warning(f"[WARN] Error during tab cleanup: {str(cleanup_error)}")
                             
                         except Exception as e:
                             failed_visits += 1
                             error_str = str(e).lower()
                             
-                            logger.error(f"❌ Error processing {url}: {str(e)}")
+                            logger.error(f"[FAIL] Error processing {url}: {str(e)}")
                             
                             if task_logger:
-                                task_logger(f"❌ [{i}/{len(shuffled_urls)}] Failed {url}: {str(e)}")
+                                task_logger(f"[FAIL] [{i}/{len(shuffled_urls)}] Failed {url}: {str(e)}")
                             
                             # Если ошибка связана с потерей страницы/контекста, пытаемся восстановить
                             if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
                                 try:
-                                    logger.info(f"🔄 Attempting to recover page after error for next URL...")
+                                    logger.info(f"[RETRY] Attempting to recover page after error for next URL...")
                                     page = await self._ensure_page_available(context, page, imageless, task_logger)
-                                    logger.info(f"✅ Page recovered successfully after error")
+                                    logger.info(f"[OK] Page recovered successfully after error")
                                     
                                     if task_logger:
-                                        task_logger(f"🔄 Page recovered for next URL")
+                                        task_logger(f"[RETRY] Page recovered for next URL")
                                         
                                 except Exception as recovery_error:
-                                    logger.error(f"❌ Failed to recover page after error: {str(recovery_error)}")
+                                    logger.error(f"[FAIL] Failed to recover page after error: {str(recovery_error)}")
                                     
                                     if task_logger:
-                                        task_logger(f"💥 Page recovery failed, may affect remaining URLs")
+                                        task_logger(f"[EXPLODE] Page recovery failed, may affect remaining URLs")
                                     
                                     # Если восстановление не удалось, устанавливаем page в None
                                     # Функция _ensure_page_available попытается создать новую на следующей итерации
@@ -1278,11 +1278,11 @@ class DolphinAnty:
                     try:
                         if not page.is_closed():
                             await page.close()
-                            logger.debug(f"📄 Page closed after processing all URLs")
+                            logger.debug(f"[FILE] Page closed after processing all URLs")
                         else:
-                            logger.debug(f"📄 Page was already closed")
+                            logger.debug(f"[FILE] Page was already closed")
                     except Exception as close_error:
-                        logger.warning(f"⚠️ Error closing main page: {str(close_error)}")
+                        logger.warning(f"[WARN] Error closing main page: {str(close_error)}")
                     
                     # Закрываем все остальные вкладки перед завершением
                     try:
@@ -1293,29 +1293,29 @@ class DolphinAnty:
                             for i, p in enumerate(all_pages):
                                 try:
                                     if not p.is_closed():
-                                        logger.debug(f"📄 Closing page/tab {i+1}/{len(all_pages)}")
+                                        logger.debug(f"[FILE] Closing page/tab {i+1}/{len(all_pages)}")
                                         await p.close()
                                 except Exception as e:
-                                    logger.warning(f"⚠️ Could not close page {i+1}: {str(e)}")
+                                    logger.warning(f"[WARN] Could not close page {i+1}: {str(e)}")
                             
-                            logger.debug(f"✅ All pages/tabs closed successfully")
+                            logger.debug(f"[OK] All pages/tabs closed successfully")
                         else:
-                            logger.debug(f"📄 No pages to close")
+                            logger.debug(f"[FILE] No pages to close")
                         
                         if task_logger:
                             task_logger(f"🗂️ Cleanup completed")
                             
                     except Exception as e:
-                        logger.warning(f"⚠️ Error closing some pages: {str(e)}")
+                        logger.warning(f"[WARN] Error closing some pages: {str(e)}")
                         if task_logger:
-                            task_logger(f"⚠️ Some tabs could not be closed: {str(e)[:100]}")
+                            task_logger(f"[WARN] Some tabs could not be closed: {str(e)[:100]}")
                     
                     # Закрываем контекст браузера
                     try:
                         await context.close()
                         logger.debug(f"🌐 Browser context closed")
                     except Exception as e:
-                        logger.warning(f"⚠️ Error closing browser context: {str(e)}")
+                        logger.warning(f"[WARN] Error closing browser context: {str(e)}")
                     
                     # Результат выполнения
                     result = {
@@ -1333,23 +1333,23 @@ class DolphinAnty:
                         }
                     }
                     
-                    logger.info(f"✅ Cookie Robot completed: {successful_visits}/{len(shuffled_urls)} URLs processed successfully")
+                    logger.info(f"[OK] Cookie Robot completed: {successful_visits}/{len(shuffled_urls)} URLs processed successfully")
                     
                     if task_logger:
-                        task_logger(f"🎯 Cookie Robot completed successfully!")
+                        task_logger(f"[TARGET] Cookie Robot completed successfully!")
                         task_logger(f"📊 Results: {successful_visits}/{len(shuffled_urls)} URLs processed ({round((successful_visits / len(shuffled_urls)) * 100, 2)}% success rate)")
                     
                     return result
                     
                 except asyncio.TimeoutError:
-                    logger.error(f"❌ Cookie Robot timeout during execution")
+                    logger.error(f"[FAIL] Cookie Robot timeout during execution")
                     if task_logger:
-                        task_logger(f"❌ Cookie Robot timeout - forcing completion")
+                        task_logger(f"[FAIL] Cookie Robot timeout - forcing completion")
                     return {"success": False, "error": "Cookie Robot timeout during execution"}
                 except Exception as e:
-                    logger.error(f"❌ Unexpected error in Cookie Robot: {str(e)}")
+                    logger.error(f"[FAIL] Unexpected error in Cookie Robot: {str(e)}")
                     if task_logger:
-                        task_logger(f"❌ Unexpected error: {str(e)}")
+                        task_logger(f"[FAIL] Unexpected error: {str(e)}")
                     return {"success": False, "error": f"Unexpected error in Cookie Robot: {str(e)}"}
                     
                 finally:
@@ -1359,7 +1359,7 @@ class DolphinAnty:
                         logger.debug(f"🔌 Disconnected from browser")
                     
         except Exception as e:
-            logger.error(f"❌ Error during Playwright automation: {str(e)}")
+            logger.error(f"[FAIL] Error during Playwright automation: {str(e)}")
             return {"success": False, "error": f"Playwright automation error: {str(e)}"}
             
         finally:
@@ -1415,7 +1415,7 @@ class DolphinAnty:
                 
                 # Проверяем, что страница еще открыта перед каждым действием
                 if page.is_closed():
-                    log_action("⚠️ Page was closed during user activity simulation, stopping", "warning")
+                    log_action("[WARN] Page was closed during user activity simulation, stopping", "warning")
                     break
                     
                 # Случайное действие каждые 2-6 секунд (более частые действия)
@@ -1424,7 +1424,7 @@ class DolphinAnty:
                 
                 # Еще одна проверка после sleep
                 if page.is_closed():
-                    log_action("⚠️ Page was closed during sleep, stopping", "warning")
+                    log_action("[WARN] Page was closed during sleep, stopping", "warning")
                     break
                 
                 # Логируем прогресс каждые 30 секунд
@@ -1432,7 +1432,7 @@ class DolphinAnty:
                 if current_time - last_progress_log >= 30:
                     elapsed = current_time - start_time
                     remaining = duration - elapsed
-                    log_action(f"⏳ Activity progress: {elapsed:.0f}s elapsed, {remaining:.0f}s remaining", "info")
+                    log_action(f"[WAIT] Activity progress: {elapsed:.0f}s elapsed, {remaining:.0f}s remaining", "info")
                     last_progress_log = current_time
                 
                 # Выбираем случайное действие с весами (более человечные действия чаще)
@@ -1453,7 +1453,7 @@ class DolphinAnty:
                 try:
                     # Проверяем состояние страницы перед каждым действием
                     if page.is_closed():
-                        log_action("⚠️ Page closed before action execution, stopping", "warning")
+                        log_action("[WARN] Page closed before action execution, stopping", "warning")
                         break
                     
                     # Дополнительная проверка - пытаемся получить URL страницы
@@ -1463,7 +1463,7 @@ class DolphinAnty:
                         # Если не можем получить URL, страница скорее всего недоступна
                         error_str = str(url_error).lower()
                         if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                            log_action("⚠️ Page became unavailable during activity simulation, stopping", "warning")
+                            log_action("[WARN] Page became unavailable during activity simulation, stopping", "warning")
                             break
                         else:
                             # Убираем избыточные warning логи
@@ -1514,7 +1514,7 @@ class DolphinAnty:
                         try:
                             # Проверяем состояние страницы перед кликом
                             if page.is_closed():
-                                log_action("⚠️ Page closed before click, skipping", "warning")
+                                log_action("[WARN] Page closed before click, skipping", "warning")
                                 continue
                             
                             # Сохраняем текущий URL для возможного возврата
@@ -1541,7 +1541,7 @@ class DolphinAnty:
                                 # Если не можем найти элементы, делаем обычный клик
                                 error_str = str(selector_error).lower()
                                 if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                                    log_action("⚠️ Page closed during element search, stopping", "warning")
+                                    log_action("[WARN] Page closed during element search, stopping", "warning")
                                     break
                                 else:
                                     # Обычный клик по координатам
@@ -1615,16 +1615,16 @@ class DolphinAnty:
                                                     # Если не получается вернуться, переходим напрямую
                                                     try:
                                                         await page.goto(current_url, wait_until="domcontentloaded", timeout=5000)
-                                                        logger.debug(f"🔄 Returned to original page via direct navigation")
+                                                        logger.debug(f"[RETRY] Returned to original page via direct navigation")
                                                     except Exception:
                                                         logger.debug(f"Could not return to original page")
                                             else:
-                                                logger.debug(f"📍 User stayed on new page")
+                                                logger.debug(f"[LOCATION] User stayed on new page")
                                     except Exception as nav_check_error:
                                         # Если не можем проверить навигацию, продолжаем
                                         error_str = str(nav_check_error).lower()
                                         if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                                            log_action("⚠️ Page closed during navigation check, stopping", "warning")
+                                            log_action("[WARN] Page closed during navigation check, stopping", "warning")
                                             break
                                         else:
                                             logger.debug(f"Could not check navigation: {str(nav_check_error)[:50]}")
@@ -1649,7 +1649,7 @@ class DolphinAnty:
                             # Проверяем, связана ли ошибка с закрытием страницы
                             error_str = str(click_error).lower()
                             if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                                log_action("⚠️ Page closed during click action, stopping", "warning")
+                                log_action("[WARN] Page closed during click action, stopping", "warning")
                                 break
                             else:
                                 # Обычный клик при ошибке
@@ -1672,7 +1672,7 @@ class DolphinAnty:
                             except Exception as selector_error:
                                 error_str = str(selector_error).lower()
                                 if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                                    log_action("⚠️ Page closed during hover element search, stopping", "warning")
+                                    log_action("[WARN] Page closed during hover element search, stopping", "warning")
                                     break
                                 else:
                                     # Обычное движение мыши
@@ -1700,7 +1700,7 @@ class DolphinAnty:
                                 except Exception as hover_error:
                                     error_str = str(hover_error).lower()
                                     if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                                        log_action("⚠️ Page closed during hover action, stopping", "warning")
+                                        log_action("[WARN] Page closed during hover action, stopping", "warning")
                                         break
                                     else:
                                         # Обычное движение мыши
@@ -1717,7 +1717,7 @@ class DolphinAnty:
                         except Exception as e:
                             error_str = str(e).lower()
                             if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                                log_action("⚠️ Page closed during hover action, stopping", "warning")
+                                log_action("[WARN] Page closed during hover action, stopping", "warning")
                                 break
                             else:
                                 logger.debug(f"👆 Hover error: {str(e)[:50]}")
@@ -1733,10 +1733,10 @@ class DolphinAnty:
                             except Exception as selector_error:
                                 error_str = str(selector_error).lower()
                                 if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                                    log_action("⚠️ Page closed during text selection search, stopping", "warning")
+                                    log_action("[WARN] Page closed during text selection search, stopping", "warning")
                                     break
                                 else:
-                                    logger.debug(f"📝 Text selection search failed: {str(selector_error)[:50]}")
+                                    logger.debug(f"[TEXT] Text selection search failed: {str(selector_error)[:50]}")
                                     continue
                             
                             if text_elements:
@@ -1754,27 +1754,27 @@ class DolphinAnty:
                                             
                                             # Снимаем выделение
                                             await page.mouse.click(random.randint(100, 200), random.randint(100, 200))
-                                            logger.debug(f"📝 Selected text for {selection_time:.1f}s (user reading)")
+                                            logger.debug(f"[TEXT] Selected text for {selection_time:.1f}s (user reading)")
                                         else:
-                                            logger.debug(f"📝 Skipped text selection - no meaningful text")
+                                            logger.debug(f"[TEXT] Skipped text selection - no meaningful text")
                                     else:
-                                        logger.debug(f"📝 Skipped text selection - element not visible")
+                                        logger.debug(f"[TEXT] Skipped text selection - element not visible")
                                 except Exception as text_error:
                                     error_str = str(text_error).lower()
                                     if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                                        log_action("⚠️ Page closed during text selection, stopping", "warning")
+                                        log_action("[WARN] Page closed during text selection, stopping", "warning")
                                         break
                                     else:
-                                        logger.debug(f"📝 Text selection error: {str(text_error)[:50]}")
+                                        logger.debug(f"[TEXT] Text selection error: {str(text_error)[:50]}")
                             else:
-                                logger.debug(f"📝 No text elements found for selection")
+                                logger.debug(f"[TEXT] No text elements found for selection")
                         except Exception as e:
                             error_str = str(e).lower()
                             if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                                log_action("⚠️ Page closed during text selection action, stopping", "warning")
+                                log_action("[WARN] Page closed during text selection action, stopping", "warning")
                                 break
                             else:
-                                logger.debug(f"📝 Text selection error: {str(e)[:50]}")
+                                logger.debug(f"[TEXT] Text selection error: {str(e)[:50]}")
                             
                     elif action == "double_click":
                         # Реалистичный двойной клик (пользователь хочет что-то выделить/открыть)
@@ -1786,7 +1786,7 @@ class DolphinAnty:
                         except Exception as e:
                             error_str = str(e).lower()
                             if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                                log_action("⚠️ Page closed during double click, stopping", "warning")
+                                log_action("[WARN] Page closed during double click, stopping", "warning")
                                 break
                             else:
                                 logger.debug(f"🖱️ Double click failed: {str(e)[:50]}")
@@ -1795,7 +1795,7 @@ class DolphinAnty:
                         # Просто ждем (как пользователь читает)
                         wait_time = min(random.uniform(1, 4), remaining_time)
                         time.sleep(wait_time)
-                        logger.debug(f"⏸️ Reading pause for {wait_time:.1f} seconds")
+                        logger.debug(f"[PAUSE] Reading pause for {wait_time:.1f} seconds")
                     
                     actions_performed += 1
                     
@@ -1808,10 +1808,10 @@ class DolphinAnty:
                     # Проверяем, связана ли ошибка с закрытием страницы
                     error_str = str(e).lower()
                     if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                        log_action(f"⚠️ Page closed during {action}, stopping simulation", "warning")
+                        log_action(f"[WARN] Page closed during {action}, stopping simulation", "warning")
                         break
                     else:
-                        logger.debug(f"⚠️ Error during {action}: {str(e)[:100]}")
+                        logger.debug(f"[WARN] Error during {action}: {str(e)[:100]}")
                         continue
             
             # Финальная статистика - только важная информация
@@ -1825,7 +1825,7 @@ class DolphinAnty:
                 log_action(f"📊 Main actions: {stats_summary}", "info")
             
         except Exception as e:
-            log_action(f"⚠️ Critical error in user activity simulation: {str(e)}", "warning")
+            log_action(f"[WARN] Critical error in user activity simulation: {str(e)}", "warning")
 
     def run_cookie_robot_sync(
         self,
@@ -1850,7 +1850,7 @@ class DolphinAnty:
             import tempfile
             import os
             
-            logger.info(f"🚀 Starting Cookie Robot sync for profile {profile_id} via subprocess")
+            logger.info(f"[START] Starting Cookie Robot sync for profile {profile_id} via subprocess")
             
             # Создаем временный файл для передачи параметров
             with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp_file:
@@ -1875,7 +1875,7 @@ class DolphinAnty:
                 
                 cmd = [python_exe, script_path, temp_file_path]
                 
-                logger.info(f"🔄 Running subprocess: {' '.join(cmd)}")
+                logger.info(f"[RETRY] Running subprocess: {' '.join(cmd)}")
                 
                 # Запускаем subprocess с увеличенным таймаутом
                 # Увеличиваем таймаут до 20 минут, чтобы Cookie Robot мог пройти все сайты
@@ -1890,7 +1890,7 @@ class DolphinAnty:
                         cwd=os.getcwd()
                     )
                 except subprocess.TimeoutExpired:
-                    logger.error(f"❌ Subprocess timeout after {timeout} seconds")
+                    logger.error(f"[FAIL] Subprocess timeout after {timeout} seconds")
                     # Принудительно завершаем subprocess
                     try:
                         import psutil
@@ -1898,17 +1898,17 @@ class DolphinAnty:
                         for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
                             try:
                                 if any('isolated_cookie_robot.py' in str(arg) for arg in proc.info['cmdline'] or []):
-                                    logger.info(f"🔄 Force killing subprocess {proc.info['pid']}")
+                                    logger.info(f"[RETRY] Force killing subprocess {proc.info['pid']}")
                                     proc.terminate()
                                     proc.wait(timeout=5)
                             except (psutil.NoSuchProcess, psutil.TimeoutExpired):
                                 pass
                     except ImportError:
-                        logger.warning("⚠️ psutil not available, cannot force kill subprocess")
+                        logger.warning("[WARN] psutil not available, cannot force kill subprocess")
                     
                     return {"success": False, "error": f"Subprocess timeout after {timeout} seconds - Cookie Robot took too long to complete"}
                 except Exception as e:
-                    logger.error(f"❌ Subprocess execution error: {str(e)}")
+                    logger.error(f"[FAIL] Subprocess execution error: {str(e)}")
                     return {"success": False, "error": f"Subprocess execution error: {str(e)}"}
                 
                 # Обрабатываем результат subprocess
@@ -1919,7 +1919,7 @@ class DolphinAnty:
                         
                         # Проверяем, что stdout не пустой
                         if not stdout_clean:
-                            logger.error("❌ Subprocess returned empty stdout")
+                            logger.error("[FAIL] Subprocess returned empty stdout")
                             logger.error(f"Stderr: {result.stderr}")
                             return {"success": False, "error": "Subprocess returned empty stdout"}
                         
@@ -1930,10 +1930,10 @@ class DolphinAnty:
                         
                         # Парсим результат
                         output_data = json.loads(stdout_clean)
-                        logger.info(f"✅ Subprocess completed successfully")
+                        logger.info(f"[OK] Subprocess completed successfully")
                         return output_data
                     except json.JSONDecodeError as e:
-                        logger.error(f"❌ Failed to parse subprocess output: {e}")
+                        logger.error(f"[FAIL] Failed to parse subprocess output: {e}")
                         logger.error(f"Raw stdout (first 500 chars): {result.stdout[:500]}")
                         logger.error(f"Raw stderr: {result.stderr}")
                         
@@ -1948,10 +1948,10 @@ class DolphinAnty:
                                 if end_idx != -1:
                                     potential_json = potential_json[:end_idx+1]
                                 output_data = json.loads(potential_json)
-                                logger.info(f"✅ Successfully parsed JSON after cleanup")
+                                logger.info(f"[OK] Successfully parsed JSON after cleanup")
                                 return output_data
                         except Exception as cleanup_error:
-                            logger.error(f"❌ JSON cleanup also failed: {cleanup_error}")
+                            logger.error(f"[FAIL] JSON cleanup also failed: {cleanup_error}")
                         
                         # Последняя попытка - ищем любой валидный JSON в stdout
                         try:
@@ -1963,29 +1963,29 @@ class DolphinAnty:
                                 # Берем самый длинный match
                                 longest_match = max(matches, key=len)
                                 output_data = json.loads(longest_match)
-                                logger.info(f"✅ Successfully parsed JSON using regex fallback")
+                                logger.info(f"[OK] Successfully parsed JSON using regex fallback")
                                 return output_data
                         except Exception as regex_error:
-                            logger.error(f"❌ Regex JSON parsing also failed: {regex_error}")
+                            logger.error(f"[FAIL] Regex JSON parsing also failed: {regex_error}")
                         
                         # Если все попытки не удались, возвращаем ошибку с детальной диагностикой
-                        logger.error(f"❌ All JSON parsing attempts failed")
-                        logger.error(f"❌ Stdout length: {len(result.stdout)}")
-                        logger.error(f"❌ Stderr length: {len(result.stderr)}")
-                        logger.error(f"❌ First 100 chars of stdout: {repr(result.stdout[:100])}")
+                        logger.error(f"[FAIL] All JSON parsing attempts failed")
+                        logger.error(f"[FAIL] Stdout length: {len(result.stdout)}")
+                        logger.error(f"[FAIL] Stderr length: {len(result.stderr)}")
+                        logger.error(f"[FAIL] First 100 chars of stdout: {repr(result.stdout[:100])}")
                         
                         return {"success": False, "error": f"Failed to parse subprocess output: {str(e)}"}
                 else:
-                    logger.error(f"❌ Subprocess failed with return code {result.returncode}")
+                    logger.error(f"[FAIL] Subprocess failed with return code {result.returncode}")
                     logger.error(f"Stdout: {result.stdout}")
                     logger.error(f"Stderr: {result.stderr}")
                     return {"success": False, "error": f"Subprocess failed: {result.stderr}"}
                 
             except subprocess.TimeoutExpired:
-                logger.error(f"❌ Subprocess timeout after {timeout} seconds")
+                logger.error(f"[FAIL] Subprocess timeout after {timeout} seconds")
                 return {"success": False, "error": f"Subprocess timeout after {timeout} seconds"}
             except Exception as e:
-                logger.error(f"❌ Subprocess execution error: {str(e)}")
+                logger.error(f"[FAIL] Subprocess execution error: {str(e)}")
                 return {"success": False, "error": f"Subprocess execution error: {str(e)}"}
             finally:
                 # Удаляем временный файл
@@ -1995,7 +1995,7 @@ class DolphinAnty:
                     pass
             
         except Exception as e:
-            logger.error(f"❌ Error in sync Cookie Robot: {str(e)}")
+            logger.error(f"[FAIL] Error in sync Cookie Robot: {str(e)}")
             return {"success": False, "error": f"Sync execution error: {str(e)}"}
 
     def _simulate_user_activity_sync(self, page, duration, urls, task_logger=None):
@@ -2031,32 +2031,32 @@ class DolphinAnty:
                 status["app_running"] = True
                 status["local_api_available"] = True
                 status["authenticated"] = True
-                logger.info("✅ Dolphin Anty application is running and responsive")
+                logger.info("[OK] Dolphin Anty application is running and responsive")
             elif response.status_code == 401:
                 status["app_running"] = True
                 status["local_api_available"] = True
                 status["authenticated"] = False
                 status["error"] = "Invalid API token"
-                logger.error("❌ Dolphin Anty is running but API token is invalid")
+                logger.error("[FAIL] Dolphin Anty is running but API token is invalid")
             elif response.status_code == 404:
                 status["app_running"] = True
                 status["local_api_available"] = False
                 status["error"] = "API endpoint not found - check Dolphin version"
-                logger.error("❌ Dolphin Anty is running but API endpoint not found")
+                logger.error("[FAIL] Dolphin Anty is running but API endpoint not found")
             else:
                 status["app_running"] = True
                 status["local_api_available"] = False
                 status["error"] = f"Unexpected HTTP {response.status_code}"
-                logger.error(f"❌ Dolphin Anty API returned HTTP {response.status_code}")
+                logger.error(f"[FAIL] Dolphin Anty API returned HTTP {response.status_code}")
                 
         except requests.exceptions.ConnectionError:
             status["error"] = "Connection refused - Dolphin Anty not running"
-            logger.error("❌ Cannot connect to Dolphin Anty - application not running")
+            logger.error("[FAIL] Cannot connect to Dolphin Anty - application not running")
         except requests.exceptions.Timeout:
             status["error"] = "Timeout connecting to Dolphin Anty"
-            logger.error("❌ Timeout connecting to Dolphin Anty")
+            logger.error("[FAIL] Timeout connecting to Dolphin Anty")
         except Exception as e:
             status["error"] = f"Unexpected error: {str(e)}"
-            logger.error(f"❌ Unexpected error checking Dolphin status: {e}")
+            logger.error(f"[FAIL] Unexpected error checking Dolphin status: {e}")
         
         return status

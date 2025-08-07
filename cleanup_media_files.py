@@ -23,7 +23,7 @@ def cleanup_orphaned_files():
     media_dir = Path("media/bot/bulk_videos")
     
     if not media_dir.exists():
-        print("📁 Директория media/bot/bulk_videos не существует")
+        print("[FOLDER] Директория media/bot/bulk_videos не существует")
         return 0
     
     # Получаем все файлы из директории
@@ -41,7 +41,7 @@ def cleanup_orphaned_files():
     
     # Находим orphaned файлы
     orphaned_files = all_files - db_files
-    print(f"🗑️ Найдено {len(orphaned_files)} orphaned файлов")
+    print(f"[DELETE] Найдено {len(orphaned_files)} orphaned файлов")
     
     deleted_count = 0
     for filename in orphaned_files:
@@ -49,9 +49,9 @@ def cleanup_orphaned_files():
         try:
             file_path.unlink()
             deleted_count += 1
-            print(f"🗑️ Удален orphaned файл: {filename}")
+            print(f"[DELETE] Удален orphaned файл: {filename}")
         except Exception as e:
-            print(f"❌ Не удалось удалить {filename}: {str(e)}")
+            print(f"[FAIL] Не удалось удалить {filename}: {str(e)}")
     
     return deleted_count
 
@@ -91,7 +91,7 @@ def cleanup_completed_tasks_files(days_old=7):
                             for other_video in other_videos_with_same_file:
                                 other_task = other_video.bulk_task
                                 if other_task.status in ['RUNNING', 'PENDING']:
-                                    return False, f'🚫 File {filename} is still used by running task "{other_task.name}" (ID: {other_task.id})'
+                                    return False, f'[BLOCK] File {filename} is still used by running task "{other_task.name}" (ID: {other_task.id})'
                             
                             return True, None
                         
@@ -101,14 +101,14 @@ def cleanup_completed_tasks_files(days_old=7):
                             filename = os.path.basename(file_path)
                             os.unlink(file_path)
                             deleted_count += 1
-                            print(f"  🗑️ Удален файл: {filename}")
+                            print(f"  [DELETE] Удален файл: {filename}")
                         else:
-                            print(f"  ⏸️ Пропущен файл (используется другими задачами): {os.path.basename(file_path)}")
+                            print(f"  [PAUSE] Пропущен файл (используется другими задачами): {os.path.basename(file_path)}")
                             if warning_msg:
-                                print(f"  ⚠️ {warning_msg}")
+                                print(f"  [WARN] {warning_msg}")
                         
                 except Exception as e:
-                    print(f"  ❌ Не удалось удалить файл {video.id}: {str(e)}")
+                    print(f"  [FAIL] Не удалось удалить файл {video.id}: {str(e)}")
     
     return deleted_count
 
@@ -117,14 +117,14 @@ def show_statistics():
     media_dir = Path("media/bot/bulk_videos")
     
     if not media_dir.exists():
-        print("📁 Директория media/bot/bulk_videos не существует")
+        print("[FOLDER] Директория media/bot/bulk_videos не существует")
         return
     
     files = list(media_dir.glob("*.mp4"))
     total_size = sum(f.stat().st_size for f in files)
     
     print(f"📊 Статистика директории media/bot/bulk_videos:")
-    print(f"   📁 Всего файлов: {len(files)}")
+    print(f"   [FOLDER] Всего файлов: {len(files)}")
     print(f"   💾 Общий размер: {total_size / (1024*1024):.1f} MB")
     
     # Статистика по задачам
@@ -134,12 +134,12 @@ def show_statistics():
     
     print(f"📊 Статистика задач:")
     print(f"   📋 Всего задач: {total_tasks}")
-    print(f"   ✅ Завершенных: {completed_tasks}")
-    print(f"   ❌ Неудачных: {failed_tasks}")
+    print(f"   [OK] Завершенных: {completed_tasks}")
+    print(f"   [FAIL] Неудачных: {failed_tasks}")
     
     # Статистика по видео в БД
     total_videos = BulkVideo.objects.count()
-    print(f"   🎬 Всего видео в БД: {total_videos}")
+    print(f"   [VIDEO] Всего видео в БД: {total_videos}")
 
 def main():
     import argparse
@@ -162,7 +162,7 @@ def main():
         print("="*60)
         return
     
-    print("🧹 Начинаем очистку файлов media/bot/bulk_videos/")
+    print("[CLEAN] Начинаем очистку файлов media/bot/bulk_videos/")
     print("=" * 60)
     
     if args.stats or args.all:
@@ -172,18 +172,18 @@ def main():
     total_deleted = 0
     
     if args.orphaned or args.all:
-        print("🗑️ Очистка orphaned файлов...")
+        print("[DELETE] Очистка orphaned файлов...")
         deleted = cleanup_orphaned_files()
         total_deleted += deleted
-        print(f"✅ Удалено orphaned файлов: {deleted}")
+        print(f"[OK] Удалено orphaned файлов: {deleted}")
         print("-" * 60)
     
     if args.old_tasks or args.all:
         days = args.old_tasks if args.old_tasks else 7
-        print(f"🗑️ Очистка файлов задач старше {days} дней...")
+        print(f"[DELETE] Очистка файлов задач старше {days} дней...")
         deleted = cleanup_completed_tasks_files(days)
         total_deleted += deleted
-        print(f"✅ Удалено файлов старых задач: {deleted}")
+        print(f"[OK] Удалено файлов старых задач: {deleted}")
         print("-" * 60)
     
     print(f"🎉 Очистка завершена! Всего удалено файлов: {total_deleted}")

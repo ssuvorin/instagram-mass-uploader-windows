@@ -29,10 +29,10 @@ class CropHandler:
             aspect_ratio_found = self._select_original_aspect_ratio()
             
             if not aspect_ratio_found:
-                log_warning("⚠️ 'Оригинал' aspect ratio option not found, trying fallback options...")
+                log_warning("[WARN] 'Оригинал' aspect ratio option not found, trying fallback options...")
                 self._try_fallback_aspect_ratios()
         else:
-            log_warning("⚠️ Crop/size selection button not found, trying fallback crop logic")
+            log_warning("[WARN] Crop/size selection button not found, trying fallback crop logic")
             self._fallback_crop_logic()
         
         return True
@@ -41,7 +41,7 @@ class CropHandler:
         """Find and click the crop/size selection button - ADAPTIVE VERSION"""
         log_info("📐 [CROP_BTN] Starting ADAPTIVE crop button search...")
         
-        # 🎯 Адаптивная стратегия поиска (независимо от CSS-классов)
+        # [TARGET] Адаптивная стратегия поиска (независимо от CSS-классов)
         search_strategies = [
             self._find_by_semantic_attributes,
             self._find_by_svg_content,
@@ -55,7 +55,7 @@ class CropHandler:
             try:
                 crop_button = strategy()
                 if crop_button:
-                    log_success(f"📐 [CROP_BTN] ✅ Found crop button using strategy {strategy_index}")
+                    log_success(f"📐 [CROP_BTN] [OK] Found crop button using strategy {strategy_index}")
                     
                     # Клик с человеческим поведением
                     self._human_click_crop_button(crop_button)
@@ -65,7 +65,7 @@ class CropHandler:
                 log_warning(f"📐 [CROP_BTN] Strategy {strategy_index} failed: {str(e)}")
                 continue
         
-        log_error("📐 [CROP_BTN] ❌ All strategies failed - crop button not found")
+        log_error("📐 [CROP_BTN] [FAIL] All strategies failed - crop button not found")
         return False
     
     def _find_by_semantic_attributes(self):
@@ -89,7 +89,7 @@ class CropHandler:
                 # Прямой поиск элемента
                 element = self.page.locator(selector).first
                 if element.is_visible(timeout=1000):
-                    log_success(f"📐 [SEMANTIC] ✅ Found direct element: {selector}")
+                    log_success(f"📐 [SEMANTIC] [OK] Found direct element: {selector}")
                     return element
                 
                 # Поиск родительского элемента
@@ -102,7 +102,7 @@ class CropHandler:
                 for parent_selector in parent_selectors:
                     parent_element = self.page.locator(parent_selector).first
                     if parent_element.is_visible(timeout=1000):
-                        log_success(f"📐 [SEMANTIC] ✅ Found parent element: {parent_selector}")
+                        log_success(f"📐 [SEMANTIC] [OK] Found parent element: {parent_selector}")
                         return parent_element
                     
             except Exception as e:
@@ -125,7 +125,7 @@ class CropHandler:
                     # Проверяем aria-label
                     aria_label = svg.get_attribute('aria-label') or ""
                     if any(keyword in aria_label.lower() for keyword in ['crop', 'обрез', 'размер', 'выбрать']):
-                        log_success(f"📐 [SVG] ✅ Found by aria-label: {aria_label}")
+                        log_success(f"📐 [SVG] [OK] Found by aria-label: {aria_label}")
                         
                         # Найти родительскую кнопку
                         parent_button = svg.locator('xpath=ancestor::button[1] | xpath=ancestor::div[@role="button"][1]').first
@@ -139,7 +139,7 @@ class CropHandler:
                         path_data = path.get_attribute('d') or ""
                         # Характерные пути для иконки кропа (углы, рамки)
                         if any(pattern in path_data for pattern in ['M10 20H4v-6', 'M20.999 2H14', 'L', 'H', 'V']):
-                            log_success(f"📐 [SVG] ✅ Found by SVG path pattern")
+                            log_success(f"📐 [SVG] [OK] Found by SVG path pattern")
                             
                             # Найти родительскую кнопку
                             parent_button = svg.locator('xpath=ancestor::button[1] | xpath=ancestor::div[@role="button"][1]').first
@@ -180,7 +180,7 @@ class CropHandler:
                             # Проверяем наличие SVG внутри
                             svg_inside = button.locator('svg').first
                             if svg_inside.is_visible():
-                                log_success(f"📐 [CONTEXT] ✅ Found candidate button by context")
+                                log_success(f"📐 [CONTEXT] [OK] Found candidate button by context")
                                 return button
                                 
                 except Exception as e:
@@ -214,7 +214,7 @@ class CropHandler:
                     log_info(f"📐 [FALLBACK] Trying XPath: {xpath}")
                     element = self.page.locator(f'xpath={xpath}').first
                     if element.is_visible(timeout=1000):
-                        log_success(f"📐 [FALLBACK] ✅ Found by XPath: {xpath}")
+                        log_success(f"📐 [FALLBACK] [OK] Found by XPath: {xpath}")
                         return element
                         
                 except Exception as e:
@@ -247,10 +247,10 @@ class CropHandler:
             # Человеческая задержка после клика
             time.sleep(random.uniform(0.8, 1.5))
             
-            log_success("📐 [CLICK] ✅ Successfully clicked crop button")
+            log_success("📐 [CLICK] [OK] Successfully clicked crop button")
             
         except Exception as e:
-            log_error(f"📐 [CLICK] ❌ Failed to click crop button: {str(e)}")
+            log_error(f"📐 [CLICK] [FAIL] Failed to click crop button: {str(e)}")
             raise
     
     def _debug_available_buttons(self):
@@ -312,7 +312,7 @@ class CropHandler:
         """Select the 'Оригинал' (Original) aspect ratio option - IMPROVED for dynamic selectors"""
         log_info("📐 Looking for 'Оригинал' (Original) aspect ratio option...")
         
-        # 🎯 АДАПТИВНАЯ СТРАТЕГИЯ: Поиск по семантическим признакам
+        # [TARGET] АДАПТИВНАЯ СТРАТЕГИЯ: Поиск по семантическим признакам
         search_strategies = [
             self._find_original_by_text_content,
             self._find_original_by_svg_icon,
@@ -326,14 +326,14 @@ class CropHandler:
             try:
                 original_element = strategy()
                 if original_element:
-                    log_success(f"📐 [ORIGINAL] ✅ Found 'Оригинал' using strategy {strategy_index}")
+                    log_success(f"📐 [ORIGINAL] [OK] Found 'Оригинал' using strategy {strategy_index}")
                     
                     # Human-like interaction with aspect ratio selection
                     _human_click_with_timeout(self.page, original_element, self.human_behavior, "ASPECT_RATIO")
                     
                     # Wait for aspect ratio to be applied
                     aspect_ratio_wait = self.human_behavior.get_human_delay(2.0, 0.5) if self.human_behavior else random.uniform(1.5, 2.5)
-                    log_info(f"⏳ Waiting {aspect_ratio_wait:.1f}s for 'Оригинал' aspect ratio to be applied...")
+                    log_info(f"[WAIT] Waiting {aspect_ratio_wait:.1f}s for 'Оригинал' aspect ratio to be applied...")
                     time.sleep(aspect_ratio_wait)
                     
                     return True
@@ -342,7 +342,7 @@ class CropHandler:
                 log_warning(f"📐 [ORIGINAL] Strategy {strategy_index} failed: {str(e)}")
                 continue
         
-        log_warning("📐 [ORIGINAL] ⚠️ All strategies failed to find 'Оригинал' option")
+        log_warning("📐 [ORIGINAL] [WARN] All strategies failed to find 'Оригинал' option")
         return False
     
     def _find_original_by_text_content(self):
@@ -390,10 +390,10 @@ class CropHandler:
                     if selector.startswith('span:'):
                         parent_button = element.query_selector('xpath=ancestor::*[@role="button"][1] | xpath=ancestor::button[1]')
                         if parent_button and parent_button.is_visible():
-                            log_success(f"📐 [TEXT] ✅ Found 'Оригинал' parent button")
+                            log_success(f"📐 [TEXT] [OK] Found 'Оригинал' parent button")
                             return parent_button
                     
-                    log_success(f"📐 [TEXT] ✅ Found 'Оригинал' element: {selector}")
+                    log_success(f"📐 [TEXT] [OK] Found 'Оригинал' element: {selector}")
                     return element
                     
             except Exception as e:
@@ -434,12 +434,12 @@ class CropHandler:
                         svg_element = self.page.query_selector(selector)
                     
                     if svg_element and svg_element.is_visible():
-                        log_success(f"📐 [SVG] ✅ Found SVG icon: {selector}")
+                        log_success(f"📐 [SVG] [OK] Found SVG icon: {selector}")
                         
                         # Найти родительскую кнопку
                         parent_button = svg_element.query_selector('xpath=ancestor::*[@role="button"][1] | xpath=ancestor::button[1]')
                         if parent_button and parent_button.is_visible():
-                            log_success("📐 [SVG] ✅ Found parent button for SVG")
+                            log_success("📐 [SVG] [OK] Found parent button for SVG")
                             return parent_button
                         
                         return svg_element
@@ -482,12 +482,12 @@ class CropHandler:
                                     
                                     # Если содержит "Оригинал" - точное совпадение
                                     if 'Оригинал' in button_text or 'Original' in button_text:
-                                        log_success(f"📐 [POS] ✅ Found 'Оригинал' at position {i+1}: '{button_text.strip()}'")
+                                        log_success(f"📐 [POS] [OK] Found 'Оригинал' at position {i+1}: '{button_text.strip()}'")
                                         return button
                                     
                                     # Если первая кнопка - возможно это "Оригинал"
                                     if i == 0:
-                                        log_info(f"📐 [POS] ✅ Using first button as potential 'Оригинал': '{button_text.strip()}'")
+                                        log_info(f"📐 [POS] [OK] Using first button as potential 'Оригинал': '{button_text.strip()}'")
                                         return button
                                         
                             except Exception as e:
@@ -532,7 +532,7 @@ class CropHandler:
                     
                     if element and element.is_visible():
                         element_text = element.text_content() or ""
-                        log_info(f"📐 [ANY] ✅ Found fallback option: '{element_text.strip()}' with selector: {selector}")
+                        log_info(f"📐 [ANY] [OK] Found fallback option: '{element_text.strip()}' with selector: {selector}")
                         return element
                         
                 except Exception as e:
@@ -600,22 +600,22 @@ def _quick_click(page, element, log_prefix="QUICK_CLICK"):
     try:
         # Try force click first (fastest)
         element.click(force=True, timeout=3000)
-        log_info(f"[{log_prefix}] ✅ Quick click successful")
+        log_info(f"[{log_prefix}] [OK] Quick click successful")
         return True
     except Exception as e:
         try:
             # Fallback to JavaScript click
             page.evaluate('(element) => element.click()', element)
-            log_info(f"[{log_prefix}] ✅ JavaScript click successful")
+            log_info(f"[{log_prefix}] [OK] JavaScript click successful")
             return True
         except Exception as e2:
             # Last resort: standard click with short timeout
             try:
                 element.click(timeout=2000)
-                log_info(f"[{log_prefix}] ✅ Standard click successful")
+                log_info(f"[{log_prefix}] [OK] Standard click successful")
                 return True
             except Exception as e3:
-                log_warning(f"[{log_prefix}] ⚠️ All click methods failed: {str(e3)[:100]}")
+                log_warning(f"[{log_prefix}] [WARN] All click methods failed: {str(e3)[:100]}")
                 return False 
 
 
@@ -629,7 +629,7 @@ def _human_click_with_timeout(page, element, human_behavior, log_prefix="HUMAN_C
             
             try:
                 human_behavior.advanced_element_interaction(element, 'click')
-                log_info(f"[{log_prefix}] ✅ Human click successful")
+                log_info(f"[{log_prefix}] [OK] Human click successful")
                 
                 # Restore original timeout
                 page.set_default_timeout(original_timeout)

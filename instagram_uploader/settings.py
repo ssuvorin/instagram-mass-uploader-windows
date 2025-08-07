@@ -158,7 +158,7 @@ CAPTCHA_API_KEY = os.environ.get('CAPTCHA_API_KEY', '')  # Fallback
 if not RUCAPTCHA_API_KEY and not CAPTCHA_API_KEY:
     import logging
     # logger = logging.getLogger(__name__)
-    # logger.warning("⚠️ No reCAPTCHA API key configured. Set RUCAPTCHA_API_KEY environment variable for automatic captcha solving.")
+    # logger.warning("[WARN] No reCAPTCHA API key configured. Set RUCAPTCHA_API_KEY environment variable for automatic captcha solving.")
 
 # Dolphin Anty settings
 DOLPHIN_API_TOKEN = os.environ.get('DOLPHIN_API_TOKEN', '')

@@ -29,29 +29,29 @@ def verify_ip_address(page):
         body_text = page.inner_text("body")
         if re.match(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", body_text):
             ip = body_text
-            logger.info(f"✅ Текущий IP-адрес: {ip}")
+            logger.info(f"[OK] Текущий IP-адрес: {ip}")
             return ip
             
         # Fallback to regex extraction from full content
         ip_match = re.search(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", ip_text)
         if ip_match:
             ip = ip_match.group(0)
-            logger.info(f"✅ Текущий IP-адрес: {ip}")
+            logger.info(f"[OK] Текущий IP-адрес: {ip}")
             return ip
         else:
             # Try alternative IP checking service
-            logger.info("🔄 Пробуем альтернативный сервис проверки IP...")
+            logger.info("[RETRY] Пробуем альтернативный сервис проверки IP...")
             page.goto("https://checkip.amazonaws.com/")
             body_text = page.inner_text("body").strip()
             if re.match(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", body_text):
                 ip = body_text
-                logger.info(f"✅ Текущий IP-адрес: {ip}")
+                logger.info(f"[OK] Текущий IP-адрес: {ip}")
                 return ip
                 
-            logger.error("❌ Не удалось определить IP-адрес")
+            logger.error("[FAIL] Не удалось определить IP-адрес")
             return None
     except Exception as e:
-        logger.error(f"❌ Ошибка при проверке IP-адреса: {str(e)}")
+        logger.error(f"[FAIL] Ошибка при проверке IP-адреса: {str(e)}")
         return None
 
 class Auth:
@@ -91,21 +91,21 @@ class Auth:
         try:
             # Verify proxy is configured
             if not self.proxy:
-                logger.error("❌ Прокси не настроен. Бот не может работать без прокси.")
+                logger.error("[FAIL] Прокси не настроен. Бот не может работать без прокси.")
                 return None
                 
             if not browser_data:
-                logger.info("🔄 Инициализация браузера...")
+                logger.info("[RETRY] Инициализация браузера...")
                 self.browser_data = get_browser(headless=False, proxy=self.proxy)
                 logger.info("🔍 Браузер запущен в видимом режиме")
             else:
                 self.browser_data = browser_data
-                logger.info("🔄 Используем существующий браузер")
+                logger.info("[RETRY] Используем существующий браузер")
             
             if not page:
-                logger.info("🔄 Создание новой страницы...")
+                logger.info("[RETRY] Создание новой страницы...")
                 self.page = get_page(self.browser_data)
-                logger.info("✅ Страница создана")
+                logger.info("[OK] Страница создана")
                 
                 # Verify IP address if proxy is used
                 if self.proxy:
@@ -114,15 +114,15 @@ class Auth:
                     if ip:
                         logger.info(f"🌐 Используется IP-адрес: {ip}")
                     else:
-                        logger.error("❌ Не удалось проверить IP-адрес или прокси не работает")
+                        logger.error("[FAIL] Не удалось проверить IP-адрес или прокси не работает")
             else:
                 self.page = page
-                logger.info("🔄 Используем существующую страницу")
+                logger.info("[RETRY] Используем существующую страницу")
 
             # Navigate to Instagram
             logger.info(f"🌐 Переход на страницу Instagram: {config['paths']['main']}")
             self.page.goto(config['paths']['main'])
-            logger.info("⏳ Ожидание загрузки страницы...")
+            logger.info("[WAIT] Ожидание загрузки страницы...")
             random_delay("major")  # Используем настраиваемую задержку вместо фиксированных 8 секунд
 
             logger.info(f'👤 Авторизация аккаунта {username} через логин и пароль')
@@ -130,7 +130,7 @@ class Auth:
             # Handle cookies dialog if present
             logger.info("🔍 Проверка наличия диалога о cookies...")
             self._click_cookies()
-            logger.info("⏳ Дополнительное ожидание после обработки cookies...")
+            logger.info("[WAIT] Дополнительное ожидание после обработки cookies...")
             random_delay()
 
             # Check if we need to click login button to get to login page
@@ -140,7 +140,7 @@ class Auth:
                 if login_button.is_visible(timeout=config['implicitly_wait'] * 1000):
                     logger.info("👆 Нажатие кнопки логина")
                     login_button.click()
-                    logger.info("⏳ Ожидание после нажатия кнопки логина...")
+                    logger.info("[WAIT] Ожидание после нажатия кнопки логина...")
                     random_delay()
                 else:
                     # Попробуем найти альтернативную кнопку логина
@@ -149,18 +149,18 @@ class Auth:
                     if alt_login_button.is_visible(timeout=config['implicitly_wait'] * 1000):
                         logger.info("👆 Нажатие альтернативной кнопки логина")
                         alt_login_button.click()
-                        logger.info("⏳ Ожидание после нажатия альтернативной кнопки логина...")
+                        logger.info("[WAIT] Ожидание после нажатия альтернативной кнопки логина...")
                         random_delay()
             except Exception as e:
-                logger.info(f"⚠️ Кнопка логина не найдена, возможно уже на странице логина: {str(e)}")
+                logger.info(f"[WARN] Кнопка логина не найдена, возможно уже на странице логина: {str(e)}")
                 pass
 
             # Fill in username with realistic typing
             logger.info("🔍 Поиск поля для ввода имени пользователя...")
             username_field = self.page.locator("xpath=" + config['selectors']['login']['username_field'])
-            logger.info("⏳ Ожидание появления поля для имени пользователя...")
+            logger.info("[WAIT] Ожидание появления поля для имени пользователя...")
             username_field.wait_for(state="visible", timeout=config['explicit_wait'] * 1000)
-            logger.info("🧹 Очистка поля имени пользователя...")
+            logger.info("[CLEAN] Очистка поля имени пользователя...")
             username_field.clear()
             logger.info(f"⌨️ Ввод имени пользователя: {username}")
             realistic_type(self.page, "xpath=" + config['selectors']['login']['username_field'], username)
@@ -168,9 +168,9 @@ class Auth:
             # Fill in password with realistic typing
             logger.info("🔍 Поиск поля для ввода пароля...")
             password_field = self.page.locator("xpath=" + config['selectors']['login']['password_field'])
-            logger.info("⏳ Ожидание появления поля для пароля...")
+            logger.info("[WAIT] Ожидание появления поля для пароля...")
             password_field.wait_for(state="visible", timeout=config['explicit_wait'] * 1000)
-            logger.info("🧹 Очистка поля пароля...")
+            logger.info("[CLEAN] Очистка поля пароля...")
             password_field.clear()
             logger.info("⌨️ Ввод пароля")
             realistic_type(self.page, "xpath=" + config['selectors']['login']['password_field'], password)
@@ -178,10 +178,10 @@ class Auth:
             # Проверим, активна ли кнопка входа
             logger.info("🔍 Проверка активности кнопки входа")
             login_button = self.page.locator("xpath=" + config['selectors']['login']['login_button'])
-            logger.info("⏳ Ожидание появления кнопки входа...")
+            logger.info("[WAIT] Ожидание появления кнопки входа...")
             login_button.wait_for(state="visible", timeout=config['explicit_wait'] * 1000)
             if not login_button.is_enabled():
-                logger.info("⚠️ Кнопка входа не активна. Ожидание...")
+                logger.info("[WARN] Кнопка входа не активна. Ожидание...")
                 random_delay("major")
 
             # Click login button
@@ -189,7 +189,7 @@ class Auth:
             login_button = self.page.locator("xpath=" + config['selectors']['login']['login_button'])
             if login_button.is_visible(timeout=config['implicitly_wait'] * 1000):
                 login_button.click()
-                logger.info("⏳ Ожидание после нажатия кнопки входа...")
+                logger.info("[WAIT] Ожидание после нажатия кнопки входа...")
                 random_delay("major")
             else:
                 # Попробуем найти альтернативную кнопку входа
@@ -198,14 +198,14 @@ class Auth:
                 if alt_login_button.is_visible(timeout=config['implicitly_wait'] * 1000):
                     logger.info("👆 Нажатие альтернативной кнопки входа")
                     alt_login_button.click()
-                    logger.info("⏳ Ожидание после нажатия альтернативной кнопки входа...")
+                    logger.info("[WAIT] Ожидание после нажатия альтернативной кнопки входа...")
                     random_delay("major")
                 else:
-                    logger.error("❌ Не удалось найти кнопку входа")
+                    logger.error("[FAIL] Не удалось найти кнопку входа")
                     close_browser(self.browser_data)
                     return None
 
-            logger.info("⏳ Длительное ожидание после входа (обработка авторизации)...")
+            logger.info("[WAIT] Длительное ожидание после входа (обработка авторизации)...")
             random_delay((15.0, 25.0))  # Более длительная задержка для обработки авторизации
             
             # Check for verification code requirement
@@ -230,21 +230,21 @@ class Auth:
                             logger.info("👆 Нажатие кнопки продолжить")
                             continue_button = self.page.locator("xpath=" + config['selectors']['login']['continue_button'])
                             continue_button.click()
-                            logger.info("⏳ Ожидание после ввода кода подтверждения...")
+                            logger.info("[WAIT] Ожидание после ввода кода подтверждения...")
                             random_delay()
                         else:
-                            logger.error("❌ Не удалось получить код подтверждения с почты")
+                            logger.error("[FAIL] Не удалось получить код подтверждения с почты")
                 else:
-                    logger.error("❌ Требуется код верификации с почты, но учетные данные почты не указаны")
+                    logger.error("[FAIL] Требуется код верификации с почты, но учетные данные почты не указаны")
             except Exception as e:
-                logger.info(f"⚠️ Проверка кода верификации пропущена: {str(e)}")
+                logger.info(f"[WARN] Проверка кода верификации пропущена: {str(e)}")
                 pass
 
             # Check for account suspension
             logger.info("🔍 Проверка на блокировку аккаунта...")
             current_url = self.page.url
             if 'suspended' in current_url:
-                logger.error(f'❌ Аккаунт {username} заблокирован. Прерывание.')
+                logger.error(f'[FAIL] Аккаунт {username} заблокирован. Прерывание.')
                 close_browser(self.browser_data)
                 return None
 
@@ -276,17 +276,17 @@ class Auth:
                                 confirm_button = self.page.get_by_role("button", name="Confirm")
                                 if confirm_button.is_visible():
                                     confirm_button.click()
-                                    logger.info("⏳ Ожидание после ввода кода двухфакторной аутентификации...")
+                                    logger.info("[WAIT] Ожидание после ввода кода двухфакторной аутентификации...")
                                     random_delay("major")
                                 else:
                                     # Пробуем альтернативную кнопку
                                     submit_button = self.page.locator("xpath=" + config['selectors']['login']['alternate_submit_button'])
                                     if submit_button.is_visible(timeout=config['implicitly_wait'] * 1000):
                                         submit_button.click()
-                                        logger.info("⏳ Ожидание после ввода кода двухфакторной аутентификации...")
+                                        logger.info("[WAIT] Ожидание после ввода кода двухфакторной аутентификации...")
                                         random_delay("major")
                                     else:
-                                        logger.error("❌ Кнопка подтверждения кода не найдена")
+                                        logger.error("[FAIL] Кнопка подтверждения кода не найдена")
                             else:
                                 # Пробуем альтернативное поле ввода кода
                                 alt_code_field = self.page.locator("xpath=" + config['selectors']['login']['alternate_email_code_field'])
@@ -299,18 +299,18 @@ class Auth:
                                     alt_submit_button = self.page.locator("xpath=" + config['selectors']['login']['alternate_submit_button'])
                                     if alt_submit_button.is_visible(timeout=config['implicitly_wait'] * 1000):
                                         alt_submit_button.click()
-                                        logger.info("⏳ Ожидание после ввода кода двухфакторной аутентификации...")
+                                        logger.info("[WAIT] Ожидание после ввода кода двухфакторной аутентификации...")
                                         random_delay("major")
                                     else:
-                                        logger.error("❌ Альтернативная кнопка подтверждения кода не найдена")
+                                        logger.error("[FAIL] Альтернативная кнопка подтверждения кода не найдена")
                                 else:
-                                    logger.error("❌ Поле для ввода кода двухфакторной аутентификации не найдено")
+                                    logger.error("[FAIL] Поле для ввода кода двухфакторной аутентификации не найдено")
                         else:
-                            logger.error("❌ Не удалось сгенерировать код двухфакторной аутентификации")
+                            logger.error("[FAIL] Не удалось сгенерировать код двухфакторной аутентификации")
                     else:
-                        logger.error("❌ Двухфакторная аутентификация требуется, но секретный ключ не указан")
+                        logger.error("[FAIL] Двухфакторная аутентификация требуется, но секретный ключ не указан")
             except Exception as e:
-                logger.info(f"⚠️ Проверка двухфакторной аутентификации пропущена: {str(e)}")
+                logger.info(f"[WARN] Проверка двухфакторной аутентификации пропущена: {str(e)}")
 
             # Final check if login successful
             try:
@@ -320,7 +320,7 @@ class Auth:
                 # Проверяем наличие кнопки нового поста
                 new_post_button = self.page.locator("xpath=" + config['selectors']['upload']['new_post_button'])
                 if new_post_button.is_visible(timeout=config['implicitly_wait'] * 1000):
-                    logger.info("✅ Успешный вход в Instagram (найдена кнопка нового поста)")
+                    logger.info("[OK] Успешный вход в Instagram (найдена кнопка нового поста)")
                     
                     # Save cookies for future use
                     logger.info("🍪 Сохранение cookies...")
@@ -340,7 +340,7 @@ class Auth:
                     # Check if we are on the home page
                     current_url = self.page.url
                     if current_url.startswith("https://www.instagram.com/") and not any(marker in current_url for marker in ['login', 'accounts/login', 'challenge', 'suspended']):
-                        logger.info("✅ Успешный вход в Instagram (URL указывает на домашнюю страницу)")
+                        logger.info("[OK] Успешный вход в Instagram (URL указывает на домашнюю страницу)")
                         
                         # Save cookies for future use
                         logger.info("🍪 Сохранение cookies...")
@@ -355,13 +355,13 @@ class Auth:
                         
                         return True
                     else:
-                        logger.error(f"❌ Не удалось войти в Instagram. Текущий URL: {current_url}")
+                        logger.error(f"[FAIL] Не удалось войти в Instagram. Текущий URL: {current_url}")
                         return False
             except Exception as e:
-                logger.error(f"❌ Ошибка при проверке успешности входа: {str(e)}")
+                logger.error(f"[FAIL] Ошибка при проверке успешности входа: {str(e)}")
                 return False
         except Exception as e:
-            logger.error(f"❌ Ошибка при входе в Instagram: {str(e)}")
+            logger.error(f"[FAIL] Ошибка при входе в Instagram: {str(e)}")
             return False
 
     def login(self, cookies_list):
@@ -392,21 +392,21 @@ class Auth:
             # Check if we need to re-login
             current_url = self.page.url
             if any(marker in current_url for marker in ['login', 'accounts/login']):
-                logger.info("🔄 Необходима повторная авторизация через логин и пароль")
+                logger.info("[RETRY] Необходима повторная авторизация через логин и пароль")
                 return self.login_with_username_and_password()
                 
             # Check for post button to verify successful login
             logger.info("🔍 Проверка успешности входа...")
             new_post_button = self.page.locator("xpath=" + config['selectors']['upload']['new_post_button'])
             if new_post_button.is_visible(timeout=config['implicitly_wait'] * 1000):
-                logger.info("✅ Успешный вход в Instagram через cookies")
+                logger.info("[OK] Успешный вход в Instagram через cookies")
                 return True
             else:
-                logger.info("⚠️ Кнопка нового поста не найдена, возможно требуется повторная авторизация")
+                logger.info("[WARN] Кнопка нового поста не найдена, возможно требуется повторная авторизация")
                 return self.login_with_username_and_password()
         except Exception as e:
-            logger.error(f"❌ Ошибка при входе через cookies: {str(e)}")
-            logger.info("🔄 Пробуем войти через логин и пароль")
+            logger.error(f"[FAIL] Ошибка при входе через cookies: {str(e)}")
+            logger.info("[RETRY] Пробуем войти через логин и пароль")
             return self.login_with_username_and_password()
 
     def _click_cookies(self):
@@ -432,7 +432,7 @@ class Auth:
                     logger.info("ℹ️ Диалог о cookies не найден")
                     return False
         except Exception as e:
-            logger.info(f"⚠️ Ошибка при обработке диалога о cookies: {str(e)}")
+            logger.info(f"[WARN] Ошибка при обработке диалога о cookies: {str(e)}")
             return False
 
     def _handle_save_login_info(self):
@@ -466,5 +466,5 @@ class Auth:
                 logger.info("ℹ️ Диалог сохранения информации не найден")
                 return False
         except Exception as e:
-            logger.info(f"⚠️ Ошибка при обработке диалога сохранения: {str(e)}")
+            logger.info(f"[WARN] Ошибка при обработке диалога сохранения: {str(e)}")
             return False

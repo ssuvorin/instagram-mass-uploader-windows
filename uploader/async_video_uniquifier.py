@@ -134,16 +134,16 @@ class AsyncVideoUniquifier:
         try:
             # Проверяем наличие входного файла
             if not os.path.exists(input_path):
-                print(f"❌ [UNIQUIFY] Input file does not exist: {input_path}")
+                print(f"[FAIL] [UNIQUIFY] Input file does not exist: {input_path}")
                 return False
             
             file_size = os.path.getsize(input_path)
-            print(f"📁 [UNIQUIFY] Input file: {os.path.basename(input_path)} ({file_size} bytes)")
+            print(f"[FOLDER] [UNIQUIFY] Input file: {os.path.basename(input_path)} ({file_size} bytes)")
             
             # Проверяем наличие FFmpeg
             subprocess.run(["ffmpeg", "-version"], capture_output=True, check=True, timeout=5)
         except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
-            print(f"❌ FFmpeg not found! Please install FFmpeg and add it to PATH.")
+            print(f"[FAIL] FFmpeg not found! Please install FFmpeg and add it to PATH.")
             return False
         
         try:
@@ -153,8 +153,8 @@ class AsyncVideoUniquifier:
             # Строим команду FFmpeg
             cmd = self._build_ffmpeg_command(input_path, output_path, config, duration, account_username)
             
-            print(f"🎬 [UNIQUIFY] Processing video for {account_username}...")
-            print(f"🔧 [UNIQUIFY] FFmpeg command: {' '.join(cmd[:8])}... (truncated)")  # Показываем только начало команды
+            print(f"[VIDEO] [UNIQUIFY] Processing video for {account_username}...")
+            print(f"[TOOL] [UNIQUIFY] FFmpeg command: {' '.join(cmd[:8])}... (truncated)")  # Показываем только начало команды
             
             # Выполняем команду с таймаутом
             start_time = time.time()
@@ -170,20 +170,20 @@ class AsyncVideoUniquifier:
             # Проверяем что выходной файл создан
             if os.path.exists(output_path):
                 output_size = os.path.getsize(output_path)
-                print(f"✅ [UNIQUIFY] Successfully created unique video: {os.path.basename(output_path)} ({output_size} bytes, took {processing_time:.1f}s)")
+                print(f"[OK] [UNIQUIFY] Successfully created unique video: {os.path.basename(output_path)} ({output_size} bytes, took {processing_time:.1f}s)")
                 return True
             else:
-                print(f"❌ [UNIQUIFY] Output file was not created: {output_path}")
+                print(f"[FAIL] [UNIQUIFY] Output file was not created: {output_path}")
                 return False
             
         except subprocess.TimeoutExpired:
             print(f"⏰ [UNIQUIFY] FFmpeg timeout (>300s) for {account_username}")
             return False
         except subprocess.CalledProcessError as e:
-            print(f"❌ [UNIQUIFY] FFmpeg error: {e.stderr}")
+            print(f"[FAIL] [UNIQUIFY] FFmpeg error: {e.stderr}")
             return False
         except Exception as e:
-            print(f"❌ [UNIQUIFY] General error: {str(e)}")
+            print(f"[FAIL] [UNIQUIFY] General error: {str(e)}")
             return False
     
     def _get_video_duration(self, video_path: str) -> float:
@@ -202,7 +202,7 @@ class AsyncVideoUniquifier:
             print(f"⏰ [UNIQUIFY] ffprobe timeout, using default duration 12.63s")
             return 12.63
         except (subprocess.CalledProcessError, ValueError):
-            print(f"⚠️ [UNIQUIFY] Could not determine video duration, using default 12.63s")
+            print(f"[WARN] [UNIQUIFY] Could not determine video duration, using default 12.63s")
             return 12.63
     
     def _build_ffmpeg_command(self, input_path: str, output_path: str, 
@@ -270,7 +270,7 @@ class AsyncVideoUniquifier:
                 
                 # Используем встроенный шрифт
                 text_filters.append(f"drawtext=text='{safe_text}':fontsize={config.text_font_size}:fontcolor={text_color}:x={x}:y={y}")
-                print(f"📝 [UNIQUIFY] Added text: '{safe_text}' at ({x}, {y}), color={text_color}")
+                print(f"[TEXT] [UNIQUIFY] Added text: '{safe_text}' at ({x}, {y}), color={text_color}")
         
         # Добавляем эмодзи
         if config.emoji_enabled:
@@ -339,7 +339,7 @@ class AsyncVideoUniquifier:
         x_str = x_str.replace("+-", "-")
         y_str = y_str.replace("+-", "-")
         
-        print(f"📍 [UNIQUIFY] Text position: {pos_name}, x={x_str}, y={y_str}")
+        print(f"[LOCATION] [UNIQUIFY] Text position: {pos_name}, x={x_str}, y={y_str}")
         return x_str, y_str
     
     def _random_metadata(self, account_username: str) -> List[str]:
@@ -377,9 +377,9 @@ class AsyncVideoUniquifier:
                 try:
                     if os.path.exists(file_path):
                         os.unlink(file_path)
-                        print(f"🗑️ [UNIQUIFY] Cleaned up temp file: {os.path.basename(file_path)}")
+                        print(f"[DELETE] [UNIQUIFY] Cleaned up temp file: {os.path.basename(file_path)}")
                 except Exception as e:
-                    print(f"⚠️ [UNIQUIFY] Could not delete temp file {file_path}: {str(e)}")
+                    print(f"[WARN] [UNIQUIFY] Could not delete temp file {file_path}: {str(e)}")
             self.temp_files.clear()
         
         # Запускаем очистку асинхронно
@@ -437,7 +437,7 @@ def cleanup_hanging_ffmpeg():
                 continue
         
         if ffmpeg_processes:
-            print(f"🔧 [UNIQUIFY_CLEANUP] Found {len(ffmpeg_processes)} FFmpeg processes")
+            print(f"[TOOL] [UNIQUIFY_CLEANUP] Found {len(ffmpeg_processes)} FFmpeg processes")
             for proc in ffmpeg_processes:
                 try:
                     # Проверяем как долго процесс работает
@@ -451,12 +451,12 @@ def cleanup_hanging_ffmpeg():
                 except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.TimeoutExpired):
                     continue
                     
-        print(f"✅ [UNIQUIFY_CLEANUP] FFmpeg cleanup completed")
+        print(f"[OK] [UNIQUIFY_CLEANUP] FFmpeg cleanup completed")
         
     except ImportError:
-        print(f"⚠️ [UNIQUIFY_CLEANUP] psutil not available, cannot cleanup FFmpeg processes")
+        print(f"[WARN] [UNIQUIFY_CLEANUP] psutil not available, cannot cleanup FFmpeg processes")
     except Exception as e:
-        print(f"❌ [UNIQUIFY_CLEANUP] Error during FFmpeg cleanup: {str(e)}") 
+        print(f"[FAIL] [UNIQUIFY_CLEANUP] Error during FFmpeg cleanup: {str(e)}") 
 
 def check_ffmpeg_availability() -> bool:
     """Проверка доступности FFmpeg"""
@@ -472,7 +472,7 @@ def uniquify_video_sync(input_path: str, output_path: str, quality: int = 23) ->
     try:
         # Проверяем доступность FFmpeg
         if not check_ffmpeg_availability():
-            print("❌ [UNIQUIFY] FFmpeg not available")
+            print("[FAIL] [UNIQUIFY] FFmpeg not available")
             return False
         
         # Создаем команду FFmpeg
@@ -488,7 +488,7 @@ def uniquify_video_sync(input_path: str, output_path: str, quality: int = 23) ->
             output_path
         ]
         
-        print(f"🔧 [UNIQUIFY] FFmpeg command: {' '.join(cmd[:8])}... (truncated)")
+        print(f"[TOOL] [UNIQUIFY] FFmpeg command: {' '.join(cmd[:8])}... (truncated)")
         
         # Используем Windows-совместимый subprocess
         result = run_subprocess_windows(
@@ -499,20 +499,20 @@ def uniquify_video_sync(input_path: str, output_path: str, quality: int = 23) ->
         )
         
         if result.returncode == 0:
-            print(f"✅ [UNIQUIFY] Video uniquified successfully: {output_path}")
+            print(f"[OK] [UNIQUIFY] Video uniquified successfully: {output_path}")
             return True
         else:
-            print(f"❌ [UNIQUIFY] FFmpeg failed: {result.stderr}")
+            print(f"[FAIL] [UNIQUIFY] FFmpeg failed: {result.stderr}")
             return False
             
     except subprocess.TimeoutExpired:
-        print("❌ [UNIQUIFY] FFmpeg timeout")
+        print("[FAIL] [UNIQUIFY] FFmpeg timeout")
         return False
     except subprocess.CalledProcessError as e:
-        print(f"❌ [UNIQUIFY] FFmpeg error: {e}")
+        print(f"[FAIL] [UNIQUIFY] FFmpeg error: {e}")
         return False
     except Exception as e:
-        print(f"❌ [UNIQUIFY] Unexpected error: {e}")
+        print(f"[FAIL] [UNIQUIFY] Unexpected error: {e}")
         return False
 
 def get_video_info_sync(video_path: str) -> Optional[Dict]:
@@ -535,15 +535,15 @@ def get_video_info_sync(video_path: str) -> Optional[Dict]:
             import json
             return json.loads(result.stdout)
         else:
-            print(f"❌ [UNIQUIFY] FFprobe failed: {result.stderr}")
+            print(f"[FAIL] [UNIQUIFY] FFprobe failed: {result.stderr}")
             return None
             
     except subprocess.TimeoutExpired:
-        print("❌ [UNIQUIFY] FFprobe timeout")
+        print("[FAIL] [UNIQUIFY] FFprobe timeout")
         return None
     except (subprocess.CalledProcessError, ValueError):
-        print("❌ [UNIQUIFY] FFprobe error")
+        print("[FAIL] [UNIQUIFY] FFprobe error")
         return None
     except Exception as e:
-        print(f"❌ [UNIQUIFY] Unexpected error: {e}")
+        print(f"[FAIL] [UNIQUIFY] Unexpected error: {e}")
         return None 

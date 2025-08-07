@@ -26,10 +26,10 @@ def show_task_accounts(task_id):
         accounts = task.accounts.all().order_by('id')
         
         if not accounts:
-            print("❌ Нет аккаунтов в задаче")
+            print("[FAIL] Нет аккаунтов в задаче")
             return
         
-        print(f"👥 Аккаунты в задаче ({accounts.count()}):")
+        print(f"[USERS] Аккаунты в задаче ({accounts.count()}):")
         print("-" * 60)
         
         for i, account_task in enumerate(accounts, 1):
@@ -39,9 +39,9 @@ def show_task_accounts(task_id):
             print(f"{i:2d}. ID: {account_task.id}")
             print(f"    👤 Username: {account.username}")
             print(f"    📊 Статус аккаунта: {account.status}")
-            print(f"    🔄 Статус задачи: {account_task.status}")
+            print(f"    [RETRY] Статус задачи: {account_task.status}")
             print(f"    🕐 Начало: {account_task.started_at or 'Не начато'}")
-            print(f"    ✅ Завершение: {account_task.completed_at or 'Не завершено'}")
+            print(f"    [OK] Завершение: {account_task.completed_at or 'Не завершено'}")
             
             if proxy:
                 print(f"    🌐 Прокси: {proxy.host}:{proxy.port} ({proxy.proxy_type})")
@@ -53,7 +53,7 @@ def show_task_accounts(task_id):
             account_logs = cache.get(cache_key, [])
             
             if account_logs:
-                print(f"    📝 Логи в кэше: {len(account_logs)} записей")
+                print(f"    [TEXT] Логи в кэше: {len(account_logs)} записей")
                 # Показываем последние 3 логи
                 for j, log in enumerate(account_logs[-3:], 1):
                     if isinstance(log, dict):
@@ -63,7 +63,7 @@ def show_task_accounts(task_id):
                     else:
                         print(f"       {j}. {str(log)[:80]}...")
             else:
-                print(f"    📝 Логи в кэше: Нет")
+                print(f"    [TEXT] Логи в кэше: Нет")
             
             # Показываем логи из базы данных
             if account_task.log:
@@ -91,9 +91,9 @@ def show_task_accounts(task_id):
         print(f"   Процент завершения: {(completed/total*100):.1f}%" if total > 0 else "0%")
         
     except BulkUploadTask.DoesNotExist:
-        print(f"❌ Задача с ID {task_id} не найдена")
+        print(f"[FAIL] Задача с ID {task_id} не найдена")
     except Exception as e:
-        print(f"❌ Ошибка: {str(e)}")
+        print(f"[FAIL] Ошибка: {str(e)}")
 
 def show_last_task():
     """Показать последнюю задачу"""
@@ -103,9 +103,9 @@ def show_last_task():
             print(f"🔍 Последняя задача: ID {last_task.id}")
             show_task_accounts(last_task.id)
         else:
-            print("❌ Нет bulk upload задач")
+            print("[FAIL] Нет bulk upload задач")
     except Exception as e:
-        print(f"❌ Ошибка: {str(e)}")
+        print(f"[FAIL] Ошибка: {str(e)}")
 
 def main():
     if len(sys.argv) > 1:
