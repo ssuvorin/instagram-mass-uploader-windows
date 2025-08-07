@@ -229,7 +229,7 @@ class WebLogger:
             LogCategories.DATABASE: '💾'
         }
         
-        emoji = category_emojis.get(category, '📋')
+        emoji = category_emojis.get(category, '[CLIPBOARD]')
         
         # Add level indicators
         level_indicators = {
@@ -585,7 +585,7 @@ def click_next_button(page, step_number):
             # Debug: log available buttons with semantic selectors instead of Instagram-specific classes
             try:
                 all_buttons = page.query_selector_all('button, div[role="button"], [role="button"], div[tabindex="0"]')
-                log_info(f"[UPLOAD] 🔍 Available clickable elements on page for step {step_number}:")
+                log_info(f"[UPLOAD] [SEARCH] Available clickable elements on page for step {step_number}:")
                 for i, btn in enumerate(all_buttons[:15]):  # Show first 15 elements
                     try:
                         btn_text = btn.text_content() or "no-text"
@@ -825,7 +825,7 @@ def detect_and_fill_email_field(page, email_login):
 def find_submit_button(page):
     """Find submit button using stable selectors"""
     try:
-        log_info("🔍 [SUBMIT_BTN] Looking for submit button...")
+        log_info("[SEARCH] [SUBMIT_BTN] Looking for submit button...")
         
         button = _find_element(page, InstagramSelectors.SUBMIT_BUTTONS)
         if button:
@@ -844,7 +844,7 @@ def find_submit_button(page):
 def find_verification_code_input(page):
     """Find verification code input field"""
     try:
-        log_info("🔍 [CODE_INPUT] Looking for verification code input field...")
+        log_info("[SEARCH] [CODE_INPUT] Looking for verification code input field...")
         time.sleep(random.uniform(1, 2))
         
         try:
@@ -854,7 +854,7 @@ def find_verification_code_input(page):
             
         is_verification_page = any(keyword in page_text.lower() for keyword in InstagramTexts.VERIFICATION_PAGE_KEYWORDS)
         
-        log_info(f"🔍 [CODE_INPUT] Verification page detected: {is_verification_page}")
+        log_info(f"[SEARCH] [CODE_INPUT] Verification page detected: {is_verification_page}")
         
         if is_verification_page:
             input_field = _find_element(page, InstagramSelectors.VERIFICATION_CODE_FIELDS)
@@ -976,7 +976,7 @@ def check_video_posted_successfully(page, video_file_path):
         # STRICT POLICY: If no explicit success indicators found, consider it a failure
         # This ensures COMPLETED status is only set when we can CONFIRM successful upload
         log_error(f"[UPLOAD] [FAIL] UPLOAD FAILED: No explicit success indicators found - cannot confirm video {os.path.basename(video_file_path)} was posted")
-        log_info(f"[UPLOAD] 🔍 Current page URL: {page.url}")
+        log_info(f"[UPLOAD] [SEARCH] Current page URL: {page.url}")
         
         return False
                 
@@ -1156,7 +1156,7 @@ def run_bulk_upload_task(task_id):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         update_task_status(task, TaskStatus.RUNNING, f"[{timestamp}] [START] Starting enhanced bulk upload task '{task.name}'\\n")
         
-        log_info(f"📋 [TASK_INFO] Task '{task.name}' - Processing {task.accounts.count()} accounts", LogCategories.TASK_INFO)
+        log_info(f"[CLIPBOARD] [TASK_INFO] Task '{task.name}' - Processing {task.accounts.count()} accounts", LogCategories.TASK_INFO)
         
         # Get all videos and titles for the task
         all_videos = get_all_task_videos(task)  # [OK] ВСЕ видео - будут переданы каждому аккаунту
@@ -1318,7 +1318,7 @@ def run_bulk_upload_task(task_id):
         # Update task with final status and log message
         update_task_status(task, final_status, final_log_message)
         
-        log_success(f"🎉 [TASK_COMPLETE] Task {task_id} completed with status: {final_status}", LogCategories.TASK_INFO)
+        log_success(f"[PARTY] [TASK_COMPLETE] Task {task_id} completed with status: {final_status}", LogCategories.TASK_INFO)
         
         # Generate web logger summary
         if web_logger:
@@ -1442,7 +1442,7 @@ def prepare_video_files(videos_for_account, account_task):
         log_info(f"Preparing and uniquifying video: {video_filename}")
         update_account_task(
             account_task,
-            log_message=f"[{timestamp}] 📋 Preparing and uniquifying video: {video_filename}\n"
+            log_message=f"[{timestamp}] [CLIPBOARD] Preparing and uniquifying video: {video_filename}\n"
         )
         
         try:
@@ -1601,7 +1601,7 @@ def run_dolphin_browser(account_details, videos, video_files_to_upload, result_q
                     return
         
         # Get profile with validation
-        log_info(f"📋 [DOLPHIN_PROFILE] Retrieving Dolphin profile for account: {username}", LogCategories.DOLPHIN)
+        log_info(f"[CLIPBOARD] [DOLPHIN_PROFILE] Retrieving Dolphin profile for account: {username}", LogCategories.DOLPHIN)
         dolphin_profile_id = get_dolphin_profile_id(username)
         if not dolphin_profile_id:
             error_msg = f"No Dolphin profile found for account: {username}"
@@ -1641,7 +1641,7 @@ def run_dolphin_browser(account_details, videos, video_files_to_upload, result_q
                     return
         
         # Pre-operation validation
-        log_info(f"🔍 [INSTAGRAM_PREP] Preparing Instagram operations for {len(video_files_to_upload)} videos", LogCategories.UPLOAD)
+        log_info(f"[SEARCH] [INSTAGRAM_PREP] Preparing Instagram operations for {len(video_files_to_upload)} videos", LogCategories.UPLOAD)
         
         # Perform Instagram operations with comprehensive monitoring
         operation_start_time = time.time()
@@ -1654,7 +1654,7 @@ def run_dolphin_browser(account_details, videos, video_files_to_upload, result_q
             success_rate = (uploaded_count / len(video_files_to_upload)) * 100 if video_files_to_upload else 0
             
             success_message = f"Successfully completed operations for account {username}: {uploaded_count}/{len(video_files_to_upload)} videos uploaded ({success_rate:.1f}% success rate) in {operation_duration:.1f}s"
-            log_success(f"🎉 [INSTAGRAM_SUCCESS] {success_message}", LogCategories.UPLOAD)
+            log_success(f"[PARTY] [INSTAGRAM_SUCCESS] {success_message}", LogCategories.UPLOAD)
             
             result_queue.put(("SUCCESS", success_message))
         else:
@@ -1902,7 +1902,7 @@ def handle_login_flow(page, account_details):
         time.sleep(3)  # Additional wait for page stability
         
         # Only check for reCAPTCHA before attempting login (it can appear on login page)
-        log_info("🔍 Checking for reCAPTCHA on login page...", LogCategories.CAPTCHA)
+        log_info("[SEARCH] Checking for reCAPTCHA on login page...", LogCategories.CAPTCHA)
         handle_recaptcha_if_present(page)
         log_success("[OK] reCAPTCHA handling completed", LogCategories.CAPTCHA)
         
@@ -1919,7 +1919,7 @@ def handle_login_flow(page, account_details):
         log_success("[OK] Login completed successfully", LogCategories.LOGIN)
         
         # NOW check for post-login verification requirements
-        log_info("🔍 Checking for phone verification requirement...", LogCategories.VERIFICATION)
+        log_info("[SEARCH] Checking for phone verification requirement...", LogCategories.VERIFICATION)
         phone_verification_result = check_for_phone_verification_page(page)
         
         if phone_verification_result.get('requires_phone_verification', False):
@@ -1927,7 +1927,7 @@ def handle_login_flow(page, account_details):
             raise Exception(f"PHONE_VERIFICATION_REQUIRED: {phone_verification_result.get('message', 'Phone verification required')}")
         
         # Check for human verification after login
-        log_info("🔍 Checking for human verification requirement...", LogCategories.VERIFICATION)
+        log_info("[SEARCH] Checking for human verification requirement...", LogCategories.VERIFICATION)
         human_verification_result = check_for_human_verification_dialog(page, account_details)
         
         if human_verification_result.get('requires_human_verification', False):
@@ -1935,7 +1935,7 @@ def handle_login_flow(page, account_details):
             raise Exception(f"HUMAN_VERIFICATION_REQUIRED: {human_verification_result.get('message', 'Human verification required')}")
         
         # Check for account suspension after login
-        log_info("🔍 Checking for account suspension...", LogCategories.VERIFICATION)
+        log_info("[SEARCH] Checking for account suspension...", LogCategories.VERIFICATION)
         suspension_result = check_for_account_suspension(page)
         
         if suspension_result.get('account_suspended', False):
@@ -1946,7 +1946,7 @@ def handle_login_flow(page, account_details):
             raise Exception(f"SUSPENDED: {suspension_message}")
         
         # Post-login reCAPTCHA check
-        log_info("🔍 Checking for post-login reCAPTCHA...", LogCategories.CAPTCHA)
+        log_info("[SEARCH] Checking for post-login reCAPTCHA...", LogCategories.CAPTCHA)
         handle_recaptcha_if_present(page)
         
         log_success("[OK] Login flow completed successfully", LogCategories.LOGIN)
@@ -2023,7 +2023,7 @@ def perform_instagram_login(page, account_details):
 def check_for_phone_verification_page(page):
     """Check if Instagram is showing phone verification page - Enhanced version"""
     try:
-        log_info("🔍 [PHONE_VERIFY] Starting phone verification check...", LogCategories.VERIFICATION)
+        log_info("[SEARCH] [PHONE_VERIFY] Starting phone verification check...", LogCategories.VERIFICATION)
         time.sleep(random.uniform(1, 2))
         
         # Get page text for analysis
@@ -2071,7 +2071,7 @@ def check_for_phone_verification_page(page):
 def check_for_human_verification_dialog(page, account_details=None):
     """Check if Instagram is showing the human verification dialog - Enhanced version"""
     try:
-        log_info("🔍 [HUMAN_VERIFY] Starting human verification check...", LogCategories.VERIFICATION)
+        log_info("[SEARCH] [HUMAN_VERIFY] Starting human verification check...", LogCategories.VERIFICATION)
         time.sleep(random.uniform(1, 2))
         
         # Get page text for analysis
@@ -2119,7 +2119,7 @@ def check_for_human_verification_dialog(page, account_details=None):
 def check_for_account_suspension(page):
     """Check if Instagram is showing account suspension message - Enhanced version with Russian and English detection"""
     try:
-        log_info("🔍 [SUSPENSION_CHECK] Starting account suspension check...", LogCategories.VERIFICATION)
+        log_info("[SEARCH] [SUSPENSION_CHECK] Starting account suspension check...", LogCategories.VERIFICATION)
         time.sleep(random.uniform(1, 2))
         
         # Get page text for analysis
@@ -2130,7 +2130,7 @@ def check_for_account_suspension(page):
             page_text = ""
             page_title = ""
         
-        log_info(f"🔍 [SUSPENSION_CHECK] Page title: '{page_title}'")
+        log_info(f"[SEARCH] [SUSPENSION_CHECK] Page title: '{page_title}'")
         
         # Comprehensive suspension keywords in Russian and English
         suspension_keywords = [
@@ -2337,7 +2337,7 @@ def send_critical_notification(task_id, message, notification_type='ERROR'):
         cache.set(notifications_key, existing_notifications, timeout=7200)  # 2 hours
         
         # Log the critical event
-        log_error(f"🚨 [CRITICAL_NOTIFICATION] {message}", LogCategories.VERIFICATION)
+        log_error(f"[ALERT] [CRITICAL_NOTIFICATION] {message}", LogCategories.VERIFICATION)
         
     except Exception as e:
         logger.error(f"Failed to send critical notification: {str(e)}")
@@ -2507,7 +2507,7 @@ def get_enhanced_video_delay(video_index, total_videos, account_fatigue_level=1.
 def determine_verification_type(page):
     """Determine the type of verification required with improved accuracy"""
     try:
-        log_info("🔍 [VERIFICATION_TYPE] Analyzing page to determine verification type...")
+        log_info("[SEARCH] [VERIFICATION_TYPE] Analyzing page to determine verification type...")
         
         # Get page content for analysis
         try:
@@ -2522,7 +2522,7 @@ def determine_verification_type(page):
         is_code_entry = any(keyword in page_text.lower() for keyword in InstagramTexts.CODE_ENTRY_KEYWORDS)
         is_non_email = any(keyword in page_text.lower() for keyword in InstagramTexts.NON_EMAIL_VERIFICATION_KEYWORDS)
         
-        log_info(f"🔍 [VERIFICATION_TYPE] Text analysis - Email: {is_email_verification}, Code: {is_code_entry}, Non-Email: {is_non_email}")
+        log_info(f"[SEARCH] [VERIFICATION_TYPE] Text analysis - Email: {is_email_verification}, Code: {is_code_entry}, Non-Email: {is_non_email}")
         
         # Check for specific form elements - UPDATED SELECTORS
         email_field_selectors = [
@@ -2558,7 +2558,7 @@ def determine_verification_type(page):
             try:
                 element = page.query_selector(selector)
                 if element and element.is_visible():
-                    log_info(f"🔍 [VERIFICATION_TYPE] Found email field: {selector}")
+                    log_info(f"[SEARCH] [VERIFICATION_TYPE] Found email field: {selector}")
                     email_field_found = True
                     break
             except:
@@ -2570,7 +2570,7 @@ def determine_verification_type(page):
             try:
                 element = page.query_selector(selector)
                 if element and element.is_visible():
-                    log_info(f"🔍 [VERIFICATION_TYPE] Found code field: {selector}")
+                    log_info(f"[SEARCH] [VERIFICATION_TYPE] Found code field: {selector}")
                     code_field_found = True
                     break
             except:
@@ -2578,23 +2578,23 @@ def determine_verification_type(page):
         
         # Determine verification type based on analysis
         if is_non_email:
-            log_info("🔍 [VERIFICATION_TYPE] Result: Non-email verification (2FA/Authenticator)")
+            log_info("[SEARCH] [VERIFICATION_TYPE] Result: Non-email verification (2FA/Authenticator)")
             return "authenticator"
         elif email_field_found and is_email_verification:
-            log_info("🔍 [VERIFICATION_TYPE] Result: Email field input required")
+            log_info("[SEARCH] [VERIFICATION_TYPE] Result: Email field input required")
             return "email_field"
         elif code_field_found and (is_email_verification or is_code_entry):
-            log_info("🔍 [VERIFICATION_TYPE] Result: Email verification code required")
+            log_info("[SEARCH] [VERIFICATION_TYPE] Result: Email verification code required")
             return "email_code"
         elif is_email_verification:
-            log_info("🔍 [VERIFICATION_TYPE] Result: Email verification (keywords found)")
+            log_info("[SEARCH] [VERIFICATION_TYPE] Result: Email verification (keywords found)")
             return "email_code"  # Default to code entry if email verification detected
         else:
-            log_info("🔍 [VERIFICATION_TYPE] Result: Unknown/No verification")
+            log_info("[SEARCH] [VERIFICATION_TYPE] Result: Unknown/No verification")
             return "unknown"
             
     except Exception as e:
-        log_error(f"🔍 [VERIFICATION_TYPE] Error determining verification type: {str(e)}")
+        log_error(f"[SEARCH] [VERIFICATION_TYPE] Error determining verification type: {str(e)}")
         return "unknown"
 
 def handle_cookie_consent(page):

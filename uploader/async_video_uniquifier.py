@@ -189,7 +189,7 @@ class AsyncVideoUniquifier:
     def _get_video_duration(self, video_path: str) -> float:
         """Получить длительность видео"""
         try:
-            print(f"🔍 [UNIQUIFY] Getting video duration for: {os.path.basename(video_path)}")
+            print(f"[SEARCH] [UNIQUIFY] Getting video duration for: {os.path.basename(video_path)}")
             result = subprocess.run([
                 "ffprobe", "-v", "error", "-show_entries", "format=duration", 
                 "-of", "default=noprint_wrappers=1:nokey=1", video_path
@@ -254,7 +254,7 @@ class AsyncVideoUniquifier:
             zoom_duration = random.uniform(0.5, 2.0)
             # Убираем enable параметр так как zoompan его не поддерживает
             filters.append(f"zoompan=z='zoom+{zoom_value-1}':d={int(zoom_duration*25)}:s={video_w}x{video_h}")
-            print(f"🔍 [UNIQUIFY] Added zoom/pan filter: zoom={zoom_value:.3f}, duration={zoom_duration:.1f}s")
+            print(f"[SEARCH] [UNIQUIFY] Added zoom/pan filter: zoom={zoom_value:.3f}, duration={zoom_duration:.1f}s")
         
         # Масштабирование и padding
         filters.append(f"scale={video_w}:{video_h}:force_original_aspect_ratio=decrease,pad={video_w}:{video_h}:(ow-iw)/2:(oh-ih)/2:black,setsar=1")
@@ -274,7 +274,7 @@ class AsyncVideoUniquifier:
         
         # Добавляем эмодзи
         if config.emoji_enabled:
-            emoji_list = ['🦁', '🌟', '🔥', '🎉', '⭐']
+            emoji_list = ['🦁', '🌟', '🔥', '[PARTY]', '⭐']
             num_emojis = random.randint(1, 3)
             for _ in range(num_emojis):
                 emoji = random.choice(emoji_list)

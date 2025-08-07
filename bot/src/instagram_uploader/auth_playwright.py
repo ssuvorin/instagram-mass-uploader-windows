@@ -21,7 +21,7 @@ def verify_ip_address(page):
     Verify the current IP address by visiting an IP checking service
     """
     try:
-        logger.info("🔍 Проверка текущего IP-адреса...")
+        logger.info("[SEARCH] Проверка текущего IP-адреса...")
         page.goto("https://api.ipify.org")
         ip_text = page.content()
         
@@ -97,7 +97,7 @@ class Auth:
             if not browser_data:
                 logger.info("[RETRY] Инициализация браузера...")
                 self.browser_data = get_browser(headless=False, proxy=self.proxy)
-                logger.info("🔍 Браузер запущен в видимом режиме")
+                logger.info("[SEARCH] Браузер запущен в видимом режиме")
             else:
                 self.browser_data = browser_data
                 logger.info("[RETRY] Используем существующий браузер")
@@ -128,14 +128,14 @@ class Auth:
             logger.info(f'👤 Авторизация аккаунта {username} через логин и пароль')
 
             # Handle cookies dialog if present
-            logger.info("🔍 Проверка наличия диалога о cookies...")
+            logger.info("[SEARCH] Проверка наличия диалога о cookies...")
             self._click_cookies()
             logger.info("[WAIT] Дополнительное ожидание после обработки cookies...")
             random_delay()
 
             # Check if we need to click login button to get to login page
             try:
-                logger.info("🔍 Поиск кнопки логина...")
+                logger.info("[SEARCH] Поиск кнопки логина...")
                 login_button = self.page.locator("xpath=" + config['selectors']['login']['log_in_btn'])
                 if login_button.is_visible(timeout=config['implicitly_wait'] * 1000):
                     logger.info("👆 Нажатие кнопки логина")
@@ -144,7 +144,7 @@ class Auth:
                     random_delay()
                 else:
                     # Попробуем найти альтернативную кнопку логина
-                    logger.info("🔍 Поиск альтернативной кнопки логина...")
+                    logger.info("[SEARCH] Поиск альтернативной кнопки логина...")
                     alt_login_button = self.page.locator("xpath=" + config['selectors']['login']['alternate_log_in_btn'])
                     if alt_login_button.is_visible(timeout=config['implicitly_wait'] * 1000):
                         logger.info("👆 Нажатие альтернативной кнопки логина")
@@ -156,7 +156,7 @@ class Auth:
                 pass
 
             # Fill in username with realistic typing
-            logger.info("🔍 Поиск поля для ввода имени пользователя...")
+            logger.info("[SEARCH] Поиск поля для ввода имени пользователя...")
             username_field = self.page.locator("xpath=" + config['selectors']['login']['username_field'])
             logger.info("[WAIT] Ожидание появления поля для имени пользователя...")
             username_field.wait_for(state="visible", timeout=config['explicit_wait'] * 1000)
@@ -166,7 +166,7 @@ class Auth:
             realistic_type(self.page, "xpath=" + config['selectors']['login']['username_field'], username)
 
             # Fill in password with realistic typing
-            logger.info("🔍 Поиск поля для ввода пароля...")
+            logger.info("[SEARCH] Поиск поля для ввода пароля...")
             password_field = self.page.locator("xpath=" + config['selectors']['login']['password_field'])
             logger.info("[WAIT] Ожидание появления поля для пароля...")
             password_field.wait_for(state="visible", timeout=config['explicit_wait'] * 1000)
@@ -176,7 +176,7 @@ class Auth:
             realistic_type(self.page, "xpath=" + config['selectors']['login']['password_field'], password)
 
             # Проверим, активна ли кнопка входа
-            logger.info("🔍 Проверка активности кнопки входа")
+            logger.info("[SEARCH] Проверка активности кнопки входа")
             login_button = self.page.locator("xpath=" + config['selectors']['login']['login_button'])
             logger.info("[WAIT] Ожидание появления кнопки входа...")
             login_button.wait_for(state="visible", timeout=config['explicit_wait'] * 1000)
@@ -193,7 +193,7 @@ class Auth:
                 random_delay("major")
             else:
                 # Попробуем найти альтернативную кнопку входа
-                logger.info("🔍 Поиск альтернативной кнопки входа...")
+                logger.info("[SEARCH] Поиск альтернативной кнопки входа...")
                 alt_login_button = self.page.locator("xpath=" + config['selectors']['login']['alternate_login_button'])
                 if alt_login_button.is_visible(timeout=config['implicitly_wait'] * 1000):
                     logger.info("👆 Нажатие альтернативной кнопки входа")
@@ -210,7 +210,7 @@ class Auth:
             
             # Check for verification code requirement
             try:
-                logger.info("🔍 Проверка, требуется ли код верификации...")
+                logger.info("[SEARCH] Проверка, требуется ли код верификации...")
                 code_field = self.page.locator("xpath=" + config['selectors']['login']['email_code_field'])
                 if code_field.is_visible(timeout=config['implicitly_wait'] * 1000):
                     logger.info('✉️ Требуется код подтверждения. Проверка почты...')
@@ -241,7 +241,7 @@ class Auth:
                 pass
 
             # Check for account suspension
-            logger.info("🔍 Проверка на блокировку аккаунта...")
+            logger.info("[SEARCH] Проверка на блокировку аккаунта...")
             current_url = self.page.url
             if 'suspended' in current_url:
                 logger.error(f'[FAIL] Аккаунт {username} заблокирован. Прерывание.')
@@ -252,7 +252,7 @@ class Auth:
             self._handle_save_login_info()
 
             # Check for TFA (Two-Factor Authentication)
-            logger.info("🔍 Проверка, требуется ли двухфакторная аутентификация...")
+            logger.info("[SEARCH] Проверка, требуется ли двухфакторная аутентификация...")
             try:
                 if any(marker in self.page.url for marker in ['challenge', 'twofactor', 'checkpoint']):
                     logger.info("🔐 Двухфакторная аутентификация требуется")
@@ -335,7 +335,7 @@ class Auth:
                     
                     return True
                 else:
-                    logger.info("🔍 Кнопка нового поста не найдена, пробуем другие методы проверки...")
+                    logger.info("[SEARCH] Кнопка нового поста не найдена, пробуем другие методы проверки...")
                     
                     # Check if we are on the home page
                     current_url = self.page.url
@@ -370,7 +370,7 @@ class Auth:
         """
         try:
             self.browser_data = get_browser(headless=False, proxy=self.proxy)
-            logger.info("🔍 Браузер запущен в видимом режиме")
+            logger.info("[SEARCH] Браузер запущен в видимом режиме")
             
             self.page = get_page(self.browser_data)
             
@@ -396,7 +396,7 @@ class Auth:
                 return self.login_with_username_and_password()
                 
             # Check for post button to verify successful login
-            logger.info("🔍 Проверка успешности входа...")
+            logger.info("[SEARCH] Проверка успешности входа...")
             new_post_button = self.page.locator("xpath=" + config['selectors']['upload']['new_post_button'])
             if new_post_button.is_visible(timeout=config['implicitly_wait'] * 1000):
                 logger.info("[OK] Успешный вход в Instagram через cookies")
@@ -412,7 +412,7 @@ class Auth:
     def _click_cookies(self):
         """Handle cookie dialogs"""
         try:
-            logger.info("🔍 Поиск диалога о cookies...")
+            logger.info("[SEARCH] Поиск диалога о cookies...")
             accept_cookies = self.page.locator("xpath=" + config['selectors']['register']['accept_cookies'])
             
             if accept_cookies.is_visible(timeout=config['implicitly_wait'] * 1000):
@@ -438,7 +438,7 @@ class Auth:
     def _handle_save_login_info(self):
         """Handle 'Save Login Info' dialogs"""
         try:
-            logger.info("🔍 Поиск диалога сохранения информации для входа...")
+            logger.info("[SEARCH] Поиск диалога сохранения информации для входа...")
             save_button = self.page.locator("xpath=" + config['selectors']['login']['save_session_button'])
             
             if save_button.is_visible(timeout=config['implicitly_wait'] * 1000):

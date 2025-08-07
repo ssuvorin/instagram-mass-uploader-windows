@@ -175,27 +175,27 @@ class DolphinBrowser:
         dialog_type = dialog.type
         dialog_message = dialog.message
         
-        logger.info(f"🔔 Dialog appeared: {dialog_type} - {dialog_message}")
+        logger.info(f"[BELL] Dialog appeared: {dialog_type} - {dialog_message}")
         
         # Default behavior: accept alerts and confirms, dismiss prompts
         if dialog_type == "alert":
-            logger.info("🔔 Automatically accepting alert dialog")
+            logger.info("[BELL] Automatically accepting alert dialog")
             dialog.accept()
         elif dialog_type == "confirm":
             # Randomly accept or dismiss confirms to mimic human behavior
             if random.random() > 0.3:  # 70% chance to accept
-                logger.info("🔔 Automatically accepting confirm dialog (70% chance)")
+                logger.info("[BELL] Automatically accepting confirm dialog (70% chance)")
                 dialog.accept()
             else:
-                logger.info("🔔 Automatically dismissing confirm dialog (30% chance)")
+                logger.info("[BELL] Automatically dismissing confirm dialog (30% chance)")
                 dialog.dismiss()
         elif dialog_type == "prompt":
             # Dismiss prompts by default
-            logger.info("🔔 Automatically dismissing prompt dialog")
+            logger.info("[BELL] Automatically dismissing prompt dialog")
             dialog.dismiss()
         elif dialog_type == "beforeunload":
             # For page unload confirmations, usually accept
-            logger.info("🔔 Automatically accepting beforeunload dialog")
+            logger.info("[BELL] Automatically accepting beforeunload dialog")
             dialog.accept()
             
     def close(self):

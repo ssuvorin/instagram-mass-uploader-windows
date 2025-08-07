@@ -256,7 +256,7 @@ class CropHandler:
     def _debug_available_buttons(self):
         """Debug function to show available crop-related buttons"""
         try:
-            log_info("🔍 [CROP_DEBUG] Searching for all buttons with crop-related content...")
+            log_info("[SEARCH] [CROP_DEBUG] Searching for all buttons with crop-related content...")
             
             # Find all buttons
             all_buttons = self.page.query_selector_all('button, div[role="button"]')
@@ -299,14 +299,14 @@ class CropHandler:
                     continue
             
             if crop_related:
-                log_info(f"🔍 [CROP_DEBUG] Found {len(crop_related)} crop-related buttons:")
+                log_info(f"[SEARCH] [CROP_DEBUG] Found {len(crop_related)} crop-related buttons:")
                 for i, btn in enumerate(crop_related):
-                    log_info(f"🔍 [CROP_DEBUG] Button {i+1}: text='{btn['text']}', aria='{btn['aria_label']}', classes='{btn['classes'][:50]}...'")
+                    log_info(f"[SEARCH] [CROP_DEBUG] Button {i+1}: text='{btn['text']}', aria='{btn['aria_label']}', classes='{btn['classes'][:50]}...'")
             else:
-                log_warning("🔍 [CROP_DEBUG] No crop-related buttons found")
+                log_warning("[SEARCH] [CROP_DEBUG] No crop-related buttons found")
                 
         except Exception as e:
-            log_warning(f"🔍 [CROP_DEBUG] Debug failed: {str(e)}")
+            log_warning(f"[SEARCH] [CROP_DEBUG] Debug failed: {str(e)}")
     
     def _select_original_aspect_ratio(self):
         """Select the 'Оригинал' (Original) aspect ratio option - IMPROVED for dynamic selectors"""

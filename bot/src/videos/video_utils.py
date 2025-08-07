@@ -13,7 +13,7 @@ def get_videos_list(video_dir):
     Returns:
         List of absolute paths to video files
     """
-    logger.info(f"🔍 Searching for videos in directory: {video_dir}")
+    logger.info(f"[SEARCH] Searching for videos in directory: {video_dir}")
     
     video_extensions = ['.mp4', '.mov', '.avi', '.mkv', '.webm']
     videos = []
@@ -43,7 +43,7 @@ def get_videos_by_folders(root_dir):
     Returns:
         Dictionary with folder names as keys and lists of video paths as values
     """
-    logger.info(f"🔍 Searching for videos in subdirectories of: {root_dir}")
+    logger.info(f"[SEARCH] Searching for videos in subdirectories of: {root_dir}")
     
     videos_by_folder = {}
     

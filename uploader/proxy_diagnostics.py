@@ -51,7 +51,7 @@ def diagnose_account_proxy(account_id: int) -> Dict:
         }
         
         # Тестируем прокси
-        print(f"🔍 Testing proxy for account {account.username}...")
+        print(f"[SEARCH] Testing proxy for account {account.username}...")
         is_valid, message, geo_info = validate_proxy(
             host=proxy.host,
             port=proxy.port,
@@ -289,13 +289,13 @@ def main():
         return
     
     if args.account_id:
-        print(f"🔍 Diagnosing proxy for account {args.account_id}...")
+        print(f"[SEARCH] Diagnosing proxy for account {args.account_id}...")
         result = diagnose_account_proxy(args.account_id)
     elif args.profile_id:
-        print(f"🔍 Diagnosing proxy for Dolphin profile {args.profile_id}...")
+        print(f"[SEARCH] Diagnosing proxy for Dolphin profile {args.profile_id}...")
         result = diagnose_dolphin_profile_proxy(args.profile_id)
     elif args.all:
-        print("🔍 Diagnosing proxies for all accounts with Dolphin profiles...")
+        print("[SEARCH] Diagnosing proxies for all accounts with Dolphin profiles...")
         result = diagnose_all_accounts_with_dolphin_profiles()
     
     if args.json:
@@ -311,7 +311,7 @@ def main():
             print(f"  Proxy working: {result['summary']['proxy_working']}")
             print(f"  Proxy failing: {result['summary']['proxy_failing']}")
             
-            print(f"\n📋 Account Details:")
+            print(f"\n[CLIPBOARD] Account Details:")
             for acc in result['accounts']:
                 if acc.get('error'):
                     print(f"  [FAIL] {acc['username']} (ID: {acc['account_id']}): {acc['error']}")
@@ -326,7 +326,7 @@ def main():
             if result.get('error'):
                 print(f"[FAIL] Error: {result['error']}")
             else:
-                print(f"\n📋 Account: {result['username']} (ID: {result['account_id']})")
+                print(f"\n[CLIPBOARD] Account: {result['username']} (ID: {result['account_id']})")
                 print(f"🐬 Dolphin Profile: {result['dolphin_profile_id']}")
                 
                 if result['proxy_assigned']:

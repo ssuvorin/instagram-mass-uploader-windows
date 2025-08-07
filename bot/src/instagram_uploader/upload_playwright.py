@@ -46,11 +46,11 @@ class Upload:
         
         try:
             # Find and click the new post button - используем несколько методов поиска
-            logger.info('🔍 Поиск кнопки нового поста...')
+            logger.info('[SEARCH] Поиск кнопки нового поста...')
             
             # Метод 1: Стандартный XPath из конфига
             try:
-                logger.info('🔍 Поиск кнопки нового поста по стандартному XPath...')
+                logger.info('[SEARCH] Поиск кнопки нового поста по стандартному XPath...')
                 new_post_button = page.locator("xpath=" + config['selectors']['upload']['new_post_button'])
                 if new_post_button.is_visible(timeout=config['implicitly_wait'] * 1000):
                     logger.info('👆 Нажатие кнопки нового поста (стандартный XPath)')
@@ -64,7 +64,7 @@ class Upload:
                 
                 # Метод 2: Поиск по роли и имени кнопки
                 try:
-                    logger.info('🔍 Поиск кнопки нового поста по роли...')
+                    logger.info('[SEARCH] Поиск кнопки нового поста по роли...')
                     create_button = page.get_by_role("button", name="Create")
                     if create_button.is_visible(timeout=config['implicitly_wait'] * 1000):
                         logger.info('👆 Нажатие кнопки Create (по роли)')
@@ -78,7 +78,7 @@ class Upload:
                     
                     # Метод 3: Поиск по aria-label
                     try:
-                        logger.info('🔍 Поиск кнопки нового поста по aria-label...')
+                        logger.info('[SEARCH] Поиск кнопки нового поста по aria-label...')
                         create_aria_button = page.locator('[aria-label="New post"]')
                         if create_aria_button.is_visible(timeout=config['implicitly_wait'] * 1000):
                             logger.info('👆 Нажатие кнопки с aria-label="New post"')
@@ -92,7 +92,7 @@ class Upload:
                         
                         # Метод 4: Поиск по SVG иконке
                         try:
-                            logger.info('🔍 Поиск кнопки нового поста по SVG иконке...')
+                            logger.info('[SEARCH] Поиск кнопки нового поста по SVG иконке...')
                             create_svg = page.locator('svg[aria-label="New post"]')
                             if create_svg.is_visible(timeout=config['implicitly_wait'] * 1000):
                                 logger.info('👆 Нажатие на SVG иконку New post')
@@ -107,7 +107,7 @@ class Upload:
                             
                             # Метод 5: Поиск по тексту "Create" на странице
                             try:
-                                logger.info('🔍 Поиск текста "Create" на странице...')
+                                logger.info('[SEARCH] Поиск текста "Create" на странице...')
                                 create_text = page.get_by_text("Create", exact=True)
                                 if create_text.is_visible(timeout=config['implicitly_wait'] * 1000):
                                     logger.info('👆 Нажатие на текст "Create"')
@@ -121,7 +121,7 @@ class Upload:
                                 
                                 # Метод 6: Прямой переход на URL создания поста
                                 try:
-                                    logger.info('🔍 Пробуем прямой переход на URL создания поста...')
+                                    logger.info('[SEARCH] Пробуем прямой переход на URL создания поста...')
                                     page.goto("https://www.instagram.com/create/select/")
                                     logger.info('[WAIT] Ожидание после перехода на URL создания поста...')
                                     time.sleep(5)
@@ -131,7 +131,7 @@ class Upload:
             
             # Check for alternate post button
             try:
-                logger.info('🔍 Проверка наличия альтернативной кнопки поста...')
+                logger.info('[SEARCH] Проверка наличия альтернативной кнопки поста...')
                 alternate_post_button = page.locator("xpath=" + config['selectors']['upload']['alternate_post_button'])
                 if alternate_post_button.is_visible(timeout=config['implicitly_wait'] * 1000):
                     logger.info('👆 Нажатие альтернативной кнопки поста')
@@ -147,14 +147,14 @@ class Upload:
             
             # Try to find and click "Select from device" button if it appears
             try:
-                logger.info('🔍 Поиск кнопки "Select from device"...')
+                logger.info('[SEARCH] Поиск кнопки "Select from device"...')
                 select_from_device = page.get_by_role("button", name="Select from device")
                 
                 if select_from_device.is_visible(timeout=config['implicitly_wait'] * 1000):
                     logger.info('🔎 Кнопка "Select from device" найдена')
                     
                     # Вместо клика по кнопке, находим скрытый input[type="file"] и загружаем через него
-                    logger.info('🔍 Поиск скрытого элемента загрузки файла...')
+                    logger.info('[SEARCH] Поиск скрытого элемента загрузки файла...')
                     upload_input = page.locator("input[type='file']")
                     
                     # Проверяем, что элемент существует
@@ -171,7 +171,7 @@ class Upload:
                         time.sleep(3)
                         
                         # После клика пробуем найти input снова
-                        logger.info('🔍 Повторный поиск элемента загрузки файла...')
+                        logger.info('[SEARCH] Повторный поиск элемента загрузки файла...')
                         upload_input = page.locator("input[type='file']")
                         if upload_input.count() > 0:
                             logger.info(f'📤 Загрузка файла после клика: {video}')
@@ -186,7 +186,7 @@ class Upload:
                 logger.info(f'[WARN] Кнопка "Select from device" не найдена, продолжаем: {str(e)}')
                 
                 # Стандартный метод загрузки файла
-                logger.info('🔍 Поиск стандартного элемента загрузки файла...')
+                logger.info('[SEARCH] Поиск стандартного элемента загрузки файла...')
                 upload_input = page.locator("input[type='file']")
                 logger.info('[WAIT] Ожидание появления элемента загрузки файла...')
                 upload_input.wait_for(state="attached", timeout=config['explicit_wait'] * 1000)
@@ -197,7 +197,7 @@ class Upload:
             
             # Check for confirmation dialog
             try:
-                logger.info('🔍 Проверка диалога подтверждения...')
+                logger.info('[SEARCH] Проверка диалога подтверждения...')
                 ok_button = page.locator("xpath=" + config['selectors']['upload']['OK'])
                 if ok_button.is_visible(timeout=config['implicitly_wait'] * 1000):
                     logger.info('👆 Нажатие кнопки OK')
@@ -213,7 +213,7 @@ class Upload:
             
             # Попытка найти элемент выбора кадрирования несколькими способами
             try:
-                logger.info('🔍 Поиск элемента выбора кадрирования...')
+                logger.info('[SEARCH] Поиск элемента выбора кадрирования...')
                 
                 # Метод 1: по XPath из конфига
                 try:
@@ -231,7 +231,7 @@ class Upload:
                     
                     # Метод 2: по тексту "Select crop"
                     try:
-                        logger.info('🔍 Поиск элемента выбора кадрирования по тексту...')
+                        logger.info('[SEARCH] Поиск элемента выбора кадрирования по тексту...')
                         select_crop_text = page.get_by_text("Select crop", exact=False)
                         if select_crop_text.is_visible(timeout=config['implicitly_wait'] * 1000):
                             logger.info('👆 Открытие меню кадрирования (по тексту)')
@@ -245,7 +245,7 @@ class Upload:
                         
                         # Метод 3: по роли кнопки
                         try:
-                            logger.info('🔍 Поиск элемента выбора кадрирования по роли...')
+                            logger.info('[SEARCH] Поиск элемента выбора кадрирования по роли...')
                             select_crop_button = page.get_by_role("button", name="Select crop")
                             if select_crop_button.is_visible(timeout=config['implicitly_wait'] * 1000):
                                 logger.info('👆 Открытие меню кадрирования (по роли)')
@@ -266,7 +266,7 @@ class Upload:
                             raise Exception("Пропускаем настройку кадрирования")
                 
                 # Поиск опции оригинального кадрирования
-                logger.info('🔍 Поиск опции оригинального кадрирования...')
+                logger.info('[SEARCH] Поиск опции оригинального кадрирования...')
                 
                 # Метод 1: по XPath из конфига
                 try:
@@ -284,7 +284,7 @@ class Upload:
                     
                     # Метод 2: по тексту "Original"
                     try:
-                        logger.info('🔍 Поиск опции оригинального кадрирования по тексту...')
+                        logger.info('[SEARCH] Поиск опции оригинального кадрирования по тексту...')
                         original_crop_text = page.get_by_text("Original", exact=True)
                         if original_crop_text.is_visible(timeout=config['implicitly_wait'] * 1000):
                             logger.info('👆 Выбор оригинального кадрирования (по тексту)')
@@ -298,7 +298,7 @@ class Upload:
                         
                         # Метод 3: по роли опции
                         try:
-                            logger.info('🔍 Поиск опции оригинального кадрирования по роли...')
+                            logger.info('[SEARCH] Поиск опции оригинального кадрирования по роли...')
                             original_crop_option = page.get_by_role("option", name="Original")
                             if original_crop_option.is_visible(timeout=config['implicitly_wait'] * 1000):
                                 logger.info('👆 Выбор оригинального кадрирования (по роли)')
@@ -336,7 +336,7 @@ class Upload:
             # Add description
             logger.info(f'[TEXT] Ввод описания: {title}')
             try:
-                logger.info('🔍 Поиск поля для ввода описания...')
+                logger.info('[SEARCH] Поиск поля для ввода описания...')
                 description_field = page.locator("xpath=" + config['selectors']['upload']['description_field'])
                 logger.info('[WAIT] Ожидание появления поля для ввода описания...')
                 description_field.wait_for(state="visible", timeout=config['implicitly_wait'] * 1000)
@@ -349,14 +349,14 @@ class Upload:
             # Add location if specified
             if location:
                 logger.info(f'[LOCATION] Ввод локации: {location}')
-                logger.info('🔍 Поиск поля для ввода локации...')
+                logger.info('[SEARCH] Поиск поля для ввода локации...')
                 location_field = page.locator("xpath=" + config['selectors']['upload']['location_field'])
                 logger.info('[WAIT] Ожидание появления поля для ввода локации...')
                 location_field.wait_for(state="visible", timeout=config['implicitly_wait'] * 1000)
                 logger.info('⌨️ Ввод текста локации...')
                 realistic_type(page, "xpath=" + config['selectors']['upload']['location_field'], location)
                 
-                logger.info('🔍 Поиск подходящей локации в выпадающем списке...')
+                logger.info('[SEARCH] Поиск подходящей локации в выпадающем списке...')
                 first_location = page.locator("xpath=" + config['selectors']['upload']['first_location'])
                 logger.info('[WAIT] Ожидание появления локации в списке...')
                 first_location.wait_for(state="visible", timeout=config['explicit_wait'] * 1000)
@@ -370,14 +370,14 @@ class Upload:
                 logger.info(f'[USERS] Добавление упоминаний: {", ".join(mentions)}')
                 for mention in mentions:
                     logger.info(f'➕ Добавление упоминания: {mention}')
-                    logger.info('🔍 Поиск поля для ввода упоминания...')
+                    logger.info('[SEARCH] Поиск поля для ввода упоминания...')
                     mention_field = page.locator("xpath=" + config['selectors']['upload']['mentions_field'])
                     logger.info('⌨️ Ввод имени пользователя для упоминания...')
                     mention_field.fill(mention)
                     logger.info('[WAIT] Ожидание после ввода имени пользователя...')
                     time.sleep(3)
                     
-                    logger.info('🔍 Поиск пользователя для упоминания в выпадающем списке...')
+                    logger.info('[SEARCH] Поиск пользователя для упоминания в выпадающем списке...')
                     first_mention = page.locator("xpath=" + config['selectors']['upload']['first_mention'].format(mention))
                     logger.info('[WAIT] Ожидание появления пользователя в списке...')
                     first_mention.wait_for(state="visible", timeout=config['explicit_wait'] * 1000)
@@ -387,7 +387,7 @@ class Upload:
                     time.sleep(2)
                 
                 logger.info('[OK] Завершение добавления упоминаний')
-                logger.info('🔍 Поиск кнопки "Готово"...')
+                logger.info('[SEARCH] Поиск кнопки "Готово"...')
                 done_btn = page.locator("xpath=" + config['selectors']['upload']['done_mentions'])
                 logger.info('👆 Нажатие кнопки "Готово"')
                 done_btn.click()
@@ -396,7 +396,7 @@ class Upload:
             
             # Post the video
             logger.info('[START] Публикация видео...')
-            logger.info('🔍 Поиск кнопки публикации видео...')
+            logger.info('[SEARCH] Поиск кнопки публикации видео...')
             post_video_button = page.locator("xpath=" + config['selectors']['upload']['post_video'])
             logger.info('👆 Нажатие кнопки публикации')
             post_video_button.click()
@@ -426,13 +426,13 @@ class Upload:
 
     def _next_page(self):
         """Click the next button during video upload"""
-        logger.info('🔍 Поиск кнопки "Далее"...')
+        logger.info('[SEARCH] Поиск кнопки "Далее"...')
         time.sleep(5)  # Увеличиваем время ожидания перед поиском кнопки
         
         # Попробуем несколько способов найти кнопку Next
         try:
             # Метод 1: по XPath из конфига
-            logger.info('🔍 Поиск кнопки "Далее" по XPath...')
+            logger.info('[SEARCH] Поиск кнопки "Далее" по XPath...')
             next_button = self.page.locator("xpath=" + config['selectors']['upload']['next'])
             if next_button.is_visible(timeout=config['implicitly_wait'] * 1000):
                 logger.info('👆 Нажатие кнопки "Далее" (XPath)')
@@ -445,7 +445,7 @@ class Upload:
         
         # Метод 2: по тексту
         try:
-            logger.info('🔍 Поиск кнопки "Далее" по тексту...')
+            logger.info('[SEARCH] Поиск кнопки "Далее" по тексту...')
             next_button_text = self.page.get_by_text("Next", exact=True)
             if next_button_text.is_visible(timeout=config['implicitly_wait'] * 1000):
                 logger.info('👆 Нажатие кнопки "Далее" (по тексту)')
@@ -458,7 +458,7 @@ class Upload:
         
         # Метод 3: по роли кнопки
         try:
-            logger.info('🔍 Поиск кнопки "Далее" по роли...')
+            logger.info('[SEARCH] Поиск кнопки "Далее" по роли...')
             next_button_role = self.page.get_by_role("button", name="Next")
             if next_button_role.is_visible(timeout=config['implicitly_wait'] * 1000):
                 logger.info('👆 Нажатие кнопки "Далее" (по роли)')
@@ -471,7 +471,7 @@ class Upload:
         
         # Метод 4: по атрибуту aria-label
         try:
-            logger.info('🔍 Поиск кнопки "Далее" по aria-label...')
+            logger.info('[SEARCH] Поиск кнопки "Далее" по aria-label...')
             next_button_aria = self.page.locator('[aria-label="Next"]')
             if next_button_aria.is_visible(timeout=config['implicitly_wait'] * 1000):
                 logger.info('👆 Нажатие кнопки "Далее" (по aria-label)')
@@ -484,7 +484,7 @@ class Upload:
         
         # Если все методы не сработали, пробуем нажать Tab и Enter
         try:
-            logger.info('🔍 Попытка использования клавиатуры для перехода к следующему шагу...')
+            logger.info('[SEARCH] Попытка использования клавиатуры для перехода к следующему шагу...')
             # Нажимаем Tab несколько раз, чтобы переместиться к кнопке Next
             for _ in range(5):
                 self.page.keyboard.press("Tab")
@@ -503,7 +503,7 @@ class Upload:
         """Upload multiple videos"""
         success = True
         
-        logger.info(f'📋 Начинаем загрузку {len(videos)} видео')
+        logger.info(f'[CLIPBOARD] Начинаем загрузку {len(videos)} видео')
         
         for i, video in enumerate(videos):
             try:

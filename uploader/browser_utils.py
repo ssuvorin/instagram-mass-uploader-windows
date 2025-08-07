@@ -309,7 +309,7 @@ class DebugUtils:
             else:
                 elements = page.query_selector_all(selector_type)
             
-            log_info(f"[DEBUG] 🔍 Found {len(elements)} elements of type '{selector_type}'")
+            log_info(f"[DEBUG] [SEARCH] Found {len(elements)} elements of type '{selector_type}'")
             
             for i, element in enumerate(elements[:10]):  # Limit to first 10
                 try:

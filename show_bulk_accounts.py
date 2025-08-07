@@ -18,7 +18,7 @@ def show_task_accounts(task_id):
     """Показать все аккаунты в задаче"""
     try:
         task = BulkUploadTask.objects.get(id=task_id)
-        print(f"📋 Задача: {task.name} (ID: {task.id})")
+        print(f"[CLIPBOARD] Задача: {task.name} (ID: {task.id})")
         print(f"   Статус: {task.status}")
         print(f"   Создана: {task.created_at}")
         print("=" * 60)
@@ -100,7 +100,7 @@ def show_last_task():
     try:
         last_task = BulkUploadTask.objects.order_by('-created_at').first()
         if last_task:
-            print(f"🔍 Последняя задача: ID {last_task.id}")
+            print(f"[SEARCH] Последняя задача: ID {last_task.id}")
             show_task_accounts(last_task.id)
         else:
             print("[FAIL] Нет bulk upload задач")

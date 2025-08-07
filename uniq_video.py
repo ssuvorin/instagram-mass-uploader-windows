@@ -334,7 +334,7 @@ class VideoProcessor(QWidget):
                     self.log_output.append(f"Добавлен {'анимированный' if self.text_checkbox.isChecked() else 'статичный'} текст: '{safe_text}' в позицию ({x}, {y}), цвет={text_color}, позиция={pos}")
 
         if self.emoji_checkbox.isChecked():
-            emoji_list = ['🦁', '🌟', '🔥', '🎉', '⭐']
+            emoji_list = ['🦁', '🌟', '🔥', '[PARTY]', '⭐']
             num_emojis = random.randint(1, 3)
             emoji_filters = []
             emoji_fontfile = "fonts/NotoColorEmoji.ttf"

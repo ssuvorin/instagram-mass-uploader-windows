@@ -50,7 +50,7 @@ def safe_log_message(message):
     try:
         # Expanded emoji replacements for comprehensive coverage
         emoji_replacements = {
-            '🔍': '[SEARCH]',
+            '[SEARCH]': '[SEARCH]',
             '[OK]': '[SUCCESS]',
             '[FAIL]': '[ERROR]',
             '[START]': '[START]',
@@ -64,7 +64,7 @@ def safe_log_message(message):
             '[TEXT]': '[TEXT]',
             '⬅️': '[BACK]',
             '🗂️': '[TABS]',
-            '📋': '[LIST]',
+            '[CLIPBOARD]': '[LIST]',
             '[DELETE]': '[DELETE]',
             '[TOOL]': '[TOOL]',
             '📧': '[EMAIL]',
@@ -84,8 +84,8 @@ def safe_log_message(message):
             '[PHONE]': '[MOBILE]',
             '🌟': '[STAR]',
             '[TARGET]': '[TARGET]',
-            '🚨': '[ALERT]',
-            '🔔': '[NOTIFICATION]',
+            '[ALERT]': '[ALERT]',
+            '[BELL]': '[NOTIFICATION]',
             '💬': '[CHAT]',
             '📂': '[FOLDER]',
             '[FOLDER]': '[DIRECTORY]',
@@ -561,7 +561,7 @@ class DolphinAnty:
         logger.info(f"[START] Starting Dolphin profile {profile_id} (headless={headless})")
         
         # Step 1: Check if Dolphin Anty local API is available
-        logger.info(f"🔍 [Step 1/3] Checking Dolphin Anty local API availability...")
+        logger.info(f"[SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...")
         try:
             # Use authentication endpoint to check API availability
             auth_data = {"token": self.api_key}
@@ -896,7 +896,7 @@ class DolphinAnty:
                 if task_logger:
                     task_logger(message)
             
-            log_action("🔍 Checking for human verification dialog...", "info")
+            log_action("[SEARCH] Checking for human verification dialog...", "info")
             
             # Ждем немного для загрузки страницы
             await asyncio.sleep(random.uniform(1, 2))
@@ -972,7 +972,7 @@ class DolphinAnty:
                     
                     # Логируем образец текста для отладки
                     verification_text_sample = page_text[:500] if page_text else "No text found"
-                    log_action(f"🔍 Verification dialog text sample: {verification_text_sample}", "error")
+                    log_action(f"[SEARCH] Verification dialog text sample: {verification_text_sample}", "error")
                     
                     return True
                 else:
@@ -1022,9 +1022,9 @@ class DolphinAnty:
             
             # Debug: check Dolphin status before starting profile
             dolphin_status = self.check_dolphin_status()
-            logger.info(f"🔍 Dolphin status before starting profile: {dolphin_status}")
+            logger.info(f"[SEARCH] Dolphin status before starting profile: {dolphin_status}")
             if task_logger:
-                task_logger(f"🔍 Dolphin status: {dolphin_status}")
+                task_logger(f"[SEARCH] Dolphin status: {dolphin_status}")
             
             success, profile_data = self.start_profile(profile_id, headless=headless)
             profile_started = success
@@ -1108,7 +1108,7 @@ class DolphinAnty:
                     
                     if task_logger:
                         task_logger(f"🔀 URL order randomized for natural behavior")
-                        task_logger(f"📋 Processing {len(shuffled_urls)} URLs")
+                        task_logger(f"[CLIPBOARD] Processing {len(shuffled_urls)} URLs")
                         task_logger(f"⏱️ Total duration: {duration} seconds")
                         task_logger(f"[TARGET] Starting Cookie Robot simulation...")
                     
@@ -2017,7 +2017,7 @@ class DolphinAnty:
         
         try:
             # Check if local API is responding by trying to authenticate
-            logger.info("🔍 Checking Dolphin Anty application status...")
+            logger.info("[SEARCH] Checking Dolphin Anty application status...")
             
             auth_data = {"token": self.api_key}
             response = requests.post(

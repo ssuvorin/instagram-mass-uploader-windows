@@ -69,7 +69,7 @@ def cleanup_completed_tasks_files(days_old=7):
     
     deleted_count = 0
     for task in old_completed_tasks:
-        print(f"📋 Очистка задачи: {task.name} (ID: {task.id}, статус: {task.status})")
+        print(f"[CLIPBOARD] Очистка задачи: {task.name} (ID: {task.id}, статус: {task.status})")
         
         for video in task.videos.all():
             if video.video_file:
@@ -133,7 +133,7 @@ def show_statistics():
     failed_tasks = BulkUploadTask.objects.filter(status='FAILED').count()
     
     print(f"📊 Статистика задач:")
-    print(f"   📋 Всего задач: {total_tasks}")
+    print(f"   [CLIPBOARD] Всего задач: {total_tasks}")
     print(f"   [OK] Завершенных: {completed_tasks}")
     print(f"   [FAIL] Неудачных: {failed_tasks}")
     
@@ -186,7 +186,7 @@ def main():
         print(f"[OK] Удалено файлов старых задач: {deleted}")
         print("-" * 60)
     
-    print(f"🎉 Очистка завершена! Всего удалено файлов: {total_deleted}")
+    print(f"[PARTY] Очистка завершена! Всего удалено файлов: {total_deleted}")
     
     if total_deleted > 0:
         print("\n📊 Обновленная статистика:")

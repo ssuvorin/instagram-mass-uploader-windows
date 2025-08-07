@@ -130,7 +130,7 @@ async def main():
         await test_verification_handlers()
         
         print("\n[OK] Все тесты завершены!")
-        print("\n📋 Резюме исправлений:")
+        print("\n[CLIPBOARD] Резюме исправлений:")
         print("1. [OK] Исправлена функция check_post_login_verifications_async")
         print("2. [OK] Убраны legacy проверки из handle_login_completion_async")
         print("3. [OK] Правильное использование determine_verification_type_async")

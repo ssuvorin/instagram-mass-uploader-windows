@@ -221,7 +221,7 @@ class InstagramNavigator(InstagramAutomationBase):
             
             # Check for dropdown menu
             if self._check_for_dropdown_menu():
-                log_info("[UPLOAD] 📋 Dropdown menu detected - selecting post option")
+                log_info("[UPLOAD] [CLIPBOARD] Dropdown menu detected - selecting post option")
                 return self._click_post_option()
             
             # Wait additional time and check again
@@ -233,7 +233,7 @@ class InstagramNavigator(InstagramAutomationBase):
                 return True
             
             if self._check_for_dropdown_menu():
-                log_info("[UPLOAD] 📋 Menu appeared after delay")
+                log_info("[UPLOAD] [CLIPBOARD] Menu appeared after delay")
                 return self._click_post_option()
             
             # Try broader detection
@@ -247,7 +247,7 @@ class InstagramNavigator(InstagramAutomationBase):
     def _check_for_file_dialog(self):
         """Check if file selection dialog is open"""
         try:
-            log_info("[UPLOAD] 🔍 Checking for file dialog...")
+            log_info("[UPLOAD] [SEARCH] Checking for file dialog...")
             
             # Use comprehensive file input selectors
             for selector in self.selectors.FILE_INPUT:
@@ -269,7 +269,7 @@ class InstagramNavigator(InstagramAutomationBase):
             try:
                 current_url = self.page.url
                 if 'create' in current_url.lower():
-                    log_info(f"[UPLOAD] 🔍 URL indicates create mode: {current_url}")
+                    log_info(f"[UPLOAD] [SEARCH] URL indicates create mode: {current_url}")
                     return True
             except:
                 pass
@@ -381,7 +381,7 @@ class InstagramNavigator(InstagramAutomationBase):
     def _click_post_option(self):
         """Find and click the post option in dropdown"""
         try:
-            log_info("[UPLOAD] 🔍 Looking for 'Публикация' option...")
+            log_info("[UPLOAD] [SEARCH] Looking for 'Публикация' option...")
             
             # Human-like pause to read menu options
             reading_time = self.human_wait(2.0, 0.8)
@@ -397,7 +397,7 @@ class InstagramNavigator(InstagramAutomationBase):
                     if i > 0:
                         self.human_wait(0.5, 0.2)
                 
-                    log_info(f"[UPLOAD] 🔍 Trying selector {i+1}/{len(self.selectors.POST_OPTION)}")
+                    log_info(f"[UPLOAD] [SEARCH] Trying selector {i+1}/{len(self.selectors.POST_OPTION)}")
                 
                     if SelectorUtils.is_xpath(selector):
                         post_option = self.page.query_selector(f"xpath={selector}")
@@ -416,7 +416,7 @@ class InstagramNavigator(InstagramAutomationBase):
                                 found_selector = selector
                                 break
                             else:
-                                log_info(f"[UPLOAD] 🔍 Element found but text doesn't match: '{element_text.strip()}'")
+                                log_info(f"[UPLOAD] [SEARCH] Element found but text doesn't match: '{element_text.strip()}'")
                                 post_option = None
                                 continue
                         except:
@@ -576,10 +576,10 @@ class InstagramUploader(InstagramAutomationBase):
     def _find_file_input_adaptive(self):
         """Адаптивный поиск файлового input независимо от CSS-классов"""
         try:
-            log_info("[UPLOAD] 🔍 Starting adaptive file input search...")
+            log_info("[UPLOAD] [SEARCH] Starting adaptive file input search...")
             
             # [TARGET] СТРАТЕГИЯ 1: Поиск по семантическим атрибутам (самый надежный)
-            log_info("[UPLOAD] 📋 Strategy 1: Semantic attributes search...")
+            log_info("[UPLOAD] [CLIPBOARD] Strategy 1: Semantic attributes search...")
             semantic_strategies = [
                 'input[type="file"]',
                 'input[accept*="video"]',
@@ -1755,7 +1755,7 @@ class InstagramUploader(InstagramAutomationBase):
                 
                 for selector in suggestion_selectors:
                     try:
-                        log_debug(f"[УПОМИНАНИЯ] 🔍 Ищем предложение: {selector}")
+                        log_debug(f"[УПОМИНАНИЯ] [SEARCH] Ищем предложение: {selector}")
                         
                         if selector.startswith('//') or selector.startswith('(//'):
                             element = self.page.query_selector(f"xpath={selector}")
@@ -1802,7 +1802,7 @@ class InstagramUploader(InstagramAutomationBase):
                     time.sleep(pause_time)
             
             # ИСПРАВЛЕННАЯ кнопка Done для упоминаний
-            log_info("[УПОМИНАНИЯ] 🔍 Ищем кнопку 'Done'...")
+            log_info("[УПОМИНАНИЯ] [SEARCH] Ищем кнопку 'Done'...")
             time.sleep(random.uniform(1.0, 2.0))
             
             done_button_selectors = [
@@ -1927,7 +1927,7 @@ class InstagramUploader(InstagramAutomationBase):
             
             for selector in share_button_selectors:
                 try:
-                    log_info(f"[ПУБЛИКАЦИЯ] 🔍 Ищем кнопку: {selector}")
+                    log_info(f"[ПУБЛИКАЦИЯ] [SEARCH] Ищем кнопку: {selector}")
                     
                     if selector.startswith('//'):
                         element = self.page.query_selector(f"xpath={selector}")
@@ -1951,7 +1951,7 @@ class InstagramUploader(InstagramAutomationBase):
                 # Debug: show available buttons
                 try:
                     all_buttons = self.page.query_selector_all('button, div[role="button"]')
-                    log_info(f"[ПУБЛИКАЦИЯ] 🔍 Найдено {len(all_buttons)} кнопок на странице:")
+                    log_info(f"[ПУБЛИКАЦИЯ] [SEARCH] Найдено {len(all_buttons)} кнопок на странице:")
                     for i, btn in enumerate(all_buttons[:10]):  # Show first 10
                         if btn.is_visible():
                             btn_text = btn.text_content() or ""
@@ -2126,7 +2126,7 @@ class InstagramUploader(InstagramAutomationBase):
             # ПРОВЕРКА URL - если мы на главной странице, это может означать успех
             current_url = self.page.url
             if current_url and ('instagram.com/' == current_url.rstrip('/') or 'instagram.com' in current_url and len(current_url.split('/')) <= 4):
-                log_info(f"[VERIFY] 🔍 Redirected to main page: {current_url}")
+                log_info(f"[VERIFY] [SEARCH] Redirected to main page: {current_url}")
                 log_info("[VERIFY] [OK] LIKELY SUCCESS: Redirected to main Instagram page after posting")
                 
                 # Дополнительная проверка - ждем еще немного и проверяем, что мы не вернулись на страницу загрузки
@@ -2149,7 +2149,7 @@ class InstagramUploader(InstagramAutomationBase):
             
             # МЯГКАЯ ПОЛИТИКА: Если нет явных ошибок и мы не на странице загрузки, считаем успехом
             log_warning("[VERIFY] [WARN] No explicit success indicators found, but no errors detected either")
-            log_info(f"[VERIFY] 🔍 Current page URL: {current_url}")
+            log_info(f"[VERIFY] [SEARCH] Current page URL: {current_url}")
             
             # Если мы не на странице загрузки и нет ошибок, вероятно загрузка прошла успешно
             log_success("[VERIFY] [OK] PROBABLE SUCCESS: No errors detected and not on upload page")

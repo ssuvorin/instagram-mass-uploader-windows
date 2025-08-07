@@ -45,7 +45,7 @@ async def quick_test():
     test_accounts = accounts_with_email[:3]
     
     for i, account in enumerate(test_accounts, 1):
-        print(f"\n🔍 Testing account {i}/{len(test_accounts)}: {account.username}")
+        print(f"\n[SEARCH] Testing account {i}/{len(test_accounts)}: {account.username}")
         print(f"   Email: {account.email_username}")
         
         # Тест подключения к почте

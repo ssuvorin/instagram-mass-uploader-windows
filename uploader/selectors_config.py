@@ -875,7 +875,7 @@ class SelectorUtils:
         
         for i, selector in enumerate(selectors):
             try:
-                log_info(f"[{log_prefix}] 🔍 Trying selector {i+1}/{len(selectors)}: {selector[:50]}...")
+                log_info(f"[{log_prefix}] [SEARCH] Trying selector {i+1}/{len(selectors)}: {selector[:50]}...")
                 
                 if SelectorUtils.is_xpath(selector):
                     element = page.query_selector(f"xpath={selector}")

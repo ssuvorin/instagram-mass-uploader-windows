@@ -142,7 +142,7 @@ def handle_task_completion(task, completed_count, failed_count, total_count):
     
     if failed_count == 0 and completed_count == total_count:
         log_info(f"All uploads completed successfully! Task: {task.name}")
-        update_task_status(task, TaskStatus.COMPLETED, f"[{timestamp_str}] 🎉 All uploads completed successfully!\n")
+        update_task_status(task, TaskStatus.COMPLETED, f"[{timestamp_str}] [PARTY] All uploads completed successfully!\n")
         return TaskStatus.COMPLETED
     elif completed_count > 0:
         log_info(f"Some uploads completed. Completed: {completed_count}, Failed: {failed_count}")

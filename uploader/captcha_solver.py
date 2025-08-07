@@ -22,9 +22,9 @@ def play_sound_notification():
                 os.system("powershell -c '[console]::beep(800,500)'")
             except:
                 # Fallback - просто выводим в консоль
-                print("\n" + "🔔" * 10)
-                print("🔔 CAPTCHA DETECTED - PLEASE SOLVE IT! 🔔")
-                print("🔔" * 10 + "\n")
+                print("\n" + "[BELL]" * 10)
+                print("[BELL] CAPTCHA DETECTED - PLEASE SOLVE IT! [BELL]")
+                print("[BELL]" * 10 + "\n")
 
 
 def send_captcha_notification_to_dashboard(bulk_upload_id):
@@ -46,12 +46,12 @@ def send_captcha_notification_to_dashboard(bulk_upload_id):
                 timeout=5
             )
             if response.status_code == 200:
-                print(f"📢 Captcha notification sent to dashboard for bulk upload {bulk_upload_id}")
+                print(f"[NOTIFY] Captcha notification sent to dashboard for bulk upload {bulk_upload_id}")
             else:
                 print(f"[WARN] Failed to send captcha notification: {response.status_code}")
         except requests.exceptions.RequestException:
             # Если API недоступен, просто логируем
-            print(f"📢 Captcha detected for bulk upload {bulk_upload_id} - notification logged")
+            print(f"[NOTIFY] Captcha detected for bulk upload {bulk_upload_id} - notification logged")
                 
     except Exception as e:
         print(f"[FAIL] Error sending captcha notification: {e}")
@@ -63,11 +63,11 @@ async def detect_recaptcha_on_page_async(page):
     """
     try:
         page_url = page.url
-        print(f"🔍 Checking for reCAPTCHA on {page_url}")
+        print(f"[SEARCH] Checking for reCAPTCHA on {page_url}")
         
         # СПЕЦИАЛЬНО ДЛЯ CHALLENGE-СТРАНИЦ INSTAGRAM
         if '/challenge/' in page_url:
-            print("🚨 Instagram challenge page detected!")
+            print("[ALERT] Instagram challenge page detected!")
             
             # Проверяем наличие Facebook's reCAPTCHA iframe
             try:
@@ -114,7 +114,7 @@ async def solve_recaptcha_if_present(page, account_details=None, max_attempts=3)
         page_url = captcha_params.get("page_url")
         is_challenge_page = captcha_params.get("is_challenge_page", False)
         
-        print(f"🔍 Detected reCAPTCHA:")
+        print(f"[SEARCH] Detected reCAPTCHA:")
         print(f"   - Page URL: {page_url}")
         print(f"   - Challenge Page: {is_challenge_page}")
         
@@ -132,7 +132,7 @@ async def solve_recaptcha_if_present(page, account_details=None, max_attempts=3)
         check_interval_seconds = 30  # Проверяем каждые 30 секунд
         
         print(f"[WAIT] Waiting for manual solution... (timeout: 5 minutes)")
-        print(f"📋 Please solve the reCAPTCHA manually in the browser")
+        print(f"[CLIPBOARD] Please solve the reCAPTCHA manually in the browser")
         print(f"[RETRY] Will check every {check_interval_seconds} seconds for page change")
         
         check_count = 0
@@ -142,7 +142,7 @@ async def solve_recaptcha_if_present(page, account_details=None, max_attempts=3)
             elapsed_minutes = int((time.time() - start_time) / 60)
             elapsed_seconds = int(time.time() - start_time) % 60
             
-            print(f"🔍 Check #{check_count} - {elapsed_minutes}m {elapsed_seconds}s elapsed")
+            print(f"[SEARCH] Check #{check_count} - {elapsed_minutes}m {elapsed_seconds}s elapsed")
             
             try:
                 # Проверяем изменился ли URL (успешное решение)
@@ -192,7 +192,7 @@ def detect_recaptcha_on_page(page):
         
         # Проверяем challenge-страницы Instagram
         if '/challenge/' in page_url:
-            print("🚨 Instagram challenge page detected")
+            print("[ALERT] Instagram challenge page detected")
             return {
                 "site_key": None,  # Не нужен для ручного решения
                 "page_url": page_url,
@@ -204,7 +204,7 @@ def detect_recaptcha_on_page(page):
         recaptcha_iframe = page.locator('iframe[title*="recaptcha" i], iframe[src*="recaptcha"], iframe[id*="recaptcha"]')
         
         if recaptcha_iframe.count() > 0:
-            print("🔍 reCAPTCHA iframe detected")
+            print("[SEARCH] reCAPTCHA iframe detected")
             return {
                 "site_key": None,  # Не нужен для ручного решения
                 "page_url": page_url,
@@ -224,7 +224,7 @@ def solve_recaptcha_if_present_sync(page, account_details=None, max_attempts=3):
     Синхронная версия ручного решения reCAPTCHA
     """
     try:
-        print("🔍 Starting synchronous reCAPTCHA detection...")
+        print("[SEARCH] Starting synchronous reCAPTCHA detection...")
         
         # Detect reCAPTCHA on page
         captcha_params = detect_recaptcha_on_page(page)
@@ -252,7 +252,7 @@ def solve_recaptcha_if_present_sync(page, account_details=None, max_attempts=3):
         check_interval_seconds = 30  # Проверяем каждые 30 секунд
         
         print(f"[WAIT] Waiting for manual solution... (timeout: 5 minutes)")
-        print(f"📋 Please solve the reCAPTCHA manually in the browser")
+        print(f"[CLIPBOARD] Please solve the reCAPTCHA manually in the browser")
         print(f"[RETRY] Will check every {check_interval_seconds} seconds for page change")
         
         check_count = 0
@@ -262,7 +262,7 @@ def solve_recaptcha_if_present_sync(page, account_details=None, max_attempts=3):
             elapsed_minutes = int((time.time() - start_time) / 60)
             elapsed_seconds = int(time.time() - start_time) % 60
             
-            print(f"🔍 Check #{check_count} - {elapsed_minutes}m {elapsed_seconds}s elapsed")
+            print(f"[SEARCH] Check #{check_count} - {elapsed_minutes}m {elapsed_seconds}s elapsed")
             
             try:
                 # Проверяем изменился ли URL (успешное решение)

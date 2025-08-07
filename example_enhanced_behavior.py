@@ -129,7 +129,7 @@ def demo_enhanced_behavior():
     for improvement in improvements:
         print(f"   {improvement}")
     
-    print(f"\n🎉 Система человеческого поведения значительно улучшена!")
+    print(f"\n[PARTY] Система человеческого поведения значительно улучшена!")
     print(f"[TOOL] Настройки можно изменить в файле uploader/human_behavior_config.json")
 
 if __name__ == "__main__":

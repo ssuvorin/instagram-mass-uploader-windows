@@ -59,14 +59,14 @@ def perform_instagram_login_optimized(page, account_details):
 
 def _check_if_already_logged_in(page, selectors):
     """Check if user is already logged in with enhanced detection"""
-    log_info("🔍 Checking if already logged in...")
+    log_info("[SEARCH] Checking if already logged in...")
     
     # Wait a moment for page to fully load
     time.sleep(random.uniform(2, 4))
     
     # Get current URL for context
     current_url = page.url
-    log_info(f"🔍 Current URL: {current_url}")
+    log_info(f"[SEARCH] Current URL: {current_url}")
     
     # Check for account suspension first - this is critical
     log_info("[BLOCK] Checking for account suspension...")
@@ -123,17 +123,17 @@ def _check_if_already_logged_in(page, selectors):
         if element and element.is_visible():
             login_form_present = True
             found_login_elements.append(indicator)
-            log_info(f"🔍 Found login form element: {indicator}")
+            log_info(f"[SEARCH] Found login form element: {indicator}")
     
     if login_form_present:
-        log_info(f"🔍 Login form detected with elements: {found_login_elements[:3]}")
+        log_info(f"[SEARCH] Login form detected with elements: {found_login_elements[:3]}")
         return False
     
     # No login form found, check for logged-in indicators
     logged_in_found = False
     found_indicators = []
     
-    log_info("🔍 No login form found, checking for logged-in indicators...")
+    log_info("[SEARCH] No login form found, checking for logged-in indicators...")
     
     for i, indicator in enumerate(selectors.LOGGED_IN_INDICATORS):
         try:
@@ -154,7 +154,7 @@ def _check_if_already_logged_in(page, selectors):
                     ]
                     
                     if any(keyword in combined_text for keyword in exclusion_keywords):
-                        log_info(f"🔍 Skipping element {i+1} (contains account creation text): '{element_text.strip()}'")
+                        log_info(f"[SEARCH] Skipping element {i+1} (contains account creation text): '{element_text.strip()}'")
                         continue
                     
                     logged_in_found = True
@@ -169,7 +169,7 @@ def _check_if_already_logged_in(page, selectors):
                     logged_in_found = True
                     found_indicators.append(indicator)
                     log_info(f"[OK] Found logged-in indicator {i+1}: {indicator}")
-                    log_warning(f"🔍 Could not analyze element text: {str(e)}")
+                    log_warning(f"[SEARCH] Could not analyze element text: {str(e)}")
                 
                 # If we found a strong indicator, we can be confident
                 if any(strong_keyword in indicator.lower() for strong_keyword in [
@@ -179,7 +179,7 @@ def _check_if_already_logged_in(page, selectors):
                     break
                     
         except Exception as e:
-            log_warning(f"🔍 Error checking indicator {indicator}: {str(e)}")
+            log_warning(f"[SEARCH] Error checking indicator {indicator}: {str(e)}")
             continue
     
     if logged_in_found:
@@ -195,7 +195,7 @@ def _check_if_already_logged_in(page, selectors):
                 log_info("[OK] Page title confirms Instagram main page")
             
         except Exception as e:
-            log_warning(f"🔍 Could not get page title: {str(e)}")
+            log_warning(f"[SEARCH] Could not get page title: {str(e)}")
         
         # Simulate human behavior - look around a bit
         from .bulk_tasks_playwright import simulate_human_mouse_movement, handle_save_login_info_dialog
@@ -207,23 +207,23 @@ def _check_if_already_logged_in(page, selectors):
         
         return True
     else:
-        log_info("🔍 No logged-in indicators found")
+        log_info("[SEARCH] No logged-in indicators found")
         
         # Additional debugging - check what's actually on the page
         try:
             # Get page text for analysis
             page_text = page.inner_text('body') or ""
             page_text_sample = page_text[:200] if page_text else "No text found"
-            log_info(f"🔍 Page text sample: '{page_text_sample}...'")
+            log_info(f"[SEARCH] Page text sample: '{page_text_sample}...'")
             
             # Check for common Instagram keywords
             instagram_keywords = ['instagram', 'инстаграм', 'войти', 'log in', 'sign up', 'регистрация']
             found_keywords = [keyword for keyword in instagram_keywords if keyword in page_text.lower()]
             if found_keywords:
-                log_info(f"🔍 Found Instagram keywords: {found_keywords}")
+                log_info(f"[SEARCH] Found Instagram keywords: {found_keywords}")
             
         except Exception as e:
-            log_warning(f"🔍 Could not analyze page text: {str(e)}")
+            log_warning(f"[SEARCH] Could not analyze page text: {str(e)}")
     
     return False
 
@@ -691,7 +691,7 @@ def _handle_login_completion(page, account_details, selectors):
                         log_info(f"[OK] Element text: '{element_text.strip()}'")
                         
                         # [OK] Симулируем естественное поведение после успешного входа
-                        log_info("🎉 Login successful! Exploring main page...")
+                        log_info("[PARTY] Login successful! Exploring main page...")
                         human_behavior.simulate_page_scanning()
                         
                         # Handle save login info dialog after successful login
@@ -941,7 +941,7 @@ def _enter_verification_code(page, tfa_input, verification_code):
                 log_info(f"[OK] 2FA verification successful! Found valid indicator: {indicator}")
                 
                 # [OK] Симулируем естественное поведение после успешного входа
-                log_info("🎉 Login successful! Simulating post-login behavior...")
+                log_info("[PARTY] Login successful! Simulating post-login behavior...")
                 human_behavior.simulate_page_scanning()  # Осматриваемся на главной странице
                 
                 # Handle save login info dialog
@@ -1069,7 +1069,7 @@ def handle_post_login_checks(page, account_details):
         for selector in notification_selectors:
             element = page.query_selector(selector)
             if element and element.is_visible():
-                log_info("[LOGIN] 🔔 Notification permission dialog detected")
+                log_info("[LOGIN] [BELL] Notification permission dialog detected")
                 try:
                     # Click "Not Now" or "Не сейчас"
                     if "Not Now" in selector or "Не сейчас" in selector:

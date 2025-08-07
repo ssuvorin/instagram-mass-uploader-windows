@@ -275,7 +275,7 @@ def main():
     if not dolphin_token:
         logger.warning("[WARN] API токен Dolphin Anty не указан! Используйте --dolphin-token или переменную окружения DOLPHIN_API_TOKEN")
     
-    logger.info(f"📋 Параметры запуска: account={args.account}, videos={args.videos}, proxy={args.proxy if args.proxy else 'не используется'}, non-interactive={args.non_interactive}, visible={not headless_mode}")
+    logger.info(f"[CLIPBOARD] Параметры запуска: account={args.account}, videos={args.videos}, proxy={args.proxy if args.proxy else 'не используется'}, non-interactive={args.non_interactive}, visible={not headless_mode}")
 
     # Инициализируем browser как None перед try-блоком
     browser = None
@@ -331,7 +331,7 @@ def main():
         
         if dolphin_profile_id:
             # Используем существующий профиль
-            logger.info(f"🔍 Используем существующий профиль Dolphin: {dolphin_profile_id}")
+            logger.info(f"[SEARCH] Используем существующий профиль Dolphin: {dolphin_profile_id}")
             browser = get_browser(
                 headless=headless_mode, 
                 api_token=dolphin_token, 
@@ -430,7 +430,7 @@ def main():
             # Имитация просмотра ленты перед загрузкой (с вероятностью 40%)
             if random.random() > 0.6:
                 browse_time = random.randint(15, 45)
-                logger.info(f"🔍 Имитация просмотра ленты Instagram перед загрузкой видео ({browse_time} секунд)...")
+                logger.info(f"[SEARCH] Имитация просмотра ленты Instagram перед загрузкой видео ({browse_time} секунд)...")
                 try:
                     # Прокрутка ленты
                     for _ in range(random.randint(3, 8)):
