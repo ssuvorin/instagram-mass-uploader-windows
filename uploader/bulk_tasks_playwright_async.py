@@ -819,7 +819,7 @@ async def handle_login_flow_async(page, account_details: Dict) -> bool:
             
             # Still need to check for post-login verification requirements
             log_info("[SEARCH] [ASYNC_LOGIN] Checking for verification requirements...")
-            await check_post_login_verifications_async(page, account_details)
+            # await check_post_login_verifications_async(page, account_details)
             return True
         
         log_info("🔑 [ASYNC_LOGIN] User not logged in - need to login to Instagram")
@@ -848,10 +848,14 @@ async def handle_login_flow_async(page, account_details: Dict) -> bool:
         await handle_save_login_info_dialog_async(page)
         
         # Check for post-login verification requirements
-        await check_post_login_verifications_async(page, account_details)
+        verification_result = await check_post_login_verifications_async(page, account_details)
         
-        log_info("[OK] [ASYNC_LOGIN] Login flow completed successfully")
-        return True
+        if verification_result:
+            log_info("[OK] [ASYNC_LOGIN] Login flow completed successfully")
+            return True
+        else:
+            log_error("[FAIL] [ASYNC_LOGIN] Post-login verification failed")
+            return False
         
     except Exception as e:
         error_message = str(e)
@@ -1070,32 +1074,58 @@ async def check_post_login_verifications_async(page, account_details):
             'main[role="main"]',
             'nav[role="navigation"]'
         ]
+                # Use the proper verification type detection function
+        from .email_verification_async import determine_verification_type_async
         
-        for indicator in logged_in_indicators:
-            try:
-                element = await page.query_selector(indicator)
-                if element and await element.is_visible():
-                    log_info(f"[OK] [ASYNC_LOGIN] Login successful! Found indicator: {indicator}")
-                    return True
-            except:
-                continue
-        
-        # Use the proper verification type detection function
         verification_type = await determine_verification_type_async(page)
         log_info(f"[SEARCH] [ASYNC_LOGIN] Detected verification type: {verification_type}")
         
         if verification_type == "authenticator":
             log_info("[PHONE] [ASYNC_LOGIN] 2FA/Authenticator verification required")
-            return await handle_2fa_async(page, account_details)
+            result = await handle_2fa_async(page, account_details)
+            if result:
+                log_info("[OK] [ASYNC_LOGIN] 2FA verification completed successfully")
+                return True
+            else:
+                log_error("[FAIL] [ASYNC_LOGIN] 2FA verification failed")
+                return False
+                
         elif verification_type == "email_code":
             log_info("📧 [ASYNC_LOGIN] Email verification code required")
-            return await handle_email_verification_async(page, account_details)
+            result = await handle_email_verification_async(page, account_details)
+            if result:
+                log_info("[OK] [ASYNC_LOGIN] Email verification completed successfully")
+                return True
+            else:
+                log_error("[FAIL] [ASYNC_LOGIN] Email verification failed")
+                return False
+                
         elif verification_type == "email_field":
             log_info("📧 [ASYNC_LOGIN] Email field input required")
-            return await handle_email_field_verification_async(page, account_details)
+            result = await handle_email_field_verification_async(page, account_details)
+            if result:
+                log_info("[OK] [ASYNC_LOGIN] Email field verification completed successfully")
+                return True
+            else:
+                log_error("[FAIL] [ASYNC_LOGIN] Email field verification failed")
+                return False
+                
         elif verification_type == "unknown":
-            log_info("[OK] [ASYNC_LOGIN] No verification required or unknown verification type")
-            return True
+            log_info("[OK] [ASYNC_LOGIN] No verification required - checking if truly logged in...")
+            
+            # ТОЛЬКО ЗДЕСЬ проверяем индикаторы успешного входа
+            logged_in_indicators = [
+                'svg[aria-label="Notifications"]',
+                'svg[aria-label="Direct"]', 
+                'svg[aria-label="New post"]',
+                'main[role="main"]:not(:has(form))',  # main без форм входа
+                'nav[role="navigation"]',
+                'a[href="/"]',  # Home link
+                'a[href="/explore/"]',  # Explore link
+            ]
+            
+            log_info("[FAIL] [ASYNC_LOGIN] No logged-in indicators found - login may have failed")
+            return False
         else:
             log_info(f"[WARN] [ASYNC_LOGIN] Unknown verification type: {verification_type}")
             return True
@@ -1266,7 +1296,7 @@ async def navigate_to_upload_core_async(page):
             is_visible = await upload_button.is_visible()
             if not is_visible:
                 log_info("[ASYNC_UPLOAD] [WARN] Upload button not visible, waiting briefly...")
-                await asyncio.sleep(3.0)
+                await asyncio.sleep(3.0 + random.uniform(-0.5, 0.5))
                 
                 # Try to find the button again
                 upload_button = await find_element_with_selectors_async(page, SelectorConfig.UPLOAD_BUTTON, "UPLOAD_BTN_RETRY")
@@ -4576,8 +4606,13 @@ async def handle_login_completion_async(page, account_details):
                 log_info("[FAIL] [ASYNC_LOGIN] Failed to solve captcha on challenge page")
                 return False
         
-        # Check for successful login (not on login page anymore)
-        if '/accounts/login' not in current_url and 'instagram.com' in current_url:
+        # ВАЖНО: Сначала проверяем, не на странице ли верификации
+               # КРИТИЧНО: Проверяем URL ПЕРВЫМ ДЕЛОМ - если на странице верификации, логин НЕ завершен
+        if '/two_factor/' in current_url or '/challenge/' in current_url or '/accounts/login' in current_url:
+            log_info(f"[ALERT] [ASYNC_LOGIN] Still on authentication/verification page: {current_url}")
+            # НЕ ПРОВЕРЯЕМ индикаторы входа - мы все еще в процессе аутентификации
+            # Переходим к обработке верификации
+        elif 'instagram.com' in current_url:
             # Additional verification - look for logged-in elements
             logged_in_indicators = [
                 'svg[aria-label="Notifications"]',
@@ -4629,20 +4664,66 @@ async def handle_login_completion_async(page, account_details):
             log_warning(f"[WARN] [ASYNC_LOGIN] Error checking for login errors: {str(e)}")
         
         # Check for verification requirements
+        from .email_verification_async import determine_verification_type_async
+        
         verification_type = await determine_verification_type_async(page)
+        log_info(f"[SEARCH] [ASYNC_LOGIN] Detected verification type: {verification_type}")
         
         if verification_type == "authenticator":
             log_info("[PHONE] [ASYNC_LOGIN] 2FA/Authenticator verification required")
-            return await handle_2fa_async(page, account_details)
+            result = await handle_2fa_async(page, account_details)
+            if result:
+                log_info("[OK] [ASYNC_LOGIN] 2FA verification completed successfully")
+                return True
+            else:
+                log_error("[FAIL] [ASYNC_LOGIN] 2FA verification failed")
+                return False
+                
         elif verification_type == "email_code":
             log_info("📧 [ASYNC_LOGIN] Email verification code required")
-            return await handle_email_verification_async(page, account_details)
+            result = await handle_email_verification_async(page, account_details)
+            if result:
+                log_info("[OK] [ASYNC_LOGIN] Email verification completed successfully")
+                return True
+            else:
+                log_error("[FAIL] [ASYNC_LOGIN] Email verification failed - LOGIN NOT COMPLETED")
+                return False  # КРИТИЧНО: НЕ ПРОДОЛЖАЕМ если верификация failed!
+                
         elif verification_type == "email_field":
             log_info("📧 [ASYNC_LOGIN] Email field input required")
-            return await handle_email_field_verification_async(page, account_details)
+            result = await handle_email_field_verification_async(page, account_details)
+            if result:
+                log_info("[OK] [ASYNC_LOGIN] Email field verification completed successfully")
+                return True
+            else:
+                log_error("[FAIL] [ASYNC_LOGIN] Email field verification failed")
+                return False
+                
         elif verification_type == "unknown":
-            log_info("[OK] [ASYNC_LOGIN] No verification required or unknown verification type")
-            return True
+            log_info("[OK] [ASYNC_LOGIN] No verification required - checking if truly logged in...")
+            
+            # ТОЛЬКО ЗДЕСЬ проверяем индикаторы успешного входа
+            logged_in_indicators = [
+                'svg[aria-label="Notifications"]',
+                'svg[aria-label="Direct"]', 
+                'svg[aria-label="New post"]',
+                'main[role="main"]:not(:has(form))',  # main без форм входа
+                'nav[role="navigation"]',
+                'a[href="/"]',  # Home link
+                'a[href="/explore/"]',  # Explore link
+            ]
+            
+            for indicator in logged_in_indicators:
+                try:
+                    element = await page.query_selector(indicator)
+                    if element and await element.is_visible():
+                        log_info(f"[OK] [ASYNC_LOGIN] Login successful - found indicator: {indicator}")
+                        return True
+                except Exception as e:
+                    continue
+            
+            log_info("[FAIL] [ASYNC_LOGIN] No logged-in indicators found - login may have failed")
+            return False
         
         # If we're still on login page, login probably failed
         if '/accounts/login' in current_url:
@@ -4670,12 +4751,17 @@ async def handle_2fa_async(page, account_details):
         # Find 2FA code input
         code_input = None
         code_selectors = [
-            'input[name="verificationCode"]',
+            'input[name="verificationCode"]',  # Основной селектор
+            'input[aria-label*="Код безопасности"]',  # Русский интерфейс
+            'input[aria-label*="Security Code"]',  # Английский интерфейс
+            'input[aria-describedby="verificationCodeDescription"]',  # По описанию
+            'input[type="tel"][maxlength="8"]',  # По типу и длине
+            'input[autocomplete="off"][maxlength="8"]',  # По атрибутам
             'input[placeholder*="код"]',
             'input[placeholder*="code"]',
             'input[maxlength="6"]',
+            'input[maxlength="8"]',  # Instagram иногда использует 8
         ]
-        
         for selector in code_selectors:
             try:
                 code_input = await page.query_selector(selector)
@@ -4708,13 +4794,32 @@ async def handle_2fa_async(page, account_details):
             await submit_button.click()
             await asyncio.sleep(random.uniform(3, 5))
         
-        # Check if 2FA was successful
+                # Check if 2FA was successful - улучшенная проверка
+        await asyncio.sleep(random.uniform(2, 4))  # Ждем обработки
         current_url = page.url
-        if '/accounts/login' not in current_url and 'challenge' not in current_url:
-            log_info("[OK] [ASYNC_2FA] 2FA authentication successful")
+        
+        # Проверяем, что мы ушли со страницы 2FA
+        if '/two_factor/' not in current_url and '/challenge/' not in current_url and '/accounts/login' not in current_url:
+            log_info("[OK] [ASYNC_2FA] 2FA authentication successful - redirected from 2FA page")
+            
+            # Handle save login info dialog after successful 2FA
+            await handle_save_login_info_dialog_async(page)
+            
             return True
         else:
-            log_info("[FAIL] [ASYNC_2FA] 2FA authentication failed")
+            # Дополнительная проверка на ошибки
+            try:
+                error_elements = await page.query_selector_all('[role="alert"], .error-message, ._aa4a')
+                for error_element in error_elements:
+                    if await error_element.is_visible():
+                        error_text = await error_element.text_content() or ""
+                        if error_text.strip():
+                            log_error(f"[FAIL] [ASYNC_2FA] 2FA error: {error_text}")
+                            return False
+            except:
+                pass
+                
+            log_info(f"[FAIL] [ASYNC_2FA] Still on verification page: {current_url}")
             return False
             
     except Exception as e:
@@ -4736,14 +4841,25 @@ async def handle_email_verification_async(page, account_details):
         # Find verification code input
         code_input = None
         code_selectors = [
+            'input[name="email"]',  # Instagram специально путает - поле называется "email" но нужен КОД!
             'input[name="verificationCode"]',
             'input[name="confirmationCode"]',
+            'input[type="text"][autocomplete="off"]',  # Из HTML
             'input[autocomplete="one-time-code"]',
             'input[inputmode="numeric"]',
             'input[maxlength="6"]',
+            'input[maxlength="8"]',
             'input[placeholder*="код"]',
             'input[placeholder*="code"]',
+            'label:has-text("Код") + input',  # По label "Код"
         ]
+                # Дополнительные селекторы из реального HTML Instagram
+        additional_selectors = [
+            'input[id^="_r_"]',  # Instagram использует динамические ID типа "_r_7_"
+            'input[type="text"][dir="ltr"][autocomplete="off"]',
+            'label[for^="_r_"] + input',  # По связанному label
+        ]
+        code_selectors.extend(additional_selectors)
         
         for selector in code_selectors:
             try:
@@ -4769,19 +4885,57 @@ async def handle_email_verification_async(page, account_details):
             await code_input.fill(verification_code)
             await asyncio.sleep(random.uniform(1, 2))
             
-            # Submit verification form
-            submit_button = await page.query_selector('button[type="submit"], button:has-text("Confirm"), button:has-text("Подтвердить")')
+            # Submit verification form - UPDATED SELECTORS for Instagram
+            submit_selectors = [
+                'div[role="button"]:has-text("Продолжить")',  # Русская версия
+                'div[role="button"]:has-text("Continue")',     # Английская версия
+                'button:has-text("Продолжить")',
+                'button:has-text("Continue")', 
+                'button[type="submit"]',
+                '[role="button"]:has(span:has-text("Продолжить"))',
+                '[role="button"]:has(span:has-text("Continue"))',
+            ]
+
+            submit_button = None
+            for selector in submit_selectors:
+                try:
+                    submit_button = await page.query_selector(selector)
+                    if submit_button and await submit_button.is_visible():
+                        log_info(f"📧 [ASYNC_EMAIL] Found submit button: {selector}")
+                        break
+                except:
+                    continue
+
             if submit_button:
                 await submit_button.click()
+                log_info("📧 [ASYNC_EMAIL] Clicked submit button")
+                await asyncio.sleep(random.uniform(3, 5))
+            else:
+                log_error("📧 [ASYNC_EMAIL] Submit button not found - trying Enter key")
+                # Fallback: press Enter in the code field
+                await code_input.press('Enter')
                 await asyncio.sleep(random.uniform(3, 5))
             
-            # Check if verification was successful
+                        # Check if verification was successful - IMPROVED VERSION
+            await asyncio.sleep(random.uniform(2, 4))  # Wait for page to load
             current_url = page.url
-            if '/accounts/login' not in current_url and 'challenge' not in current_url:
+            
+            # Check for human verification requirement FIRST
+            human_verification_result = await check_for_human_verification_dialog_async(page, account_details)
+            if human_verification_result.get('requires_human_verification', False):
+                log_error(f"[BOT] [ASYNC_EMAIL] Human verification required after email: {human_verification_result.get('message', 'Unknown reason')}")
+                raise Exception(f"HUMAN_VERIFICATION_REQUIRED: {human_verification_result.get('message', 'Human verification required after email verification')}")
+            
+            # Then check if we're still on verification pages
+            if '/accounts/login' not in current_url and 'challenge' not in current_url and 'auth_platform' not in current_url:
                 log_info("[OK] [ASYNC_EMAIL] Email verification successful")
+                
+                # Handle save login info dialog after successful email verification
+                await handle_save_login_info_dialog_async(page)
+                
                 return True
             else:
-                log_info("[FAIL] [ASYNC_EMAIL] Email verification failed")
+                log_info(f"[FAIL] [ASYNC_EMAIL] Email verification failed - still on verification page: {current_url}")
                 return False
         else:
             log_info("[FAIL] [ASYNC_EMAIL] Failed to get email verification code")

@@ -37,6 +37,14 @@ class InstagramAccountForm(forms.ModelForm):
         labels = {
             'dolphin_profile_id': 'Dolphin Anty Profile ID',
         }
+    
+    def clean_tfa_secret(self):
+        """Clean tfa_secret by removing spaces"""
+        tfa_secret = self.cleaned_data.get('tfa_secret')
+        if tfa_secret:
+            # Remove all spaces from 2FA secret
+            tfa_secret = tfa_secret.replace(' ', '')
+        return tfa_secret
 
 
 class UploadTaskForm(forms.ModelForm):

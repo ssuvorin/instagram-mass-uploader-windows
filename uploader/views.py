@@ -639,8 +639,10 @@ def import_accounts(request):
                 elif len(parts) == 3:
                     # This could be either a 2FA account or an email verification account
                     # Check if the third part looks like a 2FA secret (usually uppercase letters and numbers)
-                    if parts[2].isupper() and any(c.isdigit() for c in parts[2]):
-                        tfa_secret = parts[2]
+                    # Remove spaces first to properly detect 2FA keys that may contain spaces
+                    potential_2fa = parts[2].replace(' ', '')
+                    if potential_2fa.isupper() and any(c.isdigit() for c in potential_2fa):
+                        tfa_secret = potential_2fa  # Already has spaces removed
                         logger.info(f"[INFO] Account {username} identified as 2FA account")
                     else:
                         # Assume it's an email without password
@@ -657,14 +659,14 @@ def import_accounts(request):
                     # This is a TFA account (username:password:email:email_password:tfa_secret)
                     email_username = parts[2]
                     email_password = parts[3]
-                    tfa_secret = parts[4]
+                    tfa_secret = parts[4].replace(' ', '')  # Remove spaces from 2FA key
                     logger.info(f"[INFO] Account {username} identified as TFA account with email")
                 
                 elif len(parts) > 5:
                     # Extended format with additional fields
                     email_username = parts[2]
                     email_password = parts[3]
-                    tfa_secret = parts[4]
+                    tfa_secret = parts[4].replace(' ', '')  # Remove spaces from 2FA key
                     logger.info(f"[INFO] Account {username} identified as TFA account with extended format")
                 
                 # Get an unused active proxy for this account
