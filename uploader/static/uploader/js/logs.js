@@ -11,24 +11,31 @@ function renderLog(logData) {
 }
 
 function renderLegacyLog(logText) {
-    // Apply color formatting to legacy log text
-    return logText
-        // Format emoji/symbol prefixes
-        .replace(/(\[.*?\])/g, '<span style="color: #87CEFA;">$1</span>')  // Light blue for timestamps
-        .replace(/(❌)/g, '<span style="color: #FF6347; font-weight: bold;">$1</span>')  // Tomato red for errors
-        .replace(/(⚠️)/g, '<span style="color: #FFA500; font-weight: bold;">$1</span>')  // Orange for warnings
-        .replace(/(✅)/g, '<span style="color: #90EE90; font-weight: bold;">$1</span>')  // Light green for success
-        .replace(/(🔄|🔍|⏳|🌐|🔒)/g, '<span style="color: #ADD8E6;">$1</span>')  // Light blue for info/process symbols
-        .replace(/(👤|📝|🎬|📋|📎|👥|👆)/g, '<span style="color: #FFD700;">$1</span>')  // Gold for user actions
-        .replace(/(⌨️|🖱️|🔑)/g, '<span style="color: #FF69B4;">$1</span>')  // Hot pink for input actions
-        .replace(/(🚀|🔥)/g, '<span style="font-size: 1.1em; color: #FF4500;">$1</span>')  // Orange-red and larger for important actions
-        // Format keywords
-        .replace(/(ERROR|CRITICAL|Failed|Error|Failed|Exception|Timeout)/gi, '<span style="color: #FF6347; font-weight: bold;">$1</span>')  // Red for errors
-        .replace(/(WARNING|Warning|Warn)/gi, '<span style="color: #FFA500; font-weight: bold;">$1</span>')  // Orange for warnings
-        .replace(/(SUCCESS|Completed|Success|Successful)/gi, '<span style="color: #90EE90; font-weight: bold;">$1</span>')  // Green for success
-        .replace(/(INFO|Starting|Processing|Loading|Initialized)/gi, '<span style="color: #87CEFA;">$1</span>')  // Blue for info
-        .replace(/(Username|Password|Login|Cookie)/gi, '<span style="color: #BA55D3;">$1</span>')  // Purple for auth items
-        .replace(/(\n)/g, '<br>');  // Replace newlines with <br> tags
+    if (!logText || logText.trim() === '') {
+        return '<div class="text-muted">No logs available yet...</div>';
+    }
+    
+    // Split into lines and process each line
+    const lines = logText.split('\n');
+    let html = '';
+    
+    lines.forEach(line => {
+        if (line.trim() === '') return;
+        
+        // Simple text formatting with basic highlighting
+        const formattedMessage = line
+            .replace(/(ERROR|CRITICAL|Failed|Error|Exception|Timeout)/gi, '<span style="color: #ff6b6b; font-weight: bold;">$1</span>')
+            .replace(/(WARNING|Warning|Warn)/gi, '<span style="color: #ffa726; font-weight: bold;">$1</span>')
+            .replace(/(SUCCESS|Completed|Success|Successful)/gi, '<span style="color: #66bb6a; font-weight: bold;">$1</span>')
+            .replace(/(❌)/g, '<span style="color: #ff6b6b;">$1</span>')
+            .replace(/(⚠️)/g, '<span style="color: #ffa726;">$1</span>')
+            .replace(/(✅)/g, '<span style="color: #66bb6a;">$1</span>')
+            .replace(/(🚀|🔥)/g, '<span style="color: #ff5722;">$1</span>');
+        
+        html += `<div class="log-line">${formattedMessage}</div>`;
+    });
+    
+    return html;
 }
 
 function renderStructuredLogs(logs) {
@@ -39,34 +46,24 @@ function renderStructuredLogs(logs) {
     let html = '';
     
     logs.forEach(log => {
-        const timestamp = log.timestamp || '';
-        const level = log.level || 'INFO';
         const message = log.message || '';
-        const category = log.category || 'GENERAL';
         
         // Skip verbose Playwright logs
         if (isVerbosePlaywrightLog(message)) {
             return;
         }
         
-        // Get level styling
-        const levelClass = getLevelClass(level);
-        const levelIcon = getLevelIcon(level);
+        // Simple text formatting
+        const formattedMessage = message
+            .replace(/(ERROR|CRITICAL|Failed|Error|Exception|Timeout)/gi, '<span style="color: #ff6b6b; font-weight: bold;">$1</span>')
+            .replace(/(WARNING|Warning|Warn)/gi, '<span style="color: #ffa726; font-weight: bold;">$1</span>')
+            .replace(/(SUCCESS|Completed|Success|Successful)/gi, '<span style="color: #66bb6a; font-weight: bold;">$1</span>')
+            .replace(/(❌)/g, '<span style="color: #ff6b6b;">$1</span>')
+            .replace(/(⚠️)/g, '<span style="color: #ffa726;">$1</span>')
+            .replace(/(✅)/g, '<span style="color: #66bb6a;">$1</span>')
+            .replace(/(🚀|🔥)/g, '<span style="color: #ff5722;">$1</span>');
         
-        // Get category styling
-        const categoryClass = getCategoryClass(category);
-        
-        html += `
-            <div class="log-entry ${levelClass}">
-                <span class="log-timestamp">${timestamp}</span>
-                <span class="log-level ${levelClass}">
-                    <i class="${levelIcon}"></i>
-                    ${level}
-                </span>
-                <span class="log-category ${categoryClass}">${category}</span>
-                <span class="log-message">${formatLogMessage(message)}</span>
-            </div>
-        `;
+        html += `<div class="log-line">${formattedMessage}</div>`;
     });
     
     return html;
@@ -107,57 +104,7 @@ function isVerbosePlaywrightLog(message) {
     return verboseKeywords.some(keyword => 
         message.toLowerCase().includes(keyword.toLowerCase())
     );
-}
-
-function getLevelClass(level) {
-    switch (level.toLowerCase()) {
-        case 'error': return 'log-level-error';
-        case 'warning': return 'log-level-warning';
-        case 'success': return 'log-level-success';
-        case 'info': return 'log-level-info';
-        default: return 'log-level-info';
-    }
-}
-
-function getLevelIcon(level) {
-    switch (level.toLowerCase()) {
-        case 'error': return 'bi bi-x-circle-fill';
-        case 'warning': return 'bi bi-exclamation-triangle-fill';
-        case 'success': return 'bi bi-check-circle-fill';
-        case 'info': return 'bi bi-info-circle-fill';
-        default: return 'bi bi-info-circle';
-    }
-}
-
-function getCategoryClass(category) {
-    switch (category.toLowerCase()) {
-        case 'task_start': return 'category-task';
-        case 'task_info': return 'category-task';
-        case 'login': return 'category-login';
-        case 'upload': return 'category-upload';
-        case 'human': return 'category-human';
-        case 'dolphin': return 'category-dolphin';
-        case 'proxy': return 'category-proxy';
-        default: return 'category-general';
-    }
-}
-
-function formatLogMessage(message) {
-    // Apply emoji and keyword highlighting
-    return message
-        .replace(/(❌)/g, '<span class="emoji-error">$1</span>')
-        .replace(/(⚠️)/g, '<span class="emoji-warning">$1</span>')
-        .replace(/(✅)/g, '<span class="emoji-success">$1</span>')
-        .replace(/(🔄|🔍|⏳|🌐|🔒)/g, '<span class="emoji-info">$1</span>')
-        .replace(/(👤|📝|🎬|📋|📎|👥|👆)/g, '<span class="emoji-action">$1</span>')
-        .replace(/(⌨️|🖱️|🔑)/g, '<span class="emoji-input">$1</span>')
-        .replace(/(🚀|🔥)/g, '<span class="emoji-important">$1</span>')
-        // Highlight important keywords
-        .replace(/(ERROR|CRITICAL|Failed|Error|Exception|Timeout)/gi, '<span class="keyword-error">$1</span>')
-        .replace(/(WARNING|Warning|Warn)/gi, '<span class="keyword-warning">$1</span>')
-        .replace(/(SUCCESS|Completed|Success|Successful)/gi, '<span class="keyword-success">$1</span>')
-        .replace(/(Username|Password|Login|Cookie)/gi, '<span class="keyword-auth">$1</span>');
-}
+} 
 
 // Enhanced log updater with better error handling and performance
 function setupLogUpdater(logUrl, intervalMs = 2000, targetElementId = 'logs') {
@@ -184,10 +131,26 @@ function setupLogUpdater(logUrl, intervalMs = 2000, targetElementId = 'logs') {
                 return response.json();
             })
             .then(data => {
-                // Update logs if there's new content
-                if (data.logs && data.logs.length > lastLogCount) {
-                    lastLogCount = data.logs.length;
-                    logsDiv.innerHTML = renderLog(data.logs);
+                // Handle different log formats
+                let logsToRender = '';
+                
+                if (data.logs && Array.isArray(data.logs)) {
+                    // Structured logs
+                    logsToRender = renderStructuredLogs(data.logs);
+                } else if (data.logs && typeof data.logs === 'string') {
+                    // Legacy string format
+                    logsToRender = renderLegacyLog(data.logs);
+                } else if (data.logs) {
+                    // Fallback to legacy format
+                    logsToRender = renderLegacyLog(JSON.stringify(data.logs));
+                } else {
+                    logsToRender = '<div class="text-muted">No logs available yet...</div>';
+                }
+                
+                // Update logs if there's new content or if it's the first load
+                if (logsToRender && (lastLogCount === 0 || data.logs && data.logs.length > lastLogCount)) {
+                    lastLogCount = data.logs ? data.logs.length : 0;
+                    logsDiv.innerHTML = logsToRender;
                     
                     // Auto-scroll to bottom
                     const logContainer = logsDiv.closest('.log-container');
@@ -219,17 +182,7 @@ function setupLogUpdater(logUrl, intervalMs = 2000, targetElementId = 'logs') {
             .catch(error => {
                 console.error('Error fetching logs:', error);
                 // Show error in log container
-                logsDiv.innerHTML += `
-                    <div class="log-entry log-level-error">
-                        <span class="log-timestamp">${new Date().toLocaleTimeString()}</span>
-                        <span class="log-level log-level-error">
-                            <i class="bi bi-exclamation-triangle-fill"></i>
-                            ERROR
-                        </span>
-                        <span class="log-category category-system">SYSTEM</span>
-                        <span class="log-message">Failed to fetch logs: ${error.message}</span>
-                    </div>
-                `;
+                logsDiv.innerHTML += `<div class="log-line">Error fetching logs: ${error.message}</div>`;
                 
                 // Retry with longer interval on error
                 updateInterval = setTimeout(updateLogs, intervalMs * 2);

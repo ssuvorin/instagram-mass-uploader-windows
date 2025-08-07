@@ -89,7 +89,7 @@ if errorlevel 1 (
     pip install --no-deps -r %REQUIREMENTS_FILE%
     pip install "greenlet>=3.0.0"
     if errorlevel 1 (
-        echo %RED%❌ Ошибка установки зависимостей%RESET%
+        echo %RED%❌ Ошибка установки зависимостей%RESET%пше 
         echo Попробуйте обновить pip: python -m pip install --upgrade pip
         pause
         exit /b 1

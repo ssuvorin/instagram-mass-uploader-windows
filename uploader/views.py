@@ -1576,27 +1576,40 @@ def start_bulk_upload(request, task_id):
         print(f"[TASK] Assigning videos to accounts for task {task.id}: {task.name}")
     
     if use_async_mode:
-        # Use async version - run directly without background thread
+        # Use async version - run in background thread
         try:
             from .async_bulk_tasks import run_async_bulk_upload_task_sync
-            print(f"[TASK] Starting async task for task {task.id}: {task.name}")
+            import threading
+            print(f"[TASK] Starting async task in background for task {task.id}: {task.name}")
             
-            # Run async task directly in the current thread context
-            result = run_async_bulk_upload_task_sync(task_id)
-            print(f"[TASK] Async task completed for task {task_id}: {result}")
+            # Update task status to RUNNING
+            update_task_status(task, TaskStatus.RUNNING, "Async task started")
             
-            # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Для async режима редиректим на страницу с логами
-            if result:
-                messages.success(request, f'Async bulk upload task "{task.name}" completed successfully!')
-                return redirect('bulk_upload_detail', task_id=task.id)
-            else:
-                messages.error(request, f'Async bulk upload task "{task.name}" failed!')
-                return redirect('bulk_upload_detail', task_id=task.id)
+            # Run async task in background thread
+            def run_async_task():
+                try:
+                    result = run_async_bulk_upload_task_sync(task_id)
+                    print(f"[TASK] Async task completed for task {task_id}: {result}")
+                    if result:
+                        update_task_status(task, TaskStatus.COMPLETED, "Async task completed successfully")
+                    else:
+                        update_task_status(task, TaskStatus.FAILED, "Async task failed")
+                except Exception as e:
+                    print(f"[TASK] Async task failed for task {task_id}: {str(e)}")
+                    update_task_status(task, TaskStatus.FAILED, f"Async task failed: {str(e)}")
+            
+            # Start task in background thread
+            thread = threading.Thread(target=run_async_task, daemon=True)
+            thread.start()
+            
+            # Immediately redirect to logs page
+            messages.success(request, f'Async bulk upload task "{task.name}" started successfully! You can monitor progress on this page.')
+            return redirect('bulk_upload_detail', task_id=task.id)
             
         except Exception as e:
-            print(f"[TASK] Async task failed for task {task_id}: {str(e)}")
-            messages.error(request, f'Async task failed: {str(e)}')
-            update_task_status(task, TaskStatus.FAILED, f"Task failed: {str(e)}")
+            print(f"[TASK] Failed to start async task for task {task_id}: {str(e)}")
+            messages.error(request, f'Failed to start async task: {str(e)}')
+            update_task_status(task, TaskStatus.FAILED, f"Failed to start async task: {str(e)}")
             return redirect('bulk_upload_detail', task_id=task.id)
     else:
         # Use sync version
@@ -3067,140 +3080,79 @@ def cleanup_inactive_proxies(request):
     return render(request, 'uploader/cleanup_inactive_proxies.html', context)
 
 def bulk_upload_logs(request, task_id):
-    """Get logs for a bulk upload task as JSON with real-time updates and enhanced monitoring"""
+    """Get bulk upload logs for a specific task"""
     try:
-        # Get task to verify it exists
         task = get_object_or_404(BulkUploadTask, id=task_id)
         
-        # Get basic logs from cache
-        cache_key = f"task_logs_{task_id}"
-        logs = cache.get(cache_key, [])
+        # Get logs from cache or file
+        logs_key = f"bulk_upload_logs_{task_id}"
+        logs = cache.get(logs_key, [])
         
-        # Get critical events
-        critical_cache_key = f"task_critical_{task_id}"
-        critical_events = cache.get(critical_cache_key, [])
-        
-        # Get account-specific logs if requested
-        account_id = request.GET.get('account_id')
-        if account_id:
-            account_cache_key = f"task_logs_{task_id}_account_{account_id}"
-            account_logs = cache.get(account_cache_key, [])
-            logs.extend(account_logs)
-        
-        # Generate enhanced statistics
-        stats = {
-            'total_logs': len(logs),
-            'critical_events': len(critical_events),
-            'by_level': {},
-            'by_category': {},
-            'recent_activity': [],
-            'account_health': {},
-            'verification_issues': []
-        }
-        
-        # Process logs for statistics
-        verification_keywords = ['verification', 'верификация', 'phone', 'телефон', 'human', 'captcha']
-        
-        for log_entry in logs:
-            level = log_entry.get('level', 'INFO')
-            category = log_entry.get('category', 'GENERAL')
-            message = log_entry.get('message', '')
-            
-            # Count by level
-            stats['by_level'][level] = stats['by_level'].get(level, 0) + 1
-            
-            # Count by category  
-            stats['by_category'][category] = stats['by_category'].get(category, 0) + 1
-            
-            # Track verification issues
-            if any(keyword in message.lower() for keyword in verification_keywords):
-                stats['verification_issues'].append({
-                    'timestamp': log_entry.get('timestamp'),
-                    'message': message[:200],
-                    'level': level
-                })
-        
-        # Get recent activity (last 10 significant events)
-        significant_levels = ['ERROR', 'WARNING', 'SUCCESS']
-        recent_significant = [
-            log for log in logs[-50:] 
-            if log.get('level') in significant_levels
-        ][-10:]
-        
-        stats['recent_activity'] = recent_significant
-        
-        # Get account health information
-        account_tasks = task.bulkuploadaccount_set.all()
-        for account_task in account_tasks:
-            account = account_task.account
-            stats['account_health'][account.username] = {
-                'status': account.status,
-                'task_status': account_task.status,
-                'last_used': account.last_used.isoformat() if account.last_used else None,
-                'verification_issues': account.status in ['PHONE_VERIFICATION_REQUIRED', 'HUMAN_VERIFICATION_REQUIRED']
-            }
-        
-        # Get task progress information
-        total_accounts = account_tasks.count()
-        completed_accounts = account_tasks.filter(status__in=['COMPLETED', 'PARTIALLY_COMPLETED']).count()
-        failed_accounts = account_tasks.filter(status='FAILED').count()
-        verification_accounts = account_tasks.filter(
-            status__in=['PHONE_VERIFICATION_REQUIRED', 'HUMAN_VERIFICATION_REQUIRED']
-        ).count()
-        
-        progress = {
-            'total_accounts': total_accounts,
-            'completed_accounts': completed_accounts,
-            'failed_accounts': failed_accounts,
-            'verification_accounts': verification_accounts,
-            'completion_percentage': (completed_accounts / total_accounts * 100) if total_accounts > 0 else 0
-        }
-        
-        # Determine overall task health
-        health_status = 'HEALTHY'
-        health_message = 'All systems operational'
-        
-        if verification_accounts > 0:
-            health_status = 'WARNING'
-            health_message = f'{verification_accounts} accounts need verification'
-        
-        if failed_accounts >= total_accounts / 2:  # More than half failed
-            health_status = 'CRITICAL'
-            health_message = f'High failure rate: {failed_accounts}/{total_accounts} accounts failed'
-        
-        # Prepare response data
-        response_data = {
-            'logs': logs[-100:],  # Return last 100 logs to avoid overwhelming the frontend
-            'critical_events': critical_events[-20:],  # Last 20 critical events
-            'stats': stats,
-            'progress': progress,
-            'health': {
-                'status': health_status,
-                'message': health_message
-            },
-            'task_info': {
-                'id': task.id,
-                'name': task.name,
-                'status': task.status,
-                'created_at': task.created_at.isoformat(),
-                'updated_at': task.updated_at.isoformat()
-            },
-            'timestamp': timezone.now().isoformat()
-        }
-        
-        return JsonResponse(response_data)
-        
-    except BulkUploadTask.DoesNotExist:
         return JsonResponse({
-            'error': 'Task not found',
-            'logs': [],
-            'stats': {'total_logs': 0, 'critical_events': 0}
-        }, status=404)
+            'logs': logs,
+            'status': task.status,
+            'completion_percentage': task.get_completion_percentage,
+            'completed_count': task.get_completed_count,
+            'total_count': task.get_total_count
+        })
+        
     except Exception as e:
-        logger.error(f"Error getting bulk upload logs for task {task_id}: {str(e)}")
         return JsonResponse({
             'error': str(e),
             'logs': [],
-            'stats': {'total_logs': 0, 'critical_events': 0}
-        }, status=500)
+            'status': 'ERROR'
+        })
+
+
+@require_POST
+def captcha_notification(request):
+    """API endpoint for captcha notifications"""
+    try:
+        data = json.loads(request.body)
+        bulk_upload_id = data.get('bulk_upload_id')
+        message = data.get('message', 'CAPTCHA detected!')
+        
+        # Store captcha notification in cache
+        cache_key = f"captcha_notification_{bulk_upload_id}"
+        cache.set(cache_key, {
+            'message': message,
+            'timestamp': time.time(),
+            'active': True
+        }, timeout=300)  # 5 minutes timeout
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Captcha notification stored'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=400)
+
+
+@login_required
+def get_captcha_status(request, task_id):
+    """Get captcha status for a bulk upload task"""
+    try:
+        cache_key = f"captcha_notification_{task_id}"
+        notification = cache.get(cache_key)
+        
+        if notification and notification.get('active'):
+            return JsonResponse({
+                'captcha_detected': True,
+                'message': notification.get('message'),
+                'timestamp': notification.get('timestamp')
+            })
+        else:
+            return JsonResponse({
+                'captcha_detected': False
+            })
+            
+    except Exception as e:
+        return JsonResponse({
+            'captcha_detected': False,
+            'error': str(e)
+        })
 

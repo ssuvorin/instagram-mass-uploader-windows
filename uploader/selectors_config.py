@@ -68,9 +68,13 @@ class InstagramSelectors:
         'svg[aria-label="Публикация"]',
         'svg[aria-label*="Публикация"]',
         'svg[aria-label*="Post"]',
+        'svg[aria-label="Post"]',
         'a:has(svg[aria-label="Публикация"])',
         'div[role="menuitem"]:has(svg[aria-label="Публикация"])',
         'div[role="button"]:has(svg[aria-label="Публикация"])',
+        'a:has(svg[aria-label="Post"])',
+        'div[role="menuitem"]:has(svg[aria-label="Post"])',
+        'div[role="button"]:has(svg[aria-label="Post"])',
         
         # 🎯 ПРИОРИТЕТ 2: Текстовые селекторы
         'a:has(span:has-text("Публикация"))',
@@ -79,20 +83,25 @@ class InstagramSelectors:
         'span:has-text("Публикация")',
         'a:has(span:has-text("Post"))',
         'div[role="menuitem"]:has(span:has-text("Post"))',
+        'div[role="button"]:has(span:has-text("Post"))',
         'span:has-text("Post")',
         
         # 🎯 ПРИОРИТЕТ 3: XPath семантические
         '//svg[@aria-label="Публикация"]',
         '//svg[contains(@aria-label, "Публикация")]',
         '//svg[contains(@aria-label, "Post")]',
+        '//svg[@aria-label="Post"]',
         '//a[.//svg[@aria-label="Публикация"]]',
         '//div[@role="menuitem" and .//svg[@aria-label="Публикация"]]',
+        '//a[.//svg[@aria-label="Post"]]',
+        '//div[@role="menuitem" and .//svg[@aria-label="Post"]]',
         
         # 🎯 ПРИОРИТЕТ 4: XPath текстовые
         '//a[.//span[text()="Публикация"]]',
         '//div[@role="menuitem" and .//span[text()="Публикация"]]',
         '//span[text()="Публикация"]',
         '//a[.//span[text()="Post"]]',
+        '//div[@role="menuitem" and .//span[text()="Post"]]',
         '//span[text()="Post"]',
         
         # 🎯 ПРИОРИТЕТ 5: Универсальные

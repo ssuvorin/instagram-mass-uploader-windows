@@ -246,8 +246,8 @@ class BulkUploadTask(models.Model):
     upload_id = models.UUIDField(default=uuid.uuid4, editable=False)
     
     # Location and mentions for all videos (optional)
-    default_location = models.CharField(max_length=200, blank=True, default="", help_text="Шаблон локации для копирования в видео (не применяется автоматически)")
-    default_mentions = models.TextField(blank=True, default="", help_text="Шаблон упоминаний для копирования в видео (не применяются автоматически)")
+    default_location = models.CharField(max_length=200, blank=True, default="", help_text="Location template to copy to videos (not applied automatically)")
+    default_mentions = models.TextField(blank=True, default="", help_text="Mentions template to copy to videos (not applied automatically)")
     
     def __str__(self):
         return f"Bulk Upload {self.id} - {self.status}"
@@ -329,8 +329,8 @@ class BulkVideo(models.Model):
     order = models.IntegerField(default=0)
     
     # Individual location and mentions (override defaults if set)
-    location = models.CharField(max_length=200, blank=True, default="", help_text="Локация для этого видео (переопределяет общую)")
-    mentions = models.TextField(blank=True, default="", help_text="Упоминания для этого видео, по одному на строку (переопределяет общие)")
+    location = models.CharField(max_length=200, blank=True, default="", help_text="Location for this video (overrides default)")
+    mentions = models.TextField(blank=True, default="", help_text="Mentions for this video, one per line (overrides default)")
     
     def __str__(self):
         return f"Video {self.id} for {self.bulk_task.name}"
@@ -339,13 +339,19 @@ class BulkVideo(models.Model):
         ordering = ['order']
     
     def get_effective_location(self):
-        """Get the effective location (only individual, not default)"""
-        return self.location if self.location else None
+        """Get the effective location (individual or default from task)"""
+        if self.location:
+            return self.location
+        elif self.bulk_task.default_location:
+            return self.bulk_task.default_location
+        return None
     
     def get_effective_mentions_list(self):
-        """Get the effective mentions as a list (only individual, not default)"""
+        """Get the effective mentions as a list (individual or default from task)"""
         if self.mentions:
             return [mention.strip() for mention in self.mentions.split('\n') if mention.strip()]
+        elif self.bulk_task.default_mentions:
+            return [mention.strip() for mention in self.bulk_task.default_mentions.split('\n') if mention.strip()]
         return []
 
 

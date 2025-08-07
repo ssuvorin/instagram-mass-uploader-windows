@@ -44,7 +44,7 @@ from .browser_utils import BrowserManager, PageUtils, ErrorHandler, NetworkUtils
 from .crop_handler import CropHandler, handle_crop_and_aspect_ratio
 from .logging_utils import log_info, log_error, log_debug, log_warning
 from .human_behavior import AdvancedHumanBehavior, init_human_behavior, get_human_behavior
-from .captcha_solver import solve_recaptcha_if_present, detect_recaptcha_on_page, RuCaptchaSolver, solve_recaptcha_if_present_sync
+from .captcha_solver import solve_recaptcha_if_present, detect_recaptcha_on_page, solve_recaptcha_if_present_sync
 
 # Import email verification functions
 from .email_verification_async import (
@@ -251,6 +251,11 @@ async def run_dolphin_browser_async(account_details: Dict, videos: List, video_f
             print(f"🚫 [ASYNC_VERIFICATION_SUSPENDED] Account suspended for account: {username}")
             await update_account_status_async(username, 'SUSPENDED', account_task_id)
             return ("SUSPENDED", 0, 1)
+            
+        elif "CAPTCHA" in error_message:
+            print(f"🤖 [ASYNC_VERIFICATION_CAPTCHA] CAPTCHA solving failed for account: {username}")
+            await update_account_status_async(username, 'CAPTCHA', account_task_id)
+            return ("CAPTCHA", 0, 1)
             
         else:
             print(f"[ASYNC_FAIL] Browser error: {error_message}")
@@ -537,32 +542,14 @@ async def get_dolphin_profile_id_async(username: str) -> str:
 async def perform_instagram_operations_async(page, account_details: Dict, videos: List, video_files_to_upload: List[str]) -> bool:
     """Perform Instagram operations with enhanced error handling and monitoring - async version"""
     try:
-        print("🌐 [ASYNC_NAVIGATION] Navigating to Instagram.com")
+        print("�� [ASYNC_NAVIGATION] Starting Instagram navigation with retry mechanism")
         
-        # Navigate to Instagram with extended timeout
-        await page.goto("https://www.instagram.com/", wait_until="domcontentloaded", timeout=60000)
+        # Use retry mechanism for navigation
+        navigation_success = await retry_navigation_async(page, "https://www.instagram.com/", max_attempts=3)
         
-        # CRITICAL: Wait for page to fully load before proceeding
-        print("⏳ [ASYNC_NAVIGATION] Waiting for page to fully load...")
-        await asyncio.sleep(8)  # Increased from immediate to 8 seconds
-        
-        # Additional wait for network idle (all resources loaded) - with error handling
-        try:
-            await page.wait_for_load_state("networkidle", timeout=15000)
-            print("✅ [ASYNC_NAVIGATION] Network idle state reached")
-        except Exception as e:
-            print(f"⚠️ [ASYNC_NAVIGATION] Network idle timeout, continuing: {str(e)}")
-        
-        # Wait for DOM to be interactive - with error handling for CSP
-        try:
-            # Use a simpler check that doesn't violate CSP
-            await page.wait_for_selector("body", timeout=10000)
-            print("✅ [ASYNC_NAVIGATION] Page body loaded")
-        except Exception as e:
-            print(f"⚠️ [ASYNC_NAVIGATION] Body load timeout, continuing: {str(e)}")
-        
-        # Additional safety wait
-        await asyncio.sleep(3)
+        if not navigation_success:
+            print("❌ [ASYNC_NAVIGATION] Failed to navigate to Instagram.com after all retry attempts")
+            return False
         
         print("✅ [ASYNC_NAVIGATION] Successfully loaded Instagram.com")
         
@@ -839,7 +826,10 @@ async def handle_login_flow_async(page, account_details: Dict) -> bool:
         
         # Only check for reCAPTCHA before attempting login
         print("🔍 [ASYNC_LOGIN] Checking for reCAPTCHA on login page...")
-        await handle_recaptcha_if_present_async(page)
+        captcha_result = await handle_recaptcha_if_present_async(page, account_details)
+        if not captcha_result:
+            print("❌ [ASYNC_LOGIN] reCAPTCHA solving failed, terminating login flow")
+            raise Exception("CAPTCHA: Failed to solve reCAPTCHA")
         print("✅ [ASYNC_LOGIN] reCAPTCHA handling completed")
         
         # Perform login with enhanced process
@@ -1053,43 +1043,172 @@ async def simulate_human_mouse_movement_async(page):
 async def check_post_login_verifications_async(page, account_details):
     """Check for post-login verification requirements"""
     try:
-        print("🔍 [ASYNC_LOGIN] Checking for phone verification requirement...")
-        phone_verification_result = await check_for_phone_verification_page_async(page)
+        # Wait for page to load and potential captcha to appear
+        print("⏳ [ASYNC_LOGIN] Waiting for page to fully load after login...")
+        await asyncio.sleep(3)  # Wait for captcha to load if present
         
-        if phone_verification_result.get('requires_phone_verification', False):
-            message = phone_verification_result.get('message', 'Unknown reason')
-            print(f"📱 [ASYNC_LOGIN] Phone verification required after login: {message}")
-            raise Exception(f"PHONE_VERIFICATION_REQUIRED: {message}")
-        
-        # Check for human verification after login
-        print("🔍 [ASYNC_LOGIN] Checking for human verification requirement...")
-        human_verification_result = await check_for_human_verification_dialog_async(page, account_details)
-        
-        if human_verification_result.get('requires_human_verification', False):
-            message = human_verification_result.get('message', 'Unknown reason')
-            print(f"🤖 [ASYNC_LOGIN] Human verification required after login: {message}")
-            raise Exception(f"HUMAN_VERIFICATION_REQUIRED: {message}")
-        
-        # Check for account suspension after login
-        print("🔍 [ASYNC_LOGIN] Checking for account suspension...")
-        suspension_result = await check_for_account_suspension_async(page)
-        
-        if suspension_result.get('account_suspended', False):
-            suspension_message = suspension_result.get('message', 'Account suspended by Instagram')
-            print(f"🚫 [ASYNC_LOGIN] Account suspension detected after login: {suspension_message}")
-            
-            # Raise exception to trigger account status update
-            raise Exception(f"SUSPENDED: {suspension_message}")
-        
-        # Post-login reCAPTCHA check
+        # Check for reCAPTCHA first (before other verifications)
         print("🔍 [ASYNC_LOGIN] Checking for post-login reCAPTCHA...")
-        await handle_recaptcha_if_present_async(page)
+        captcha_result = await handle_recaptcha_if_present_async(page, account_details)
+        if not captcha_result:
+            print("❌ [ASYNC_LOGIN] Post-login reCAPTCHA solving failed, terminating login flow")
+            raise Exception("CAPTCHA: Failed to solve post-login reCAPTCHA")
+        print("✅ [ASYNC_LOGIN] reCAPTCHA handling completed")
+        # Check for 2FA/Email verification after captcha
+        print("🔍 [ASYNC_LOGIN] Checking for 2FA/Email verification...")
         
+        # Try to find verification input
+        tfa_input = None
+        max_attempts = 5
+        
+        for attempt in range(max_attempts):
+            print(f"🔍 [ASYNC_LOGIN] Verification check attempt {attempt + 1}/{max_attempts}")
+            
+            # Use the comprehensive function to find verification code input
+            tfa_input = await page.query_selector('input[name="verificationCode"], input[name="confirmationCode"]')
+            
+            if tfa_input and await tfa_input.is_visible():
+                print(f"✅ [ASYNC_LOGIN] Found verification input on attempt {attempt + 1}")
+                break
+            else:
+                # Check if we're already logged in (successful login without 2FA)
+                logged_in_indicators = [
+                    'a[href*="/accounts/activity/"]',
+                    'a[href*="/accounts/edit/"]',
+                    'a[href*="/accounts/"]',
+                    'button[aria-label*="New post"]',
+                    'button[aria-label*="Create"]'
+                ]
+                
+                for indicator in logged_in_indicators:
+                    try:
+                        element = await page.query_selector(indicator)
+                        if element and await element.is_visible():
+                            print(f"✅ [ASYNC_LOGIN] Login successful! Found indicator: {indicator}")
+                            return True
+                    except:
+                        continue
+                
+                if attempt < max_attempts - 1:
+                    print("⏳ [ASYNC_LOGIN] No verification input found, waiting before retry...")
+                    await asyncio.sleep(3)
+        
+        if tfa_input:
+            # Determine verification type using the same logic as sync version
+            try:
+                page_text = await page.inner_text('body') or ""
+                
+                # Check for NON-email verification keywords first (2FA/Authenticator)
+                non_email_keywords = [
+                    'google authenticator',
+                    'authentication app',
+                    'приложение аутентификации',
+                    'authenticator app',
+                    'приложение authenticator',
+                    'two-factor app',
+                    'приложение двухфакторной',
+                    'backup code',
+                    'резервный код',
+                    'recovery code',
+                    'код восстановления',
+                    'sms code',
+                    'смс код',
+                    'text message',
+                    'текстовое сообщение',
+                    'phone number',
+                    'номер телефона',
+                ]
+                
+                is_non_email = any(keyword in page_text.lower() for keyword in non_email_keywords)
+                
+                if is_non_email:
+                    print("🔐 [ASYNC_LOGIN] Google Authenticator verification detected")
+                    
+                    # Handle 2FA verification
+                    tfa_secret = account_details.get('tfa_secret')
+                    
+                    if not tfa_secret:
+                        print("❌ [ASYNC_LOGIN] 2FA secret not provided")
+                        raise Exception("2FA_VERIFICATION_FAILED: 2FA secret not provided")
+                    
+                    # Get 2FA code from API
+                    from .email_verification_async import get_2fa_code_async
+                    verification_code = await get_2fa_code_async(tfa_secret)
+                    
+                    if verification_code:
+                        print(f"�� [ASYNC_LOGIN] Got 2FA code: {verification_code}")
+                        
+                        # Enter verification code
+                        await tfa_input.click()
+                        await asyncio.sleep(random.uniform(0.5, 1.0))
+                        await tfa_input.fill(verification_code)
+                        await asyncio.sleep(random.uniform(1, 2))
+                        
+                        # Submit form
+                        submit_button = await page.query_selector('button[type="submit"], button:has-text("Confirm"), button:has-text("Подтвердить")')
+                        if submit_button:
+                            await submit_button.click()
+                            await asyncio.sleep(random.uniform(3, 5))
+                        
+                        print("✅ [ASYNC_LOGIN] 2FA verification completed successfully")
+                        return True
+                    else:
+                        print("❌ [ASYNC_LOGIN] Failed to get 2FA code")
+                        raise Exception("2FA_VERIFICATION_FAILED: Failed to get 2FA code")
+                        
+                else:
+                    print("📧 [ASYNC_LOGIN] Email verification detected")
+                    
+                    # Handle email verification
+                    email_login = account_details.get('email_login')
+                    email_password = account_details.get('email_password')
+                    
+                    if not email_login or not email_password:
+                        print("❌ [ASYNC_LOGIN] Email credentials not provided for verification")
+                        raise Exception("EMAIL_VERIFICATION_FAILED: Email credentials not provided")
+                    
+                    print(f"📧 [ASYNC_LOGIN] Starting email verification for: {email_login}")
+                    
+                    # Get verification code from API
+                    from .email_verification_async import get_email_verification_code_async
+                    verification_code = await get_email_verification_code_async(email_login, email_password)
+                    
+                    if verification_code:
+                        print(f"📧 [ASYNC_LOGIN] Got email verification code: {verification_code}")
+                        
+                        # Enter verification code
+                        await tfa_input.click()
+                        await asyncio.sleep(random.uniform(0.5, 1.0))
+                        await tfa_input.fill(verification_code)
+                        await asyncio.sleep(random.uniform(1, 2))
+                        
+                        # Submit form
+                        submit_button = await page.query_selector('button[type="submit"], button:has-text("Confirm"), button:has-text("Подтвердить")')
+                        if submit_button:
+                            await submit_button.click()
+                            await asyncio.sleep(random.uniform(3, 5))
+                        
+                        print("✅ [ASYNC_LOGIN] Email verification completed successfully")
+                        return True
+                    else:
+                        print("❌ [ASYNC_LOGIN] Failed to get email verification code")
+                        raise Exception("EMAIL_VERIFICATION_FAILED: Failed to get verification code")
+                        
+            except Exception as e:
+                print(f"❌ [ASYNC_LOGIN] Error in 2FA/Email verification: {str(e)}")
+                raise e
+        
+        print("✅ [ASYNC_LOGIN] No 2FA/Email verification required")
+        
+        # Check for phone verification requirement
     except Exception as e:
         # Re-raise verification exceptions
         if ("SUSPENDED:" in str(e) or 
             "PHONE_VERIFICATION_REQUIRED:" in str(e) or 
-            "HUMAN_VERIFICATION_REQUIRED:" in str(e)):
+            "HUMAN_VERIFICATION_REQUIRED:" in str(e) or
+            "CAPTCHA:" in str(e) or
+            "2FA_VERIFICATION_FAILED:" in str(e) or
+            "EMAIL_VERIFICATION_FAILED:" in str(e)):
             raise e
         else:
             print(f"❌ [ASYNC_LOGIN] Error in post-login verification: {str(e)}")
@@ -1204,7 +1323,7 @@ async def wait_for_page_ready_async(page, max_wait_time=30.0) -> bool:
                 upload_button = await page.query_selector('[aria-label*="New post"], [aria-label*="Create"], [data-testid="new-post-button"]')
                 if not upload_button or not await upload_button.is_visible():
                     print(f"[ASYNC_READY] ⏳ Upload button not visible")
-                    await asyncio.sleep(0.5)
+                    await asyncio.sleep(3)
                     continue
                 
                 print(f"[ASYNC_READY] ✅ Page is ready! (took {time.time() - start_time:.1f}s)")
@@ -1247,7 +1366,7 @@ async def navigate_to_upload_core_async(page):
             is_visible = await upload_button.is_visible()
             if not is_visible:
                 print("[ASYNC_UPLOAD] ⚠️ Upload button not visible, waiting briefly...")
-                await asyncio.sleep(2.0)
+                await asyncio.sleep(3.0)
                 
                 # Try to find the button again
                 upload_button = await find_element_with_selectors_async(page, SelectorConfig.UPLOAD_BUTTON, "UPLOAD_BTN_RETRY")
@@ -1792,12 +1911,12 @@ async def navigate_to_upload_alternative_async(page) -> bool:
             create_url = "https://www.instagram.com/create/select/"
             print(f"[ASYNC_UPLOAD] 🌐 Navigating to: {create_url}")
             
-            await page.goto(create_url, wait_until="domcontentloaded", timeout=30000)
+            # Use retry mechanism for alternative navigation
+            navigation_success = await retry_navigation_async(page, create_url, max_attempts=3, base_delay=3)
             
-            # Wait for page to load (ПОЛНАЯ КОПИЯ из sync)
-            load_wait = 3.0 + random.uniform(-1.0, 1.0)
-            print(f"[ASYNC_UPLOAD] ⏳ Waiting {load_wait:.1f}s for page load...")
-            await asyncio.sleep(load_wait)
+            if not navigation_success:
+                print("[ASYNC_UPLOAD] ❌ Alternative navigation failed after all retry attempts")
+                return False
             
             # Check if we're on upload page (ПОЛНАЯ КОПИЯ из sync)
             if await check_for_file_dialog_async(page):
@@ -3411,52 +3530,28 @@ async def safely_close_all_windows_async(page, dolphin_browser, dolphin_profile_
     except Exception as e:
         print(f"[ASYNC_BROWSER] Error in window closure: {str(e)}")
 
-async def handle_recaptcha_if_present_async(page):
-    """Handle reCAPTCHA if present on the page - proper async version"""
+async def handle_recaptcha_if_present_async(page, account_details=None):
+    """Handle reCAPTCHA if present on the page - использует captcha_solver.py"""
     try:
-        print("🔍 [ASYNC_RECAPTCHA] Starting async reCAPTCHA detection...")
+        print("🔍 [ASYNC_RECAPTCHA] Starting reCAPTCHA detection and solving...")
         
-        # Check for reCAPTCHA iframe elements
-        recaptcha_selectors = [
-            'iframe[src*="recaptcha"]',
-            'iframe[title*="reCAPTCHA"]',
-            'div[class*="recaptcha"]',
-            '.g-recaptcha',
-            '#recaptcha',
-        ]
+        # Используем функцию из captcha_solver.py для решения капчи
+        from .captcha_solver import solve_recaptcha_if_present
         
-        recaptcha_detected = False
+        result = await solve_recaptcha_if_present(page, account_details, max_attempts=3)
         
-        for selector in recaptcha_selectors:
-            try:
-                elements = await page.query_selector_all(selector)
-                if elements and len(elements) > 0:
-                    for element in elements:
-                        if await element.is_visible():
-                            print(f"🔍 [ASYNC_RECAPTCHA] reCAPTCHA detected with selector: {selector}")
-                            recaptcha_detected = True
-                            break
-                if recaptcha_detected:
-                    break
-            except Exception as e:
-                print(f"⚠️ [ASYNC_RECAPTCHA] Error checking selector {selector}: {str(e)}")
-                continue
-        
-        if not recaptcha_detected:
-            print("ℹ️ [ASYNC_RECAPTCHA] No reCAPTCHA detected on page")
+        if result:
+            print("✅ [ASYNC_RECAPTCHA] reCAPTCHA solved successfully or not detected")
             return True
-        
-        print("⚠️ [ASYNC_RECAPTCHA] reCAPTCHA detected but automatic solving not implemented for async version")
-        print("ℹ️ [ASYNC_RECAPTCHA] Continuing without solving (manual intervention may be required)")
-        
-        # Wait a bit to see if reCAPTCHA resolves itself or times out
-        await asyncio.sleep(random.uniform(3, 5))
-        
-        return True
+        else:
+            print("❌ [ASYNC_RECAPTCHA] Failed to solve reCAPTCHA after all attempts")
+            # Возвращаем False для завершения выполнения и установки статуса CAPTCHA
+            return False
         
     except Exception as e:
         print(f"⚠️ [ASYNC_RECAPTCHA] Error handling reCAPTCHA: {str(e)}")
-        return True  # Continue anyway
+        # При ошибке также возвращаем False для завершения выполнения
+        return False
 
 async def perform_instagram_login_optimized_async(page, account_details):
     """Perform Instagram login - async version with comprehensive error handling"""
@@ -4559,6 +4654,28 @@ async def handle_login_completion_async(page, account_details):
         current_url = page.url
         print(f"🔍 [ASYNC_LOGIN] URL after login: {current_url}")
         
+        # Проверяем, что мы НЕ на challenge-странице
+        if '/challenge/' in current_url:
+            print("🚨 [ASYNC_LOGIN] On challenge page - attempting to solve captcha...")
+            
+            # Пытаемся решить капчу на challenge-странице
+            captcha_result = await handle_recaptcha_if_present_async(page, account_details)
+            if captcha_result:
+                print("✅ [ASYNC_LOGIN] Captcha solved on challenge page")
+                # Ждем немного после решения капчи
+                await asyncio.sleep(random.uniform(3, 5))
+                # Проверяем, что мы больше не на challenge-странице
+                current_url = page.url
+                if '/challenge/' not in current_url:
+                    print("✅ [ASYNC_LOGIN] Successfully passed challenge page")
+                    return True
+                else:
+                    print("⚠️ [ASYNC_LOGIN] Still on challenge page after captcha solving")
+                    return False
+            else:
+                print("❌ [ASYNC_LOGIN] Failed to solve captcha on challenge page")
+                return False
+        
         # Check for successful login (not on login page anymore)
         if '/accounts/login' not in current_url and 'instagram.com' in current_url:
             # Additional verification - look for logged-in elements
@@ -4568,14 +4685,22 @@ async def handle_login_completion_async(page, account_details):
                 'svg[aria-label="New post"]',
                 'a[href*="/accounts/edit/"]',
                 'main[role="main"]',
+                'nav[role="navigation"]',
+                'a[href="/"]',  # Home link
+                'a[href="/explore/"]',  # Explore link
+                'a[href="/reels/"]',  # Reels link
+                'a[href="/accounts/activity/"]',  # Activity link
             ]
             
             for indicator in logged_in_indicators:
                 try:
                     element = await page.query_selector(indicator)
                     if element and await element.is_visible():
-                        print("✅ [ASYNC_LOGIN] Login successful - found logged-in indicator")
+                        print(f"✅ [ASYNC_LOGIN] Login successful - found logged-in indicator: {indicator}")
                         return True
+                except Exception as e:
+                    print(f"⚠️ [ASYNC_LOGIN] Error checking indicator {indicator}: {e}")
+                    continue
                 except:
                     continue
         
@@ -4647,8 +4772,9 @@ async def handle_login_completion_async(page, account_details):
             print("❌ [ASYNC_LOGIN] Still on login page - login likely failed")
             return False
         
-        print("✅ [ASYNC_LOGIN] Login appears successful")
-        return True
+        # Если мы дошли сюда, логин не завершен
+        print("❌ [ASYNC_LOGIN] Login not completed - unknown state")
+        return False
         
     except Exception as e:
         print(f"❌ [ASYNC_LOGIN] Error in login completion: {str(e)}")
@@ -5253,7 +5379,7 @@ async def get_task_with_accounts_async(task_id):
         return None
 
 async def get_account_details_async(account_id):
-    """Get account details - async version"""
+    """Get account details - async version with proxy information"""
     try:
         from asgiref.sync import sync_to_async
         from uploader.models import InstagramAccount
@@ -5262,11 +5388,18 @@ async def get_account_details_async(account_id):
         def get_account():
             try:
                 account = InstagramAccount.objects.get(id=account_id)
-                return {
-                    'username': account.username,
-                    'password': account.password,
-                    'tfa_secret': account.tfa_secret,
-                }
+                
+                # Use the to_dict() method which includes proxy information
+                account_details = account.to_dict()
+                
+                print(f"🔍 [ACCOUNT_DETAILS] Retrieved account details for {account.username}")
+                if account_details.get('proxy'):
+                    proxy_info = account_details['proxy']
+                    print(f"🔒 [ACCOUNT_DETAILS] Proxy: {proxy_info.get('host')}:{proxy_info.get('port')} (type: {proxy_info.get('type', 'http')})")
+                else:
+                    print(f"⚠️ [ACCOUNT_DETAILS] No proxy assigned to account {account.username}")
+                
+                return account_details
             except InstagramAccount.DoesNotExist:
                 return None
         
@@ -5662,3 +5795,56 @@ async def update_account_last_used_async(username: str):
     except Exception as e:
         print(f"❌ [DATABASE] Error in update_account_last_used_async: {str(e)}")
         return False
+
+# Add this new retry function after the imports section (around line 100)
+
+async def retry_navigation_async(page, url, max_attempts=3, base_delay=5):
+    """
+    Retry navigation to a URL with exponential backoff
+    """
+    for attempt in range(max_attempts):
+        try:
+            print(f"🌐 [ASYNC_NAVIGATION] Attempt {attempt + 1}/{max_attempts} - Navigating to {url}")
+            
+            # Navigate with timeout
+            await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+            
+            # Wait for page to fully load
+            print(f"⏳ [ASYNC_NAVIGATION] Waiting for page to fully load (attempt {attempt + 1})...")
+            await asyncio.sleep(8)
+            
+            # Additional wait for network idle
+            try:
+                await page.wait_for_load_state("networkidle", timeout=15000)
+                print(f"✅ [ASYNC_NAVIGATION] Network idle state reached (attempt {attempt + 1})")
+            except Exception as e:
+                print(f"⚠️ [ASYNC_NAVIGATION] Network idle timeout, continuing (attempt {attempt + 1}): {str(e)}")
+            
+            # Wait for DOM to be interactive
+            try:
+                await page.wait_for_selector("body", timeout=10000)
+                print(f"✅ [ASYNC_NAVIGATION] Page body loaded (attempt {attempt + 1})")
+            except Exception as e:
+                print(f"⚠️ [ASYNC_NAVIGATION] Body load timeout, continuing (attempt {attempt + 1}): {str(e)}")
+            
+            # Additional safety wait
+            await asyncio.sleep(3)
+            
+            print(f"✅ [ASYNC_NAVIGATION] Successfully loaded {url} on attempt {attempt + 1}")
+            return True
+            
+        except Exception as e:
+            error_msg = str(e)
+            print(f"❌ [ASYNC_NAVIGATION] Attempt {attempt + 1} failed: {error_msg}")
+            
+            # If this is the last attempt, don't wait
+            if attempt == max_attempts - 1:
+                print(f"❌ [ASYNC_NAVIGATION] All {max_attempts} attempts failed. Giving up.")
+                return False
+            
+            # Calculate delay with exponential backoff
+            delay = base_delay * (2 ** attempt)
+            print(f"⏳ [ASYNC_NAVIGATION] Waiting {delay}s before retry...")
+            await asyncio.sleep(delay)
+    
+    return False

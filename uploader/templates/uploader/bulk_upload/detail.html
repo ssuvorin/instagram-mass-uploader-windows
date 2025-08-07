@@ -8,7 +8,7 @@
     /* Main dashboard styling */
     .task-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        color: var(--apple-text, white);
         padding: 2rem;
         border-radius: 12px;
         margin-bottom: 2rem;
@@ -102,7 +102,7 @@
     }
     
     .progress-text {
-        color: white;
+        color: var(--apple-text, white);
         font-weight: 600;
         margin-top: 0.5rem;
         font-size: 0.9rem;
@@ -117,7 +117,7 @@
     }
     
     .stat-card {
-        background: white;
+        background: var(--apple-card, white);
         border-radius: 12px;
         padding: 1.5rem;
         box-shadow: 0 4px 6px rgba(0,0,0,0.05);
@@ -171,13 +171,13 @@
     .stat-number {
         font-size: 2rem;
         font-weight: 700;
-        color: #2d3748;
+        color: var(--apple-text, #2d3748);
         line-height: 1;
         margin-bottom: 0.25rem;
     }
     
     .stat-label {
-        color: #718096;
+        color: var(--apple-text-secondary, #718096);
         font-weight: 500;
         font-size: 0.9rem;
     }
@@ -195,7 +195,7 @@
     
     /* Action panel */
     .action-panel {
-        background: white;
+        background: var(--apple-card, white);
         border-radius: 12px;
         padding: 1.5rem;
         box-shadow: 0 4px 6px rgba(0,0,0,0.05);
@@ -206,7 +206,7 @@
     .action-title {
         font-size: 1.1rem;
         font-weight: 600;
-        color: #2d3748;
+        color: var(--apple-text, #2d3748);
         margin-bottom: 1rem;
         display: flex;
         align-items: center;
@@ -335,7 +335,7 @@
     
     /* Data tables */
     .data-section {
-        background: white;
+        background: var(--apple-card, white);
         border-radius: 12px;
         overflow: hidden;
         box-shadow: 0 4px 6px rgba(0,0,0,0.05);
@@ -354,7 +354,7 @@
     
     .data-title {
         font-weight: 600;
-        color: #2d3748;
+        color: var(--apple-text, #2d3748);
         margin: 0;
         display: flex;
         align-items: center;
@@ -440,7 +440,7 @@
     
     /* Logs section */
     .logs-section {
-        background: white;
+        background: var(--apple-card, white);
         border-radius: 12px;
         overflow: hidden;
         box-shadow: 0 4px 6px rgba(0,0,0,0.05);
@@ -477,144 +477,25 @@
         background: #1e1e1e;
         color: #f8f8f8;
         font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-        padding: 1.5rem;
-        max-height: 500px;
+        padding: 1rem;
+        max-height: 800px;
         overflow-y: auto;
         white-space: pre-wrap;
         word-wrap: break-word;
-        line-height: 1.6;
+        line-height: 1.4;
         font-size: 0.85rem;
+        border-radius: 8px;
+        border: 1px solid #333;
     }
     
-    /* Enhanced log entry styling */
-    .log-entry {
-        display: flex;
-        align-items: flex-start;
-        gap: 0.75rem;
-        padding: 0.5rem 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        transition: background-color 0.2s ease;
+    .log-line {
+        padding: 0.1rem 0;
+        border-bottom: none;
     }
     
-    .log-entry:hover {
+    .log-line:hover {
         background-color: rgba(255, 255, 255, 0.05);
     }
-    
-    .log-timestamp {
-        color: #569cd6;
-        font-weight: 600;
-        font-size: 0.8rem;
-        min-width: 60px;
-        flex-shrink: 0;
-    }
-    
-    .log-level {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-        font-weight: 600;
-        font-size: 0.75rem;
-        min-width: 80px;
-        flex-shrink: 0;
-        padding: 0.2rem 0.5rem;
-        border-radius: 4px;
-    }
-    
-    .log-level-error {
-        background: rgba(244, 76, 76, 0.2);
-        color: #f44c4c;
-        border: 1px solid rgba(244, 76, 76, 0.3);
-    }
-    
-    .log-level-warning {
-        background: rgba(255, 193, 7, 0.2);
-        color: #ffc107;
-        border: 1px solid rgba(255, 193, 7, 0.3);
-    }
-    
-    .log-level-success {
-        background: rgba(40, 167, 69, 0.2);
-        color: #28a745;
-        border: 1px solid rgba(40, 167, 69, 0.3);
-    }
-    
-    .log-level-info {
-        background: rgba(23, 162, 184, 0.2);
-        color: #17a2b8;
-        border: 1px solid rgba(23, 162, 184, 0.3);
-    }
-    
-    .log-category {
-        font-size: 0.7rem;
-        font-weight: 500;
-        padding: 0.2rem 0.5rem;
-        border-radius: 4px;
-        min-width: 70px;
-        text-align: center;
-        flex-shrink: 0;
-    }
-    
-    .category-task {
-        background: rgba(102, 126, 234, 0.2);
-        color: #667eea;
-    }
-    
-    .category-login {
-        background: rgba(186, 85, 211, 0.2);
-        color: #ba55d3;
-    }
-    
-    .category-upload {
-        background: rgba(255, 154, 86, 0.2);
-        color: #ff9a56;
-    }
-    
-    .category-human {
-        background: rgba(255, 105, 180, 0.2);
-        color: #ff69b4;
-    }
-    
-    .category-dolphin {
-        background: rgba(64, 224, 208, 0.2);
-        color: #40e0d0;
-    }
-    
-    .category-proxy {
-        background: rgba(255, 215, 0, 0.2);
-        color: #ffd700;
-    }
-    
-    .category-general {
-        background: rgba(108, 117, 125, 0.2);
-        color: #6c757d;
-    }
-    
-    .log-message {
-        flex: 1;
-        line-height: 1.4;
-    }
-    
-    /* Emoji styling */
-    .emoji-error { color: #ff6b6b; font-size: 1.1em; }
-    .emoji-warning { color: #ffa726; font-size: 1.1em; }
-    .emoji-success { color: #66bb6a; font-size: 1.1em; }
-    .emoji-info { color: #42a5f5; font-size: 1.1em; }
-    .emoji-action { color: #ffca28; font-size: 1.1em; }
-    .emoji-input { color: #ec407a; font-size: 1.1em; }
-    .emoji-important { color: #ff5722; font-size: 1.2em; font-weight: bold; }
-    
-    /* Keyword highlighting */
-    .keyword-error { color: #f44c4c; font-weight: bold; }
-    .keyword-warning { color: #ffc107; font-weight: bold; }
-    .keyword-success { color: #28a745; font-weight: bold; }
-    .keyword-auth { color: #ba55d3; font-weight: 500; }
-    
-    /* Legacy log styling (fallback) */
-    .log-container .log-time { color: #569cd6; font-weight: bold; }
-    .log-container .log-info { color: #4fc1ff; }
-    .log-container .log-success { color: #6a9955; }
-    .log-container .log-warning { color: #d7ba7d; }
-    .log-container .log-error { color: #f14c4c; }
     
     .account-log-header {
         background: #f8f9fa;
@@ -631,6 +512,23 @@
         display: flex;
         align-items: center;
         gap: 1rem;
+    }
+    
+    .account-stats {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .account-stats .badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .account-stats small {
+        font-size: 0.8rem;
+        color: #6c757d;
     }
     
     .proxy-info {
@@ -741,10 +639,63 @@
         border-top: 1px solid #e9ecef;
         padding: 1.5rem;
     }
+
+    /* Captcha Banner Styling */
+    .captcha-banner {
+        background-color: #fff3cd;
+        color: #856404;
+        padding: 1rem 0;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        z-index: 1050; /* Bootstrap modal z-index */
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .captcha-banner .container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .captcha-icon {
+        font-size: 2rem;
+        color: #ffc107;
+    }
+
+    .captcha-content h5 {
+        margin-bottom: 0.25rem;
+    }
+
+    .captcha-content p {
+        margin-bottom: 0;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
+<!-- Captcha Notification Banner -->
+<div id="captchaBanner" class="captcha-banner" style="display: none;">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-10">
+                <div class="d-flex align-items-center">
+                    <div class="captcha-icon me-3">
+                        <i class="bi bi-shield-exclamation"></i>
+                    </div>
+                    <div class="captcha-content">
+                        <h5 class="mb-1">🔔 CAPTCHA DETECTED!</h5>
+                        <p class="mb-0">Please solve the captcha manually in the browser. The process will continue automatically once solved.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 text-end">
+                <button type="button" class="btn-close btn-close-white" onclick="hideCaptchaBanner()"></button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Task Header -->
 <div class="task-header">
     <div class="row align-items-center">
@@ -1123,16 +1074,28 @@
                                 {% endif %}
                             </td>
                             <td>
-                                {% if video.location %}
-                                    <span class="badge bg-info">{{ video.location }}</span>
+                                {% if video.get_effective_location %}
+                                    <span class="badge bg-info">
+                                        {% if video.location %}
+                                            {{ video.get_effective_location }}
+                                        {% else %}
+                                            {{ video.get_effective_location }} (default)
+                                        {% endif %}
+                                    </span>
                                 {% else %}
                                     <span class="text-muted">Not set</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {% if video.mentions %}
+                                {% if video.get_effective_mentions_list %}
                                     {% for mention in video.get_effective_mentions_list %}
-                                        <span class="badge bg-success me-1">{{ mention }}</span>
+                                        <span class="badge bg-success me-1">
+                                            {% if video.mentions %}
+                                                {{ mention }}
+                                            {% else %}
+                                                {{ mention }} (default)
+                                            {% endif %}
+                                        </span>
                                     {% endfor %}
                                 {% else %}
                                     <span class="text-muted">Not set</span>
@@ -1216,6 +1179,11 @@
             <div class="log-container">
                 <div id="logs">{{ task.log|default:"No logs available yet..." }}</div>
             </div>
+            <div class="mt-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleLogHeight('main-log')">
+                    <i class="bi bi-arrows-expand"></i> Развернуть логи
+                </button>
+            </div>
         </div>
         
         {% for account_task in accounts %}
@@ -1250,15 +1218,26 @@
                         {% endif %}
                     </span>
                 </div>
+                <div class="account-stats">
+                    <span class="badge bg-secondary">{{ account_task.assigned_videos.count }} videos assigned</span>
+                    {% if account_task.started_at %}
+                    <small>Started: {{ account_task.started_at|timesince }} ago</small>
+                    {% endif %}
+                </div>
             </div>
             
             <div class="log-container">
                 <div id="account-logs-{{ account_task.id }}">{{ account_task.log|default:"No logs for this account yet..." }}</div>
             </div>
+            <div class="mt-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleLogHeight('account-{{ account_task.id }}')">
+                    <i class="bi bi-arrows-expand"></i> Развернуть логи
+                </button>
+            </div>
             
             {% if account_task.assigned_videos.exists %}
             <div class="assigned-videos">
-                <h6><i class="bi bi-camera-video"></i> All Task Videos ({{ task.videos.count }})</h6>
+                <h6><i class="bi bi-camera-video"></i> Assigned Videos ({{ account_task.assigned_videos.count }})</h6>
                 {% for video in account_task.assigned_videos.all %}
                 <div class="video-item">
                     <div>
@@ -1332,10 +1311,8 @@
 <!-- Include logs formatting script -->
 <script src="{% static 'uploader/js/logs.js' %}"></script>
 
-<!-- Generate account IDs array using JSON -->
-{{ accounts|length|json_script:"account-task-ids" }}
+<!-- Generate account IDs array -->
 <script>
-const accountTaskIds = JSON.parse(document.getElementById('account-task-ids').textContent);
 // Convert to actual account IDs
 window.accountTaskIds = [
     {% for account_task in accounts %}{{ account_task.id }}{% if not forloop.last %},{% endif %}{% endfor %}
@@ -1434,9 +1411,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Setup log updaters for each account tab when clicked
     accountTaskIds.forEach(function(accountId) {
         const tabElement = document.getElementById('account-' + accountId + '-tab');
-        if (tabElement) {
+        const logElement = document.getElementById('account-logs-' + accountId);
+        
+        if (tabElement && logElement) {
+            // Initialize logs for this account
+            setupLogUpdater('{% url "bulk_task_logs" task_id=task.id %}?account_id=' + accountId, 2000, 'account-logs-' + accountId);
+            
+            // Also set up click handler for tab switching
             tabElement.addEventListener('click', function() {
-                setupLogUpdater('{% url "bulk_task_logs" task_id=task.id %}?account_id=' + accountId, 2000, 'account-logs-' + accountId);
+                // Ensure logs are updated when tab is clicked
+                setTimeout(() => {
+                    setupLogUpdater('{% url "bulk_task_logs" task_id=task.id %}?account_id=' + accountId, 2000, 'account-logs-' + accountId);
+                }, 100);
             });
         }
     });
@@ -1444,11 +1430,29 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 {% else %}
 <script>
+// Function to toggle log container height
+function toggleLogHeight(tabId) {
+    const tabPane = document.getElementById(tabId);
+    if (tabPane) {
+        const logContainer = tabPane.querySelector('.log-container');
+        if (logContainer) {
+            if (logContainer.style.maxHeight === 'none' || logContainer.style.maxHeight === '') {
+                logContainer.style.maxHeight = '800px';
+                event.target.innerHTML = '<i class="bi bi-arrows-expand"></i> Развернуть логи';
+            } else {
+                logContainer.style.maxHeight = 'none';
+                event.target.innerHTML = '<i class="bi bi-arrows-collapse"></i> Свернуть логи';
+            }
+        }
+    }
+}
+</script>
+<script>
 document.addEventListener('DOMContentLoaded', function() {
     // Get account IDs from global variable
     const accountTaskIds = window.accountTaskIds || [];
     
-    // For completed tasks, just format the logs
+    // For completed tasks, format the main logs
     const logsDiv = document.getElementById('logs');
     if (logsDiv && logsDiv.textContent) {
         logsDiv.innerHTML = renderLog(logsDiv.textContent);
@@ -1464,4 +1468,92 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endif %}
+
+<!-- Captcha Banner JavaScript -->
+<script>
+// Function to show captcha banner
+function showCaptchaBanner() {
+    const banner = document.getElementById('captchaBanner');
+    if (banner) {
+        banner.style.display = 'block';
+        // Add margin to body to prevent content jump
+        document.body.style.marginTop = '80px';
+        
+        // Play sound notification
+        playSoundNotification();
+    }
+}
+
+// Function to hide captcha banner
+function hideCaptchaBanner() {
+    const banner = document.getElementById('captchaBanner');
+    if (banner) {
+        banner.style.display = 'none';
+        // Remove margin from body
+        document.body.style.marginTop = '0';
+    }
+}
+
+// Function to play sound notification
+function playSoundNotification() {
+    try {
+        // Create audio context for beep sound
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+        oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.5);
+        
+        console.log('🔔 Captcha notification sound played');
+    } catch (error) {
+        console.log('🔔 Captcha detected! Please solve it manually.');
+    }
+}
+
+// Listen for captcha notifications from WebSocket or Server-Sent Events
+document.addEventListener('DOMContentLoaded', function() {
+    // Check for captcha status every 10 seconds
+    setInterval(function() {
+        fetch('{% url "get_captcha_status" task_id=task.id %}')
+            .then(response => response.json())
+            .then(data => {
+                if (data.captcha_detected) {
+                    showCaptchaBanner();
+                }
+            })
+            .catch(error => {
+                console.error('Error checking for captcha:', error);
+            });
+    }, 10000);
+    
+    // Also check logs for captcha keywords
+    setInterval(function() {
+        fetch('{% url "bulk_task_logs" task_id=task.id %}')
+            .then(response => response.json())
+            .then(data => {
+                if (data.logs && data.logs.some(log => 
+                    log.includes('CAPTCHA DETECTED') || 
+                    log.includes('Starting MANUAL reCAPTCHA solving') ||
+                    log.includes('🚨 Instagram challenge page detected')
+                )) {
+                    showCaptchaBanner();
+                }
+            })
+            .catch(error => {
+                console.error('Error checking logs for captcha:', error);
+            });
+    }, 15000);
+});
+</script>
 {% endblock %} 

@@ -57,7 +57,7 @@ from .crop_handler import CropHandler, handle_crop_and_aspect_ratio
 from .login_optimized import perform_instagram_login_optimized, _check_if_already_logged_in, _fill_login_credentials, _submit_login_form, _handle_login_completion, _handle_2fa_verification, _enter_verification_code
 from .logging_utils import log_info, log_error, log_debug, log_warning
 from .human_behavior import AdvancedHumanBehavior, init_human_behavior, get_human_behavior
-from .captcha_solver import solve_recaptcha_if_present, detect_recaptcha_on_page, RuCaptchaSolver, solve_recaptcha_if_present_sync
+from .captcha_solver import solve_recaptcha_if_present, detect_recaptcha_on_page, solve_recaptcha_if_present_sync
 
 # Disable verbose Playwright logging
 logging.getLogger('playwright').setLevel(logging.ERROR)

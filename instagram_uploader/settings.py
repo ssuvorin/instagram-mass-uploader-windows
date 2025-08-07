@@ -194,12 +194,12 @@ LOGGING = {
         'django': {
             'handlers': ['console', 'file'],
             'level': 'INFO',
-            'propagate': True,
+            'propagate': False,
         },
         'uploader': {
             'handlers': ['console', 'file'],
             'level': 'DEBUG',
-            'propagate': True,
+            'propagate': False,
         },
         'django.db.backends': {
             'handlers': ['console'],
@@ -210,10 +210,6 @@ LOGGING = {
             'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
-        },
-        '': {  # Root logger
-            'handlers': ['console', 'file'],
-            'level': 'INFO',
         },
     },
 }

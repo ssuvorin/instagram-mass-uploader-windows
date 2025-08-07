@@ -75,10 +75,10 @@ class BulkUploadTaskForm(forms.ModelForm):
         required=False,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Например: Москва, Россия'
+            'placeholder': 'For example: Moscow, Russia'
         }),
-        label="Локация по умолчанию",
-        help_text="Локация для копирования в отдельные видео (не применяется автоматически)"
+        label="Default Location",
+        help_text="Location template to copy to videos (not applied automatically)"
     )
     
     default_mentions = forms.CharField(
@@ -88,8 +88,8 @@ class BulkUploadTaskForm(forms.ModelForm):
             'rows': 3,
             'placeholder': '@username1\n@username2\n@username3'
         }),
-        label="Упоминания по умолчанию",
-        help_text="Упоминания для копирования в отдельные видео (не применяются автоматически)"
+        label="Default Mentions",
+        help_text="Mentions to copy to videos (not applied automatically)"
     )
     
     def __init__(self, *args, **kwargs):
@@ -196,10 +196,10 @@ class BulkVideoLocationMentionsForm(forms.ModelForm):
         required=False,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Например: Москва, Россия'
+            'placeholder': 'For example: Moscow, Russia'
         }),
-        label="Локация",
-        help_text="Оставьте пустым, чтобы использовать локацию по умолчанию"
+        label="Location",
+        help_text="Leave empty to use default location"
     )
     
     mentions = forms.CharField(
@@ -209,8 +209,8 @@ class BulkVideoLocationMentionsForm(forms.ModelForm):
             'rows': 3,
             'placeholder': '@username1\n@username2\n@username3'
         }),
-        label="Упоминания",
-        help_text="По одному на строку. Оставьте пустым, чтобы использовать упоминания по умолчанию"
+        label="Mentions",
+        help_text="Mentions for this video, one per line (overrides defaults)"
     )
     
     class Meta:
