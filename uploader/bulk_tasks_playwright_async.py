@@ -459,11 +459,17 @@ class AsyncDolphinBrowser:
     async def cleanup_async(self):
         """Clean up browser resources"""
         try:
+            import platform
+            is_windows = platform.system().lower() == 'windows'
+            
             log_info("🔒 [ASYNC_BROWSER_CLEANUP] Starting browser cleanup...")
             
             # Close page first
             if self.page:
                 try:
+                    # На Windows добавляем небольшую задержку перед закрытием
+                    if is_windows:
+                        await asyncio.sleep(0.5)
                     await self.page.close()
                     log_info("[OK] [ASYNC_BROWSER_CLEANUP] Page closed")
                 except Exception as e:
@@ -474,6 +480,9 @@ class AsyncDolphinBrowser:
             # Close browser
             if self.browser:
                 try:
+                    # На Windows добавляем задержку перед закрытием браузера
+                    if is_windows:
+                        await asyncio.sleep(1.0)
                     await self.browser.close()
                     log_info("[OK] [ASYNC_BROWSER_CLEANUP] Browser closed")
                 except Exception as e:
@@ -484,6 +493,9 @@ class AsyncDolphinBrowser:
             # Stop playwright
             if self.playwright:
                 try:
+                    # На Windows добавляем задержку перед остановкой Playwright
+                    if is_windows:
+                        await asyncio.sleep(0.5)
                     await self.playwright.stop()
                     log_info("[OK] [ASYNC_BROWSER_CLEANUP] Playwright stopped")
                 except Exception as e:
@@ -495,6 +507,9 @@ class AsyncDolphinBrowser:
             if self.dolphin and self.dolphin_profile_id:
                 try:
                     from asgiref.sync import sync_to_async
+                    # На Windows добавляем задержку перед остановкой профиля
+                    if is_windows:
+                        await asyncio.sleep(0.5)
                     stop_profile_sync = sync_to_async(self.dolphin.stop_profile)
                     await stop_profile_sync(self.dolphin_profile_id)
                     log_info("[OK] [ASYNC_BROWSER_CLEANUP] Dolphin profile stopped")
@@ -508,6 +523,10 @@ class AsyncDolphinBrowser:
             self.playwright = None
             self.dolphin_profile_id = None
             self.automation_data = None
+            
+            # На Windows добавляем финальную задержку для полной очистки
+            if is_windows:
+                await asyncio.sleep(1.0)
             
             log_info("[OK] [ASYNC_BROWSER_CLEANUP] Cleanup completed successfully")
             
@@ -603,7 +622,7 @@ async def perform_instagram_operations_async(page, account_details: Dict, videos
                 await log_video_info_async(i, len(video_files_to_upload), video_file_path, video_obj)
                 
                 # Navigate to upload page
-                if not await navigate_to_upload_with_human_behavior_async(page):
+                if not await navigate_to_upload_with_human_behavior_async(page, account_details):
                     log_info(f"[ASYNC_FAIL] Could not navigate to upload page for video {i}")
                     continue
                 
@@ -1143,7 +1162,7 @@ async def check_post_login_verifications_async(page, account_details):
             log_error(f"[FAIL] [ASYNC_LOGIN] Error in post-login verification: {str(e)}")
             return False
 
-async def navigate_to_upload_with_human_behavior_async(page):
+async def navigate_to_upload_with_human_behavior_async(page, account_details=None):
     """Navigate to upload page with advanced human behavior - ПОЛНАЯ КОПИЯ sync версии"""
     try:
         log_info("[ASYNC_UPLOAD] [START] Starting enhanced navigation to upload interface")
@@ -1296,7 +1315,7 @@ async def navigate_to_upload_core_async(page):
             is_visible = await upload_button.is_visible()
             if not is_visible:
                 log_info("[ASYNC_UPLOAD] [WARN] Upload button not visible, waiting briefly...")
-                await asyncio.sleep(3.0 + random.uniform(-0.5, 0.5))
+                await asyncio.sleep(2.0 + random.uniform(-0.5, 0.5))
                 
                 # Try to find the button again
                 upload_button = await find_element_with_selectors_async(page, SelectorConfig.UPLOAD_BUTTON, "UPLOAD_BTN_RETRY")

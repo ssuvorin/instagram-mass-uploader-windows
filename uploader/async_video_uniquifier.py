@@ -427,6 +427,9 @@ def cleanup_hanging_ffmpeg():
     """Очистка зависших FFmpeg процессов"""
     try:
         import psutil
+        import platform
+        
+        is_windows = platform.system().lower() == 'windows'
         ffmpeg_processes = []
         
         for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
@@ -444,19 +447,37 @@ def cleanup_hanging_ffmpeg():
                     create_time = proc.create_time()
                     runtime = time.time() - create_time
                     
-                    if runtime > 600:  # Если процесс работает больше 10 минут
+                    # На Windows используем более короткий таймаут
+                    timeout_threshold = 300 if is_windows else 600  # 5 минут для Windows, 10 для остальных
+                    
+                    if runtime > timeout_threshold:
                         print(f"💀 [UNIQUIFY_CLEANUP] Killing long-running FFmpeg process (PID: {proc.pid}, runtime: {runtime:.1f}s)")
-                        proc.kill()
-                        proc.wait(timeout=5)
+                        
+                        if is_windows:
+                            # На Windows сначала пробуем мягкое завершение
+                            proc.terminate()
+                            try:
+                                proc.wait(timeout=3)
+                            except psutil.TimeoutExpired:
+                                proc.kill()
+                                proc.wait(timeout=2)
+                        else:
+                            proc.kill()
+                            proc.wait(timeout=5)
+                            
                 except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.TimeoutExpired):
                     continue
                     
         print(f"[OK] [UNIQUIFY_CLEANUP] FFmpeg cleanup completed")
         
+        # На Windows добавляем небольшую задержку
+        if is_windows:
+            time.sleep(0.5)
+        
     except ImportError:
         print(f"[WARN] [UNIQUIFY_CLEANUP] psutil not available, cannot cleanup FFmpeg processes")
     except Exception as e:
-        print(f"[FAIL] [UNIQUIFY_CLEANUP] Error during FFmpeg cleanup: {str(e)}") 
+        print(f"[FAIL] [UNIQUIFY_CLEANUP] Error during FFmpeg cleanup: {str(e)}")
 
 def check_ffmpeg_availability() -> bool:
     """Проверка доступности FFmpeg"""

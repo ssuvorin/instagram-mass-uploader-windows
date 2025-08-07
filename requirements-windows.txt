@@ -49,6 +49,7 @@ wmi==1.5.1; sys_platform == "win32"
 
 # Async support for Windows
 asyncio-mqtt==0.16.1
+nest-asyncio==1.5.8
 
 # File handling for Windows
 pathlib2==2.3.7; python_version < "3.4"

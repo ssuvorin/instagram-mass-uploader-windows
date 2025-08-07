@@ -28,8 +28,16 @@ from django.utils import timezone
 import signal
 import threading
 
-# Configure Django settings for async operations
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'instagram_uploader.settings')
+# Windows-specific fixes
+try:
+    from .windows_fixes import apply_windows_async_context_fix, log_windows_environment, is_windows
+    if is_windows():
+        apply_windows_async_context_fix()
+        log_windows_environment()
+except ImportError:
+    print("[WARN] Windows fixes module not available")
+
+# Django imports
 import django
 django.setup()
 
@@ -245,9 +253,23 @@ class AsyncTaskRepository:
     @sync_to_async
     def close_django_connections() -> None:
         """Закрыть Django соединения"""
-        from django.db import connection
-        if connection.connection is not None:
-            connection.close()
+        import platform
+        from django.db import connections
+        
+        try:
+            # Закрываем все соединения с базой данных
+            for conn in connections.all():
+                if conn.connection is not None:
+                    conn.close()
+            
+            # На Windows добавляем дополнительную очистку
+            if platform.system().lower() == 'windows':
+                import time
+                time.sleep(0.1)  # Небольшая задержка для Windows
+                
+            print("[OK] [DATABASE] All Django connections closed")
+        except Exception as e:
+            print(f"[WARN] [DATABASE] Error closing Django connections: {str(e)}")
     
     @staticmethod
     @sync_to_async
@@ -1065,26 +1087,25 @@ async def run_async_bulk_upload_task(task_id: int) -> bool:
         """Обработчик сигналов для корректного завершения"""
         print(f"\n[WARN] Received signal {signum}, gracefully shutting down async task {task_id}...")
         
-        # Создаем задачу для обновления статуса
-        async def update_task_status_on_signal():
-            try:
-                from django.utils import timezone
-                from .models import BulkUploadTask
-                
-                task = BulkUploadTask.objects.get(id=task_id)
-                current_time = timezone.now()
-                timestamp = current_time.strftime("%Y-%m-%d %H:%M:%S")
-                
-                task.status = 'FAILED'
-                task.log += f"[{timestamp}] [WARN] Async task interrupted by signal {signum}\n"
-                task.save()
-                
-                print(f"[OK] Updated task {task_id} status to FAILED due to signal interruption")
-            except Exception as e:
-                print(f"[FAIL] Failed to update task status on signal interruption: {str(e)}")
-        
-        # Запускаем обновление статуса в отдельной задаче
-        asyncio.create_task(update_task_status_on_signal())
+        # Обработка прерывания сигналом (синхронно, так как обработчики сигналов не могут быть async)
+        try:
+            from django.utils import timezone
+            from .models import BulkUploadTask
+            
+            task = BulkUploadTask.objects.get(id=task_id)
+            current_time = timezone.now()
+            timestamp = current_time.strftime("%Y-%m-%d %H:%M:%S")
+            
+            task.status = 'FAILED'
+            task.log += f"[{timestamp}] [WARN] Async task interrupted by signal {signum}\n"
+            task.save()
+            
+            print(f"[SIGNAL] Task '{task.name}' marked as FAILED due to signal {signum}")
+            
+        except Exception as db_error:
+            print(f"Warning: Failed to update task status in database: {str(db_error)}")
+        except Exception as e:
+            print(f"Warning: Error handling signal {signum}: {str(e)}")
     
     # Устанавливаем обработчики сигналов только в главном потоке
     if threading.current_thread() is threading.main_thread():
@@ -1121,15 +1142,14 @@ async def run_async_bulk_upload_task(task_id: int) -> bool:
             from django.utils import timezone
             from .models import BulkUploadTask
             
-            # Получаем задачу и обновляем статус
-            task = BulkUploadTask.objects.get(id=task_id)
+            # ИСПРАВЛЕНИЕ: Используем асинхронный метод вместо синхронного Django ORM
+            task_repo = AsyncTaskRepository()
+            task = await task_repo.get_task(task_id)
             current_time = timezone.now()
             timestamp = current_time.strftime("%Y-%m-%d %H:%M:%S")
             
             # Обновляем статус и логи
-            task.status = 'FAILED'
-            task.log += f"[{timestamp}] [EXPLODE] Critical task error: {error_msg}\n"
-            task.save()
+            await task_repo.update_task_status(task, 'FAILED', f"[{timestamp}] [EXPLODE] Critical task error: {error_msg}\n")
             
             print(f"[OK] Updated task {task_id} status to FAILED")
         except Exception as update_error:
@@ -1159,7 +1179,9 @@ async def run_async_bulk_upload_task(task_id: int) -> bool:
         # КРИТИЧЕСКОЕ ДОБАВЛЕНИЕ: Always cleanup original video files from bulk_videos folder
         try:
             from .models import BulkUploadTask
-            task = BulkUploadTask.objects.get(id=task_id)
+            # ИСПРАВЛЕНИЕ: Используем асинхронный метод вместо синхронного Django ORM
+            task_repo = AsyncTaskRepository()
+            task = await task_repo.get_task(task_id)
             coordinator = AsyncTaskCoordinator(task_id)
             deleted_count = await coordinator._cleanup_original_video_files(task, AsyncLogger(task_id))
             print(f"[DELETE] Cleaned up {deleted_count} original video files from bulk_videos folder")
