@@ -44,8 +44,9 @@ class InstagramAccountForm(forms.ModelForm):
         """Clean tfa_secret by removing spaces"""
         tfa_secret = self.cleaned_data.get('tfa_secret')
         if tfa_secret:
-            # Remove all spaces from 2FA secret
-            tfa_secret = tfa_secret.replace(' ', '')
+            # Remove all whitespace (spaces, tabs, non-breaking spaces, etc.) from 2FA secret
+            import re
+            tfa_secret = re.sub(r'\s+', '', tfa_secret)
         return tfa_secret
 
 

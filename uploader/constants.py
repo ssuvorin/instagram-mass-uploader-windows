@@ -181,6 +181,12 @@ class InstagramTexts:
         'текстовое сообщение',
         'phone number',
         'номер телефона',
+        # Дополнительные подсказки 2FA
+        'two-factor',
+        'two factor',
+        '2fa',
+        'authenticator',
+        'verification code from your authenticator app',
     ]
     
     # Сохранение данных входа

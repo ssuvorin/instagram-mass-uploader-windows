@@ -654,7 +654,8 @@ def import_accounts(request):
                     # This could be either a 2FA account or an email verification account
                     # Check if the third part looks like a 2FA secret (usually uppercase letters and numbers)
                     # Remove spaces first to properly detect 2FA keys that may contain spaces
-                    potential_2fa = parts[2].replace(' ', '')
+                    import re
+                    potential_2fa = re.sub(r'\s+', '', parts[2])
                     if potential_2fa.isupper() and any(c.isdigit() for c in potential_2fa):
                         tfa_secret = potential_2fa  # Already has spaces removed
                         logger.info(f"[INFO] Account {username} identified as 2FA account")
@@ -673,15 +674,18 @@ def import_accounts(request):
                     # This is a TFA account (username:password:email:email_password:tfa_secret)
                     email_username = parts[2]
                     email_password = parts[3]
-                    tfa_secret = parts[4].replace(' ', '')  # Remove spaces from 2FA key
+                    import re
+                    tfa_secret = re.sub(r'\s+', '', parts[4])  # Remove all whitespace from 2FA key
                     logger.info(f"[INFO] Account {username} identified as TFA account with email")
                 
                 elif len(parts) > 5:
                     # Extended format with additional fields
                     email_username = parts[2]
                     email_password = parts[3]
-                    tfa_secret = parts[4].replace(' ', '')  # Remove spaces from 2FA key
+                    import re
+                    tfa_secret = re.sub(r'\s+', '', parts[4])  # Remove all whitespace from 2FA key
                     logger.info(f"[INFO] Account {username} identified as TFA account with extended format")
+                
                 
                 # Get an unused active proxy for this account
                 logger.info(f"[STEP 4/5] Assigning proxy to account: {username}")

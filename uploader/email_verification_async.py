@@ -171,10 +171,10 @@ async def determine_verification_type_async(page) -> str:
         log_info("Analyzing page to determine verification type...")
         
         # КРИТИЧНО: Сначала проверяем URL - самый надежный индикатор
-        current_url = page.url
+        current_url = page.url.lower()
         
         # Если на странице 2FA - это точно authenticator
-        if '/two_factor/' in current_url or 'totp_two_factor_on=True' in current_url:
+        if 'two_factor' in current_url or 'totp_two_factor_on=true' in current_url:
             log_info("Result: 2FA/Authenticator verification (detected by URL)")
             return "authenticator"
         
