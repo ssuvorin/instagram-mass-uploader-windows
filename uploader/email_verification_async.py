@@ -21,6 +21,10 @@ except ImportError:
     Email = None
 
 from .constants import APIConstants, InstagramTexts
+import base64
+import hmac
+import hashlib
+import time
 
 def log_info(message: str, category: str = None):
     """Async-compatible logging function"""
@@ -130,13 +134,16 @@ async def get_2fa_code_async(tfa_secret: str) -> Optional[str]:
                                 return response_data["data"]["otp"]
                             else:
                                 log_warning(f"Failed to get valid 2FA code from API: {response_data}")
-                                return None
+                                # Падать не будем — поедем в локальный TOTP
                         else:
                             log_warning(f"2FA API returned status: {response.status}")
-                            return None
+                            # Падать не будем — поедем в локальный TOTP
                 except asyncio.TimeoutError:
                     log_warning("2FA API request timeout")
-                    return None
+                    # Падать не будем — поедем в локальный TOTP
+                except Exception as e:
+                    log_warning(f"2FA API request failed: {str(e)}")
+                    # Падать не будем — поедем в локальный TOTP
         else:
             # Fallback к синхронному requests в отдельном потоке
             def sync_get_2fa():
@@ -159,7 +166,31 @@ async def get_2fa_code_async(tfa_secret: str) -> Optional[str]:
                 return code
             else:
                 log_warning("Failed to get 2FA code (sync fallback)")
+                # Падать не будем — поедем в локальный TOTP
+        
+        # Локальный TOTP fallback (без внешних зависимостей)
+        def generate_totp(secret_base32: str, interval: int = 30, digits: int = 6) -> Optional[str]:
+            try:
+                normalized = secret_base32.replace(' ', '').upper()
+                # Добавим padding для base32 если нужно
+                padding = '=' * ((8 - len(normalized) % 8) % 8)
+                key = base64.b32decode(normalized + padding, casefold=True)
+                counter = int(time.time()) // interval
+                msg = counter.to_bytes(8, 'big')
+                h = hmac.new(key, msg, hashlib.sha1).digest()
+                o = h[-1] & 0x0F
+                code_int = (int.from_bytes(h[o:o+4], 'big') & 0x7FFFFFFF) % (10 ** digits)
+                return str(code_int).zfill(digits)
+            except Exception as e:
+                log_error(f"Local TOTP generation failed: {str(e)}")
                 return None
+        
+        local_code = generate_totp(tfa_secret)
+        if local_code:
+            log_info("Successfully generated 2FA code locally (TOTP)")
+            return local_code
+        
+        return None
                 
     except Exception as e:
         log_error(f"Error getting 2FA code: {str(e)}")
