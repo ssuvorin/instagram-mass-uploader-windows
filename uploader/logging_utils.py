@@ -15,6 +15,9 @@ logger = logging.getLogger('uploader.bulk_tasks')
 # Async logger bridge (used in async mode)
 _async_logger = None  # type: ignore
 
+# Console silence flag
+SILENT_CONSOLE = os.getenv('SILENT_CONSOLE_LOGS') == '1'
+
 def set_async_logger(async_logger):
     """Register AsyncLogger-like instance to mirror logs into Django cache in async mode."""
     global _async_logger
@@ -75,7 +78,8 @@ def log_info(message: str, category: Optional[str] = None):
         pass
     _mirror_to_async_logger('INFO', safe_message, category)
     logger.info(safe_message)
-    print(f"[BULK TASK] {safe_message}")
+    if not SILENT_CONSOLE:
+        print(f"[BULK TASK] {safe_message}")
 
 
 def log_success(message: str, category: Optional[str] = None):
@@ -89,7 +93,8 @@ def log_success(message: str, category: Optional[str] = None):
         pass
     _mirror_to_async_logger('SUCCESS', safe_message, category)
     logger.info(safe_message)
-    print(f"[BULK TASK SUCCESS] {safe_message}")
+    if not SILENT_CONSOLE:
+        print(f"[BULK TASK SUCCESS] {safe_message}")
 
 
 def log_error(message: str, category: Optional[str] = None):
@@ -103,7 +108,8 @@ def log_error(message: str, category: Optional[str] = None):
         pass
     _mirror_to_async_logger('ERROR', safe_message, category)
     logger.error(safe_message)
-    print(f"[BULK TASK ERROR] {safe_message}")
+    if not SILENT_CONSOLE:
+        print(f"[BULK TASK ERROR] {safe_message}")
 
 
 def log_debug(message: str, category: Optional[str] = None):
@@ -117,7 +123,8 @@ def log_debug(message: str, category: Optional[str] = None):
         pass
     _mirror_to_async_logger('DEBUG', safe_message, category)
     logger.debug(safe_message)
-    print(f"[BULK TASK DEBUG] {safe_message}")
+    if not SILENT_CONSOLE:
+        print(f"[BULK TASK DEBUG] {safe_message}")
 
 
 def log_warning(message: str, category: Optional[str] = None):
@@ -131,4 +138,5 @@ def log_warning(message: str, category: Optional[str] = None):
         pass
     _mirror_to_async_logger('WARNING', safe_message, category)
     logger.warning(safe_message)
-    print(f"[BULK TASK WARNING] {safe_message}") 
+    if not SILENT_CONSOLE:
+        print(f"[BULK TASK WARNING] {safe_message}") 

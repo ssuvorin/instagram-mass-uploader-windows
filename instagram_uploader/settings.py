@@ -193,6 +193,9 @@ LOGGING = {
             'formatter': 'verbose',
             'level': 'INFO',
         },
+        'null': {
+            'class': 'logging.NullHandler',
+        },
     },
     'loggers': {
         'django': {
@@ -211,8 +214,26 @@ LOGGING = {
             'propagate': False,
         },
         'django.request': {
+            'handlers': ['null'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        # Silence Django runserver request logs
+        'django.server': {
+            'handlers': ['null'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        # Our middleware logs go through logger when SILENT_REQUEST_LOGS=1
+        'uploader.middleware': {
             'handlers': ['console'],
-            'level': 'INFO',
+            'level': os.getenv('REQUEST_LOG_LEVEL', 'INFO'),
+            'propagate': False,
+        },
+        # Our bulk task logger
+        'uploader.bulk_tasks': {
+            'handlers': ['console'],
+            'level': os.getenv('BULK_LOG_LEVEL', 'INFO'),
             'propagate': False,
         },
     },
