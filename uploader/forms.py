@@ -1,8 +1,34 @@
 from django import forms
 from django.core.validators import FileExtensionValidator
-from .models import UploadTask, InstagramAccount, Proxy, VideoFile, BulkUploadTask, BulkVideo
+from .models import (
+    UploadTask,
+    InstagramAccount,
+    Proxy,
+    VideoFile,
+    BulkUploadTask,
+    BulkVideo,
+    AvatarChangeTask,
+    FollowCategory,
+    FollowTarget,
+    FollowTask,
+)
 from django.db.models import Sum, Value
 from django.db.models.functions import Coalesce
+from django.forms.widgets import ClearableFileInput
+
+
+class MultipleFileInput(ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class MultipleFileField(forms.FileField):
+    widget = MultipleFileInput
+
+    def clean(self, data, initial=None):
+        single_file = super().clean(data, initial)
+        if isinstance(single_file, list):
+            return single_file
+        return [single_file] if single_file else []
 
 
 class ProxyForm(forms.ModelForm):
@@ -25,7 +51,7 @@ class InstagramAccountForm(forms.ModelForm):
     class Meta:
         model = InstagramAccount
         fields = ['username', 'password', 'email_username', 'email_password', 
-                  'tfa_secret', 'proxy', 'status', 'notes', 'dolphin_profile_id']
+                  'tfa_secret', 'proxy', 'status', 'notes', 'dolphin_profile_id', 'phone_number']
         widgets = {
             'password': forms.PasswordInput(render_value=True),
             'email_password': forms.PasswordInput(render_value=True),
@@ -35,9 +61,11 @@ class InstagramAccountForm(forms.ModelForm):
         help_texts = {
             'dolphin_profile_id': 'ID профиля Dolphin Anty. Заполняется автоматически при запуске теста аккаунта.',
             'proxy': 'Прокси-сервер для использования с этим аккаунтом. Будет автоматически добавлен в профиль Dolphin.',
+            'phone_number': 'Номер телефона для закрепления мобильного устройства и верификаций (E.164 формат)',
         }
         labels = {
             'dolphin_profile_id': 'Dolphin Anty Profile ID',
+            'phone_number': 'Phone Number',
         }
     
     def clean_tfa_secret(self):
@@ -56,12 +84,10 @@ class InstagramAccountForm(forms.ModelForm):
             existing_profile_id = self.instance.dolphin_profile_id
         instance = super().save(commit=False)
         # Always keep the original Dolphin profile ID unless it was already empty
-        if existing_profile_id:
+        if existing_profile_id and not instance.dolphin_profile_id:
             instance.dolphin_profile_id = existing_profile_id
         if commit:
             instance.save()
-            if hasattr(self, 'save_m2m'):
-                self.save_m2m()
         return instance
 
 
@@ -249,3 +275,129 @@ class BulkVideoLocationMentionsForm(forms.ModelForm):
     class Meta:
         model = BulkVideo
         fields = ['location', 'mentions']
+
+
+# New: form for avatar change task
+class AvatarChangeTaskForm(forms.ModelForm):
+    selected_accounts = forms.ModelMultipleChoiceField(
+        queryset=InstagramAccount.objects.all().order_by('-created_at'),
+        widget=forms.CheckboxSelectMultiple,
+        required=True,
+        label="Select accounts"
+    )
+    images = MultipleFileField(
+        widget=MultipleFileInput(attrs={'multiple': True, 'class': 'form-control'}),
+        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png'])],
+        required=True,
+        label="Avatar images",
+        help_text="You can select multiple PNG/JPG images"
+    )
+    strategy = forms.ChoiceField(
+        choices=[('random_reuse', 'Random reuse'), ('one_to_one', 'One-to-one order')],
+        initial='random_reuse',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label='Distribution strategy'
+    )
+    delay_min_sec = forms.IntegerField(initial=15, min_value=1, label='Min delay (sec)')
+    delay_max_sec = forms.IntegerField(initial=45, min_value=1, label='Max delay (sec)')
+    concurrency = forms.IntegerField(initial=1, min_value=1, max_value=3, label='Concurrency')
+
+    class Meta:
+        model = AvatarChangeTask
+        fields = ['strategy', 'delay_min_sec', 'delay_max_sec', 'concurrency']
+
+    def clean(self):
+        data = super().clean()
+        min_d = data.get('delay_min_sec')
+        max_d = data.get('delay_max_sec')
+        if min_d and max_d and min_d > max_d:
+            raise forms.ValidationError('Min delay must be <= Max delay')
+        return data
+
+
+class FollowCategoryForm(forms.ModelForm):
+    class Meta:
+        model = FollowCategory
+        fields = ['name']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+
+
+class FollowTargetsBulkForm(forms.Form):
+    usernames = forms.CharField(
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 6, 'placeholder': '@user1\n@user2, user3 user4'}),
+        required=False,
+        label='Usernames (one per line, or separated by comma/space)'
+    )
+
+    def clean_usernames(self):
+        text = (self.cleaned_data.get('usernames') or '').strip()
+        if not text:
+            return []
+        import re
+        # Split by commas, whitespace, or newlines
+        raw_items = re.split(r'[\s,]+', text)
+        result = []
+        for item in raw_items:
+            username = item.strip().lstrip('@').lower()
+            if not username:
+                continue
+            # Basic validation: instagram usernames are 1-30 chars [a-z0-9._]
+            if len(username) > 30:
+                raise forms.ValidationError(f"Username too long: {username}")
+            if not re.fullmatch(r'[a-z0-9._]+', username):
+                raise forms.ValidationError(f"Invalid username: {username}")
+            result.append(username)
+        # De-duplicate preserving order
+        seen = set()
+        unique = []
+        for u in result:
+            if u not in seen:
+                seen.add(u)
+                unique.append(u)
+        return unique
+
+
+class FollowTargetForm(forms.ModelForm):
+    class Meta:
+        model = FollowTarget
+        fields = ['username']
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'instagram username'})
+        }
+
+
+class FollowTaskForm(forms.ModelForm):
+    selected_accounts = forms.ModelMultipleChoiceField(
+        queryset=InstagramAccount.objects.all().order_by('-created_at'),
+        widget=forms.CheckboxSelectMultiple,
+        required=True,
+        label="Select accounts"
+    )
+
+    class Meta:
+        model = FollowTask
+        fields = ['category', 'delay_min_sec', 'delay_max_sec', 'concurrency', 'follow_min_count', 'follow_max_count']
+        widgets = {
+            'category': forms.Select(attrs={'class': 'form-select'}),
+            'delay_min_sec': forms.NumberInput(attrs={'class': 'form-control'}),
+            'delay_max_sec': forms.NumberInput(attrs={'class': 'form-control'}),
+            'concurrency': forms.NumberInput(attrs={'class': 'form-control'}),
+            'follow_min_count': forms.NumberInput(attrs={'class': 'form-control'}),
+            'follow_max_count': forms.NumberInput(attrs={'class': 'form-control'}),
+        }
+
+    def clean(self):
+        data = super().clean()
+        min_d = data.get('delay_min_sec')
+        max_d = data.get('delay_max_sec')
+        if min_d and max_d and min_d > max_d:
+            raise forms.ValidationError('Min delay must be <= Max delay')
+        fmin = data.get('follow_min_count') or 0
+        fmax = data.get('follow_max_count') or 0
+        if fmin < 0 or fmax < 0:
+            raise forms.ValidationError('Follow counts must be >= 0')
+        if fmin > fmax:
+            raise forms.ValidationError('Follow min must be <= Follow max')
+        return data

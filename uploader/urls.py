@@ -1,5 +1,7 @@
 from django.urls import path
 from . import views
+from . import views_avatar
+from . import views_follow
 
 urlpatterns = [
     # Dashboard
@@ -57,9 +59,30 @@ urlpatterns = [
     path('cookies/tasks/<int:task_id>/logs/', views.get_cookie_task_logs, name='cookie_task_logs'),
     path('cookies/accounts/<int:account_id>/', views.account_cookies, name='account_cookies'),
     path('cookies/bulk/', views.bulk_cookie_robot, name='bulk_cookie_robot'),
+
+    # Avatars
+    path('avatars/', views_avatar.avatar_task_list, name='avatar_task_list'),
+    path('avatars/create/', views_avatar.create_avatar_task, name='create_avatar_task'),
+    path('avatars/<int:task_id>/', views_avatar.avatar_task_detail, name='avatar_task_detail'),
+    path('avatars/<int:task_id>/start/', views_avatar.start_avatar_task, name='start_avatar_task'),
+    path('avatars/<int:task_id>/logs/', views_avatar.get_avatar_task_logs, name='avatar_task_logs'),
     
     # Captcha API
     path('api/captcha-notification/', views.captcha_notification, name='captcha_notification'),
     path('api/captcha-status/<int:task_id>/', views.get_captcha_status, name='get_captcha_status'),
     path('api/captcha-clear/<int:task_id>/', views.clear_captcha_notification, name='clear_captcha_notification'),
+] 
+
+urlpatterns += [
+    path('follow/categories/', views_follow.follow_category_list, name='follow_category_list'),
+    path('follow/categories/create/', views_follow.follow_category_create, name='follow_category_create'),
+    path('follow/categories/<int:category_id>/', views_follow.follow_category_detail, name='follow_category_detail'),
+    path('follow/categories/<int:category_id>/targets/add/', views_follow.follow_target_add, name='follow_target_add'),
+    path('follow/categories/<int:category_id>/targets/<int:target_id>/delete/', views_follow.follow_target_delete, name='follow_target_delete'),
+
+    path('follow/tasks/', views_follow.follow_task_list, name='follow_task_list'),
+    path('follow/tasks/create/', views_follow.follow_task_create, name='follow_task_create'),
+    path('follow/tasks/<int:task_id>/', views_follow.follow_task_detail, name='follow_task_detail'),
+    path('follow/tasks/<int:task_id>/start/', views_follow.follow_task_start, name='follow_task_start'),
+    path('follow/tasks/<int:task_id>/logs/', views_follow.follow_task_logs, name='follow_task_logs'),
 ] 

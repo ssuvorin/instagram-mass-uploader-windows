@@ -22841,3 +22841,25 @@ navigating to 'https://medium.com/', waiting until 'domcontentloaded'
 2025-08-08 17:13:31,472 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping Dolphin profile: 612899146
 2025-08-08 17:13:31,735 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Successfully stopped profile: 612899146
 2025-08-08 17:13:31,735 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Successfully stopped profile: 612899146
+2025-08-08 21:00:38,779 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@45.89.231.193:63376] [201] GET https://www.instagram.com/meufus2025/?__a=1&__d=dis
+2025-08-08 21:00:38,781 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/meufus2025/?__a=1&__d=dis) >>> 
+2025-08-08 21:00:42,252 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@45.89.231.193:63376] [201] GET https://www.instagram.com/meufus2025/?__a=1&__d=dis
+2025-08-08 21:00:42,253 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/meufus2025/?__a=1&__d=dis) >>> 
+2025-08-08 21:00:45,539 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@45.89.231.193:63376] [201] GET https://www.instagram.com/meufus2025/?__a=1&__d=dis
+2025-08-08 21:00:45,539 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/meufus2025/?__a=1&__d=dis) >>> 
+2025-08-08 21:00:46,541 - instagrapi - INFO - https://i.instagram.com/api/v1/users/meufus2025/usernameinfo/
+2025-08-08 21:00:47,897 - private_request - INFO - None [403] GET https://i.instagram.com/api/v1/users/meufus2025/usernameinfo/ (269.0.0.18.75, samsung SM-G973F)
+2025-08-08 21:00:47,898 - instagrapi - INFO - https://i.instagram.com/api/v1/launcher/sync/
+2025-08-08 21:00:48,667 - private_request - INFO - meufus2025 [200] POST https://i.instagram.com/api/v1/launcher/sync/ (269.0.0.18.75, samsung SM-G973F)
+2025-08-08 21:01:00,360 - instagrapi - INFO - https://i.instagram.com/api/v1/accounts/login/
+2025-08-08 21:01:07,204 - private_request - INFO - meufus2025 [400] POST https://i.instagram.com/api/v1/accounts/login/ (269.0.0.18.75, samsung SM-G973F)
+2025-08-08 21:01:07,205 - instagrapi - INFO - https://i.instagram.com/api/v1/launcher/sync/
+2025-08-08 21:01:07,931 - private_request - INFO - meufus2025 [200] POST https://i.instagram.com/api/v1/launcher/sync/ (269.0.0.18.75, samsung SM-G973F)
+2025-08-08 21:01:08,406 - instagrapi - INFO - https://i.instagram.com/api/v1/accounts/login/
+2025-08-08 21:01:11,639 - private_request - INFO - meufus2025 [400] POST https://i.instagram.com/api/v1/accounts/login/ (269.0.0.18.75, samsung SM-G973F)
+2025-08-08 21:01:11,640 - instagrapi - INFO - https://i.instagram.com/api/v1/accounts/two_factor_login/
+2025-08-08 21:01:20,278 - private_request - INFO - meufus2025 [200] POST https://i.instagram.com/api/v1/accounts/two_factor_login/ (269.0.0.18.75, samsung SM-G973F)
+2025-08-08 21:01:21,280 - instagrapi - INFO - https://i.instagram.com/api/v1/feed/reels_tray/
+2025-08-08 21:01:22,554 - private_request - INFO - meufus2025 [200] POST https://i.instagram.com/api/v1/feed/reels_tray/ (269.0.0.18.75, samsung SM-G973F)
+2025-08-08 21:01:23,560 - instagrapi - INFO - https://i.instagram.com/api/v1/feed/timeline/
+2025-08-08 21:01:26,307 - private_request - INFO - meufus2025 [200] POST https://i.instagram.com/api/v1/feed/timeline/ (269.0.0.18.75, samsung SM-G973F)

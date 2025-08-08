@@ -12,161 +12,78 @@
     <link rel="stylesheet" href="{% static 'css/dark-theme.css' %}">
     <link rel="icon" type="image/svg+xml" href="{% static 'css/logo.svg' %}">
     <style>
+        /* Elevate navbar and dropdowns above banners */
+        .navbar { position: relative; z-index: 1100; }
+        .dropdown-menu { z-index: 1200; border-radius: 10px; box-shadow: 0 10px 24px rgba(0,0,0,0.12); border: 1px solid rgba(0,0,0,0.06); }
+
+        /* Navbar alignment & spacing */
+        .navbar .container { align-items: center; }
+        .navbar-brand { display: flex; align-items: center; }
+        .navbar-nav { align-items: center; gap: .5rem; }
+        .navbar-nav .nav-item { display: flex; align-items: center; }
+        .navbar-nav .nav-link, .navbar .btn { display: flex; align-items: center; padding: .5rem .85rem; line-height: 1; }
+        .navbar-nav .nav-link i { margin-right: .45rem; }
+        .navbar .dropdown-toggle::after { margin-left: .35rem; vertical-align: middle; }
+
+        /* Dropdown animation */
+        .dropdown-menu { opacity: 0; transform: translateY(8px) scale(0.98); transition: opacity .18s ease, transform .18s ease; will-change: opacity, transform; }
+        .dropdown-menu.show { opacity: 1; transform: translateY(0) scale(1); }
+
+        /* Dropdown items & icon spacing */
+        .dropdown-item { transition: background-color .12s ease, color .12s ease; border-radius: 6px; display: flex; align-items: center; }
+        .dropdown-item i { margin-right: .5rem; }
+        .dropdown-item:hover { background-color: rgba(0,0,0,0.06); }
+
         /* Custom nav styles */
-        .navbar-nav .nav-link {
-            padding: 0.5rem 0.8rem;
-            font-size: 0.9rem;
-        }
-        
-        /* Smaller icon size */
-        .navbar-nav .bi {
-            font-size: 0.9rem;
-        }
-        
-        /* Add horizontal scrolling for navbar on small screens */
+        .navbar-nav .nav-link { transition: color .12s ease, background-color .12s ease; border-radius: 8px; }
+        .navbar-nav .nav-link:hover { background-color: rgba(0,0,0,0.04); }
+        .navbar-nav .bi { font-size: 0.95rem; }
+
+        /* Light theme dropdown header */
+        .dropdown-header { font-weight:600; font-size:.8rem; color:#6c757d; }
+
+        /* Dark theme adjustments */
+        .dark-theme .dropdown-menu { background-color: #1f1f1f; border-color: rgba(255,255,255,0.08); box-shadow: 0 12px 28px rgba(0,0,0,0.4); }
+        .dark-theme .dropdown-item { color: rgba(255,255,255,0.9); }
+        .dark-theme .dropdown-item:hover { background-color: rgba(255,255,255,0.12); }
+        .dark-theme .dropdown-header { color: rgba(255,255,255,0.55); }
+        .dark-theme .navbar-nav .nav-link:hover { background-color: rgba(255,255,255,0.08); }
+        .navbar .nav-link.active { background-color: rgba(0,0,0,0.06); }
+        .dark-theme .navbar .nav-link.active { background-color: rgba(255,255,255,0.12); }
+
         @media (max-width: 1199px) {
-            .scrollable-navbar {
-                display: flex;
-                flex-wrap: nowrap;
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-                white-space: nowrap;
-                padding-bottom: 5px;
-                margin-bottom: -5px;
-                scrollbar-width: none; /* Firefox */
-            }
-            
-            .scrollable-navbar::-webkit-scrollbar {
-                display: none; /* Chrome, Safari */
-            }
-            
-            .scrollable-navbar .nav-item {
-                flex: 0 0 auto;
-            }
-        }
-        
-        /* Fix for modal backdrop - NO DARKENING */
-        .modal-backdrop {
-            opacity: 0 !important; /* Completely transparent backdrop */
-            background-color: transparent !important;
-            pointer-events: none !important; /* Allow clicks through backdrop */
-        }
-        
-        /* Make modal dialog visible without a dark backdrop */
-        .modal-dialog {
-            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
-            border-radius: 14px;
-            overflow: hidden;
-            z-index: 2000 !important;
-            position: relative;
-        }
-        
-        /* Ensure the modal content is visible and stands out */
-        .modal-content {
-            border: none;
-            border-radius: 14px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
-        }
-        
-        /* Modal header styling */
-        .modal-header {
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-            background-color: #f8f9fa;
-        }
-        
-        /* Modal footer styling */
-        .modal-footer {
-            border-top: 1px solid rgba(0, 0, 0, 0.05);
-            background-color: #f8f9fa;
-        }
-        
-        /* Ensure table doesn't interfere with modals */
-        .table-responsive {
-            overflow-x: auto;
-        }
-        
-        /* Fix for button-inside-table issues */
-        .table button, .table a.btn {
-            position: relative;
-            z-index: 1;
+            .scrollable-navbar { display:flex; flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; white-space:nowrap; padding-bottom:5px; margin-bottom:-5px; scrollbar-width:none; }
+            .scrollable-navbar::-webkit-scrollbar { display:none; }
+            .scrollable-navbar .nav-item { flex:0 0 auto; }
         }
 
-        /* Fix for modal stacking issues */
-        body.modal-open {
-            overflow: auto !important;
-            padding-right: 0 !important;
-        }
-        
-        /* Fix for button alignment */
-        .btn-toolbar {
-            display: flex;
-            align-items: center;
-        }
-        
-        .table td .btn {
-            margin: 0 2px;
-        }
-        
-        /* Action card improvements */
-        .action-card {
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        
-        .action-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-        }
-        
-        /* Theme switcher button */
-        #theme-switcher {
-            transition: all 0.2s ease;
-            border-radius: 8px;
-            padding: 0.5rem 0.75rem;
-            margin-left: 0.5rem;
-            min-width: 40px;
-            height: 38px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        #theme-switcher:hover {
-            transform: scale(1.05);
-        }
-        
-        #theme-switcher:active {
-            transform: scale(0.95);
-        }
-        
-        #theme-switcher i {
-            font-size: 1rem;
-        }
-        
-        /* Dark theme specific button styles */
-        .dark-theme #theme-switcher {
-            background-color: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.2);
-            color: var(--apple-text-dark);
-        }
-        
-        .dark-theme #theme-switcher:hover {
-            background-color: rgba(255, 255, 255, 0.15);
-            border-color: rgba(255, 255, 255, 0.3);
-        }
-        
-        /* Responsive adjustments */
+        /* Modal tweaks */
+        .modal-backdrop { opacity:0 !important; background-color:transparent !important; pointer-events:none !important; }
+        .modal-dialog { box-shadow:0 5px 25px rgba(0,0,0,0.2); border-radius:14px; overflow:hidden; z-index:2000 !important; position:relative; }
+        .modal-content { border:none; border-radius:14px; box-shadow:0 8px 30px rgba(0,0,0,0.1); }
+        .modal-header { border-bottom:1px solid rgba(0,0,0,0.05); background-color:#f8f9fa; }
+        .modal-footer { border-top:1px solid rgba(0,0,0,0.05); background-color:#f8f9fa; }
+        .table-responsive { overflow-x:auto; }
+        .table button, .table a.btn { position:relative; z-index:1; }
+        body.modal-open { overflow:auto !important; padding-right:0 !important; }
+        .btn-toolbar { display:flex; align-items:center; }
+        .table td .btn { margin:0 2px; }
+        .action-card { transition: transform .2s ease, box-shadow .2s ease; }
+        .action-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        #theme-switcher { transition:all .2s ease; border-radius:8px; padding:.5rem .75rem; margin-left:.5rem; min-width:40px; height:38px; display:flex; align-items:center; justify-content:center; }
+        #theme-switcher:hover { transform:scale(1.05); }
+        #theme-switcher:active { transform:scale(0.95); }
+        #theme-switcher i { font-size:1rem; }
+        .dark-theme #theme-switcher { background-color:rgba(255,255,255,.1); border-color:rgba(255,255,255,.2); color:var(--apple-text-dark); }
+        .dark-theme #theme-switcher:hover { background-color:rgba(255,255,255,.15); border-color:rgba(255,255,255,.3); }
         @media (max-width: 1199px) {
-            #theme-switcher {
-                margin-left: 0.25rem;
-                padding: 0.4rem 0.6rem;
-                min-width: 36px;
-                height: 34px;
-            }
-            
-            #theme-switcher i {
-                font-size: 0.9rem;
-            }
+            #theme-switcher { margin-left:.25rem; padding:.4rem .6rem; min-width:36px; height:34px; }
+            #theme-switcher i { font-size:.9rem; }
         }
+
+        /* Ensure body uses correct background in dark theme immediately */
+        html, body { background-color: var(--apple-bg); }
+        body.dark-theme { background-color: #1c1c1e !important; }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -189,36 +106,61 @@
                                 <i class="bi bi-grid"></i> Dashboard
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if active_tab == 'tasks' %}active{% endif %}" href="{% url 'task_list' %}">
-                                <i class="bi bi-list-task"></i> Tasks
+
+                        <!-- Content group -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle {% if active_tab in 'bulk_upload avatars' %}active{% endif %}" href="#" id="contentDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-collection"></i> Content
                             </a>
+                            <ul class="dropdown-menu" aria-labelledby="contentDropdown">
+                                <li class="dropdown-header">Bulk Upload</li>
+                                <li><a class="dropdown-item" href="{% url 'bulk_upload_list' %}"><i class="bi bi-card-list me-2"></i>All Bulk Tasks</a></li>
+                                <li><a class="dropdown-item" href="{% url 'create_bulk_upload' %}"><i class="bi bi-plus-square me-2"></i>Create Bulk Task</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li class="dropdown-header">Avatars</li>
+                                <li><a class="dropdown-item" href="{% url 'avatar_task_list' %}"><i class="bi bi-person-bounding-box me-2"></i>Avatar Tasks</a></li>
+                                <li><a class="dropdown-item" href="{% url 'create_avatar_task' %}"><i class="bi bi-plus-square me-2"></i>Create Avatar Task</a></li>
+                            </ul>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if active_tab == 'create_task' %}active{% endif %}" href="{% url 'create_task' %}">
-                                <i class="bi bi-plus-circle"></i> Upload
+
+                        <!-- Accounts & Proxies group -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle {% if active_tab in 'accounts proxies' %}active{% endif %}" href="#" id="accountsGroupDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-people"></i> Accounts & Proxies
                             </a>
+                            <ul class="dropdown-menu" aria-labelledby="accountsGroupDropdown">
+                                <li class="dropdown-header">Accounts</li>
+                                <li><a class="dropdown-item" href="{% url 'account_list' %}"><i class="bi bi-people me-2"></i>All Accounts</a></li>
+                                
+                                <li><a class="dropdown-item" href="{% url 'import_accounts' %}"><i class="bi bi-file-earmark-arrow-up me-2"></i>Import Accounts</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li class="dropdown-header">Proxies</li>
+                                <li><a class="dropdown-item" href="{% url 'proxy_list' %}"><i class="bi bi-list-ul me-2"></i>All Proxies</a></li>
+                                
+                                <li><a class="dropdown-item" href="{% url 'import_proxies' %}"><i class="bi bi-file-earmark-arrow-up me-2"></i>Import Proxies</a></li>
+                                <li><a class="dropdown-item" href="{% url 'validate_all_proxies' %}"><i class="bi bi-shield-check me-2"></i>Validate All</a></li>
+                            </ul>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if active_tab == 'bulk_upload' %}active{% endif %}" href="{% url 'bulk_upload_list' %}">
-                                <i class="bi bi-cloud-upload"></i> Bulk
+
+                        <!-- Tools group -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle {% if active_tab in 'cookies follow' %}active{% endif %}" href="#" id="toolsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-tools"></i> Tools
                             </a>
+                            <ul class="dropdown-menu" aria-labelledby="toolsDropdown">
+                                <li class="dropdown-header">Cookies</li>
+                                <li><a class="dropdown-item" href="{% url 'cookie_dashboard' %}"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a></li>
+                                <li><a class="dropdown-item" href="{% url 'cookie_task_list' %}"><i class="bi bi-list-task me-2"></i>Tasks</a></li>
+                                <li><a class="dropdown-item" href="{% url 'create_cookie_robot_task' %}"><i class="bi bi-plus-square me-2"></i>Create Task</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li class="dropdown-header">Follow</li>
+                                <li><a class="dropdown-item" href="{% url 'follow_category_list' %}"><i class="bi bi-list-ul me-2"></i>Follow Categories</a></li>
+                                <li><a class="dropdown-item" href="{% url 'follow_category_create' %}"><i class="bi bi-plus-square me-2"></i>Create Category</a></li>
+                                <li><a class="dropdown-item" href="{% url 'follow_task_list' %}"><i class="bi bi-list-task me-2"></i>Follow Tasks</a></li>
+                                <li><a class="dropdown-item" href="{% url 'follow_task_create' %}"><i class="bi bi-plus-square me-2"></i>Create Follow Task</a></li>
+                            </ul>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if active_tab == 'accounts' %}active{% endif %}" href="{% url 'account_list' %}">
-                                <i class="bi bi-person-circle"></i> Accounts
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if active_tab == 'proxies' %}active{% endif %}" href="{% url 'proxy_list' %}">
-                                <i class="bi bi-shield-lock"></i> Proxies
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if active_tab == 'cookies' %}active{% endif %}" href="{% url 'cookie_dashboard' %}">
-                                <i class="bi bi-journal-text"></i> Cookies
-                            </a>
-                        </li>
+
                         <li class="nav-item">
                             <a class="nav-link btn btn-sm btn-outline-primary px-3" href="{% url 'logout' %}">
                                 <i class="bi bi-box-arrow-right"></i> Logout

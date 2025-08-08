@@ -6,8 +6,11 @@ pillow==11.2.1
 gunicorn==21.2.0
 whitenoise==6.5.0
 
+# Instagram API (sync)
+instagrapi==2.1.5
+
 # Browser automation
-playwright==1.35.0
+playwright==1.45.0
 
 # Security and authentication
 pyotp==2.8.0
@@ -29,6 +32,7 @@ psutil==6.1.1
 # Additional dependencies for Windows/Docker deployment
 asyncio-throttle==1.0.2
 aiofiles==24.1.0
+# aiohttp kept for other async utilities in project
 aiohttp==3.9.5
 
 # Video processing support
@@ -37,8 +41,8 @@ opencv-python-headless==4.8.1.78
 # Enhanced logging and monitoring
 structlog==23.2.0
 
-# Database connectors (optional - not for Windows)
-psycopg2-binary==2.9.9; sys_platform != "win32"
+# Database connectors (optional; restrict to Linux with Python <3.13)
+psycopg2-binary==2.9.9; 
 
 # Development and debugging tools
 python-dateutil==2.8.2

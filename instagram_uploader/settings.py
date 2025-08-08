@@ -218,22 +218,56 @@ LOGGING = {
             'level': 'WARNING',
             'propagate': False,
         },
-        # Silence Django runserver request logs
         'django.server': {
             'handlers': ['null'],
             'level': 'WARNING',
             'propagate': False,
         },
-        # Our middleware logs go through logger when SILENT_REQUEST_LOGS=1
+        'django.template': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
         'uploader.middleware': {
             'handlers': ['console'],
             'level': os.getenv('REQUEST_LOG_LEVEL', 'INFO'),
             'propagate': False,
         },
-        # Our bulk task logger
         'uploader.bulk_tasks': {
             'handlers': ['console'],
             'level': os.getenv('BULK_LOG_LEVEL', 'INFO'),
+            'propagate': False,
+        },
+        # Instagrapi and HTTP request loggers
+        'instagrapi': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'public_request': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'private_request': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        # Our auth/avatar services
+        'insta.auth': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'insta.avatar': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'insta.follow': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
             'propagate': False,
         },
     },

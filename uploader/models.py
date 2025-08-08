@@ -52,7 +52,9 @@ class Proxy(models.Model):
             "host": self.host,
             "port": self.port,
             "user": self.username,
-            "pass": self.password
+            "pass": self.password,
+            "country": self.country,
+            "city": self.city,
         }
 
 
@@ -81,6 +83,8 @@ class InstagramAccount(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     notes = models.TextField(blank=True, default="")
+    # New: phone number used for mobile device profile and account verification
+    phone_number = models.CharField(max_length=32, null=True, blank=True)
     
     class Meta:
         verbose_name = "Instagram account"
@@ -118,6 +122,10 @@ class InstagramAccount(models.Model):
         if self.dolphin_profile_id:
             data["dolphin_profile_id"] = self.dolphin_profile_id
             
+        # Add phone if exists
+        if self.phone_number:
+            data["phone"] = self.phone_number
+            
         return data
     
     def mark_as_used(self):
@@ -154,6 +162,26 @@ class InstagramAccount(models.Model):
             self.current_proxy = None
         
         super().save(*args, **kwargs)
+
+
+# New: Persistent mobile device/session profile tied to account
+class InstagramDevice(models.Model):
+    account = models.OneToOneField(InstagramAccount, on_delete=models.CASCADE, related_name='device')
+    device_settings = models.JSONField(default=dict, blank=True)
+    user_agent = models.CharField(max_length=255, blank=True, default="")
+    session_settings = models.JSONField(null=True, blank=True)
+    session_file = models.CharField(max_length=255, null=True, blank=True)
+    last_login_at = models.DateTimeField(null=True, blank=True)
+    last_avatar_change_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Instagram device"
+        verbose_name_plural = "Instagram devices"
+    
+    def __str__(self):
+        return f"Device for {self.account.username}"
 
 
 class InstagramCookies(models.Model):
@@ -358,6 +386,7 @@ class BulkVideo(models.Model):
         return []
 
 
+# New: Title model for bulk uploads
 class VideoTitle(models.Model):
     bulk_task = models.ForeignKey(
         BulkUploadTask,
@@ -373,6 +402,144 @@ class VideoTitle(models.Model):
         blank=True,
         related_name='title_data'
     )
+
+    def __str__(self):
+        return f"Title {self.id} for {self.bulk_task.name}"
+
+
+# New: Avatar change task models
+class AvatarChangeTask(models.Model):
+    STRATEGY_CHOICES = [
+        ('random_reuse', 'Random reuse when images < accounts'),
+        ('one_to_one', 'One image per account (same order)'),
+    ]
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('RUNNING', 'Running'),
+        ('COMPLETED', 'Completed'),
+        ('FAILED', 'Failed'),
+    ]
+    name = models.CharField(max_length=120, default="Avatar Change")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    strategy = models.CharField(max_length=20, choices=STRATEGY_CHOICES, default='random_reuse')
+    delay_min_sec = models.IntegerField(default=15)
+    delay_max_sec = models.IntegerField(default=45)
+    concurrency = models.IntegerField(default=1)
+    log = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
-        return f"Title {self.id} for Bulk Upload {self.bulk_task.id}"
+        return f"Avatar Task {self.id} - {self.status}"
+
+
+class AvatarChangeTaskAccount(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('RUNNING', 'Running'),
+        ('COMPLETED', 'Completed'),
+        ('FAILED', 'Failed'),
+    ]
+    task = models.ForeignKey(AvatarChangeTask, on_delete=models.CASCADE, related_name='accounts')
+    account = models.ForeignKey(InstagramAccount, on_delete=models.CASCADE, related_name='avatar_tasks')
+    proxy = models.ForeignKey(Proxy, on_delete=models.SET_NULL, null=True, blank=True, related_name='avatar_used_in')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    log = models.TextField(blank=True, default="")
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    
+    def __str__(self):
+        return f"{self.account.username} in Avatar Task {self.task.id}"
+
+
+class AvatarImage(models.Model):
+    task = models.ForeignKey(AvatarChangeTask, on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to='bot/avatars/')
+    order = models.IntegerField(default=0)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['order', 'id']
+    
+    def __str__(self):
+        return f"AvatarImage {self.id} for Task {self.task.id}"
+
+
+class FollowCategory(models.Model):
+    name = models.CharField(max_length=120, unique=True)
+    description = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Follow category"
+        verbose_name_plural = "Follow categories"
+
+    def __str__(self):
+        return self.name
+
+
+class FollowTarget(models.Model):
+    """A target to follow: stores username and resolved user_id (pk)."""
+    category = models.ForeignKey(FollowCategory, on_delete=models.CASCADE, related_name='targets')
+    username = models.CharField(max_length=150)
+    user_id = models.BigIntegerField(null=True, blank=True)
+    full_name = models.CharField(max_length=255, blank=True, default="")
+    is_private = models.BooleanField(default=False)
+    is_verified = models.BooleanField(default=False)
+    profile_pic_url = models.URLField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('category', 'username')
+        verbose_name = "Follow target"
+        verbose_name_plural = "Follow targets"
+
+    def __str__(self):
+        return f"{self.username} ({self.user_id or 'unresolved'})"
+
+
+class FollowTask(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('RUNNING', 'Running'),
+        ('COMPLETED', 'Completed'),
+        ('FAILED', 'Failed'),
+    ]
+    name = models.CharField(max_length=120, default="Follow Task")
+    category = models.ForeignKey(FollowCategory, on_delete=models.CASCADE, related_name='tasks')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    delay_min_sec = models.IntegerField(default=10)
+    delay_max_sec = models.IntegerField(default=25)
+    concurrency = models.IntegerField(default=1)
+    # New: random range of follows per account
+    follow_min_count = models.IntegerField(default=3)
+    follow_max_count = models.IntegerField(default=10)
+    log = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Follow Task {self.id} - {self.status}"
+
+
+class FollowTaskAccount(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('RUNNING', 'Running'),
+        ('COMPLETED', 'Completed'),
+        ('FAILED', 'Failed'),
+    ]
+    task = models.ForeignKey(FollowTask, on_delete=models.CASCADE, related_name='accounts')
+    account = models.ForeignKey(InstagramAccount, on_delete=models.CASCADE, related_name='follow_tasks')
+    proxy = models.ForeignKey(Proxy, on_delete=models.SET_NULL, null=True, blank=True, related_name='follow_used_in')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    log = models.TextField(blank=True, default="")
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    # Progress: last processed target id
+    last_target_id = models.IntegerField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.account.username} in Follow Task {self.task.id}"

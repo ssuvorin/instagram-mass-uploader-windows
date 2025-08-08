@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Proxy, InstagramAccount, InstagramCookies, UploadTask, VideoFile
+from .models import Proxy, InstagramAccount, InstagramCookies, UploadTask, VideoFile, FollowCategory, FollowTarget, FollowTask, FollowTaskAccount
 
 
 @admin.register(Proxy)
@@ -44,3 +44,32 @@ class VideoFileAdmin(admin.ModelAdmin):
     list_filter = ('uploaded_at',)
     search_fields = ('task__account__username', 'caption')
     readonly_fields = ('uploaded_at',)
+
+
+@admin.register(FollowCategory)
+class FollowCategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'description', 'created_at', 'updated_at')
+    search_fields = ('name', 'description')
+
+
+@admin.register(FollowTarget)
+class FollowTargetAdmin(admin.ModelAdmin):
+    list_display = ('username', 'user_id', 'category', 'is_private', 'is_verified', 'created_at')
+    list_filter = ('category', 'is_private', 'is_verified')
+    search_fields = ('username', 'user_id')
+
+
+@admin.register(FollowTask)
+class FollowTaskAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'category', 'status', 'created_at')
+    list_filter = ('status', 'category')
+    search_fields = ('name', 'log')
+    readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(FollowTaskAccount)
+class FollowTaskAccountAdmin(admin.ModelAdmin):
+    list_display = ('task', 'account', 'status', 'started_at', 'completed_at')
+    list_filter = ('status',)
+    search_fields = ('task__name', 'account__username')
+    readonly_fields = ('started_at', 'completed_at')
