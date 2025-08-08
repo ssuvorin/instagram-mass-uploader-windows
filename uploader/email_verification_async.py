@@ -11,14 +11,19 @@ except ImportError:
     AIOHTTP_AVAILABLE = False
     import requests  # Fallback to sync requests
 
-# Add path to email_client module
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'bot', 'src', 'instagram_uploader'))
-
+# Prefer absolute import from project package; fallback to path-based import
 try:
-    from email_client import Email
-except ImportError:
-    # Fallback if email_client is not available
-    Email = None
+    from bot.src.instagram_uploader.email_client import Email
+except Exception:
+    try:
+        # Fallback: add direct module directory to sys.path and import
+        email_mod_path = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'bot', 'src', 'instagram_uploader'))
+        if email_mod_path not in sys.path:
+            sys.path.append(email_mod_path)
+        from email_client import Email
+    except Exception:
+        # If still not available, disable email verification via Email client
+        Email = None
 
 from .constants import APIConstants, InstagramTexts
 import base64
