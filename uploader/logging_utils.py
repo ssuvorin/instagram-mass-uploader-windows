@@ -25,11 +25,19 @@ def _get_web_logger_safe():
 def safe_encode_message(message):
     """Safely encode message for Windows console compatibility (cp1252, etc.)."""
     try:
-        target_encoding = getattr(sys.stdout, 'encoding', None) or os.environ.get('PYTHONIOENCODING') or 'utf-8'
-        # Re-encode to the target console encoding with replacement for unsupported chars
+        # On Windows consoles (often cp1252), strip to ASCII to avoid UnicodeEncodeError
+        if os.name == 'nt':
+            return ''.join(char for char in message if ord(char) < 128)
+        # Else, use the active stderr/stdout encoding with replacement
+        target_encoding = (
+            getattr(sys.stderr, 'encoding', None)
+            or getattr(sys.stdout, 'encoding', None)
+            or os.environ.get('PYTHONIOENCODING')
+            or 'utf-8'
+        )
         return message.encode(target_encoding, errors='replace').decode(target_encoding, errors='replace')
     except Exception:
-        # Last resort - keep only ASCII to guarantee no encoding errors
+        # Last resort - keep only ASCII
         return ''.join(char for char in message if ord(char) < 128)
 
 
