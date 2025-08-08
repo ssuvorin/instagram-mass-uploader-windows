@@ -670,30 +670,159 @@
     .captcha-content p {
         margin-bottom: 0;
     }
+
+    /* Chrome-like warning banner for captcha */
+    .chrome-warning {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1050;
+        width: 380px;
+        max-width: calc(100% - 40px);
+        background: #fff8e1;
+        border: 1px solid #ffe082;
+        color: #8a6d3b;
+        border-radius: 10px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        overflow: hidden;
+        display: none;
+    }
+    .chrome-warning .bar {
+        height: 4px;
+        background: linear-gradient(90deg, #ffc107, #ff9800);
+    }
+    .chrome-warning .content {
+        display: flex;
+        gap: 12px;
+        padding: 12px 14px;
+        align-items: flex-start;
+    }
+    .chrome-warning .icon {
+        flex: 0 0 auto;
+        font-size: 20px;
+        line-height: 1;
+        color: #ff9800;
+    }
+    .chrome-warning .text {
+        flex: 1;
+        font-size: 14px;
+    }
+    .chrome-warning .actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 6px;
+    }
+    .btn-small {
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        border: 1px solid rgba(0,0,0,0.08);
+        background: white;
+        color: #555;
+        cursor: pointer;
+    }
+    .btn-small.primary {
+        background: #ffecb3;
+        border-color: #ffe082;
+        color: #8a6d3b;
+        font-weight: 600;
+    }
+    .btn-small:hover { filter: brightness(0.98); }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Captcha Notification Banner -->
-<div id="captchaBanner" class="captcha-banner" style="display: none;">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-md-10">
-                <div class="d-flex align-items-center">
-                    <div class="captcha-icon me-3">
-                        <i class="bi bi-shield-exclamation"></i>
-                    </div>
-                    <div class="captcha-content">
-                        <h5 class="mb-1">🔔 CAPTCHA DETECTED!</h5>
-                        <p class="mb-0">Please solve the captcha manually in the browser. The process will continue automatically once solved.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-2 text-end">
-                <button type="button" class="btn-close btn-close-white" onclick="hideCaptchaBanner()"></button>
+
+<div id="captchaBanner" class="chrome-warning" role="alert" aria-live="polite" data-task-id="{{ task.id }}">
+    <div class="bar"></div>
+    <div class="content">
+        <div class="icon">⚠️</div>
+        <div class="text">
+            <div id="captchaBannerText"><strong>Manual action required:</strong> reCAPTCHA detected. Please solve it in the opened browser profile.</div>
+            <div class="actions">
+                <button class="btn-small primary" onclick="location.reload()">Refresh</button>
+                <button class="btn-small" id="captchaDismissBtn" type="button">Dismiss</button>
             </div>
         </div>
     </div>
+    
+    <script>
+    (function() {
+        const banner = document.getElementById('captchaBanner');
+        const taskId = banner?.dataset?.taskId;
+        const textEl = document.getElementById('captchaBannerText');
+        const dismissBtn = document.getElementById('captchaDismissBtn');
+        let lastShownTs = 0;
+        let isActive = false; // current captcha active state
+        
+        function playSoundOnce() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+                oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+            } catch (e) {
+                // noop
+            }
+        }
+        
+        async function clearServerNotification() {
+            try {
+                await fetch(`/api/captcha-clear/${taskId}/`, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            } catch (e) { /* ignore */ }
+        }
+        
+        async function pollCaptcha() {
+            try {
+                const res = await fetch(`/api/captcha-status/${taskId}/`, { cache: 'no-store' });
+                if (!res.ok) throw new Error('bad response');
+                const data = await res.json();
+                if (data.captcha_detected) {
+                    // New detection or updated timestamp → show and beep once
+                    if ((data.timestamp || 0) !== lastShownTs) {
+                        lastShownTs = data.timestamp || Date.now()/1000;
+                        if (data.message) textEl.textContent = data.message;
+                        playSoundOnce();
+                    }
+                    banner.style.display = 'block';
+                    document.body.style.marginTop = '80px';
+                    isActive = true;
+                } else {
+                    // Resolved → hide and ensure server flag cleared
+                    if (isActive) {
+                        await clearServerNotification();
+                    }
+                    banner.style.display = 'none';
+                    document.body.style.marginTop = '0';
+                    isActive = false;
+                }
+            } catch (e) {
+                // ignore
+            } finally {
+                setTimeout(pollCaptcha, 4000);
+            }
+        }
+        
+        if (dismissBtn) {
+            dismissBtn.addEventListener('click', async function() {
+                banner.style.display = 'none';
+                document.body.style.marginTop = '0';
+                isActive = false;
+                await clearServerNotification();
+            });
+        }
+        
+        pollCaptcha();
+    })();
+    </script>
 </div>
 
 <!-- Task Header -->
@@ -880,9 +1009,6 @@
         </a>
         <div class="text-muted">You need to select accounts before starting the upload</div>
         {% else %}
-        <a href="{% url 'start_bulk_upload' task_id=task.id %}" class="btn btn-start btn-enhanced" id="startUploadBtn">
-            <i class="bi bi-rocket-takeoff"></i> Start Bulk Upload
-        </a>
         <a href="{% url 'start_bulk_upload' task_id=task.id %}?async=true" class="btn btn-success btn-enhanced" id="startAsyncUploadBtn" title="Start with parallel account processing">
             <i class="bi bi-lightning-charge"></i> Start ASYNC Upload
         </a>
@@ -897,34 +1023,6 @@
         </a>
         {% endif %}
         
-        {% if task.videos.count > 0 and accounts|length > 0 and accounts|length > 1 %}
-        <div class="mode-info">
-            <div class="d-flex align-items-center mb-2">
-                <i class="bi bi-info-circle text-primary me-2"></i>
-                <strong>Choose Upload Mode</strong>
-            </div>
-            <div class="mode-comparison">
-                <div class="mode-card sync">
-                    <div class="mode-title text-primary">
-                        <i class="bi bi-arrow-right"></i> Standard Mode
-                    </div>
-                    <div class="mode-desc">
-                        Accounts processed one by one.<br>
-                        Reliable but slower for multiple accounts.
-                    </div>
-                </div>
-                <div class="mode-card async">
-                    <div class="mode-title text-success">
-                        <i class="bi bi-lightning-charge"></i> Async Mode
-                    </div>
-                    <div class="mode-desc">
-                        Up to {{ accounts|length|add:0|floatformat:0 }} accounts in parallel.<br>
-                        3-5x faster, recommended for 2+ accounts.
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
         
         <button type="button" class="btn btn-outline-danger btn-enhanced" data-bs-toggle="modal" data-bs-target="#deleteTaskModal">
             <i class="bi bi-trash3"></i> Delete Task
@@ -970,6 +1068,8 @@
                         <tr>
                             <th>Account</th>
                             <th>Videos</th>
+                            <th>Uploaded</th>
+                            <th>Failed</th>
                             <th>Status</th>
                         </tr>
                     </thead>
@@ -992,6 +1092,12 @@
                             </td>
                             <td>
                                 <span class="badge bg-secondary">{{ task.videos.count }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-success">{{ account_task.uploaded_success_count }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-danger">{{ account_task.uploaded_failed_count }}</span>
                             </td>
                             <td>
                                 <span class="status-mini status-{{ account_task.status|lower }}">
@@ -1168,6 +1274,8 @@
                             <i class="bi bi-clock"></i>
                         {% endif %}
                     </span>
+                    <span class="badge bg-success ms-2">{{ account_task.uploaded_success_count }}</span>
+                    <span class="badge bg-danger ms-1">{{ account_task.uploaded_failed_count }}</span>
                 </button>
             </li>
             {% endfor %}
@@ -1311,18 +1419,23 @@
 <!-- Include logs formatting script -->
 <script src="{% static 'uploader/js/logs.js' %}"></script>
 
-<!-- Generate account IDs array -->
+<!-- Derive account IDs from DOM to avoid template-time JS injections -->
 <script>
-// Convert to actual account IDs
-window.accountTaskIds = [
-    {% for account_task in accounts %}{{ account_task.id }}{% if not forloop.last %},{% endif %}{% endfor %}
-];
+document.addEventListener('DOMContentLoaded', function() {
+    const tabButtons = document.querySelectorAll('button[id^="account-"][id$="-tab"]');
+    const ids = Array.from(tabButtons)
+        .map(btn => {
+            try { return parseInt(btn.id.replace('account-','').replace('-tab',''), 10); } catch(e) { return NaN; }
+        })
+        .filter(id => !Number.isNaN(id));
+    window.accountTaskIds = ids;
+});
 </script>
 
 {% if task.status == 'RUNNING' or task.status == 'PENDING' %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Get account IDs from global variable
+    // Get account IDs from DOM-derived global
     const accountTaskIds = window.accountTaskIds || [];
     
     // Set initial progress bar width
@@ -1393,12 +1506,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
                 
-                // If task is completed or failed, reload page to get final state
-                if (data.status && ['COMPLETED', 'FAILED', 'PARTIALLY_COMPLETED'].includes(data.status)) {
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 3000);
-                }
+                // Do not reload the page on completion; keep logs visible as-is
             })
             .catch(error => {
                 console.error('Error updating progress:', error);
@@ -1449,8 +1557,13 @@ function toggleLogHeight(tabId) {
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Get account IDs from global variable
-    const accountTaskIds = window.accountTaskIds || [];
+    // Derive account IDs from DOM
+    const tabButtons = document.querySelectorAll('button[id^="account-"][id$="-tab"]');
+    const accountTaskIds = Array.from(tabButtons)
+        .map(btn => {
+            try { return parseInt(btn.id.replace('account-','').replace('-tab',''), 10); } catch(e) { return NaN; }
+        })
+        .filter(id => !Number.isNaN(id));
     
     // For completed tasks, format the main logs
     const logsDiv = document.getElementById('logs');
@@ -1470,90 +1583,5 @@ document.addEventListener('DOMContentLoaded', function() {
 {% endif %}
 
 <!-- Captcha Banner JavaScript -->
-<script>
-// Function to show captcha banner
-function showCaptchaBanner() {
-    const banner = document.getElementById('captchaBanner');
-    if (banner) {
-        banner.style.display = 'block';
-        // Add margin to body to prevent content jump
-        document.body.style.marginTop = '80px';
-        
-        // Play sound notification
-        playSoundNotification();
-    }
-}
-
-// Function to hide captcha banner
-function hideCaptchaBanner() {
-    const banner = document.getElementById('captchaBanner');
-    if (banner) {
-        banner.style.display = 'none';
-        // Remove margin from body
-        document.body.style.marginTop = '0';
-    }
-}
-
-// Function to play sound notification
-function playSoundNotification() {
-    try {
-        // Create audio context for beep sound
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-        oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
-        oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
-        
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-        
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.5);
-        
-        console.log('🔔 Captcha notification sound played');
-    } catch (error) {
-        console.log('🔔 Captcha detected! Please solve it manually.');
-    }
-}
-
-// Listen for captcha notifications from WebSocket or Server-Sent Events
-document.addEventListener('DOMContentLoaded', function() {
-    // Check for captcha status every 10 seconds
-    setInterval(function() {
-        fetch('{% url "get_captcha_status" task_id=task.id %}')
-            .then(response => response.json())
-            .then(data => {
-                if (data.captcha_detected) {
-                    showCaptchaBanner();
-                }
-            })
-            .catch(error => {
-                console.error('Error checking for captcha:', error);
-            });
-    }, 10000);
-    
-    // Also check logs for captcha keywords
-    setInterval(function() {
-        fetch('{% url "bulk_task_logs" task_id=task.id %}')
-            .then(response => response.json())
-            .then(data => {
-                if (data.logs && data.logs.some(log => 
-                    log.includes('CAPTCHA DETECTED') || 
-                    log.includes('Starting MANUAL reCAPTCHA solving') ||
-                    log.includes('🚨 Instagram challenge page detected')
-                )) {
-                    showCaptchaBanner();
-                }
-            })
-            .catch(error => {
-                console.error('Error checking logs for captcha:', error);
-            });
-    }, 15000);
-});
-</script>
+<script></script>
 {% endblock %} 

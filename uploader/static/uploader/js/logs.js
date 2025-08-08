@@ -48,8 +48,8 @@ function renderStructuredLogs(logs) {
     logs.forEach(log => {
         const message = log.message || '';
         
-        // Skip verbose Playwright logs
-        if (isVerbosePlaywrightLog(message)) {
+        // Skip verbose Playwright logs unless globally enabled
+        if (!window.showVerboseLogs && isVerbosePlaywrightLog(message)) {
             return;
         }
         
@@ -258,7 +258,9 @@ function setupLogUpdater(logUrl, intervalMs = 2000, targetElementId = 'logs') {
 // Initialize log highlighter for static logs (when not using the updater)
 document.addEventListener('DOMContentLoaded', function() {
     const logsDiv = document.getElementById('logs');
-    if (logsDiv && logsDiv.textContent && !logsDiv.dataset.autoUpdate) {
-        logsDiv.innerHTML = renderLog(logsDiv.textContent);
+    if (logsDiv && logsDiv.textContent) {
+        // If server already injects formatted HTML, keep it; otherwise render
+        const hasHtml = /<[^>]+>/.test(logsDiv.textContent);
+        logsDiv.innerHTML = hasHtml ? logsDiv.textContent : renderLog(logsDiv.textContent);
     }
 }); 

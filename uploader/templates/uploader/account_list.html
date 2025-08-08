@@ -74,6 +74,8 @@
                         <th>Status</th>
                         <th>Dolphin Profile</th>
                         <th>Proxy</th>
+                        <th>Uploaded</th>
+                        <th>Failed</th>
                         <th>Last Used</th>
                         <th>Last Warmed</th>
                         <th>Actions</th>
@@ -117,6 +119,12 @@
                             {% endif %}
                         </td>
                         <td>
+                            <span class="badge bg-success">{{ account.uploaded_success_total }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-danger">{{ account.uploaded_failed_total }}</span>
+                        </td>
+                        <td>
                             {% if account.last_used %}
                             {{ account.last_used|date:"Y-m-d H:i" }}
                             {% else %}
@@ -152,7 +160,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="text-center py-4">
+                        <td colspan="8" class="text-center py-4">
                             <i class="bi bi-person-x fs-1 text-muted mb-3 d-block"></i>
                             <p class="text-muted">No accounts found</p>
                             <a href="{% url 'create_account' %}" class="btn btn-primary btn-sm">Create New Account</a>

@@ -512,6 +512,12 @@ class AsyncAccountProcessor:
             account = self.account_task.account
             proxy = await self.account_repo.get_account_proxy(self.account_task, account)
             account_details = await self.account_repo.get_account_details(account, proxy)
+            # Provide bulk_upload_id to downstream flows (captcha notifications, etc.)
+            try:
+                if isinstance(account_details, dict):
+                    account_details.setdefault('bulk_upload_id', self.task_data.id)
+            except Exception:
+                pass
             
             # Логируем статус аккаунта для информации, но не пропускаем
             if account.status != 'ACTIVE':
@@ -537,10 +543,9 @@ class AsyncAccountProcessor:
             )
             
             # Очищаем временные файлы
-            await self.file_manager.cleanup_temp_files_async(temp_files)
-            
-            # Очищаем файлы уникализации
-            await cleanup_uniquifier_temp_files()
+            # Важно: не удаляем временные файлы и файлы уникализации на середине выполнения аккаунтов,
+            # чтобы не потерять входные данные для следующих аккаунтов.
+            # Переносим очистку в финал задачи (_finalize_task).
             
             self.end_time = time.time()
             processing_time = self.end_time - self.start_time
@@ -548,6 +553,21 @@ class AsyncAccountProcessor:
             # Проверяем результат браузера
             if isinstance(result, tuple) and len(result) >= 3:
                 result_type, completed, failed = result
+                # Persist per-account counters
+                try:
+                    # Use task_utils.update_account_task compatibility hook to pass extra fields
+                    from . import task_utils as _tu
+                    setattr(_tu.update_account_task, "_extra_fields", {
+                        'uploaded_success_count': completed,
+                        'uploaded_failed_count': failed,
+                    })
+                    _tu.update_account_task(
+                        self.account_task,
+                        status=(TaskStatus.COMPLETED if result_type == 'success' and completed > 0 else self.account_task.status),
+                        completed_at=timezone.now()
+                    )
+                except Exception:
+                    pass
                 
                 if result_type == 'success' and completed > 0:
                     await self.logger.log('SUCCESS', f"Account {account.username} successfully uploaded {completed} videos in {processing_time:.1f}s")
@@ -727,7 +747,12 @@ class AsyncAccountProcessor:
         """Обрабатывает результат браузера"""
         if isinstance(result, tuple) and len(result) >= 3:
             result_type, completed, failed = result
-            return result_type, completed, failed
+            # Normalize result type to lowercase to align with aggregator expectations
+            try:
+                normalized_type = str(result_type).lower()
+            except Exception:
+                normalized_type = 'failed'
+            return normalized_type, completed, failed
         else:
             return 'failed', 0, 1
     
@@ -925,6 +950,20 @@ class AsyncTaskCoordinator:
                     # Успех только если видео действительно выложились
                     successful_accounts += 1
                     await logger.log('SUCCESS', f"Account {i+1} successfully uploaded {completed} videos")
+                    # Update per-account counters in DB
+                    try:
+                        if i < len(account_tasks):
+                            account_task = account_tasks[i]
+                            from . import task_utils as _tu
+                            setattr(_tu.update_account_task, "_extra_fields", {
+                                'uploaded_success_count': completed,
+                                'uploaded_failed_count': failed,
+                            })
+                            # ЯВНО: ставим статус COMPLETED
+                            await AsyncAccountRepository.update_account_task(account_task, status=TaskStatus.COMPLETED)
+                            _tu.update_account_task(account_task)
+                    except Exception:
+                        pass
                 elif result_type in ['verification_required', 'phone_verification_required', 'human_verification_required']:
                     verification_required_accounts += 1
                     await logger.log('WARNING', f"Account {i+1} requires verification")
@@ -950,21 +989,33 @@ class AsyncTaskCoordinator:
                 else:
                     failed_accounts += 1
                     await logger.log('ERROR', f"Account {i+1} failed to upload videos")
+                    # Update per-account counters on fail path too, and mark FAILED
+                    try:
+                        if i < len(account_tasks):
+                            account_task = account_tasks[i]
+                            from . import task_utils as _tu
+                            setattr(_tu.update_account_task, "_extra_fields", {
+                                'uploaded_success_count': completed,
+                                'uploaded_failed_count': failed,
+                            })
+                            await AsyncAccountRepository.update_account_task(account_task, status=TaskStatus.FAILED)
+                            _tu.update_account_task(account_task)
+                    except Exception:
+                        pass
             else:
                 failed_accounts += 1
                 await logger.log('ERROR', f"Account {i+1} processing failed")
         
         await logger.log('INFO', f"Results: {successful_accounts} successful ({total_uploaded_videos} videos uploaded), {failed_accounts} failed ({total_failed_videos} videos failed), {verification_required_accounts} verification required, {suspended_accounts} suspended")
         
-        # Обновляем статус задачи
-        if successful_accounts > 0 and failed_accounts == 0 and verification_required_accounts == 0 and suspended_accounts == 0:
-            final_status = TaskStatus.COMPLETED
-        elif successful_accounts > 0:
-            final_status = TaskStatus.PARTIALLY_COMPLETED
-        elif verification_required_accounts > 0 or suspended_accounts > 0:
-            final_status = TaskStatus.VERIFICATION_REQUIRED
-        else:
+        # Final task status: all success -> COMPLETED; some -> PARTIALLY_COMPLETED; none -> FAILED
+        total_accounts = len(account_tasks)
+        if successful_accounts == 0:
             final_status = TaskStatus.FAILED
+        elif successful_accounts == total_accounts:
+            final_status = TaskStatus.COMPLETED
+        else:
+            final_status = TaskStatus.PARTIALLY_COMPLETED
         
         task = await self.task_repo.get_task(self.task_id)
         await self.task_repo.update_task_status(task, final_status)

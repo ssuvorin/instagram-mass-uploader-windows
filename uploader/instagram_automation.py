@@ -695,6 +695,12 @@ class InstagramUploader(InstagramAutomationBase):
                 'div:has-text("Создание публикации")',
                 'div:has-text("Перетащите сюда фото и видео")',
                 'div:has-text("Выбрать на компьютере")',
+                'div[aria-label="Create new post"]',
+                'div[aria-label*="Create"]',
+                'div:has-text("Create new post")',
+                'div:has-text("Drag photos and videos here")',
+                'div:has-text("Select from computer")',
+                'div:has-text("Select from device")',
             ]
             
             for selector in dialog_selectors:
@@ -734,6 +740,7 @@ class InstagramUploader(InstagramAutomationBase):
                 'button:has-text("Select from computer")',
                 'button:has-text("Выбрать файлы")',
                 'button:has-text("Select files")',
+                'button:has-text("Select from device")',
             ]
             
             for selector in button_selectors:

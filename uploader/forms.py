@@ -1,6 +1,8 @@
 from django import forms
 from django.core.validators import FileExtensionValidator
 from .models import UploadTask, InstagramAccount, Proxy, VideoFile, BulkUploadTask, BulkVideo
+from django.db.models import Sum, Value
+from django.db.models.functions import Coalesce
 
 
 class ProxyForm(forms.ModelForm):
@@ -104,7 +106,14 @@ class BulkUploadTaskForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Set queryset dynamically to get fresh data from database
         # Sort by creation date descending (newest first) for better UX
-        self.fields['selected_accounts'].queryset = InstagramAccount.objects.all().order_by('-created_at')
+        self.fields['selected_accounts'].queryset = (
+            InstagramAccount.objects.all()
+            .order_by('-created_at')
+            .annotate(
+                uploaded_success_total=Coalesce(Sum('bulk_uploads__uploaded_success_count'), Value(0)),
+                uploaded_failed_total=Coalesce(Sum('bulk_uploads__uploaded_failed_count'), Value(0)),
+            )
+        )
     
     class Meta:
         model = BulkUploadTask

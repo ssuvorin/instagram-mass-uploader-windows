@@ -146,6 +146,8 @@ class InstagramSelectors:
         'div[role="button"]:has-text("Select files")',
         'button:has-text("Choose files")',
         'div[role="button"]:has-text("Choose files")',
+        'button:has-text("Select from device")',
+        'div[role="button"]:has-text("Select from device")',
         
         # [TARGET] ПРИОРИТЕТ 5: XPath тексты
         '//button[contains(text(), "Выбрать на компьютере")]',
@@ -156,6 +158,8 @@ class InstagramSelectors:
         '//div[@role="button" and contains(text(), "Select from computer")]',
         '//button[contains(text(), "Select files")]',
         '//div[@role="button" and contains(text(), "Select files")]',
+        '//button[contains(text(), "Select from device")]',
+        '//div[@role="button" and contains(text(), "Select from device")]',
         
         # [TARGET] ПРИОРИТЕТ 6: Aria-label семантические
         'button[aria-label*="Выбрать"]',

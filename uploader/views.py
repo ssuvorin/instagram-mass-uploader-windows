@@ -3,8 +3,10 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Sum, Value, Case, When, IntegerField
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
@@ -249,7 +251,13 @@ def account_list(request):
     search_query = request.GET.get('q', '')
     
     # Sort by creation date descending (newest first) for consistency
-    accounts = InstagramAccount.objects.order_by('-created_at')
+    accounts = (
+        InstagramAccount.objects.order_by('-created_at')
+        .annotate(
+            uploaded_success_total=Coalesce(Sum('bulk_uploads__uploaded_success_count'), Value(0)),
+            uploaded_failed_total=Coalesce(Sum('bulk_uploads__uploaded_failed_count'), Value(0)),
+        )
+    )
     
     if status_filter:
         accounts = accounts.filter(status=status_filter)
@@ -272,7 +280,13 @@ def account_list(request):
 @login_required
 def account_detail(request, account_id):
     """View details of a specific account"""
-    account = get_object_or_404(InstagramAccount, id=account_id)
+    account = get_object_or_404(
+        InstagramAccount.objects.annotate(
+            uploaded_success_total=Coalesce(Sum('bulk_uploads__uploaded_success_count'), Value(0)),
+            uploaded_failed_total=Coalesce(Sum('bulk_uploads__uploaded_failed_count'), Value(0)),
+        ),
+        id=account_id,
+    )
     tasks = account.tasks.order_by('-created_at')
     
     context = {
@@ -1342,7 +1356,21 @@ def delete_proxy(request, proxy_id):
 @login_required
 def bulk_upload_list(request):
     """List all bulk upload tasks"""
-    tasks = BulkUploadTask.objects.order_by('-created_at')
+    from django.db.models import Sum, Value
+    from django.db.models.functions import Coalesce
+    tasks = (
+        BulkUploadTask.objects
+        .order_by('-created_at')
+        .annotate(
+            uploaded_success_total=Coalesce(Sum('accounts__uploaded_success_count'), Value(0)),
+            uploaded_failed_total=Coalesce(Sum('accounts__uploaded_failed_count'), Value(0)),
+            completed_accounts_count=Coalesce(Sum(Case(
+                When(accounts__status='COMPLETED', then=1),
+                default=0,
+                output_field=IntegerField()
+            )), Value(0))
+        )
+    )
     
     context = {
         'tasks': tasks,
@@ -1592,10 +1620,12 @@ def start_bulk_upload(request, task_id):
                 try:
                     result = run_async_bulk_upload_task_sync(task_id)
                     print(f"[TASK] Async task completed for task {task_id}: {result}")
+                    # Координатор уже установил финальный статус (COMPLETED / PARTIALLY_COMPLETED / VERIFICATION_REQUIRED / FAILED)
+                    # Здесь лишь дополняем лог без перезаписи статуса
                     if result:
-                        update_task_status(task, TaskStatus.COMPLETED, "Async task completed successfully")
+                        update_task_status(task, task.status, "Async task finished (status preserved)")
                     else:
-                        update_task_status(task, TaskStatus.FAILED, "Async task failed")
+                        update_task_status(task, task.status, "Async task finished with errors (status preserved)")
                 except Exception as e:
                     print(f"[TASK] Async task failed for task {task_id}: {str(e)}")
                     update_task_status(task, TaskStatus.FAILED, f"Async task failed: {str(e)}")
@@ -2082,6 +2112,7 @@ def get_cookie_task_logs(request, task_id):
     
     return JsonResponse(response_data)
 
+@csrf_exempt
 @require_POST
 def stop_cookie_task(request, task_id):
     """Stop a running cookie robot task"""
@@ -3106,6 +3137,7 @@ def bulk_upload_logs(request, task_id):
         })
 
 
+@csrf_exempt
 @require_POST
 def captcha_notification(request):
     """API endpoint for captcha notifications"""
@@ -3157,4 +3189,16 @@ def get_captcha_status(request, task_id):
             'captcha_detected': False,
             'error': str(e)
         })
+
+
+@csrf_exempt
+@require_POST
+def clear_captcha_notification(request, task_id):
+    """Clear captcha notification for a bulk upload task (called after resolution/dismiss)."""
+    try:
+        cache_key = f"captcha_notification_{task_id}"
+        cache.delete(cache_key)
+        return JsonResponse({ 'status': 'cleared' })
+    except Exception as e:
+        return JsonResponse({ 'status': 'error', 'message': str(e) }, status=400)
 

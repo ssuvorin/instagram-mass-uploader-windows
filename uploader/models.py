@@ -306,6 +306,9 @@ class BulkUploadAccount(models.Model):
     log = models.TextField(blank=True, default="")
     started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+    # Per-account upload counters
+    uploaded_success_count = models.IntegerField(default=0)
+    uploaded_failed_count = models.IntegerField(default=0)
     
     def __str__(self):
         return f"{self.account.username} in {self.bulk_task.name}"

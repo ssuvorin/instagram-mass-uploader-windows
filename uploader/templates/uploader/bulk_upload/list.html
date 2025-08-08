@@ -834,6 +834,8 @@
     .col-name { width: auto; min-width: 200px; }
     .col-accounts { width: 100px; }
     .col-videos { width: 100px; }
+    .col-uploaded { width: 100px; }
+    .col-failed { width: 100px; }
     .col-progress { width: 180px; }
     .col-created { width: 120px; }
     .col-actions { width: 160px; }
@@ -1244,6 +1246,14 @@
                         <span class="metric-value">{{ task.videos.count }}</span>
                         <span class="metric-label">videos</span>
                     </div>
+                    <div class="metric">
+                        <span class="metric-value">{{ task.uploaded_success_total }}</span>
+                        <span class="metric-label">uploaded</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-value">{{ task.uploaded_failed_total }}</span>
+                        <span class="metric-label">failed</span>
+                    </div>
                     {% if task.status == 'RUNNING' or task.status == 'PARTIALLY_COMPLETED' %}
                     <div class="metric progress-metric">
                         <span class="metric-value">{{ task.get_completion_percentage }}%</span>
@@ -1256,8 +1266,8 @@
                         <i class="bi bi-eye"></i>
                     </a>
                     {% if task.status == 'PENDING' %}
-                    <a href="{% url 'start_bulk_upload' task_id=task.id %}" class="action-btn start" title="Start">
-                        <i class="bi bi-play-fill"></i>
+                    <a href="{% url 'start_bulk_upload' task_id=task.id %}?async=true" class="action-btn start" title="Start ASYNC">
+                        <i class="bi bi-lightning-charge"></i>
                     </a>
                     {% endif %}
                 </div>
@@ -1295,6 +1305,8 @@
                         <th class="col-name">Task Name</th>
                         <th class="col-accounts">Accounts</th>
                         <th class="col-videos">Videos</th>
+                        <th class="col-uploaded">Uploaded</th>
+                        <th class="col-failed">Failed</th>
                         <th class="col-progress">Progress</th>
                         <th class="col-created">Created</th>
                         <th class="col-actions">Actions</th>
@@ -1334,6 +1346,12 @@
                         </td>
                         <td class="metric-cell">
                             <span class="metric-number">{{ task.videos.count }}</span>
+                        </td>
+                        <td class="metric-cell">
+                            <span class="metric-number text-success">{{ task.uploaded_success_total }}</span>
+                        </td>
+                        <td class="metric-cell">
+                            <span class="metric-number text-danger">{{ task.uploaded_failed_total }}</span>
                         </td>
                         <td class="progress-cell">
                             {% if task.status == 'RUNNING' or task.status == 'PARTIALLY_COMPLETED' %}
@@ -1388,10 +1406,10 @@
                                    title="Add Videos">
                                     <i class="bi bi-film"></i>
                                 </a>
-                                <a href="{% url 'start_bulk_upload' task_id=task.id %}" 
+                                <a href="{% url 'start_bulk_upload' task_id=task.id %}?async=true" 
                                    class="btn-table btn-start" 
-                                   title="Start Upload">
-                                    <i class="bi bi-play-fill"></i>
+                                   title="Start ASYNC Upload">
+                                    <i class="bi bi-lightning-charge"></i>
                                 </a>
                                 {% endif %}
                                 

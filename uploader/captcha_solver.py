@@ -3,28 +3,59 @@ import time
 import logging
 import asyncio
 import requests
+import platform
+import random
+
+try:
+    import winsound  # Windows
+except Exception:
+    winsound = None
 
 logger = logging.getLogger(__name__)
 
 
+def _get_dashboard_base_url() -> str:
+    """Return base URL for dashboard API from env, fallback to localhost."""
+    base = os.environ.get("UPLOADER_BASE_URL") or os.environ.get("DJANGO_BASE_URL")
+    if base:
+        return base.rstrip('/')
+    return "http://127.0.0.1:8000"
+
+
 def play_sound_notification():
     """Воспроизвести звуковое оповещение"""
+    # Small randomized human-like delay
+    time.sleep(random.uniform(0.05, 0.2))
+    system = platform.system().lower()
     try:
-        # Для macOS
-        os.system("afplay /System/Library/Sounds/Glass.aiff")
-    except:
-        try:
-            # Для Linux
-            os.system("paplay /usr/share/sounds/freedesktop/stereo/complete.oga")
-        except:
-            try:
-                # Для Windows
-                os.system("powershell -c '[console]::beep(800,500)'")
-            except:
-                # Fallback - просто выводим в консоль
-                print("\n" + "[BELL]" * 10)
-                print("[BELL] CAPTCHA DETECTED - PLEASE SOLVE IT! [BELL]")
-                print("[BELL]" * 10 + "\n")
+        if system == 'windows' and winsound is not None:
+            # Use native Windows API for reliability
+            winsound.Beep(800, 250)
+            time.sleep(0.05)
+            winsound.Beep(600, 200)
+            time.sleep(0.05)
+            winsound.Beep(800, 250)
+            return
+        if system == 'darwin':
+            # macOS
+            exit_code = os.system("afplay /System/Library/Sounds/Glass.aiff >/dev/null 2>&1")
+            if exit_code == 0:
+                return
+        if system == 'linux':
+            # Linux
+            if os.system("command -v paplay >/dev/null 2>&1") == 0:
+                exit_code = os.system("paplay /usr/share/sounds/freedesktop/stereo/complete.oga >/dev/null 2>&1")
+                if exit_code == 0:
+                    return
+            elif os.system("command -v aplay >/dev/null 2>&1") == 0:
+                os.system("aplay /usr/share/sounds/alsa/Front_Center.wav >/dev/null 2>&1")
+                return
+        # Generic console bell as last resort
+        print("\a")
+        print("[BELL] CAPTCHA DETECTED")
+    except Exception:
+        print("\a")
+        print("[BELL] CAPTCHA DETECTED")
 
 
 def send_captcha_notification_to_dashboard(bulk_upload_id):
@@ -40,8 +71,9 @@ def send_captcha_notification_to_dashboard(bulk_upload_id):
         
         # Отправляем уведомление на dashboard
         try:
+            base_url = _get_dashboard_base_url()
             response = requests.post(
-                f"http://127.0.0.1:8000/api/captcha-notification/", 
+                f"{base_url}/api/captcha-notification/", 
                 json=notification_data,
                 timeout=5
             )
@@ -55,6 +87,15 @@ def send_captcha_notification_to_dashboard(bulk_upload_id):
                 
     except Exception as e:
         print(f"[FAIL] Error sending captcha notification: {e}")
+
+
+def clear_captcha_notification_on_dashboard(bulk_upload_id):
+    """Снять уведомление на dashboard после решения/отмены капчи"""
+    try:
+        base_url = _get_dashboard_base_url()
+        requests.post(f"{base_url}/api/captcha-clear/{int(bulk_upload_id)}/", timeout=5)
+    except Exception:
+        pass
 
 
 async def detect_recaptcha_on_page_async(page):
@@ -150,6 +191,9 @@ async def solve_recaptcha_if_present(page, account_details=None, max_attempts=3)
                 if current_url != initial_url:
                     print(f"[OK] Page URL changed from {initial_url} to {current_url}")
                     print(f"[OK] Manual reCAPTCHA solution successful!")
+                    # Снимаем баннер на dashboard
+                    if account_details and account_details.get("bulk_upload_id"):
+                        clear_captcha_notification_on_dashboard(account_details["bulk_upload_id"])
                     return True
             
                 # Ждем до следующей проверки

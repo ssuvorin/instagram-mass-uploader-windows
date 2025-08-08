@@ -443,6 +443,7 @@ def navigate_to_upload_with_human_behavior(page):
                     'input[multiple]',
                     'button:has-text("Выбрать на компьютере")',
                     'button:has-text("Select from computer")',
+                    'button:has-text("Select from device")',
                 ]
                 
                 for selector in semantic_selectors:
@@ -2359,7 +2360,10 @@ def handle_recaptcha_if_present(page):
     """Handle reCAPTCHA if present on the page"""
     try:
         from .captcha_solver import solve_recaptcha_if_present_sync
-        return solve_recaptcha_if_present_sync(page, {})
+        # Ensure dashboard receives correct bulk upload id for banner notifications
+        task_id = get_current_task_id()
+        account_details = {"bulk_upload_id": task_id} if task_id else {}
+        return solve_recaptcha_if_present_sync(page, account_details)
     except ImportError:
         log_warning("reCAPTCHA solver not available")
         return True

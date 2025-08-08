@@ -41,6 +41,20 @@ def update_account_task(account_task, status=None, log_message=None, started_at=
             account_task.completed_at = timezone.now()
         else:
             account_task.completed_at = completed_at
+    # Optional counters if provided via kwargs for backward compatibility
+    try:
+        # Some callers may pass these as attributes on the function (kwargs not explicit here),
+        # so fetch from a dict attached temporarily if present
+        extra = getattr(update_account_task, "_extra_fields", None)
+        if isinstance(extra, dict):
+            if 'uploaded_success_count' in extra:
+                account_task.uploaded_success_count = int(extra['uploaded_success_count'])
+            if 'uploaded_failed_count' in extra:
+                account_task.uploaded_failed_count = int(extra['uploaded_failed_count'])
+            # reset after use
+            setattr(update_account_task, "_extra_fields", None)
+    except Exception:
+        pass
     account_task.save()
 
 
