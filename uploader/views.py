@@ -39,6 +39,7 @@ from .forms import (
     BulkVideoLocationMentionsForm
 )
 from bot.src.instagram_uploader.dolphin_anty import DolphinAnty
+from .tasks_playwright import run_upload_task
 
 import logging
 import io
