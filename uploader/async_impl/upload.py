@@ -70,6 +70,19 @@ from ..email_verification_async import (
 import django
 from ..models import InstagramAccount, BulkUploadAccount
 
+# Fallback PARALLEL_CONFIG: import from legacy config if available, else use sane defaults
+try:
+    from ..bulk_tasks_playwright_async import PARALLEL_CONFIG as _GLOBAL_PARALLEL_CONFIG
+except Exception:
+    _GLOBAL_PARALLEL_CONFIG = None
+
+PARALLEL_CONFIG = _GLOBAL_PARALLEL_CONFIG or {
+    'MAX_CONCURRENT_ACCOUNTS': 3,
+    'MAX_RETRIES_PER_ACCOUNT': 2,
+    'ACCOUNT_START_DELAY': (5, 15),
+    'BATCH_SIZE': 5,
+}
+
 
 async def navigate_to_upload_with_human_behavior_async(page, account_details=None):
     """Navigate to upload page with advanced human behavior - ПОЛНАЯ КОПИЯ sync версии"""
@@ -449,6 +462,14 @@ async def try_broader_upload_detection_async(page) -> bool:
         return False
 
 # Removed deprecated direct URL navigation to /create/select/ per latest IG behavior changes.
+
+# Compatibility fallback for legacy callers expecting navigate_to_upload_alternative_async
+async def navigate_to_upload_alternative_async(page) -> bool:
+    """Fallback alternative navigation: delegate to core navigation logic."""
+    try:
+        return await navigate_to_upload_core_async(page)
+    except Exception:
+        return False
 
 async def upload_video_with_human_behavior_async(page, video_file_path, video_obj):
     """Upload video with advanced human behavior - ПОЛНАЯ КОПИЯ sync версии"""
