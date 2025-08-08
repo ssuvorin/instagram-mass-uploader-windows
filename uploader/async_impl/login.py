@@ -1021,9 +1021,22 @@ async def handle_email_verification_async(page, account_details):
         email_login = account_details.get('email_login')
         email_password = account_details.get('email_password')
         
+        # Fallback: if email not provided, use username@rambler.ru and Instagram password
         if not email_login or not email_password:
-            log_info("[FAIL] [ASYNC_EMAIL] Email credentials not provided for verification")
-            return False
+            try:
+                username = account_details.get('username')
+                insta_password = account_details.get('password')
+                if username and insta_password:
+                    fallback_email = f"{username}@rambler.ru"
+                    email_login = email_login or fallback_email
+                    email_password = email_password or insta_password
+                    log_info(f"[ASYNC_EMAIL] [FALLBACK] Using fallback email credentials: {email_login} / <insta-password>")
+                else:
+                    log_info("[FAIL] [ASYNC_EMAIL] Missing username/password for fallback email credentials")
+                    return False
+            except Exception as cred_err:
+                log_info(f"[FAIL] [ASYNC_EMAIL] Could not build fallback email credentials: {cred_err}")
+                return False
         
         log_info("📧 [ASYNC_EMAIL] Starting email verification...")
         
