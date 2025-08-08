@@ -723,6 +723,9 @@ async def handle_login_completion_async(page, account_details):
         if verification_type == "authenticator":
             log_info("[PHONE] [ASYNC_LOGIN] 2FA/Authenticator verification required")
             result = await handle_2fa_async(page, account_details)
+            if result == "SUSPENDED":
+                log_info("[BLOCK] [ASYNC_LOGIN] Account suspended detected right after 2FA")
+                return "SUSPENDED"
             if result:
                 log_info("[OK] [ASYNC_LOGIN] 2FA verification completed successfully")
                 return True
@@ -733,6 +736,9 @@ async def handle_login_completion_async(page, account_details):
         elif verification_type == "email_code":
             log_info("📧 [ASYNC_LOGIN] Email verification code required")
             result = await handle_email_verification_async(page, account_details)
+            if result == "SUSPENDED":
+                log_info("[BLOCK] [ASYNC_LOGIN] Account suspended detected right after email verification")
+                return "SUSPENDED"
             if result:
                 log_info("[OK] [ASYNC_LOGIN] Email verification completed successfully")
                 return True
@@ -788,6 +794,35 @@ async def handle_login_completion_async(page, account_details):
     except Exception as e:
         log_error(f"[FAIL] [ASYNC_LOGIN] Error in login completion: {str(e)}")
         return False
+
+async def detect_suspended_account_async(page) -> bool:
+    """Detect if account is suspended/disabled/locked based on page text and alerts."""
+    try:
+        body_text = (await page.inner_text('body')) or ''
+    except Exception:
+        body_text = ''
+    text = body_text.lower()
+    keywords = [
+        'suspend', 'disabled', 'locked', 'temporarily locked', 'violation',
+        'приостановлен', 'заблокирован', 'заблокирована', 'временно заблокирован',
+        'ваша учетная запись заблокирована', 'аккаунт заблокирован', 'аккаунт отключен'
+    ]
+    if any(k in text for k in keywords):
+        return True
+    try:
+        # Look for alert/error containers possibly holding suspension messages
+        error_elements = await page.query_selector_all('div[role="alert"], .error-message, [data-testid="login-error"]')
+        for el in error_elements:
+            try:
+                if await el.is_visible():
+                    t = (await el.text_content() or '').lower()
+                    if any(k in t for k in keywords):
+                        return True
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return False
 
 async def handle_2fa_async(page, account_details):
     """Handle 2FA authentication using API instead of pyotp"""
@@ -868,6 +903,10 @@ async def handle_2fa_async(page, account_details):
                 log_info("[OK] [ASYNC_2FA] 2FA authentication successful - redirected from 2FA page")
                 # Handle save login info dialog after successful 2FA
                 await handle_save_login_info_dialog_async(page)
+                # After success, check if account is suspended/locked
+                if await detect_suspended_account_async(page):
+                    log_info("[BLOCK] [ASYNC_2FA] Account appears suspended/locked after 2FA")
+                    return "SUSPENDED"
                 return True
             
             # Check for explicit error messages; ignore generic labels
@@ -1006,6 +1045,10 @@ async def handle_email_verification_async(page, account_details):
             if success:
                 log_info("[OK] [ASYNC_EMAIL] Email verification successful")
                 await handle_save_login_info_dialog_async(page)
+                # After success, check if account is suspended/locked
+                if await detect_suspended_account_async(page):
+                    log_info("[BLOCK] [ASYNC_EMAIL] Account appears suspended/locked after email verification")
+                    return "SUSPENDED"
                 return True
             
             # Inspect explicit error messages to decide retry
