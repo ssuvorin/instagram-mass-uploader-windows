@@ -49,6 +49,21 @@ class InstagramAccountForm(forms.ModelForm):
             tfa_secret = re.sub(r'\s+', '', tfa_secret)
         return tfa_secret
 
+    def save(self, commit=True):
+        """Preserve existing dolphin_profile_id to avoid clearing it on updates."""
+        existing_profile_id = None
+        if self.instance and getattr(self.instance, 'pk', None):
+            existing_profile_id = self.instance.dolphin_profile_id
+        instance = super().save(commit=False)
+        # Always keep the original Dolphin profile ID unless it was already empty
+        if existing_profile_id:
+            instance.dolphin_profile_id = existing_profile_id
+        if commit:
+            instance.save()
+            if hasattr(self, 'save_m2m'):
+                self.save_m2m()
+        return instance
+
 
 class UploadTaskForm(forms.ModelForm):
     caption = forms.CharField(

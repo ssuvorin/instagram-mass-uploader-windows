@@ -861,7 +861,12 @@ def edit_account(request, account_id):
     if request.method == 'POST':
         form = InstagramAccountForm(request.POST, instance=account)
         if form.is_valid():
+            # Preserve Dolphin profile ID explicitly to avoid clearing
+            preserved_profile_id = account.dolphin_profile_id
             account = form.save()
+            if preserved_profile_id and account.dolphin_profile_id != preserved_profile_id:
+                account.dolphin_profile_id = preserved_profile_id
+                account.save(update_fields=['dolphin_profile_id'])
             
             # Synchronize proxy and current_proxy fields
             if account.proxy != account.current_proxy:
