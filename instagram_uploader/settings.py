@@ -32,6 +32,10 @@ DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 ALLOWED_HOSTS_ENV = os.environ.get('ALLOWED_HOSTS', '0.0.0.0,localhost,127.0.0.1,*')
 ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_ENV.split(',') if host.strip()]
 
+# Allow all hosts in DEBUG to prevent DisallowedHost during local/dev runs
+if DEBUG and '*' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('*')
+
 
 # Application definition
 

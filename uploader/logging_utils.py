@@ -23,17 +23,14 @@ def _get_web_logger_safe():
 
 
 def safe_encode_message(message):
-    """Safely encode message for Windows compatibility"""
+    """Safely encode message for Windows console compatibility (cp1252, etc.)."""
     try:
-        # Try to encode with UTF-8 first
-        return message.encode('utf-8').decode('utf-8')
-    except UnicodeEncodeError:
-        # If UTF-8 fails, try to replace problematic characters
-        try:
-            return message.encode('utf-8', errors='replace').decode('utf-8')
-        except:
-            # Last resort - remove all non-ASCII characters
-            return ''.join(char for char in message if ord(char) < 128)
+        target_encoding = getattr(sys.stdout, 'encoding', None) or os.environ.get('PYTHONIOENCODING') or 'utf-8'
+        # Re-encode to the target console encoding with replacement for unsupported chars
+        return message.encode(target_encoding, errors='replace').decode(target_encoding, errors='replace')
+    except Exception:
+        # Last resort - keep only ASCII to guarantee no encoding errors
+        return ''.join(char for char in message if ord(char) < 128)
 
 
 def log_info(message: str, category: Optional[str] = None):
