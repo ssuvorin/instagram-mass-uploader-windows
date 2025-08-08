@@ -224,6 +224,54 @@ async def handle_login_flow_async(page, account_details: Dict) -> bool:
             raise Exception("CAPTCHA: Failed to solve reCAPTCHA")
         log_info("[OK] [ASYNC_LOGIN] reCAPTCHA handling completed")
         
+        # Pre-login verification handling: if Instagram shows a verification step (email code/2FA/email field),
+        # handle it immediately instead of attempting username/password on a non-login page.
+        try:
+            log_info("[SEARCH] [ASYNC_LOGIN] Checking for verification before attempting login...")
+            verification_type = await determine_verification_type_async(page)
+            log_info(f"[SEARCH] [ASYNC_LOGIN] Pre-login verification detected: {verification_type}")
+            
+            if verification_type == "authenticator":
+                log_info("[PHONE] [ASYNC_LOGIN] 2FA/Authenticator verification required (pre-login)")
+                result = await handle_2fa_async(page, account_details)
+                if result == "SUSPENDED":
+                    log_info("[BLOCK] [ASYNC_LOGIN] Account suspended detected during pre-login 2FA")
+                    raise Exception("SUSPENDED: Account suspended during 2FA verification")
+                if result:
+                    log_info("[OK] [ASYNC_LOGIN] 2FA verification completed successfully (pre-login)")
+                    return True
+                else:
+                    log_error("[FAIL] [ASYNC_LOGIN] 2FA verification failed (pre-login)")
+                    return False
+            elif verification_type == "email_code":
+                log_info("📧 [ASYNC_LOGIN] Email verification code required (pre-login)")
+                result = await handle_email_verification_async(page, account_details)
+                if result == "SUSPENDED":
+                    log_info("[BLOCK] [ASYNC_LOGIN] Account suspended detected during pre-login email verification")
+                    raise Exception("SUSPENDED: Account suspended during email verification")
+                if result:
+                    log_info("[OK] [ASYNC_LOGIN] Email verification completed successfully (pre-login)")
+                    return True
+                else:
+                    log_error("[FAIL] [ASYNC_LOGIN] Email verification failed (pre-login)")
+                    return False
+            elif verification_type == "email_field":
+                log_info("📧 [ASYNC_LOGIN] Email field input required (pre-login)")
+                result = await handle_email_field_verification_async(page, account_details)
+                if result:
+                    log_info("[OK] [ASYNC_LOGIN] Email field verification completed successfully (pre-login)")
+                    return True
+                else:
+                    log_error("[FAIL] [ASYNC_LOGIN] Email field verification failed (pre-login)")
+                    return False
+        except Exception as pre_ver_err:
+            # If verification probe throws a critical status, bubble it up; otherwise, proceed to regular login
+            if any(tag in str(pre_ver_err) for tag in [
+                "SUSPENDED:", "PHONE_VERIFICATION_REQUIRED:", "HUMAN_VERIFICATION_REQUIRED:"
+            ]):
+                raise
+            log_warning(f"[WARN] [ASYNC_LOGIN] Pre-login verification check failed: {pre_ver_err}")
+        
         # Perform login with enhanced process
         login_result = await perform_enhanced_instagram_login_async(page, account_details)
         
