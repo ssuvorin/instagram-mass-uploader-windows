@@ -68,6 +68,7 @@ from .instagram_automation import InstagramNavigator, InstagramUploader, Instagr
 from .browser_utils import BrowserManager, PageUtils, ErrorHandler, NetworkUtils, FileUtils, DebugUtils
 from .models import BulkUploadTask, InstagramAccount, VideoFile, BulkUploadAccount, BulkVideo
 from .async_video_uniquifier import uniquify_video_for_account, cleanup_uniquifier_temp_files
+from .logging_utils import set_async_logger
 
 # Настройка логирования
 logger = logging.getLogger(__name__)
@@ -492,10 +493,16 @@ class AsyncLogger:
 class AsyncAccountProcessor:
     """Асинхронный обработчик одного аккаунта"""
     
-    def __init__(self, account_task: BulkUploadAccount, task_data: TaskData, logger: AsyncLogger):
+    def __init__(self, account_task, task_data, logger: AsyncLogger):
         self.account_task = account_task
         self.task_data = task_data
         self.logger = logger
+        # Share logger globally for logging_utils bridge
+        try:
+            from .logging_utils import set_async_logger
+            set_async_logger(logger)
+        except Exception:
+            pass
         self.file_manager = AsyncFileManager()
         self.account_repo = AsyncAccountRepository()
         self.start_time = None
@@ -797,6 +804,7 @@ class AsyncTaskCoordinator:
             
             # Инициализируем логгер
             logger = AsyncLogger(self.task_id)
+            set_async_logger(logger)
             
             # Обновляем статус задачи
             current_time = timezone.now()

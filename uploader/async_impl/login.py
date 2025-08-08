@@ -379,16 +379,50 @@ async def check_post_login_verifications_async(page, account_details):
         elif verification_type == "unknown":
             log_info("[OK] [ASYNC_LOGIN] No verification required - checking if truly logged in...")
             
-            # ТОЛЬКО ЗДЕСЬ проверяем индикаторы успешного входа
-            logged_in_indicators = [
+            # ACTUAL CHECK: verify logged-in indicators on the page (RU + EN)
+            indicators = [
+                # Russian UI
+                'svg[aria-label*="Главная"]',
+                '[aria-label*="Главная"]',
+                'svg[aria-label*="Создать"]',
+                'svg[aria-label*="Сообщения"]',
+                'svg[aria-label*="Уведомления"]',
+                'svg[aria-label*="Профиль"]',
+                'a[aria-label*="Главная"]',
+                # English UI
                 'svg[aria-label="Notifications"]',
                 'svg[aria-label="Direct"]', 
                 'svg[aria-label="New post"]',
-                'main[role="main"]:not(:has(form))',  # main без форм входа
+                # Common containers/links
+                'main[role="main"]:not(:has(form))',
                 'nav[role="navigation"]',
-                'a[href="/"]',  # Home link
-                'a[href="/explore/"]',  # Explore link
+                'a[href="/"]',
+                'a[href="/explore/"]'
             ]
+            for indicator in indicators:
+                try:
+                    el = await page.query_selector(indicator)
+                    if el and await el.is_visible():
+                        log_info(f"[OK] [ASYNC_LOGIN] Looks logged in - found indicator: {indicator}")
+                        return True
+                except Exception:
+                    continue
+            
+            # Fallback: navigate to home and retry a short check
+            try:
+                log_info("[RETRY] [ASYNC_LOGIN] Forcing navigation to home and re-checking indicators...")
+                await page.goto('https://www.instagram.com/', wait_until='domcontentloaded')
+                await asyncio.sleep(random.uniform(2, 4))
+                for indicator in indicators:
+                    try:
+                        el = await page.query_selector(indicator)
+                        if el and await el.is_visible():
+                            log_info(f"[OK] [ASYNC_LOGIN] Logged-in indicator after reload: {indicator}")
+                            return True
+                    except Exception:
+                        continue
+            except Exception as nav_err:
+                log_warning(f"[WARN] [ASYNC_LOGIN] Home navigation check failed: {nav_err}")
             
             log_info("[FAIL] [ASYNC_LOGIN] No logged-in indicators found - login may have failed")
             return False
@@ -807,15 +841,25 @@ async def handle_login_completion_async(page, account_details):
         elif verification_type == "unknown":
             log_info("[OK] [ASYNC_LOGIN] No verification required - checking if truly logged in...")
             
-            # ТОЛЬКО ЗДЕСЬ проверяем индикаторы успешного входа
+            # ТОЛЬКО ЗДЕСЬ проверяем индикаторы успешного входа (RU + EN)
             logged_in_indicators = [
+                # Russian UI
+                'svg[aria-label*="Главная"]',
+                '[aria-label*="Главная"]',
+                'svg[aria-label*="Создать"]',
+                'svg[aria-label*="Сообщения"]',
+                'svg[aria-label*="Уведомления"]',
+                'svg[aria-label*="Профиль"]',
+                'a[aria-label*="Главная"]',
+                # English UI
                 'svg[aria-label="Notifications"]',
                 'svg[aria-label="Direct"]', 
                 'svg[aria-label="New post"]',
-                'main[role="main"]:not(:has(form))',  # main без форм входа
+                # Common containers/links
+                'main[role="main"]:not(:has(form))',
                 'nav[role="navigation"]',
-                'a[href="/"]',  # Home link
-                'a[href="/explore/"]',  # Explore link
+                'a[href="/"]',
+                'a[href="/explore/"]'
             ]
             
             for indicator in logged_in_indicators:

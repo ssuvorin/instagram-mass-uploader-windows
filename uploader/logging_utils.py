@@ -7,9 +7,18 @@ import logging
 import sys
 import os
 from typing import Optional
+import asyncio
 
 # Setup logger
 logger = logging.getLogger('uploader.bulk_tasks')
+
+# Async logger bridge (used in async mode)
+_async_logger = None  # type: ignore
+
+def set_async_logger(async_logger):
+    """Register AsyncLogger-like instance to mirror logs into Django cache in async mode."""
+    global _async_logger
+    _async_logger = async_logger
 
 
 def _get_web_logger_safe():
@@ -41,8 +50,22 @@ def safe_encode_message(message):
         return ''.join(char for char in message if ord(char) < 128)
 
 
+def _mirror_to_async_logger(level: str, message: str, category: Optional[str] = None):
+    """Schedule mirroring to AsyncLogger if configured and event loop is running."""
+    if _async_logger is None:
+        return
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return
+    try:
+        loop.create_task(_async_logger.log(level, message, category))
+    except Exception:
+        pass
+
+
 def log_info(message: str, category: Optional[str] = None):
-    """Log message to both logger, console, and WebLogger (if available)."""
+    """Log message to both logger, console, and WebLogger/AsyncLogger (if available)."""
     safe_message = safe_encode_message(message)
     try:
         web_logger = _get_web_logger_safe()
@@ -50,12 +73,13 @@ def log_info(message: str, category: Optional[str] = None):
             web_logger.log('INFO', safe_message, category)
     except Exception:
         pass
+    _mirror_to_async_logger('INFO', safe_message, category)
     logger.info(safe_message)
     print(f"[BULK TASK] {safe_message}")
 
 
 def log_success(message: str, category: Optional[str] = None):
-    """Log success message to both logger, console, and WebLogger (if available)."""
+    """Log success message to both logger, console, and WebLogger/AsyncLogger (if available)."""
     safe_message = safe_encode_message(message)
     try:
         web_logger = _get_web_logger_safe()
@@ -63,12 +87,13 @@ def log_success(message: str, category: Optional[str] = None):
             web_logger.log('SUCCESS', safe_message, category)
     except Exception:
         pass
+    _mirror_to_async_logger('SUCCESS', safe_message, category)
     logger.info(safe_message)
     print(f"[BULK TASK SUCCESS] {safe_message}")
 
 
 def log_error(message: str, category: Optional[str] = None):
-    """Log error to both logger, console, and WebLogger (if available)."""
+    """Log error to both logger, console, and WebLogger/AsyncLogger (if available)."""
     safe_message = safe_encode_message(message)
     try:
         web_logger = _get_web_logger_safe()
@@ -76,12 +101,13 @@ def log_error(message: str, category: Optional[str] = None):
             web_logger.log('ERROR', safe_message, category)
     except Exception:
         pass
+    _mirror_to_async_logger('ERROR', safe_message, category)
     logger.error(safe_message)
     print(f"[BULK TASK ERROR] {safe_message}")
 
 
 def log_debug(message: str, category: Optional[str] = None):
-    """Log debug message to both logger, console, and WebLogger (if available)."""
+    """Log debug message to both logger, console, and WebLogger/AsyncLogger (if available)."""
     safe_message = safe_encode_message(message)
     try:
         web_logger = _get_web_logger_safe()
@@ -89,12 +115,13 @@ def log_debug(message: str, category: Optional[str] = None):
             web_logger.log('DEBUG', safe_message, category)
     except Exception:
         pass
+    _mirror_to_async_logger('DEBUG', safe_message, category)
     logger.debug(safe_message)
     print(f"[BULK TASK DEBUG] {safe_message}")
 
 
 def log_warning(message: str, category: Optional[str] = None):
-    """Log warning to both logger, console, and WebLogger (if available)."""
+    """Log warning to both logger, console, and WebLogger/AsyncLogger (if available)."""
     safe_message = safe_encode_message(message)
     try:
         web_logger = _get_web_logger_safe()
@@ -102,5 +129,6 @@ def log_warning(message: str, category: Optional[str] = None):
             web_logger.log('WARNING', safe_message, category)
     except Exception:
         pass
+    _mirror_to_async_logger('WARNING', safe_message, category)
     logger.warning(safe_message)
     print(f"[BULK TASK WARNING] {safe_message}") 

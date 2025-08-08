@@ -1447,6 +1447,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Setup automatic log updating for main task log
     setupLogUpdater('{% url "bulk_task_logs" task_id=task.id %}', 2000);
     
+    // Setup per-account log updaters
+    accountTaskIds.forEach(function(accountId) {
+        const targetId = 'account-logs-' + accountId;
+        const url = '{% url "bulk_task_logs" task_id=task.id %}' + '?account_id=' + accountId;
+        setupLogUpdater(url, 2000, targetId);
+    });
+    
     // Progress update function
     function updateTaskProgress() {
         fetch('{% url "bulk_task_logs" task_id=task.id %}')
@@ -1508,32 +1515,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Do not reload the page on completion; keep logs visible as-is
             })
-            .catch(error => {
-                console.error('Error updating progress:', error);
-            });
+            .catch(() => {});
     }
     
-    // Update progress every 3 seconds
-    const progressInterval = setInterval(updateTaskProgress, 3000);
-    
-    // Setup log updaters for each account tab when clicked
-    accountTaskIds.forEach(function(accountId) {
-        const tabElement = document.getElementById('account-' + accountId + '-tab');
-        const logElement = document.getElementById('account-logs-' + accountId);
-        
-        if (tabElement && logElement) {
-            // Initialize logs for this account
-            setupLogUpdater('{% url "bulk_task_logs" task_id=task.id %}?account_id=' + accountId, 2000, 'account-logs-' + accountId);
-            
-            // Also set up click handler for tab switching
-            tabElement.addEventListener('click', function() {
-                // Ensure logs are updated when tab is clicked
-                setTimeout(() => {
-                    setupLogUpdater('{% url "bulk_task_logs" task_id=task.id %}?account_id=' + accountId, 2000, 'account-logs-' + accountId);
-                }, 100);
-            });
-        }
-    });
+    // Periodic progress updates
+    setInterval(updateTaskProgress, 3000);
 });
 </script>
 {% else %}

@@ -168,18 +168,22 @@ class WebLogger:
             self.critical_events.append(log_entry)
         
         # Store in cache for real-time updates
-        cache_key = f"task_logs_{self.task_id}"
-        if self.account_id:
-            cache_key += f"_account_{self.account_id}"
-            
-        existing_logs = cache.get(cache_key, [])
-        existing_logs.append(log_entry)
+        # Always append to the main task log collection
+        main_cache_key = f"task_logs_{self.task_id}"
+        existing_main_logs = cache.get(main_cache_key, [])
+        existing_main_logs.append(log_entry)
+        if len(existing_main_logs) > Limits.MAX_LOG_ENTRIES:
+            existing_main_logs = existing_main_logs[-Limits.MAX_LOG_ENTRIES:]
+        cache.set(main_cache_key, existing_main_logs, timeout=3600)
         
-        # Keep only last 1000 log entries to prevent memory issues
-        if len(existing_logs) > Limits.MAX_LOG_ENTRIES:
-            existing_logs = existing_logs[-Limits.MAX_LOG_ENTRIES:]
-            
-        cache.set(cache_key, existing_logs, timeout=3600)
+        # If logging for a specific account, also write to account-specific cache
+        if self.account_id:
+            account_cache_key = f"task_logs_{self.task_id}_account_{self.account_id}"
+            existing_account_logs = cache.get(account_cache_key, [])
+            existing_account_logs.append(log_entry)
+            if len(existing_account_logs) > Limits.MAX_LOG_ENTRIES:
+                existing_account_logs = existing_account_logs[-Limits.MAX_LOG_ENTRIES:]
+            cache.set(account_cache_key, existing_account_logs, timeout=3600)
         
         # Also store summary for critical events
         if is_critical:
@@ -320,6 +324,14 @@ def log_error(message, category=None):
         web_logger.log('ERROR', message, category)
     else:
         print(f"[ERROR] {message}")
+
+def log_debug(message, category=None):
+    """Log debug message to web interface (mapped to INFO for visibility)"""
+    if web_logger:
+        # Use DEBUG level so we can identify them if needed
+        web_logger.log('DEBUG', message, category)
+    else:
+        print(f"[DEBUG] {message}")
 
 def get_2fa_code(tfa_secret):
     """Get 2FA code from API service"""
@@ -1152,6 +1164,7 @@ def run_bulk_upload_task(task_id):
         
         # Initialize web logger for this task
         web_logger = init_web_logger(task_id)
+        install_web_log_handler()
         
         # Task initialization
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -1548,6 +1561,7 @@ def run_dolphin_browser(account_details, videos, video_files_to_upload, result_q
     
     try:
         init_web_logger(task_id, account_task_id)
+        install_web_log_handler()
         
         username = account_details['username']
         log_info(f"🐬 [DOLPHIN_START] Starting Dolphin Anty browser for account: {username}", LogCategories.DOLPHIN)
@@ -2791,3 +2805,51 @@ def cleanup_original_video_files_sync(task) -> int:
         log_error(f"[FAIL] [CLEANUP] Error in cleanup_original_video_files_sync: {str(e)}", LogCategories.CLEANUP)
     
     return deleted_count
+
+class WebLogHandler(logging.Handler):
+    """Logging handler that forwards Python logging records to the active WebLogger"""
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            logger_instance = get_web_logger()
+            if not logger_instance:
+                return
+            # Map levelno to our levels
+            if record.levelno >= logging.ERROR:
+                level = 'ERROR'
+            elif record.levelno >= logging.WARNING:
+                level = 'WARNING'
+            elif record.levelno >= logging.INFO:
+                level = 'INFO'
+            else:
+                level = 'DEBUG'
+            message = self.format(record) if self.formatter else record.getMessage()
+            logger_instance.log(level, message, category=None)
+        except Exception:
+            # Avoid breaking logging pipeline
+            pass
+
+
+_installed_web_handlers = False
+
+def install_web_log_handler():
+    """Attach WebLogHandler to relevant loggers once per process"""
+    global _installed_web_handlers
+    if _installed_web_handlers:
+        return
+    handler = WebLogHandler()
+    # Keep formatter minimal; message formatting already done by WebLogger
+    handler.setLevel(logging.INFO)
+    # Attach to our module logger and related libs
+    for name in ['uploader', 'uploader.bulk_tasks', 'bot.src.instagram_uploader.dolphin_anty']:
+        try:
+            lg = logging.getLogger(name)
+            # Ensure INFO level so records pass even if root is CRITICAL
+            lg.setLevel(logging.INFO)
+            # Avoid duplicate attachments
+            if not any(isinstance(h, WebLogHandler) for h in lg.handlers):
+                lg.addHandler(handler)
+            # Prevent propagation up to root (which is set to CRITICAL)
+            lg.propagate = False
+        except Exception:
+            pass
+    _installed_web_handlers = True
