@@ -102,6 +102,16 @@
                         <input type="file" name="accounts_file" id="accounts_file" class="form-control" accept=".txt" required>
                         <div class="form-text">Select a text file with Instagram accounts</div>
                     </div>
+
+                    <div class="mb-4">
+                        <label for="profile_locale" class="form-label">Dolphin Profile Locale</label>
+                        <select class="form-select" id="profile_locale" name="profile_locale" required>
+                            <option value="en_US">English (US)</option>
+                            <option value="en_IN">English (India)</option>
+                            <option value="ru_RU" selected>Русский (Россия)</option>
+                        </select>
+                        <div class="form-text">Select locale to use for created Dolphin profiles</div>
+                    </div>
                     
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-primary" id="submitBtn">

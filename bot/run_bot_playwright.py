@@ -73,21 +73,21 @@ def check_proxy_config(proxy_data):
     
     try:
         # Создаем временный профиль с прокси
-        temp_profile_data = {
-            "name": f"Temp Profile - {uuid.uuid4().hex[:8]}",
-            "tags": ["temp"],
-            "browserType": "chrome",
-            "proxy": {
-                "mode": "manual",
-                "host": proxy_data.get('host'),
-                "port": proxy_data.get('port'),
-                "username": proxy_data.get('username', ""),
-                "password": proxy_data.get('password', ""),
-                "type": proxy_data.get('type', "http")
-            }
+        temp_profile_name = f"Temp Profile - {uuid.uuid4().hex[:8]}"
+        proxy_payload = {
+            'type': proxy_data.get('type', 'http'),
+            'host': proxy_data.get('host'),
+            'port': proxy_data.get('port'),
+            'user': proxy_data.get('username', ''),
+            'pass': proxy_data.get('password', '')
         }
         
-        profile_response = dolphin.create_profile(temp_profile_data)
+        profile_response = dolphin.create_profile(
+            name=temp_profile_name,
+            proxy=proxy_payload,
+            tags=["temp"],
+            locale='ru_RU'
+        )
         if not profile_response or not profile_response.get("success"):
             logger.error("[FAIL] Не удалось создать временный профиль для проверки прокси")
             return None

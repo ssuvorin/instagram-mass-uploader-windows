@@ -110,8 +110,21 @@ async def check_if_already_logged_in_async(page, selectors):
     
     url_indicates_suspension = any(pattern in current_url.lower() for pattern in suspension_url_patterns)
     if url_indicates_suspension:
-        log_info(f"[BLOCK] [ASYNC_LOGIN] Account suspension also detected from URL: {current_url}")
-        return "SUSPENDED"
+        # Before treating as suspended, check if this is actually a verification checkpoint
+        try:
+            from ..email_verification_async import determine_verification_type_async
+            verification_type = await determine_verification_type_async(page)
+            # If any verification is detected, do NOT mark as suspended here
+            if verification_type in ("email_code", "email_field", "authenticator"):
+                log_info(f"[SEARCH] [ASYNC_LOGIN] URL suggests suspension, but verification '{verification_type}' detected; proceeding with verification instead of SUSPENDED")
+            else:
+                log_info(f"[BLOCK] [ASYNC_LOGIN] Account suspension also detected from URL: {current_url}")
+                return "SUSPENDED"
+        except Exception as verification_probe_error:
+            # If verification probe fails, fall back to previous behavior
+            log_info(f"[WARN] [ASYNC_LOGIN] Verification probe failed during suspension URL check: {str(verification_probe_error)}")
+            log_info(f"[BLOCK] [ASYNC_LOGIN] Account suspension also detected from URL: {current_url}")
+            return "SUSPENDED"
     
     # First check if we see login form elements
     login_form_present = False

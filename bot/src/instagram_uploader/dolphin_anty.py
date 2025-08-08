@@ -290,11 +290,12 @@ class DolphinAnty:
         self,
         name: str,
         proxy: Dict[str, Any],
-        tags: List[str]
+        tags: List[str],
+        locale: str = "ru_RU"
     ) -> Dict[str, Any]:
         """
         Create a fully randomized Dolphin Anty browser profile payload,
-        with manual modes and Russian localization.
+        with manual modes and configurable localization.
         """
         # 1) Proxy is required
         if not proxy:
@@ -356,24 +357,47 @@ class DolphinAnty:
         audio_mode = random.choice(["real","noise"])
         audio_payload = {"mode": audio_mode}
         
-        # 10) Randomize Timezone
-        ru_timezones = [
-            "Europe/Moscow", "Europe/Kaliningrad", "Europe/Samara",
-            "Asia/Yekaterinburg", "Asia/Novosibirsk", "Asia/Irkutsk",
-            "Asia/Yakutsk", "Asia/Vladivostok"
-        ]
-        tz_mode = random.choice(["auto", "manual"])
-        tz_payload: Dict[str, Any] = {"mode": tz_mode}
-        if tz_mode == "manual":
-            tz_payload["value"] = random.choice(ru_timezones)
+        # 10) Timezone & Geolocation based on locale (kept simple and deterministic per region)
+        normalized_locale = (locale or "ru_RU").strip()
+        lang_value_dash = normalized_locale.replace("_", "-")
 
-        # 11) Geolocation: auto or manual (Moscow coords if manual)
-        geo_mode = random.choice(["auto", "manual"])
-        geo_payload: Dict[str, Any] = {"mode": geo_mode}
-        if geo_mode == "manual":
-            geo_payload.update({"latitude": 55.7558, "longitude": 37.6173})
+        tz_payload: Dict[str, Any]
+        geo_payload: Dict[str, Any]
 
-        # 12) Build payload
+        if normalized_locale == "en_IN":
+            # India
+            tz_payload = {"mode": "manual", "value": "Asia/Kolkata"}
+            # Randomly pick between Delhi and Mumbai for simple variety
+            if random.choice([True, False]):
+                geo_payload = {"mode": "manual", "latitude": 28.6139, "longitude": 77.2090}  # Delhi
+            else:
+                geo_payload = {"mode": "manual", "latitude": 19.0760, "longitude": 72.8777}  # Mumbai
+        elif normalized_locale == "en_US":
+            # USA
+            us_timezones = [
+                "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles"
+            ]
+            tz_payload = {"mode": "manual", "value": random.choice(us_timezones)}
+            # Random popular US city coords
+            cities = [
+                (40.7128, -74.0060),  # NYC
+                (34.0522, -118.2437), # LA
+                (41.8781, -87.6298),  # Chicago
+                (29.7604, -95.3698),  # Houston
+            ]
+            lat, lon = random.choice(cities)
+            geo_payload = {"mode": "manual", "latitude": lat, "longitude": lon}
+        else:
+            # Default: Russia (original behavior)
+            ru_timezones = [
+                "Europe/Moscow", "Europe/Kaliningrad", "Europe/Samara",
+                "Asia/Yekaterinburg", "Asia/Novosibirsk", "Asia/Irkutsk",
+                "Asia/Yakutsk", "Asia/Vladivostok"
+            ]
+            tz_payload = {"mode": "manual", "value": random.choice(ru_timezones)}
+            geo_payload = {"mode": "manual", "latitude": 55.7558, "longitude": 37.6173}  # Moscow
+
+        # 11) Build payload
         payload: Dict[str, Any] = {
             "name":            name,
             "tags":            tags,
@@ -413,7 +437,8 @@ class DolphinAnty:
             },
 
             "timezone":    tz_payload,
-            "locale":      {"mode": "manual", "value": "ru_RU"},
+            "locale":      {"mode": "manual", "value": normalized_locale},
+            "language":    {"mode": "manual", "value": lang_value_dash},
             "geolocation": geo_payload,
 
             "cpu": {
@@ -444,6 +469,7 @@ class DolphinAnty:
         }
 
         # 13) Send request
+        logger.info(f"[PROFILE] Creating with locale={normalized_locale}, language={lang_value_dash}, timezone={tz_payload.get('value')}")
         try:
             resp = self._make_request("post", "/browser_profiles", data=payload)
         except DolphinAntyAPIError as e:
@@ -531,7 +557,10 @@ class DolphinAnty:
                 tags.append(account_data['tags'])
         
         logger.info(f"[TOOL] Creating profile for Instagram account: {username}")
-        response = self.create_profile(name=name, proxy=proxy_data, tags=tags)
+        locale = account_data.get('locale', 'ru_RU')
+        if locale not in {'en_US','en_IN','ru_RU'}:
+            locale = 'ru_RU'
+        response = self.create_profile(name=name, proxy=proxy_data, tags=tags, locale=locale)
         
         # Extract profile ID from response
         profile_id = None

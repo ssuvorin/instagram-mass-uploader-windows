@@ -22769,3 +22769,13 @@ navigating to 'https://medium.com/', waiting until 'domcontentloaded'
 2025-08-08 14:01:16,263 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping Dolphin profile: 642874888
 2025-08-08 14:01:16,523 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Successfully stopped profile: 642874888
 2025-08-08 14:01:16,523 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Successfully stopped profile: 642874888
+2025-08-08 16:10:04,340 - bot.src.instagram_uploader.dolphin_anty - INFO - Getting profile list with params: {'limit': 1, 'page': 1}
+2025-08-08 16:10:04,340 - bot.src.instagram_uploader.dolphin_anty - INFO - Getting profile list with params: {'limit': 1, 'page': 1}
+2025-08-08 16:10:06,009 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Generated UA (136): Mozilla/5.0 (Windows NT 10.0; Win64; x64...
+2025-08-08 16:10:06,009 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Generated UA (136): Mozilla/5.0 (Windows NT 10.0; Win64; x64...
+2025-08-08 16:10:08,516 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Profile created: {'success': 1, 'browserProfileId': 645315062, 'data': {'id': 645315062}}
+2025-08-08 16:10:08,516 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Profile created: {'success': 1, 'browserProfileId': 645315062, 'data': {'id': 645315062}}
+2025-08-08 16:16:32,249 - bot.src.instagram_uploader.dolphin_anty - INFO - Getting profile list with params: {'limit': 1, 'page': 1}
+2025-08-08 16:16:32,249 - bot.src.instagram_uploader.dolphin_anty - INFO - Getting profile list with params: {'limit': 1, 'page': 1}
+2025-08-08 16:16:54,010 - bot.src.instagram_uploader.dolphin_anty - INFO - Getting profile list with params: {'limit': 1, 'page': 1}
+2025-08-08 16:16:54,010 - bot.src.instagram_uploader.dolphin_anty - INFO - Getting profile list with params: {'limit': 1, 'page': 1}

@@ -427,10 +427,15 @@ def create_account(request):
                         logger.info(f"[CREATE ACCOUNT] Using proxy for profile: {proxy_data.get('host')}:{proxy_data.get('port')}")
 
                         # Using updated create_profile method with proper fingerprint generation
+                        # Locale: try to read from POST (if present on the form), else default
+                        selected_locale = request.POST.get('profile_locale', 'ru_RU')
+                        if selected_locale not in {'en_US','en_IN','ru_RU'}:
+                            selected_locale = 'ru_RU'
                         response = dolphin.create_profile(
                             name=profile_name,
                             proxy=proxy_data,
-                            tags=["instagram", "auto-created", "single-account-created"]
+                            tags=["instagram", "auto-created", "single-account-created"],
+                            locale=selected_locale
                         )
 
                         # Extract profile ID from response
@@ -569,6 +574,12 @@ def import_accounts(request):
     if request.method == 'POST' and request.FILES.get('accounts_file'):
         accounts_file = request.FILES['accounts_file']
         
+        # Locale selection from form
+        selected_locale = request.POST.get('profile_locale', 'ru_RU')
+        allowed_locales = {'en_US', 'en_IN', 'ru_RU'}
+        if selected_locale not in allowed_locales:
+            selected_locale = 'ru_RU'
+        
         # Counters for status messages
         created_count = 0
         updated_count = 0
@@ -609,12 +620,39 @@ def import_accounts(request):
         total_lines = len(lines)
         logger.info(f"[INFO] Found {total_lines} lines in the accounts file")
         
-        # Check if we have enough proxies
+        # Determine how many proxies are actually needed: only for new accounts or existing accounts without proxy
+        # Parse usernames from valid lines (username:password...)
+        parsed_usernames = []
+        for raw in lines:
+            s = (raw or '').strip()
+            if not s:
+                continue
+            parts = s.split(':')
+            if len(parts) >= 2 and parts[0]:
+                parsed_usernames.append(parts[0])
+        unique_usernames = list({u for u in parsed_usernames})
+
+        existing_map = {
+            acc.username: acc
+            for acc in InstagramAccount.objects.filter(username__in=unique_usernames)
+        }
+        new_usernames = [u for u in unique_usernames if u not in existing_map]
+        existing_without_proxy = [
+            u for u in unique_usernames
+            if u in existing_map and not (getattr(existing_map[u], 'proxy', None) or getattr(existing_map[u], 'current_proxy', None))
+        ]
+        proxies_needed = len(new_usernames) + len(existing_without_proxy)
+
         available_proxies = Proxy.objects.filter(is_active=True, assigned_account__isnull=True)
         available_proxy_count = available_proxies.count()
+        logger.info(f"[INFO] Proxy requirement: needed={proxies_needed} (new={len(new_usernames)}, existing_without_proxy={len(existing_without_proxy)}), available={available_proxy_count}")
         
-        if available_proxy_count < total_lines:
-            error_message = f"Not enough available proxies. Need {total_lines} but only have {available_proxy_count}. Please add more proxies before importing accounts."
+        if available_proxy_count < proxies_needed:
+            error_message = (
+                f"Not enough available proxies. Need {proxies_needed} "
+                f"(new: {len(new_usernames)}, missing: {len(existing_without_proxy)}) "
+                f"but only have {available_proxy_count}. Please add more proxies before importing accounts."
+            )
             logger.error(f"[ERROR] {error_message}")
             messages.error(request, error_message)
             return redirect('import_accounts')
@@ -689,23 +727,25 @@ def import_accounts(request):
                     logger.info(f"[INFO] Account {username} identified as TFA account with extended format")
                 
                 
-                # Get an unused active proxy for this account
-                logger.info(f"[STEP 4/5] Assigning proxy to account: {username}")
+                # Decide proxy assignment strategy
+                logger.info(f"[STEP 4/5] Deciding proxy for account: {username}")
                 assigned_proxy = None
                 try:
-                    # Get an unused active proxy
-                    available_proxies = Proxy.objects.filter(is_active=True, assigned_account__isnull=True)
-                    
-                    if not available_proxies.exists():
-                        error_message = f"No available proxies left for account {username}. Please add more proxies."
-                        logger.error(f"[ERROR] {error_message}")
-                        messages.error(request, error_message)
-                        return redirect('import_accounts')
-                    
-                    # Get a random proxy from available ones
-                    assigned_proxy = available_proxies.order_by('?').first()
-                    logger.info(f"[SUCCESS] Assigned proxy {assigned_proxy} to account {username}")
-                    
+                    existing_acc = existing_map.get(username)
+                    if existing_acc and (existing_acc.current_proxy or existing_acc.proxy):
+                        # Reuse existing proxy assignment, do not grab a new proxy
+                        assigned_proxy = existing_acc.current_proxy or existing_acc.proxy
+                        logger.info(f"[INFO] Reusing existing proxy for {username}: {assigned_proxy}")
+                    else:
+                        # Get an unused active proxy
+                        available_proxies = Proxy.objects.filter(is_active=True, assigned_account__isnull=True)
+                        if not available_proxies.exists():
+                            error_message = f"No available proxies left for account {username}. Please add more proxies."
+                            logger.error(f"[ERROR] {error_message}")
+                            messages.error(request, error_message)
+                            return redirect('import_accounts')
+                        assigned_proxy = available_proxies.order_by('?').first()
+                        logger.info(f"[SUCCESS] Assigned new proxy {assigned_proxy} to account {username}")
                 except Exception as e:
                     error_message = f"Error assigning proxy to account {username}: {str(e)}"
                     logger.error(f"[ERROR] {error_message}")
@@ -715,16 +755,20 @@ def import_accounts(request):
                 
                 # Check if account already exists
                 logger.info(f"[STEP 5/5] Creating or updating account: {username}")
+                # Build defaults without overwriting existing proxy unless we actually selected one
+                defaults = {
+                    'password': password,
+                    'tfa_secret': tfa_secret,
+                    'email_username': email_username,
+                    'email_password': email_password,
+                    'status': 'ACTIVE',
+                }
+                if assigned_proxy and (not existing_map.get(username) or not (existing_map[username].proxy or existing_map[username].current_proxy)):
+                    defaults['proxy'] = assigned_proxy
+
                 account, created = InstagramAccount.objects.update_or_create(
                     username=username,
-                    defaults={
-                        'password': password,
-                        'tfa_secret': tfa_secret,
-                        'email_username': email_username,
-                        'email_password': email_password,
-                        'status': 'ACTIVE',
-                        'proxy': assigned_proxy
-                    }
+                    defaults=defaults
                 )
                 
                 if created:
@@ -734,8 +778,8 @@ def import_accounts(request):
                     logger.info(f"[SUCCESS] Updated existing account: {username}")
                     updated_count += 1
                     
-                # Update proxy assignment
-                if assigned_proxy:
+                # Update proxy assignment only if we assigned a new proxy from pool
+                if assigned_proxy and (not existing_map.get(username) or not (existing_map[username].proxy or existing_map[username].current_proxy)):
                     assigned_proxy.assigned_account = account
                     assigned_proxy.save()
                     logger.info(f"[INFO] Updated proxy assignment for account {username}")
@@ -769,7 +813,8 @@ def import_accounts(request):
                         response = dolphin.create_profile(
                             name=profile_name,
                             proxy=proxy_data,
-                            tags=["instagram", "auto-created"]
+                            tags=["instagram", "auto-created"],
+                            locale=selected_locale
                         )
                         
                         # Extract profile ID from response
@@ -2610,7 +2655,8 @@ def create_dolphin_profile(request, account_id):
         response = dolphin.create_profile(
             name=profile_name,
             proxy=proxy_data,
-            tags=["instagram", "manual-created"]
+            tags=["instagram", "manual-created"],
+            locale='ru_RU'
         )
         
         # Extract profile ID from response
