@@ -838,16 +838,24 @@ async def handle_2fa_async(page, account_details):
         code_input = None
         code_selectors = [
             'input[name="verificationCode"]',  # Основной селектор
+            'input[name="confirmationCode"]',
+            'input[name="securityCode"]',
             'input[aria-label*="Код безопасности"]',  # Русский интерфейс
             'input[aria-label*="Security Code"]',  # Английский интерфейс
             'input[aria-describedby="verificationCodeDescription"]',  # По описанию
-            'input[type="tel"][maxlength="8"]',  # По типу и длине
-            'input[autocomplete="off"][maxlength="8"]',  # По атрибутам
-            'input[placeholder*="код"]',
-            'input[placeholder*="code"]',
-            'input[maxlength="6"]',
-            'input[maxlength="8"]',  # Instagram иногда использует 8
+            'input[type="tel"][maxlength]','input[type="tel"]',  # По типу
+            'input[autocomplete="off"][maxlength]','input[autocomplete="one-time-code"]',
+            'input[inputmode="numeric"]',
+            'input[maxlength="6"]', 'input[maxlength="8"]',  # Instagram иногда использует 8
+            'input[placeholder*="код"]','input[placeholder*="code"]',
+            'label:has-text("Код") + input'
         ]
+        # Расширенные динамические селекторы
+        code_selectors.extend([
+            'input[id^="_r_"]',
+            'input[type="text"][dir="ltr"][autocomplete="off"]',
+            'label[for^="_r_"] + input',
+        ])
         for selector in code_selectors:
             try:
                 code_input = await page.query_selector(selector)
@@ -858,6 +866,12 @@ async def handle_2fa_async(page, account_details):
         
         if not code_input:
             log_info("[FAIL] [ASYNC_2FA] 2FA code input not found")
+            # Возможно, сразу телефонная проверка / другая форма
+            from .utils_dom import check_for_phone_verification_page_async
+            phone_check = await check_for_phone_verification_page_async(page)
+            if phone_check.get('requires_phone_verification'):
+                log_error("[PHONE] [ASYNC_2FA] Phone verification required instead of 2FA input")
+                raise Exception("PHONE_VERIFICATION_REQUIRED: Detected phone verification after 2FA phase")
             return False
         
         # Retry up to 3 times with fresh TOTP (30s window)
@@ -880,7 +894,7 @@ async def handle_2fa_async(page, account_details):
             await asyncio.sleep(random.uniform(0.8, 1.6))
             
             # Submit 2FA form
-            submit_button = await page.query_selector('button[type="submit"], button:has-text("Confirm"), button:has-text("Подтвердить")')
+            submit_button = await page.query_selector('button[type="submit"], button:has-text("Confirm"), button:has-text("Подтвердить"), div[role="button"]:has-text("Confirm"), div[role="button"]:has-text("Подтвердить")')
             if submit_button:
                 await submit_button.click()
             else:
@@ -903,6 +917,16 @@ async def handle_2fa_async(page, account_details):
                 log_info("[OK] [ASYNC_2FA] 2FA authentication successful - redirected from 2FA page")
                 # Handle save login info dialog after successful 2FA
                 await handle_save_login_info_dialog_async(page)
+                # Сразу после успеха проверим требование телефона
+                try:
+                    from .utils_dom import check_for_phone_verification_page_async
+                    phone_check = await check_for_phone_verification_page_async(page)
+                    if phone_check.get('requires_phone_verification'):
+                        log_error("[PHONE] [ASYNC_2FA] Phone verification required after successful 2FA")
+                        raise Exception("PHONE_VERIFICATION_REQUIRED: Phone verification detected post-2FA")
+                except Exception as e:
+                    # Пробросим дальше для верхнего уровня
+                    raise
                 # After success, check if account is suspended/locked
                 if await detect_suspended_account_async(page):
                     log_info("[BLOCK] [ASYNC_2FA] Account appears suspended/locked after 2FA")
@@ -923,6 +947,16 @@ async def handle_2fa_async(page, account_details):
             except Exception:
                 pass
             
+            # Если не редиректнуло и нет явной ошибки — проверим телефонную верификацию перед ретраем
+            try:
+                from .utils_dom import check_for_phone_verification_page_async
+                phone_check = await check_for_phone_verification_page_async(page)
+                if phone_check.get('requires_phone_verification'):
+                    log_error("[PHONE] [ASYNC_2FA] Phone verification required during 2FA")
+                    raise Exception("PHONE_VERIFICATION_REQUIRED: Phone verification detected during 2FA")
+            except Exception as e:
+                raise
+
             # If still here: no redirect and no explicit error; retry once more
             log_info(f"[WARN] [ASYNC_2FA] No redirect after submit; retrying ({attempt}/{max_attempts})")
         
