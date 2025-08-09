@@ -875,7 +875,7 @@ class SelectorUtils:
     @staticmethod
     def find_element_with_selectors(page, selectors, log_prefix="ELEMENT"):
         """Find element using list of selectors with logging"""
-        from .bulk_tasks_playwright import log_info, log_warning
+        from .logging_utils import log_info, log_warning
         
         for i, selector in enumerate(selectors):
             try:

@@ -34,6 +34,7 @@
                             <option value="RUNNING" {% if status_filter == 'RUNNING' %}selected{% endif %}>Running</option>
                             <option value="COMPLETED" {% if status_filter == 'COMPLETED' %}selected{% endif %}>Completed</option>
                             <option value="FAILED" {% if status_filter == 'FAILED' %}selected{% endif %}>Failed</option>
+                            <option value="PARTIALLY_COMPLETED" {% if status_filter == 'PARTIALLY_COMPLETED' %}selected{% endif %}>Partially Completed</option>
                             <option value="CANCELLED" {% if status_filter == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
                         </select>
                     </div>

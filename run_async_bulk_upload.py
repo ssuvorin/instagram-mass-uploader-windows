@@ -349,35 +349,6 @@ async def run_async_task_with_monitoring(task_id):
         print(f"{Colors.BOLD}Execution Time:{Colors.END} {Colors.colorize(f'{execution_time:.2f}s', Colors.CYAN)}")
         return False
 
-def run_sync_vs_async_comparison(task_id):
-    """Compare sync vs async performance"""
-    print_separator("SYNC VS ASYNC PERFORMANCE COMPARISON")
-    
-    try:
-        task = BulkUploadTask.objects.get(id=task_id)
-    except BulkUploadTask.DoesNotExist:
-        print(f"{Colors.RED}Task with ID {task_id} not found{Colors.END}")
-        return
-    
-    print(f"{Colors.BOLD}Task:{Colors.END} {task.name}")
-    print(f"{Colors.BOLD}Accounts:{Colors.END} {task.accounts.count()}")
-    print(f"{Colors.BOLD}Videos:{Colors.END} {task.videos.count()}")
-    
-    print(f"\n{Colors.YELLOW}[WARN]  ВНИМАНИЕ: Это тест производительности, не реальная загрузка!{Colors.END}")
-    print(f"{Colors.YELLOW}[WARN]  Для реального теста используйте отдельные задачи{Colors.END}")
-    
-    # Run async performance test
-    print(f"\n{Colors.BLUE}[START] Running ASYNC performance test...{Colors.END}")
-    async_result = asyncio.run(test_async_performance(task_id))
-    
-    print(f"\n{Colors.BOLD}ASYNC Results:{Colors.END}")
-    print(f"  Success: {Colors.colorize(str(async_result['success']), Colors.GREEN if async_result['success'] else Colors.RED)}")
-    print(f"  Time: {Colors.colorize(f'{async_result['execution_time']:.2f}s', Colors.CYAN)}")
-    print(f"  Accounts Processed: {Colors.colorize(str(async_result['accounts_processed']), Colors.CYAN)}/{async_result['total_accounts']}")
-    
-    if 'error' in async_result:
-        print(f"  Error: {Colors.colorize(async_result['error'], Colors.RED)}")
-
 def list_suitable_tasks():
     """List tasks suitable for async testing"""
     print_separator("TASKS SUITABLE FOR ASYNC TESTING")
@@ -512,8 +483,6 @@ Examples:
   python run_async_bulk_upload.py --create                  # Create new test task
   python run_async_bulk_upload.py --create --name "My Task" # Create task with custom name  
   python run_async_bulk_upload.py --run-async 5             # Run task with ID 5 in async mode
-  python run_async_bulk_upload.py --run-sync 5              # Run task with ID 5 in sync mode
-  python run_async_bulk_upload.py --compare 5               # Compare sync vs async performance
   python run_async_bulk_upload.py --config                  # Show current async configuration
   python run_async_bulk_upload.py --max-accounts 5          # Set max concurrent accounts
         """
@@ -522,10 +491,6 @@ Examples:
     # Main actions
     parser.add_argument('--run-async', type=int, metavar='TASK_ID',
                        help='Run task in async mode')
-    parser.add_argument('--run-sync', type=int, metavar='TASK_ID',
-                       help='Run task in sync mode (for comparison)')
-    parser.add_argument('--compare', type=int, metavar='TASK_ID',
-                       help='Compare sync vs async performance')
     parser.add_argument('--list', action='store_true',
                        help='List tasks suitable for async testing')
     parser.add_argument('--config', action='store_true',
@@ -575,7 +540,7 @@ Examples:
                     print(f"{Colors.GREEN}[OK] Async task completed successfully{Colors.END}")
                 else:
                     print(f"{Colors.RED}[FAIL] Async task failed{Colors.END}")
-        
+            
     elif args.list:
         list_suitable_tasks()
     
@@ -586,25 +551,6 @@ Examples:
             print(f"{Colors.GREEN}[OK] Async task completed successfully{Colors.END}")
         else:
             print(f"{Colors.RED}[FAIL] Async task failed{Colors.END}")
-    
-    elif args.run_sync:
-        print(f"{Colors.BOLD}[RETRY] Starting SYNC bulk upload task {args.run_sync}{Colors.END}")
-        from uploader.bulk_tasks_playwright import run_bulk_upload_task
-        
-        start_time = time.time()
-        result = run_bulk_upload_task(args.run_sync)
-        end_time = time.time()
-        
-        execution_time = end_time - start_time
-        print(f"{Colors.BOLD}Sync Execution Time:{Colors.END} {Colors.colorize(f'{execution_time:.2f}s', Colors.CYAN)}")
-        
-        if result:
-            print(f"{Colors.GREEN}[OK] Sync task completed successfully{Colors.END}")
-        else:
-            print(f"{Colors.RED}[FAIL] Sync task failed{Colors.END}")
-    
-    elif args.compare:
-        run_sync_vs_async_comparison(args.compare)
     
     else:
         # Show help and list tasks by default

@@ -259,8 +259,7 @@ python manage.py runserver 0.0.0.0:8000
 
 #### 3. Запуск задачи
 
-- **Синхронный режим**: Последовательная обработка
-- **Асинхронный режим**: Параллельная обработка (рекомендуется)
+- Асинхронный режим: Параллельная обработка (рекомендуется)
 
 ### CLI инструменты
 
@@ -268,16 +267,16 @@ python manage.py runserver 0.0.0.0:8000
 
 ```bash
 # Список всех задач
-python run_bulk_upload.py --list
+python run_async_bulk_upload.py --list
 
 # Создание тестовой задачи
-python run_bulk_upload.py --create
+python run_async_bulk_upload.py --create
 
-# Запуск задачи
-python run_bulk_upload.py --run 5
+# Запуск задачи (асинхронно)
+python run_async_bulk_upload.py --run-async 5
 
-# Детальный статус
-python run_bulk_upload.py --status 5
+# Показать текущую конфигурацию
+python run_async_bulk_upload.py --config
 ```
 
 #### Асинхронная массовая загрузка
@@ -291,9 +290,6 @@ python run_async_bulk_upload.py --create
 
 # Запуск асинхронной задачи
 python run_async_bulk_upload.py --run-async 5
-
-# Сравнение производительности
-python run_async_bulk_upload.py --compare 5
 
 # Настройка параметров
 python run_async_bulk_upload.py --max-accounts 3 --account-delay-min 30
@@ -506,7 +502,7 @@ python -c "from bot.src.instagram_uploader.dolphin_anty import DolphinAnty; d = 
 
 ```bash
 # Тест производительности
-python run_async_bulk_upload.py --compare <task_id>
+python run_async_bulk_upload.py --config
 
 # Проверка конфигурации
 python run_async_bulk_upload.py --config
@@ -571,10 +567,7 @@ python uniq_video.py
 
 ```bash
 # Сравнение синхронного и асинхронного режимов
-python run_async_bulk_upload.py --compare <task_id>
-
-# Анализ логов производительности
-grep "PERFORMANCE" logs/*.log
+# (удалено, используется только асинхронный режим)
 ```
 
 ## 🛠️ Разработка

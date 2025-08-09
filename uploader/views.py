@@ -877,7 +877,7 @@ def import_accounts(request):
             messages.success(request, success_msg)
         else:
             messages.warning(request, f'No accounts were imported. Errors: {error_count}')
-            
+        
         return redirect('account_list')
         
     context = {
@@ -1649,11 +1649,8 @@ def start_bulk_upload(request, task_id):
         messages.error(request, 'No accounts assigned to this task!')
         return redirect('bulk_upload_detail', task_id=task.id)
     
-    # Determine if we should use async mode
-    use_async_mode = request.GET.get('async', 'false').lower() == 'true'
-    
-    # Update task status to RUNNING
-    update_task_status(task, TaskStatus.RUNNING, f"Task started in {'ASYNC' if use_async_mode else 'SYNC'} mode")
+    # Always use async mode
+    update_task_status(task, TaskStatus.RUNNING, "Task started in ASYNC mode")
     print(f"[TASK] Changing task {task.id}: {task.name} status to RUNNING")
     
     # Assign videos to accounts if not already done
@@ -1661,60 +1658,42 @@ def start_bulk_upload(request, task_id):
         assign_videos_to_accounts(task)
         print(f"[TASK] Assigning videos to accounts for task {task.id}: {task.name}")
     
-    if use_async_mode:
-        # Use async version - run in background thread
-        try:
-            from .async_bulk_tasks import run_async_bulk_upload_task_sync
-            import threading
-            print(f"[TASK] Starting async task in background for task {task.id}: {task.name}")
-            
-            # Update task status to RUNNING
-            update_task_status(task, TaskStatus.RUNNING, "Async task started")
-            
-            # Run async task in background thread
-            def run_async_task():
-                try:
-                    result = run_async_bulk_upload_task_sync(task_id)
-                    print(f"[TASK] Async task completed for task {task_id}: {result}")
-                    # Координатор уже установил финальный статус (COMPLETED / PARTIALLY_COMPLETED / VERIFICATION_REQUIRED / FAILED)
-                    # Здесь лишь дополняем лог без перезаписи статуса
-                    if result:
-                        update_task_status(task, task.status, "Async task finished (status preserved)")
-                    else:
-                        update_task_status(task, task.status, "Async task finished with errors (status preserved)")
-                except Exception as e:
-                    print(f"[TASK] Async task failed for task {task_id}: {str(e)}")
-                    update_task_status(task, TaskStatus.FAILED, f"Async task failed: {str(e)}")
-            
-            # Start task in background thread
-            thread = threading.Thread(target=run_async_task, daemon=True)
-            thread.start()
-            
-            # Immediately redirect to logs page
-            messages.success(request, f'Async bulk upload task "{task.name}" started successfully! You can monitor progress on this page.')
-            return redirect('bulk_upload_detail', task_id=task.id)
-            
-        except Exception as e:
-            print(f"[TASK] Failed to start async task for task {task_id}: {str(e)}")
-            messages.error(request, f'Failed to start async task: {str(e)}')
-            update_task_status(task, TaskStatus.FAILED, f"Failed to start async task: {str(e)}")
-            return redirect('bulk_upload_detail', task_id=task.id)
-    else:
-        # Use sync version
-        try:
-            from .bulk_tasks_playwright import run_bulk_upload_task
-            print(f"[TASK] Starting sync task for task {task.id}: {task.name}")
-            run_bulk_upload_task(task_id)
-            print(f"[TASK] Sync task completed for task {task_id}")
-        except Exception as e:
-            print(f"[TASK] Sync task failed for task {task_id}: {str(e)}")
-            messages.error(request, f'Sync task failed: {str(e)}')
-            update_task_status(task, TaskStatus.FAILED, f"Task failed: {str(e)}")
-    
-    # Success message with mode info (только для sync режима)
-    mode_text = "ASYNC" if use_async_mode else "SYNC"
-    messages.success(request, f'Bulk upload task "{task.name}" started successfully in {mode_text} mode!')
-    return redirect('bulk_upload_detail', task_id=task.id)
+    # Use async version - run in background thread
+    try:
+        from .async_bulk_tasks import run_async_bulk_upload_task_sync
+        import threading
+        print(f"[TASK] Starting async task in background for task {task.id}: {task.name}")
+        
+        # Update task status to RUNNING
+        update_task_status(task, TaskStatus.RUNNING, "Async task started")
+        
+        # Run async task in background thread
+        def run_async_task():
+            try:
+                result = run_async_bulk_upload_task_sync(task_id)
+                print(f"[TASK] Async task completed for task {task_id}: {result}")
+                # Coordinator already set the final status; preserve it here
+                if result:
+                    update_task_status(task, task.status, "Async task finished (status preserved)")
+                else:
+                    update_task_status(task, task.status, "Async task finished with errors (status preserved)")
+            except Exception as e:
+                print(f"[TASK] Async task failed for task {task_id}: {str(e)}")
+                update_task_status(task, TaskStatus.FAILED, f"Async task failed: {str(e)}")
+        
+        # Start task in background thread
+        thread = threading.Thread(target=run_async_task, daemon=True)
+        thread.start()
+        
+        # Immediately redirect to logs page
+        messages.success(request, f'Async bulk upload task "{task.name}" started successfully! You can monitor progress on this page.')
+        return redirect('bulk_upload_detail', task_id=task.id)
+        
+    except Exception as e:
+        print(f"[TASK] Failed to start async task for task {task_id}: {str(e)}")
+        messages.error(request, f'Failed to start async task: {str(e)}')
+        update_task_status(task, TaskStatus.FAILED, f"Failed to start async task: {str(e)}")
+        return redirect('bulk_upload_detail', task_id=task.id)
 
 @login_required
 def get_bulk_task_logs(request, task_id):
@@ -2268,12 +2247,21 @@ def delete_cookie_task(request, task_id):
     }
     return render(request, 'uploader/cookies/delete_task.html', context)
 
+# Global semaphore for Cookie Robot concurrency
+_COOKIE_ROBOT_SEMAPHORE = threading.Semaphore(getattr(settings, 'COOKIE_ROBOT_CONCURRENCY', 5))
+
 def run_cookie_robot_task(task_id, urls, headless, imageless):
     """
     Run cookie robot task in background thread
     """
     from django.utils import timezone
     from uploader.models import InstagramAccount
+    
+    # Concurrency control: ensure not more than N tasks run simultaneously
+    acquired = _COOKIE_ROBOT_SEMAPHORE.acquire(timeout=5)
+    if not acquired:
+        # If cannot acquire immediately, wait a bit longer
+        _COOKIE_ROBOT_SEMAPHORE.acquire()
     
     try:
         # Debug information
@@ -2368,13 +2356,24 @@ def run_cookie_robot_task(task_id, urls, headless, imageless):
         task_logger_func(f"[INFO] Disable images: {imageless}")
         task_logger_func(f"[INFO] Account: {account.username}")
         
-        result = dolphin.run_cookie_robot_sync(
-            profile_id=account.dolphin_profile_id,
-            urls=urls,
-            headless=headless,
-            imageless=imageless,
-            task_logger=task_logger_func  # Pass the logger function
-        )
+        # Execute with internal retries for more robustness
+        result = None
+        backoffs = [0, 2, 5]  # seconds
+        for attempt, delay in enumerate(backoffs, start=1):
+            if delay:
+                time.sleep(delay)
+            result = dolphin.run_cookie_robot_sync(
+                profile_id=account.dolphin_profile_id,
+                urls=urls,
+                headless=headless,
+                imageless=imageless,
+                task_logger=task_logger_func  # Pass the logger function
+            )
+            # Stop retry if not profile start/connection related error
+            err = (result or {}).get('error', '') or ''
+            if not err or 'Failed to start profile' not in err and 'Missing port or wsEndpoint' not in err and 'connect_over_cdp' not in err:
+                break
+            task_logger_func(f"[RETRY] Attempt {attempt} failed: {err}")
         
         # Refresh task from database to get latest logs and check for cancellation
         task = UploadTask.objects.get(id=task_id)
@@ -2384,13 +2383,30 @@ def run_cookie_robot_task(task_id, urls, headless, imageless):
             logger.info(f"Cookie Robot task {task_id} was cancelled during execution")
             return
         
+        # Helper to get success metrics from result
+        def extract_success_metrics(res: dict):
+            data = res.get('data') or {}
+            successful = data.get('successful_visits')
+            failed = data.get('failed_visits')
+            success_rate = data.get('success_rate')
+            return successful, failed, success_rate
+        
         # Update task with result
         if result.get('success', False):
+            successful, failed, success_rate = extract_success_metrics(result)
+            # If success as a whole, keep COMPLETED, but log metrics
             task.status = 'COMPLETED'
             log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [SUCCESS] Cookie Robot completed successfully!"
             safe_message = safe_log_message(log_message)
             task.log += safe_message + "\n"
             logger.info(safe_message)
+            
+            if successful is not None:
+                task.log += f"Successful visits: {successful}\n";
+            if failed is not None:
+                task.log += f"Failed visits: {failed}\n";
+            if success_rate is not None:
+                task.log += f"Success rate: {success_rate}%\n";
             
             log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] Response details:"
             task.log += log_message + "\n"
@@ -2400,64 +2416,84 @@ def run_cookie_robot_task(task_id, urls, headless, imageless):
             task.log += response_json + "\n"
             logger.info(f"Response JSON: {response_json}")
         else:
+            # Check for partial success conditions
+            successful, failed, success_rate = (None, None, None)
+            if isinstance(result, dict):
+                successful, failed, success_rate = extract_success_metrics(result)
+            
             error_details = result.get('error', 'Unknown error')
             
-            # Check if it's a human verification error
-            if error_details == 'HUMAN_VERIFICATION_REQUIRED':
-                task.status = 'FAILED'
-                log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [ERROR] Human verification required for this account"
-                safe_message = safe_log_message(log_message)
-                task.log += safe_message + "\n"
-                logger.error(safe_message)
-                
-                # Update the Instagram account status
+            # Treat as partial success if more than 10 successes or >= 25% success rate
+            partial_condition = False
+            if successful is not None and successful >= 10:
+                partial_condition = True
+            if success_rate is not None:
                 try:
-                    instagram_account = InstagramAccount.objects.get(username=account.username)
-                    instagram_account.status = 'HUMAN_VERIFICATION_REQUIRED'
-                    instagram_account.save()
-                    
-                    log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] Updated account {account.username} status to HUMAN_VERIFICATION_REQUIRED"
-                    safe_message = safe_log_message(log_message)
-                    task.log += safe_message + "\n"
-                    logger.info(safe_message)
-                except Exception as update_error:
-                    log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [WARNING] Could not update account status: {str(update_error)}"
-                    safe_message = safe_log_message(log_message)
-                    task.log += safe_message + "\n"
-                    logger.warning(safe_message)
-            else:
-                task.status = 'FAILED'
-                log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [ERROR] Cookie Robot failed: {error_details}"
-                safe_message = safe_log_message(log_message)
-                task.log += safe_message + "\n"
-                logger.error(safe_message)
-                
-                # Add full error details if available
-                if isinstance(error_details, dict):
-                    error_json = json.dumps(error_details, indent=2)
-                    task.log += f"Full error details:\n{error_json}\n"
-                    logger.error(f"Full API error: {error_json}")
-        
-        task.save()
-        
-    except Exception as e:
-        # Check if task was cancelled
-        task.refresh_from_db()
-        if task.status == 'CANCELLED':
-            logger.info(f"Cookie Robot task {task_id} was cancelled during exception handling")
-            return
+                    if float(success_rate) >= 25:
+                        partial_condition = True
+                except Exception:
+                    pass
             
-        task.status = 'FAILED'
-        log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [ERROR] Exception occurred: {str(e)}"
-        safe_message = safe_log_message(log_message)
-        task.log += safe_message + "\n"
-        logger.error(safe_message)
-        
-        stack_trace = traceback.format_exc()
-        task.log += stack_trace
-        logger.error(f"Stack trace: {stack_trace}")
+            if partial_condition:
+                task.status = 'PARTIALLY_COMPLETED'
+                note = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [WARNING] Partial success: visited {successful} sites (failed reason: {error_details})"
+                safe_message = safe_log_message(note)
+                task.log += safe_message + "\n"
+                logger.warning(safe_message)
+                
+                summary = {
+                    'successful_visits': successful,
+                    'failed_visits': failed,
+                    'success_rate': success_rate,
+                    'error': error_details,
+                }
+                task.log += json.dumps(summary, indent=2) + "\n"
+            else:
+                # Regular failure
+                # Check if it's a human verification error
+                if error_details == 'HUMAN_VERIFICATION_REQUIRED':
+                    task.status = 'FAILED'
+                    log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [ERROR] Human verification required for this account"
+                    safe_message = safe_log_message(log_message)
+                    task.log += safe_message + "\n"
+                    logger.error(safe_message)
+                    
+                    # Update the Instagram account status
+                    try:
+                        instagram_account = InstagramAccount.objects.get(username=account.username)
+                        instagram_account.status = 'HUMAN_VERIFICATION_REQUIRED'
+                        instagram_account.save()
+                        
+                        log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [INFO] Updated account {account.username} status to HUMAN_VERIFICATION_REQUIRED"
+                        safe_message = safe_log_message(log_message)
+                        task.log += safe_message + "\n"
+                        logger.info(safe_message)
+                    except Exception as update_error:
+                        log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [WARNING] Could not update account status: {str(update_error)}"
+                        safe_message = safe_log_message(log_message)
+                        task.log += safe_message + "\n"
+                        logger.warning(safe_message)
+                else:
+                    task.status = 'FAILED'
+                    log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [ERROR] Cookie Robot failed: {error_details}"
+                    safe_message = safe_log_message(log_message)
+                    task.log += safe_message + "\n"
+                    logger.error(safe_message)
+                    
+                    # Add full error details if available
+                    if isinstance(error_details, dict):
+                        error_json = json.dumps(error_details, indent=2)
+                        task.log += f"Full error details:\n{error_json}\n"
+                        logger.error(f"Full API error: {error_json}")
         
         task.save()
+        
+    finally:
+        # Release semaphore to allow next task to start
+        try:
+            _COOKIE_ROBOT_SEMAPHORE.release()
+        except Exception:
+            pass
 
 @login_required
 def bulk_cookie_robot(request):

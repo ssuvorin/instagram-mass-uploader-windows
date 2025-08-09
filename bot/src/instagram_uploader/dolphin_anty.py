@@ -148,6 +148,9 @@ class DolphinAnty:
     ]
     BROWSER_VERSIONS = ["133","134", "135", "136"]
     
+    # Stealth defaults for headers
+    DEFAULT_ACCEPT_LANGUAGE = "en-US,en;q=0.9"
+    
     def __init__(
         self,
         api_key: str,
@@ -390,11 +393,9 @@ class DolphinAnty:
         else:
             # Default: Russia (original behavior)
             ru_timezones = [
-                "Europe/Moscow", "Europe/Kaliningrad", "Europe/Samara",
-                "Asia/Yekaterinburg", "Asia/Novosibirsk", "Asia/Irkutsk",
-                "Asia/Yakutsk", "Asia/Vladivostok"
+                "Europe/Moscow"
             ]
-            tz_payload = {"mode": "manual", "value": random.choice(ru_timezones)}
+            tz_payload = {"mode": "manual", "value": ru_timezones[0]}
             geo_payload = {"mode": "manual", "latitude": 55.7558, "longitude": 37.6173}  # Moscow
 
         # 11) Build payload
@@ -1015,6 +1016,55 @@ class DolphinAnty:
             log_action(f"[WARN] Error checking for human verification dialog: {str(e)}", "warning")
             return False
 
+    async def _apply_stealth_patches(self, context, accept_language: Optional[str] = None):
+        """Apply additional anti-detection patches at context level."""
+        try:
+            # Accept-Language aligned with RU/EN mix by default (can be adjusted)
+            try:
+                await context.set_extra_http_headers({"Accept-Language": (accept_language or self.DEFAULT_ACCEPT_LANGUAGE)})
+            except Exception:
+                pass
+            # Mask common automation flags
+            stealth_script = r"""
+                // navigator.webdriver
+                Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+                // chrome runtime
+                if (!window.chrome) {
+                  Object.defineProperty(window, 'chrome', { get: () => ({ runtime: {} }) });
+                }
+                // languages
+                Object.defineProperty(navigator, 'languages', { get: () => navigator.language ? [navigator.language.split('-')[0], navigator.language] : ['en','en-US'] });
+                // plugins length
+                Object.defineProperty(navigator, 'plugins', { get: () => [1,2,3,4,5] });
+                // permissions query override (avoid notifications prompt anomalies)
+                const originalQuery = window.navigator.permissions && window.navigator.permissions.query;
+                if (originalQuery) {
+                  window.navigator.permissions.query = (parameters) => (
+                    parameters && parameters.name === 'notifications' ?
+                      Promise.resolve({ state: Notification.permission }) : originalQuery(parameters)
+                  );
+                }
+                // WebGL vendor/renderer presence guards (Dolphin sets real values)
+                try {
+                  const getParameter = WebGLRenderingContext.prototype.getParameter;
+                  WebGLRenderingContext.prototype.getParameter = function(parameter) {
+                    // 37445 UNMASKED_VENDOR_WEBGL, 37446 UNMASKED_RENDERER_WEBGL
+                    if (parameter === 37445 || parameter === 37446) {
+                      const val = getParameter.call(this, parameter);
+                      return val || 'Intel Inc.';
+                    }
+                    return getParameter.call(this, parameter);
+                  };
+                } catch (e) {}
+            """
+            try:
+                await context.add_init_script(stealth_script)
+            except Exception:
+                pass
+        except Exception:
+            # Fail silently; Dolphin's own fingerprinting still applies
+            pass
+
     async def run_cookie_robot(
         self,
         profile_id: Union[str, int],
@@ -1043,6 +1093,9 @@ class DolphinAnty:
         # 1) Запускаем профиль и получаем данные для подключения
         profile_started = False
         automation_data = None
+        successful_visits = 0
+        failed_visits = 0
+        shuffled_urls = urls.copy()
         
         try:
             logger.info(f"[RETRY] Starting Dolphin profile {profile_id}...")
@@ -1065,7 +1118,7 @@ class DolphinAnty:
             
             if success and automation_data:
                 logger.info(f"[OK] Profile {profile_id} started successfully")
-                logger.info(f"🔗 Automation data: {automation_data}")
+                logger.info(f"[LINK] Automation data: {automation_data}")
                 if task_logger:
                     task_logger(f"[OK] Profile {profile_id} started successfully")
             else:
@@ -1097,11 +1150,20 @@ class DolphinAnty:
             
             # Формируем WebSocket URL для подключения
             ws_url = f"ws://127.0.0.1:{port}{ws_endpoint}"
-            logger.info(f"🌐 Connecting to browser via: {ws_url}")
+            logger.info(f"[WEB] Connecting to browser via: {ws_url}")
             
             async with async_playwright() as p:
                 # Подключаемся к уже запущенному браузеру
-                browser = await p.chromium.connect_over_cdp(ws_url)
+                connect_errors = []
+                for attempt in range(3):
+                    try:
+                        browser = await p.chromium.connect_over_cdp(ws_url)
+                        break
+                    except Exception as ce:
+                        connect_errors.append(str(ce))
+                        await asyncio.sleep(1 + attempt)
+                if not browser:
+                    return {"success": False, "error": f"Playwright automation error: BrowserType.connect_over_cdp failed: {connect_errors[-1] if connect_errors else 'unknown error'}"}
                 logger.info(f"[OK] Successfully connected to Dolphin browser")
                 
                 try:
@@ -1114,239 +1176,81 @@ class DolphinAnty:
                         context = await browser.new_context()
                         logger.info(f"[FILE] Created new browser context")
                     
+                    # Apply stealth patches to reduce automation detection
+                    resolved_al = self._resolve_accept_language(profile_id) or self.DEFAULT_ACCEPT_LANGUAGE
+                    await self._apply_stealth_patches(context, accept_language=resolved_al)
+                    
                     # Создаем новую страницу
                     page = await context.new_page()
                     
-                    
-                        
-                    # Cookie Robot - сразу переходим к основной логике набивания куков
-                    log_action("Starting Cookie Robot - focusing on cookie collection...", "info")
-                    
-                    # 4) Запускаем собственно Cookie Robot на заданных URLs
-                    # Настройки для imageless режима
-                    if imageless:
-                        await page.route("**/*.{png,jpg,jpeg,gif,webp,svg,ico}", lambda route: route.abort())
-                        logger.info(f"[BLOCK] Images blocked (imageless mode)")
-                    
-                    successful_visits = 0
-                    failed_visits = 0
-                    
                     # Рандомизируем порядок URL для более естественного поведения
-                    shuffled_urls = urls.copy()
                     random.shuffle(shuffled_urls)
-                    
                     if task_logger:
-                        task_logger(f"🔀 URL order randomized for natural behavior")
-                        task_logger(f"[CLIPBOARD] Processing {len(shuffled_urls)} URLs")
-                        task_logger(f"⏱️ Total duration: {duration} seconds")
                         task_logger(f"[TARGET] Starting Cookie Robot simulation...")
+                        task_logger(f"[LIST] Processing {len(shuffled_urls)} URLs")
                     
                     # Обходим каждый URL
                     for i, url in enumerate(shuffled_urls, 1):
                         try:
                             if task_logger:
-                                task_logger(f"[RETRY] [{i}/{len(shuffled_urls)}] Starting: {url}")
+                                task_logger(f"[PROCESS] [{i}/{len(shuffled_urls)}] Starting: {url}")
                             
-                            # Убеждаемся, что у нас есть рабочая страница перед каждым URL
+                            # Ensure page available
                             try:
                                 page = await self._ensure_page_available(context, page, imageless, task_logger)
                             except Exception as page_error:
-                                logger.error(f"[FAIL] Cannot ensure page availability for URL {i}/{len(shuffled_urls)}: {url}")
-                                logger.error(f"[EXPLODE] Page recovery failed: {str(page_error)}")
-                                
-                                if task_logger:
-                                    task_logger(f"[FAIL] [{i}/{len(shuffled_urls)}] Page recovery failed for: {url}")
-                                    task_logger(f"[EXPLODE] Error: {str(page_error)}")
-                                
                                 failed_visits += 1
+                                if task_logger:
+                                    task_logger(f"[ERROR] [{i}/{len(shuffled_urls)}] Page recovery failed for: {url}")
                                 continue
                             
-                            # Убираем избыточные логи о каждом URL
-                            logger.debug(f"🌐 Visiting URL {i}/{len(shuffled_urls)}: {url}")
+                            await page.goto(url, wait_until="domcontentloaded", timeout=30000)
                             
-                            if task_logger:
-                                task_logger(f"🌐 [{i}/{len(shuffled_urls)}] Navigating to: {url}")
-                            
-                            # Переходим на страницу с улучшенной обработкой ошибок
-                            navigation_success = False
-                            max_nav_attempts = 3
-                            
-                            for attempt in range(max_nav_attempts):
-                                try:
-                                    await page.goto(url, wait_until="domcontentloaded", timeout=30000)
-                                    navigation_success = True
-                                    break
-                                    
-                                except Exception as nav_error:
-                                    error_str = str(nav_error).lower()
-                                    
-                                    # Если страница была закрыта или контекст потерян
-                                    if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                                        logger.warning(f"[WARN] Navigation attempt {attempt + 1}/{max_nav_attempts} failed due to page/context loss: {url}")
-                                        
-                                        if task_logger:
-                                            task_logger(f"[WARN] [{i}/{len(shuffled_urls)}] Navigation attempt {attempt + 1}/{max_nav_attempts} failed")
-                                        
-                                        if attempt < max_nav_attempts - 1:  # Не последняя попытка
-                                            try:
-                                                # Пытаемся восстановить страницу
-                                                page = await self._ensure_page_available(context, page, imageless, task_logger)
-                                                logger.debug(f"[RETRY] Page recovered, retrying navigation to: {url}")
-                                                continue
-                                            except Exception as recovery_error:
-                                                logger.error(f"[FAIL] Page recovery failed on attempt {attempt + 1}: {str(recovery_error)}")
-                                                break
-                                        else:
-                                            logger.error(f"[FAIL] All navigation attempts failed for: {url}")
-                                            break
-                                    else:
-                                        # Другая ошибка навигации
-                                        logger.error(f"[FAIL] Navigation error (attempt {attempt + 1}/{max_nav_attempts}): {str(nav_error)}")
-                                        if attempt == max_nav_attempts - 1:
-                                            raise nav_error
-                                        await asyncio.sleep(1)  # Небольшая пауза перед повтором
-                            
-                            if not navigation_success:
-                                failed_visits += 1
-                                logger.error(f"[FAIL] Failed to navigate to {url} after {max_nav_attempts} attempts")
-                                
-                                if task_logger:
-                                    task_logger(f"[FAIL] [{i}/{len(shuffled_urls)}] Navigation failed after {max_nav_attempts} attempts: {url}")
-                                
-                                continue
-                            
-                            # Случайная задержка для имитации человеческого поведения
+                            # Simulate user activity
                             base_duration = duration / len(shuffled_urls)
                             random_delay = random.uniform(base_duration * 0.8, base_duration * 1.2)
-                            
-                            # Убираем избыточные логи о времени
-                            logger.debug(f"[WAIT] Staying on {url} for {random_delay:.1f} seconds")
-                            
                             if task_logger:
                                 task_logger(f"[WAIT] [{i}/{len(shuffled_urls)}] Simulating user activity for {random_delay:.1f} seconds")
-                            
-                            # Имитируем активность пользователя с улучшенной обработкой ошибок
                             try:
                                 await self._simulate_user_activity(page, random_delay, task_logger)
-                            except Exception as activity_error:
-                                error_str = str(activity_error).lower()
-                                
-                                if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                                    logger.warning(f"[WARN] User activity stopped due to page/context loss: {str(activity_error)}")
-                                    
-                                    if task_logger:
-                                        task_logger(f"[WARN] [{i}/{len(shuffled_urls)}] User activity interrupted by page closure")
-                                    
-                                    # Пытаемся восстановить страницу для следующего URL
-                                    try:
-                                        page = await self._ensure_page_available(context, page, imageless, task_logger)
-                                        logger.debug(f"[RETRY] Page recovered after activity interruption")
-                                    except Exception as recovery_error:
-                                        logger.error(f"[FAIL] Failed to recover page after activity interruption: {str(recovery_error)}")
-                                        # Продолжаем с текущей страницей (может быть None)
-                                else:
-                                    logger.warning(f"[WARN] Non-critical error in user activity simulation: {str(activity_error)}")
+                            except Exception:
+                                pass
                             
                             successful_visits += 1
-                            logger.info(f"[OK] Successfully processed {url}")
-                            
                             if task_logger:
-                                task_logger(f"[OK] [{i}/{len(shuffled_urls)}] Successfully completed: {url}")
+                                task_logger(f"[SUCCESS] [{i}/{len(shuffled_urls)}] Successfully completed: {url}")
                             
-                            # Очищаем все вкладки кроме текущей после каждого сайта для оптимизации памяти
+                            # Cleanup extra tabs
                             try:
                                 all_pages = context.pages
-                                if len(all_pages) > 1:
-                                    logger.debug(f"🗂️ Cleaning up {len(all_pages)-1} extra tabs after visiting {url}")
-                                    
-                                    for p in all_pages:
-                                        if p != page and not p.is_closed():
-                                            try:
-                                                await p.close()
-                                                logger.debug(f"[FILE] Closed extra tab")
-                                            except Exception as e:
-                                                logger.warning(f"[WARN] Could not close extra tab: {str(e)}")
-                                    
-                                    if task_logger:
-                                        task_logger(f"🗂️ Cleaned up extra tabs after: {url}")
-                            except Exception as cleanup_error:
-                                logger.warning(f"[WARN] Error during tab cleanup: {str(cleanup_error)}")
-                            
+                                for p in all_pages:
+                                    if p != page and not p.is_closed():
+                                        await p.close()
+                            except Exception:
+                                pass
                         except Exception as e:
                             failed_visits += 1
-                            error_str = str(e).lower()
-                            
-                            logger.error(f"[FAIL] Error processing {url}: {str(e)}")
-                            
                             if task_logger:
-                                task_logger(f"[FAIL] [{i}/{len(shuffled_urls)}] Failed {url}: {str(e)}")
-                            
-                            # Если ошибка связана с потерей страницы/контекста, пытаемся восстановить
-                            if any(keyword in error_str for keyword in ["page was closed", "target page", "context or browser has been closed"]):
-                                try:
-                                    logger.info(f"[RETRY] Attempting to recover page after error for next URL...")
-                                    page = await self._ensure_page_available(context, page, imageless, task_logger)
-                                    logger.info(f"[OK] Page recovered successfully after error")
-                                    
-                                    if task_logger:
-                                        task_logger(f"[RETRY] Page recovered for next URL")
-                                        
-                                except Exception as recovery_error:
-                                    logger.error(f"[FAIL] Failed to recover page after error: {str(recovery_error)}")
-                                    
-                                    if task_logger:
-                                        task_logger(f"[EXPLODE] Page recovery failed, may affect remaining URLs")
-                                    
-                                    # Если восстановление не удалось, устанавливаем page в None
-                                    # Функция _ensure_page_available попытается создать новую на следующей итерации
-                                    page = None
-                            
+                                task_logger(f"[ERROR] [{i}/{len(shuffled_urls)}] Failed {url}: {str(e)}")
+                            # Attempt to recover page for next iteration
+                            try:
+                                page = await self._ensure_page_available(context, page, imageless, task_logger)
+                            except Exception:
+                                page = None
                             continue
                     
-                    # Закрываем страницу после всех URL только если она еще открыта
+                    # Close page and context
                     try:
-                        if not page.is_closed():
+                        if page and not page.is_closed():
                             await page.close()
-                            logger.debug(f"[FILE] Page closed after processing all URLs")
-                        else:
-                            logger.debug(f"[FILE] Page was already closed")
-                    except Exception as close_error:
-                        logger.warning(f"[WARN] Error closing main page: {str(close_error)}")
-                    
-                    # Закрываем все остальные вкладки перед завершением
-                    try:
-                        all_pages = context.pages
-                        if all_pages:
-                            logger.debug(f"🗂️ Found {len(all_pages)} pages/tabs total")
-                            
-                            for i, p in enumerate(all_pages):
-                                try:
-                                    if not p.is_closed():
-                                        logger.debug(f"[FILE] Closing page/tab {i+1}/{len(all_pages)}")
-                                        await p.close()
-                                except Exception as e:
-                                    logger.warning(f"[WARN] Could not close page {i+1}: {str(e)}")
-                            
-                            logger.debug(f"[OK] All pages/tabs closed successfully")
-                        else:
-                            logger.debug(f"[FILE] No pages to close")
-                        
-                        if task_logger:
-                            task_logger(f"🗂️ Cleanup completed")
-                            
-                    except Exception as e:
-                        logger.warning(f"[WARN] Error closing some pages: {str(e)}")
-                        if task_logger:
-                            task_logger(f"[WARN] Some tabs could not be closed: {str(e)[:100]}")
-                    
-                    # Закрываем контекст браузера
+                    except Exception:
+                        pass
                     try:
                         await context.close()
-                        logger.debug(f"🌐 Browser context closed")
-                    except Exception as e:
-                        logger.warning(f"[WARN] Error closing browser context: {str(e)}")
+                    except Exception:
+                        pass
                     
-                    # Результат выполнения
+                    # Build result
                     result = {
                         "success": True,
                         "data": {
@@ -1361,41 +1265,68 @@ class DolphinAnty:
                             "visit_order": shuffled_urls
                         }
                     }
-                    
-                    logger.info(f"[OK] Cookie Robot completed: {successful_visits}/{len(shuffled_urls)} URLs processed successfully")
-                    
                     if task_logger:
                         task_logger(f"[TARGET] Cookie Robot completed successfully!")
-                        task_logger(f"📊 Results: {successful_visits}/{len(shuffled_urls)} URLs processed ({round((successful_visits / len(shuffled_urls)) * 100, 2)}% success rate)")
-                    
                     return result
                     
                 except asyncio.TimeoutError:
-                    logger.error(f"[FAIL] Cookie Robot timeout during execution")
-                    if task_logger:
-                        task_logger(f"[FAIL] Cookie Robot timeout - forcing completion")
+                    # Convert timeout into partial success if any progress
+                    if successful_visits >= 10:
+                        partial = {
+                            "success": False,
+                            "error": "Cookie Robot timeout during execution",
+                            "data": {
+                                "successful_visits": successful_visits,
+                                "failed_visits": failed_visits,
+                                "success_rate": round((successful_visits / max(1, (successful_visits + failed_visits))) * 100, 2)
+                            }
+                        }
+                        return partial
                     return {"success": False, "error": "Cookie Robot timeout during execution"}
                 except Exception as e:
-                    logger.error(f"[FAIL] Unexpected error in Cookie Robot: {str(e)}")
-                    if task_logger:
-                        task_logger(f"[FAIL] Unexpected error: {str(e)}")
+                    # If we have >=10 successes, surface as partial data for upper layer
+                    if successful_visits >= 10:
+                        return {
+                            "success": False,
+                            "error": f"Unexpected error in Cookie Robot: {str(e)}",
+                            "data": {
+                                "successful_visits": successful_visits,
+                                "failed_visits": failed_visits,
+                                "success_rate": round((successful_visits / max(1, (successful_visits + failed_visits))) * 100, 2)
+                            }
+                        }
                     return {"success": False, "error": f"Unexpected error in Cookie Robot: {str(e)}"}
-                    
+                
                 finally:
-                    # Отключаемся от браузера (не закрываем его)
+                    # Disconnect from browser
                     if browser:
-                        await browser.close()
-                        logger.debug(f"🔌 Disconnected from browser")
-                    
+                        try:
+                            await browser.close()
+                        except Exception:
+                            pass
         except Exception as e:
             logger.error(f"[FAIL] Error during Playwright automation: {str(e)}")
+            # Partial surface if possible
+            if successful_visits >= 10:
+                return {
+                    "success": False,
+                    "error": f"Playwright automation error: {str(e)}",
+                    "data": {
+                        "successful_visits": successful_visits,
+                        "failed_visits": failed_visits,
+                        "success_rate": round((successful_visits / max(1, (successful_visits + failed_visits))) * 100, 2)
+                    }
+                }
             return {"success": False, "error": f"Playwright automation error: {str(e)}"}
             
         finally:
-            # Останавливаем профиль только если мы его запустили
+            # Ensure profile is stopped if we started it
             if profile_started:
-                logger.info(f"🛑 Stopping browser profile {profile_id}")
-                self.stop_profile(profile_id)
+                try:
+                    logger.info(f"[STOP] Stopping browser profile {profile_id}")
+                    self.stop_profile(profile_id)
+                except Exception:
+                    pass
 
     async def _simulate_user_activity(self, page, duration: float, task_logger=None):
         """
@@ -1904,7 +1835,7 @@ class DolphinAnty:
                 
                 cmd = [python_exe, script_path, temp_file_path]
                 
-                logger.info(f"[RETRY] Running subprocess: {' '.join(cmd)}")
+                logger.info(f"[PROCESS] Running subprocess: {' '.join(cmd)}")
                 
                 # Запускаем subprocess с увеличенным таймаутом
                 # Увеличиваем таймаут до 20 минут, чтобы Cookie Robot мог пройти все сайты
@@ -1913,6 +1844,10 @@ class DolphinAnty:
                 
                 try:
                     # Используем Windows-совместимый subprocess
+                    # Ensure isolated mode env so that logs go to stderr
+                    env = os.environ.copy()
+                    env['COOKIE_ROBOT_ISOLATED'] = '1'
+                    env['FORCE_LOG_TO_STDERR'] = '1'
                     result = run_subprocess_windows(
                         cmd,
                         timeout=timeout,
@@ -1927,7 +1862,7 @@ class DolphinAnty:
                         for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
                             try:
                                 if any('isolated_cookie_robot.py' in str(arg) for arg in proc.info['cmdline'] or []):
-                                    logger.info(f"[RETRY] Force killing subprocess {proc.info['pid']}")
+                                    logger.info(f"[PROCESS] Force killing subprocess {proc.info['pid']}")
                                     proc.terminate()
                                     proc.wait(timeout=5)
                             except (psutil.NoSuchProcess, psutil.TimeoutExpired):
@@ -1942,90 +1877,80 @@ class DolphinAnty:
                 
                 # Обрабатываем результат subprocess
                 if result.returncode == 0:
+                    # We expect stdout to contain only JSON; stderr contains logs
+                    stdout_text = result.stdout or ''
+                    stderr_text = result.stderr or ''
                     try:
-                        # Очищаем stdout от возможных лишних символов
-                        stdout_clean = result.stdout.strip()
-                        
-                        # Проверяем, что stdout не пустой
+                        stdout_clean = (stdout_text or '').strip()
                         if not stdout_clean:
                             logger.error("[FAIL] Subprocess returned empty stdout")
-                            logger.error(f"Stderr: {result.stderr}")
+                            logger.error(f"Stderr: {stderr_text[:1000]}")
                             return {"success": False, "error": "Subprocess returned empty stdout"}
-                        
-                        # Дополнительная очистка - убираем все до первого '{'
-                        json_start = stdout_clean.find('{')
-                        if json_start != -1:
-                            stdout_clean = stdout_clean[json_start:]
-                        
-                        # Парсим результат
-                        output_data = json.loads(stdout_clean)
-                        logger.info(f"[OK] Subprocess completed successfully")
-                        return output_data
+                        # Strict parse first
+                        return json.loads(stdout_clean)
                     except json.JSONDecodeError as e:
-                        logger.error(f"[FAIL] Failed to parse subprocess output: {e}")
-                        logger.error(f"Raw stdout (first 500 chars): {result.stdout[:500]}")
-                        logger.error(f"Raw stderr: {result.stderr}")
+                        logger.error(f"[ERROR] Failed to parse subprocess stdout as JSON: {e}")
+                        logger.error(f"[DEBUG] Stdout (first 500): {stdout_text[:500]}")
+                        logger.error(f"[DEBUG] Stderr (first 500): {stderr_text[:500]}")
                         
-                        # Попробуем найти JSON в stdout - более агрессивный поиск
-                        try:
-                            # Ищем начало JSON объекта
-                            start_idx = result.stdout.find('{')
-                            if start_idx != -1:
-                                potential_json = result.stdout[start_idx:]
-                                # Убираем все после последнего '}'
-                                end_idx = potential_json.rfind('}')
-                                if end_idx != -1:
-                                    potential_json = potential_json[:end_idx+1]
-                                output_data = json.loads(potential_json)
-                                logger.info(f"[OK] Successfully parsed JSON after cleanup")
-                                return output_data
-                        except Exception as cleanup_error:
-                            logger.error(f"[FAIL] JSON cleanup also failed: {cleanup_error}")
+                        # Attempt to extract JSON object from stdout or stderr
+                        import re
+                        json_candidate = None
+                        for text in (stdout_text, stderr_text):
+                            try:
+                                start_idx = text.find('{')
+                                end_idx = text.rfind('}')
+                                if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                                    candidate = text[start_idx:end_idx+1]
+                                    # Validate
+                                    json_candidate = json.loads(candidate)
+                                    break
+                            except Exception:
+                                pass
+                        if json_candidate is not None:
+                            logger.info(f"[OK] Successfully parsed JSON from mixed output")
+                            return json_candidate
                         
-                        # Последняя попытка - ищем любой валидный JSON в stdout
+                        # Regex fallback for nested braces
                         try:
-                            import re
-                            # Ищем JSON объект с помощью regex
                             json_pattern = r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
-                            matches = re.findall(json_pattern, result.stdout)
-                            if matches:
-                                # Берем самый длинный match
-                                longest_match = max(matches, key=len)
-                                output_data = json.loads(longest_match)
-                                logger.info(f"[OK] Successfully parsed JSON using regex fallback")
-                                return output_data
-                        except Exception as regex_error:
-                            logger.error(f"[FAIL] Regex JSON parsing also failed: {regex_error}")
+                            for text in (stdout_text, stderr_text):
+                                matches = re.findall(json_pattern, text)
+                                if matches:
+                                    longest_match = max(matches, key=len)
+                                    return json.loads(longest_match)
+                        except Exception as cleanup_error:
+                            logger.error(f"[ERROR] Regex JSON parsing failed: {cleanup_error}")
                         
-                        # Если все попытки не удались, возвращаем ошибку с детальной диагностикой
-                        logger.error(f"[FAIL] All JSON parsing attempts failed")
-                        logger.error(f"[FAIL] Stdout length: {len(result.stdout)}")
-                        logger.error(f"[FAIL] Stderr length: {len(result.stderr)}")
-                        logger.error(f"[FAIL] First 100 chars of stdout: {repr(result.stdout[:100])}")
-                        
+                        # Final fallback
                         return {"success": False, "error": f"Failed to parse subprocess output: {str(e)}"}
                 else:
-                    logger.error(f"[FAIL] Subprocess failed with return code {result.returncode}")
-                    logger.error(f"Stdout: {result.stdout}")
-                    logger.error(f"Stderr: {result.stderr}")
-                    return {"success": False, "error": f"Subprocess failed: {result.stderr}"}
-                
-            except subprocess.TimeoutExpired:
-                logger.error(f"[FAIL] Subprocess timeout after {timeout} seconds")
-                return {"success": False, "error": f"Subprocess timeout after {timeout} seconds"}
-            except Exception as e:
-                logger.error(f"[FAIL] Subprocess execution error: {str(e)}")
-                return {"success": False, "error": f"Subprocess execution error: {str(e)}"}
+                    # Non-zero return code; still attempt to parse stdout JSON for partial data
+                    stdout_text = result.stdout or ''
+                    stderr_text = result.stderr or ''
+                    try:
+                        if stdout_text.strip():
+                            return json.loads(stdout_text.strip())
+                    except Exception:
+                        pass
+                    # Return error with diagnostics
+                    return {
+                        "success": False,
+                        "error": f"Subprocess returned code {result.returncode}",
+                        "data": {
+                            "stdout_head": stdout_text[:300],
+                            "stderr_head": stderr_text[:300]
+                        }
+                    }
             finally:
-                # Удаляем временный файл
+                # Cleanup temp parameters file
                 try:
                     os.unlink(temp_file_path)
                 except Exception:
                     pass
-            
         except Exception as e:
-            logger.error(f"[FAIL] Error in sync Cookie Robot: {str(e)}")
-            return {"success": False, "error": f"Sync execution error: {str(e)}"}
+            logger.error(f"[FAIL] Error in run_cookie_robot_sync: {str(e)}")
+            return {"success": False, "error": str(e)}
 
     def _simulate_user_activity_sync(self, page, duration, urls, task_logger=None):
         """УСТАРЕВШИЙ МЕТОД - теперь используется run_cookie_robot_sync с изоляцией"""
@@ -2089,3 +2014,40 @@ class DolphinAnty:
             logger.error(f"[FAIL] Unexpected error checking Dolphin status: {e}")
         
         return status
+
+    def _resolve_accept_language(self, profile_id: Union[str, int]) -> Optional[str]:
+        """Resolve Accept-Language header value from Dolphin profile locale/language if available."""
+        try:
+            prof = self.get_profile(profile_id)
+            # Profile data can be nested in different ways; try several paths
+            data = prof.get('data', prof)
+            # Try to extract locale or language value
+            locale_val = None
+            def _val(obj, key):
+                try:
+                    v = obj.get(key)
+                    if isinstance(v, dict):
+                        return v.get('value') or v.get('lang') or v.get('locale')
+                    return v
+                except Exception:
+                    return None
+            locale_val = _val(data, 'locale') or _val(data, 'language')
+            if not locale_val and isinstance(data, dict):
+                # Sometimes profile is under 'browserProfile'
+                bp = data.get('browserProfile') or {}
+                locale_val = _val(bp, 'locale') or _val(bp, 'language')
+            if not locale_val or not isinstance(locale_val, str):
+                return None
+            locale_val = locale_val.replace('_', '-')
+            lv = locale_val.lower()
+            # Map to Accept-Language strings
+            if lv.startswith('ru'):
+                return 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7'
+            if lv.startswith('en-in'):
+                return 'en-IN,en;q=0.9'
+            if lv.startswith('en'):
+                return 'en-US,en;q=0.9'
+            # Generic fallback using the detected locale
+            return f"{locale_val},{locale_val.split('-')[0]};q=0.9,en-US;q=0.8,en;q=0.7"
+        except Exception:
+            return None

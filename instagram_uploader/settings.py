@@ -95,6 +95,9 @@ DATABASES = {
     }
 }
 
+# Cookie Robot concurrency limit (global), default 5
+COOKIE_ROBOT_CONCURRENCY = int(os.environ.get('COOKIE_ROBOT_CONCURRENCY', '5'))
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators

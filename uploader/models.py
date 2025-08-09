@@ -229,6 +229,7 @@ class UploadTask(models.Model):
         ('RUNNING', 'Running'),
         ('COMPLETED', 'Completed'),
         ('FAILED', 'Failed'),
+        ('PARTIALLY_COMPLETED', 'Partially Completed'),
     ]
     
     account = models.ForeignKey(InstagramAccount, on_delete=models.CASCADE, related_name='tasks')

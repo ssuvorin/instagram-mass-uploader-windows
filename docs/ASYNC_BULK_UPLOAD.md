@@ -54,11 +54,8 @@ python run_async_bulk_upload.py --run-async 123
 # Создание тестовой задачи
 python run_async_bulk_upload.py --create
 
-# Сравнение производительности sync vs async
-python run_async_bulk_upload.py --compare 123
-
-# Показать детальный статус
-python run_async_bulk_upload.py --status 123
+# Показать детальный статус/конфигурацию
+python run_async_bulk_upload.py --config
 ```
 
 #### Настройка параметров

@@ -66,7 +66,7 @@ async def handle_login_flow_async(page, account_details: Dict) -> bool:
         
         # Import selectors for detailed checks
         try:
-            from .selectors_config import InstagramSelectors
+            from selectors_config import InstagramSelectors
             selectors = InstagramSelectors()
         except:
             # Fallback selectors if import fails - EXACT COPY from selectors_config.py
