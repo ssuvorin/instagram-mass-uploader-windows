@@ -716,6 +716,8 @@
                                     <div class="col-lg-6 col-md-12 account-item" 
                                          data-username="{{ account.username|lower }}"
                                          data-has-proxy="{{ account.proxy|yesno:'true,false' }}"
+                                         data-proxy-active="{% if account.proxy %}{{ account.proxy.is_active|yesno:'true,false' }}{% else %}false{% endif %}"
+                                         data-proxy-status="{% if account.proxy %}{{ account.proxy.status|lower }}{% else %}none{% endif %}"
                                          data-has-dolphin="{{ account.dolphin_profile_id|yesno:'true,false' }}"
                                          data-last-login="{{ account.last_login|default:'never' }}"
                                          data-account-id="{{ account.id }}"
@@ -798,9 +800,15 @@
                                                         
                                                         <!-- Proxy badge -->
                                                         {% if account.proxy %}
-                                                        <span class="badge-custom badge-proxy">
-                                                            <i class="bi bi-shield-check me-1"></i>Proxy
-                                                        </span>
+                                                            {% if account.proxy.is_active %}
+                                                            <span class="badge-custom badge-proxy">
+                                                                <i class="bi bi-shield-check me-1"></i>Proxy OK
+                                                            </span>
+                                                            {% else %}
+                                                            <span class="badge-custom" style="background: rgba(239, 68, 68, 0.1); color: #dc2626; border-color: rgba(239, 68, 68, 0.3);">
+                                                                <i class="bi bi-exclamation-octagon me-1"></i>Proxy Inactive
+                                                            </span>
+                                                            {% endif %}
                                                         {% endif %}
                                                         
                                                         <!-- Dolphin badge -->
@@ -1171,6 +1179,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (item.dataset.username) {
                 item.setAttribute('data-username', item.dataset.username);
                 item.setAttribute('data-has-proxy', item.dataset.hasProxy);
+                item.setAttribute('data-proxy-active', item.dataset.proxyActive);
+                item.setAttribute('data-proxy-status', item.dataset.proxyStatus);
                 item.setAttribute('data-has-dolphin', item.dataset.hasDolphin);
                 item.setAttribute('data-last-login', item.dataset.lastLogin);
                 item.setAttribute('data-account-id', item.dataset.accountId);
@@ -1295,11 +1305,14 @@ document.addEventListener('DOMContentLoaded', function() {
             return item.dataset.status !== 'active';
         }).length;
         
+        // Count accounts with invalid proxies (only when a proxy exists)
         const problemsCount = Array.from(accountItems).filter(item => {
             const status = item.dataset.status;
+            const hasProxy = item.dataset.hasProxy === 'true';
+            const invalidProxy = hasProxy && item.dataset.proxyActive === 'false';
             return status === 'blocked' || status === 'limited' || 
                    status === 'phone_verification_required' || 
-                   status === 'human_verification_required';
+                   status === 'human_verification_required' || invalidProxy;
         }).length;
         
         selectedCountEl.textContent = checkedBoxes.length;
@@ -1314,7 +1327,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (activeCountEl) activeCountEl.textContent = activeCount;
         if (problemsCountEl) problemsCountEl.textContent = problemsCount;
         
-        // Show warning if non-active accounts are selected
+        // Show warning if non-active accounts or invalid proxies are selected
         showNonActiveWarning(selectedNonActive, selectedActive);
     }
     
@@ -1325,12 +1338,19 @@ document.addEventListener('DOMContentLoaded', function() {
             existingWarning.remove();
         }
         
-        if (nonActiveCount > 0) {
+        // Compute selected invalid proxies
+        const checkedBoxes = Array.from(accountCheckboxes).filter(cb => cb.checked);
+        const selectedInvalidProxy = checkedBoxes.filter(cb => {
+            const item = cb.closest('.account-item');
+            return item.dataset.hasProxy === 'true' && item.dataset.proxyActive === 'false';
+        }).length;
+        
+        if (nonActiveCount > 0 || selectedInvalidProxy > 0) {
             const warningHtml = `
                 <div id="nonActiveWarning" class="alert alert-warning mt-3" role="alert">
                     <i class="bi bi-exclamation-triangle me-2"></i>
-                    <strong>Warning:</strong> ${nonActiveCount} non-ACTIVE account${nonActiveCount > 1 ? 's' : ''} selected. 
-                    Only ${activeCount} ACTIVE account${activeCount !== 1 ? 's' : ''} will be processed for bulk upload.
+                    <strong>Warning:</strong> ${nonActiveCount} non-ACTIVE account${nonActiveCount > 1 ? 's' : ''} selected.
+                    ${selectedInvalidProxy > 0 ? `<br/><strong>Warning:</strong> ${selectedInvalidProxy} account(s) have an inactive/invalid proxy.` : ''}
                     <br><small class="text-muted">Tip: Use the "Active" filter to see only ready accounts.</small>
                 </div>
             `;
@@ -1360,15 +1380,22 @@ document.addEventListener('DOMContentLoaded', function() {
             return item.dataset.status !== 'active';
         }).length;
         
+        // Count selected invalid proxies
+        const selectedInvalidProxy = checkedBoxes.filter(cb => {
+            const item = cb.closest('.account-item');
+            return item.dataset.hasProxy === 'true' && item.dataset.proxyActive === 'false';
+        }).length;
+        
         if (selectedActive === 0) {
             alert('No ACTIVE accounts selected! Please select at least one ACTIVE account to proceed with bulk upload.');
             return false;
         }
         
-        if (selectedNonActive > 0) {
-            const message = `Warning: ${selectedNonActive} non-ACTIVE account${selectedNonActive > 1 ? 's' : ''} selected.\n\n` +
-                          `Only ${selectedActive} ACTIVE account${selectedActive !== 1 ? 's' : ''} will be processed.\n\n` +
-                          `Do you want to continue?`;
+        if (selectedNonActive > 0 || selectedInvalidProxy > 0) {
+            const message = `Warning: ${selectedNonActive} non-ACTIVE account${selectedNonActive !== 1 ? 's' : ''} selected.` +
+                            (selectedInvalidProxy > 0 ? `\nWarning: ${selectedInvalidProxy} account(s) have inactive/invalid proxy.` : '') +
+                            `\n\nOnly ${selectedActive} ACTIVE account${selectedActive !== 1 ? 's' : ''} will be processed.\n\n` +
+                            `Do you want to continue?`;
             return confirm(message);
         }
         

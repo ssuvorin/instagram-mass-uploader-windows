@@ -1108,25 +1108,30 @@ class DolphinAnty:
             if task_logger:
                 task_logger(f"[SEARCH] Dolphin status: {dolphin_status}")
             
-            success, profile_data = self.start_profile(profile_id, headless=headless)
-            profile_started = success
-            automation_data = profile_data
-            
-            logger.info(f"[RETRY] Profile start result - Success: {success}, Data: {profile_data}")
-            if task_logger:
-                task_logger(f"[RETRY] Profile start result - Success: {success}")
-            
-            if success and automation_data:
-                logger.info(f"[OK] Profile {profile_id} started successfully")
-                logger.info(f"[LINK] Automation data: {automation_data}")
+            # Retry starting profile a few times with small backoff
+            automation_data = None
+            profile_started = False
+            start_errors = []
+            for attempt in range(3):
+                success, profile_data = self.start_profile(profile_id, headless=headless)
+                profile_started = success
+                automation_data = profile_data
+                logger.info(f"[RETRY] Profile start attempt {attempt+1}/3 - Success: {success}, Data: {profile_data}")
                 if task_logger:
-                    task_logger(f"[OK] Profile {profile_id} started successfully")
-            else:
+                    task_logger(f"[RETRY] Profile start attempt {attempt+1}/3 - Success: {success}")
+                if success and automation_data:
+                    logger.info(f"[OK] Profile {profile_id} started successfully")
+                    logger.info(f"[LINK] Automation data: {automation_data}")
+                    if task_logger:
+                        task_logger(f"[OK] Profile {profile_id} started successfully")
+                    break
+                else:
+                    start_errors.append(str(profile_data))
+                    await asyncio.sleep(1 + attempt)
+            if not (profile_started and automation_data):
                 logger.error(f"[FAIL] Could not start profile {profile_id} or get automation data")
-                logger.error(f"[FAIL] Success: {success}, Profile data: {profile_data}")
                 if task_logger:
                     task_logger(f"[FAIL] Failed to start profile {profile_id}")
-                    task_logger(f"[FAIL] Success: {success}, Profile data: {profile_data}")
                 return {"success": False, "error": "Failed to start profile or get automation data"}
                 
         except Exception as e:
@@ -1155,15 +1160,21 @@ class DolphinAnty:
             async with async_playwright() as p:
                 # Подключаемся к уже запущенному браузеру
                 connect_errors = []
-                for attempt in range(3):
+                for attempt in range(5):
                     try:
                         browser = await p.chromium.connect_over_cdp(ws_url)
                         break
                     except Exception as ce:
                         connect_errors.append(str(ce))
                         await asyncio.sleep(1 + attempt)
-                if not browser:
-                    return {"success": False, "error": f"Playwright automation error: BrowserType.connect_over_cdp failed: {connect_errors[-1] if connect_errors else 'unknown error'}"}
+                    if not browser:
+                        # Ensure profile stopped if we cannot connect
+                        try:
+                            if profile_started:
+                                self.stop_profile(profile_id)
+                        except Exception:
+                            pass
+                        return {"success": False, "error": f"Playwright automation error: BrowserType.connect_over_cdp failed: {connect_errors[-1] if connect_errors else 'unknown error'}"}
                 logger.info(f"[OK] Successfully connected to Dolphin browser")
                 
                 try:

@@ -1,6 +1,6 @@
 {% extends 'uploader/base.html' %}
-
-{% block title %}Create Avatar Task - Instagram Uploader{% endblock %}
+{% load static %}
+{% block title %}Create Bio Link Task - Instagram Uploader{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -36,10 +36,30 @@
 {% endblock %}
 
 {% block content %}
-<h2 class="fw-bold mb-4"><i class="bi bi-plus-circle me-2"></i>Create Avatar Change Task</h2>
+<h2 class="fw-bold mb-4"><i class="bi bi-plus-circle me-2"></i>Create Bio Link Task</h2>
 
-<form method="post" enctype="multipart/form-data" onsubmit="return validateAccountSelection()">
+<form method="post" onsubmit="return validateAccountSelection()">
   {% csrf_token %}
+
+  <div class="mb-3">
+    <label class="form-label">Link URL</label>
+    {{ form.link_url }}
+  </div>
+
+  <div class="row mb-3">
+    <div class="col">
+      <label class="form-label">Min delay (sec)</label>
+      {{ form.delay_min_sec }}
+    </div>
+    <div class="col">
+      <label class="form-label">Max delay (sec)</label>
+      {{ form.delay_max_sec }}
+    </div>
+    <div class="col">
+      <label class="form-label">Concurrency</label>
+      {{ form.concurrency }}
+    </div>
+  </div>
 
   <div class="summary-bar" id="accountsSummary">
     <div class="d-flex align-items-center gap-3">
@@ -121,15 +141,23 @@
                 {% with dev=account.device %}
                   {% if dev %}
                     {% with ds=dev.device_settings %}
-                      <span class="badge-custom" style="background: rgba(59, 130, 246, 0.1); color: #2563eb; border-color: rgba(59, 130, 246, 0.3);"><i class="bi bi-phone me-1"></i>Device {{ ds.model|default:'?' }} (Android {{ ds.android_version|default:'?' }})</span>
+                      <span class="badge-custom" style="background: rgba(59, 130, 246, 0.1); color: #2563eb; border-color: rgba(59, 130, 246, 0.3);">
+                        <i class="bi bi-phone me-1"></i>Device {{ ds.model|default:'?' }} (Android {{ ds.android_version|default:'?' }})
+                      </span>
                     {% endwith %}
                     {% if dev.session_settings %}
-                      <span class="badge-custom" style="background: rgba(34, 197, 94, 0.1); color: #059669; border-color: rgba(34, 197, 94, 0.3);"><i class="bi bi-key me-1"></i>Session saved</span>
+                      <span class="badge-custom" style="background: rgba(34, 197, 94, 0.1); color: #059669; border-color: rgba(34, 197, 94, 0.3);">
+                        <i class="bi bi-key me-1"></i>Session saved
+                      </span>
                     {% else %}
-                      <span class="badge-custom" style="background: rgba(148,163,184,.15); color: #475569; border-color: rgba(148,163,184,.35);"><i class="bi bi-key me-1"></i>No session</span>
+                      <span class="badge-custom" style="background: rgba(148,163,184,.15); color: #475569; border-color: rgba(148,163,184,.35);">
+                        <i class="bi bi-key me-1"></i>No session
+                      </span>
                     {% endif %}
                   {% else %}
-                    <span class="badge-custom" style="background: rgba(148,163,184,.15); color: #475569; border-color: rgba(148,163,184,.35);"><i class="bi bi-phone me-1"></i>No device</span>
+                    <span class="badge-custom" style="background: rgba(148,163,184,.15); color: #475569; border-color: rgba(148,163,184,.35);">
+                      <i class="bi bi-phone me-1"></i>No device
+                    </span>
                   {% endif %}
                 {% endwith %}
               </div>
@@ -143,46 +171,20 @@
     </div>
   </div>
 
-  <div class="mb-3">
-    <label class="form-label">Avatar images</label>
-    {{ form.images }}
-    <div class="form-text">Upload PNG/JPG images. If fewer images than accounts, they will be reused randomly (or one-to-one by order).</div>
-  </div>
+  <div id="nonActiveWarningContainer"></div>
 
-  <div class="row g-3">
-    <div class="col-md-6">
-      <label class="form-label">Strategy</label>
-      {{ form.strategy }}
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">Min delay (sec)</label>
-      {{ form.delay_min_sec }}
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">Max delay (sec)</label>
-      {{ form.delay_max_sec }}
-    </div>
-  </div>
-
-  <div class="row g-3 mt-2">
-    <div class="col-md-3">
-      <label class="form-label">Concurrency</label>
-      {{ form.concurrency }}
-    </div>
-  </div>
-
-  <div id="nonActiveWarningContainer" class="mt-3"></div>
-
-  <div class="mt-4 d-flex gap-2 justify-content-end">
+  <div class="text-end">
     <button type="submit" class="btn btn-success"><i class="bi bi-check2-circle me-2"></i>Create</button>
-    <a href="{% url 'avatar_task_list' %}" class="btn btn-light">Cancel</a>
+    <a href="{% url 'bio_task_list' %}" class="btn btn-light">Cancel</a>
   </div>
 </form>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-function debounce(func, wait) { let timeout; return function(...args){ clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), wait); } }
+function debounce(func, wait) {
+  let timeout; return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), wait); };
+}
 function updateCardSelection(cb){ const card = cb.closest('.account-item').querySelector('.account-card'); if(cb.checked){ card.classList.add('selected'); } else { card.classList.remove('selected'); } }
 function updateCounter(){
   const checkboxes = document.querySelectorAll('.account-checkbox');
@@ -210,15 +212,30 @@ document.addEventListener('DOMContentLoaded', function(){
   const accountsWidget = document.getElementById('accountsWidget');
   let currentView = 'card';
 
-  document.querySelectorAll('.view-toggle-btn').forEach(btn => { btn.addEventListener('click', function(){ document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active')); this.classList.add('active'); currentView = this.dataset.view; updateViewMode(); }); });
-  function updateViewMode(){ accountsWidget.className = accountsWidget.className.replace(/\b(compact-mode|list-mode)\b/g, '').trim(); if(currentView === 'compact'){ accountsWidget.classList.add('compact-mode'); updateColumnClasses('col-lg-4 col-md-6'); } else if(currentView === 'list'){ accountsWidget.classList.add('list-mode'); updateColumnClasses('col-12'); } else { updateColumnClasses('col-lg-6 col-md-12'); } }
+  document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      currentView = this.dataset.view; updateViewMode();
+    });
+  });
+
+  function updateViewMode(){
+    accountsWidget.className = accountsWidget.className.replace(/\b(compact-mode|list-mode)\b/g, '').trim();
+    if(currentView === 'compact') { accountsWidget.classList.add('compact-mode'); updateColumnClasses('col-lg-4 col-md-6'); }
+    else if(currentView === 'list') { accountsWidget.classList.add('list-mode'); updateColumnClasses('col-12'); }
+    else { updateColumnClasses('col-lg-6 col-md-12'); }
+  }
   function updateColumnClasses(newClasses){ accountItems.forEach(item => { item.className = 'account-item ' + newClasses; }); }
+
   function filterList(){ const q = (searchInput.value || '').toLowerCase().trim(); accountItems.forEach(item => { const match = (item.dataset.username || '').includes(q); item.style.display = match ? '' : 'none'; }); }
   searchInput.addEventListener('input', debounce(filterList, 200));
+
   document.getElementById('selectAll').addEventListener('click', function(){ accountItems.forEach(item => { if(item.style.display !== 'none'){ const cb = item.querySelector('.account-checkbox'); cb.checked = true; updateCardSelection(cb); } }); updateCounter(); });
   document.getElementById('selectNone').addEventListener('click', function(){ accountCheckboxes.forEach(cb => { cb.checked = false; updateCardSelection(cb); }); updateCounter(); });
   document.getElementById('selectRandom').addEventListener('click', function(){ const visible = Array.from(accountItems).filter(i => i.style.display !== 'none'); const randomTen = visible.sort(() => .5 - Math.random()).slice(0, 10); accountCheckboxes.forEach(cb => { cb.checked = false; updateCardSelection(cb); }); randomTen.forEach(item => { const cb = item.querySelector('.account-checkbox'); cb.checked = true; updateCardSelection(cb); }); updateCounter(); });
+
   accountCheckboxes.forEach(cb => { cb.addEventListener('change', function(){ updateCardSelection(cb); updateCounter(); }); });
 });
 </script>
-{% endblock %} 
+{% endblock %}

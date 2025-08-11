@@ -29,7 +29,8 @@ from ..task_utils import (
     get_account_from_task, mark_account_as_used, get_task_with_accounts, 
     get_account_tasks, get_assigned_videos, get_all_task_videos, get_all_task_titles,
     handle_verification_error, handle_task_completion, handle_emergency_cleanup,
-    process_browser_result, handle_account_task_error, handle_critical_task_error
+    process_browser_result, handle_account_task_error, handle_critical_task_error,
+    clear_human_verification_badge_async
 )
 from ..account_utils import (
     get_account_details, get_proxy_details, get_account_proxy,
@@ -66,7 +67,7 @@ async def handle_login_flow_async(page, account_details: Dict) -> bool:
         
         # Import selectors for detailed checks
         try:
-            from selectors_config import InstagramSelectors
+            from ..selectors_config import InstagramSelectors
             selectors = InstagramSelectors()
         except:
             # Fallback selectors if import fails - EXACT COPY from selectors_config.py
@@ -292,6 +293,10 @@ async def handle_login_flow_async(page, account_details: Dict) -> bool:
         
         if verification_result:
             log_info("[OK] [ASYNC_LOGIN] Login flow completed successfully")
+            try:
+                await clear_human_verification_badge_async(account_details['username'])
+            except Exception:
+                pass
             return True
         else:
             log_error("[FAIL] [ASYNC_LOGIN] Post-login verification failed")
@@ -351,6 +356,10 @@ async def check_post_login_verifications_async(page, account_details):
             result = await handle_2fa_async(page, account_details)
             if result:
                 log_info("[OK] [ASYNC_LOGIN] 2FA verification completed successfully")
+                try:
+                    await clear_human_verification_badge_async(account_details['username'])
+                except Exception:
+                    pass
                 return True
             else:
                 log_error("[FAIL] [ASYNC_LOGIN] 2FA verification failed")
@@ -361,6 +370,10 @@ async def check_post_login_verifications_async(page, account_details):
             result = await handle_email_verification_async(page, account_details)
             if result:
                 log_info("[OK] [ASYNC_LOGIN] Email verification completed successfully")
+                try:
+                    await clear_human_verification_badge_async(account_details['username'])
+                except Exception:
+                    pass
                 return True
             else:
                 log_error("[FAIL] [ASYNC_LOGIN] Email verification failed")
@@ -371,6 +384,10 @@ async def check_post_login_verifications_async(page, account_details):
             result = await handle_email_field_verification_async(page, account_details)
             if result:
                 log_info("[OK] [ASYNC_LOGIN] Email field verification completed successfully")
+                try:
+                    await clear_human_verification_badge_async(account_details['username'])
+                except Exception:
+                    pass
                 return True
             else:
                 log_error("[FAIL] [ASYNC_LOGIN] Email field verification failed")
@@ -418,6 +435,10 @@ async def check_post_login_verifications_async(page, account_details):
                         el = await page.query_selector(indicator)
                         if el and await el.is_visible():
                             log_info(f"[OK] [ASYNC_LOGIN] Logged-in indicator after reload: {indicator}")
+                            try:
+                                await clear_human_verification_badge_async(account_details['username'])
+                            except Exception:
+                                pass
                             return True
                     except Exception:
                         continue
@@ -765,6 +786,10 @@ async def handle_login_completion_async(page, account_details):
                     element = await page.query_selector(indicator)
                     if element and await element.is_visible():
                         log_info(f"[OK] [ASYNC_LOGIN] Login successful - found logged-in indicator: {indicator}")
+                        try:
+                            await clear_human_verification_badge_async(account_details['username'])
+                        except Exception:
+                            pass
                         return True
                 except Exception as e:
                     log_warning(f"[WARN] [ASYNC_LOGIN] Error checking indicator {indicator}: {e}")
@@ -810,6 +835,10 @@ async def handle_login_completion_async(page, account_details):
                 return "SUSPENDED"
             if result:
                 log_info("[OK] [ASYNC_LOGIN] 2FA verification completed successfully")
+                try:
+                    await clear_human_verification_badge_async(account_details['username'])
+                except Exception:
+                    pass
                 return True
             else:
                 log_error("[FAIL] [ASYNC_LOGIN] 2FA verification failed")
@@ -823,6 +852,10 @@ async def handle_login_completion_async(page, account_details):
                 return "SUSPENDED"
             if result:
                 log_info("[OK] [ASYNC_LOGIN] Email verification completed successfully")
+                try:
+                    await clear_human_verification_badge_async(account_details['username'])
+                except Exception:
+                    pass
                 return True
             else:
                 log_error("[FAIL] [ASYNC_LOGIN] Email verification failed - LOGIN NOT COMPLETED")
@@ -833,6 +866,10 @@ async def handle_login_completion_async(page, account_details):
             result = await handle_email_field_verification_async(page, account_details)
             if result:
                 log_info("[OK] [ASYNC_LOGIN] Email field verification completed successfully")
+                try:
+                    await clear_human_verification_badge_async(account_details['username'])
+                except Exception:
+                    pass
                 return True
             else:
                 log_error("[FAIL] [ASYNC_LOGIN] Email field verification failed")
@@ -1184,6 +1221,10 @@ async def handle_email_verification_async(page, account_details):
             if success:
                 log_info("[OK] [ASYNC_EMAIL] Email verification successful")
                 await handle_save_login_info_dialog_async(page)
+                try:
+                    await clear_human_verification_badge_async(account_details['username'])
+                except Exception:
+                    pass
                 # After success, check if account is suspended/locked
                 if await detect_suspended_account_async(page):
                     log_info("[BLOCK] [ASYNC_EMAIL] Account appears suspended/locked after email verification")

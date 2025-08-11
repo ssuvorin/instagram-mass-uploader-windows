@@ -9,6 +9,7 @@ from .instagram_automation import InstagramLoginHandler
 from .browser_utils import ErrorHandler, PageUtils
 from .human_behavior import init_human_behavior
 from .logging_utils import log_info, log_error, log_warning
+from .task_utils import clear_human_verification_badge
 
 
 def perform_instagram_login_optimized(page, account_details):
@@ -35,6 +36,8 @@ def perform_instagram_login_optimized(page, account_details):
             return "SUSPENDED"
         elif logged_in_status:
             log_info(f"[OK] Already logged in! Skipping login process for user: {username}")
+            # Clear human verification badge if previously set
+            clear_human_verification_badge(username)
             return True
         
         # Perform login steps
@@ -698,6 +701,9 @@ def _handle_login_completion(page, account_details, selectors):
                         from .bulk_tasks_playwright import handle_save_login_info_dialog
                         handle_save_login_info_dialog(page)
                         
+                        # Clear human verification badge if previously set
+                        clear_human_verification_badge(username)
+                        
                         return True
                 except Exception as e:
                     log_warning(f"Error checking login indicator {indicator}: {str(e)}")
@@ -947,6 +953,9 @@ def _enter_verification_code(page, tfa_input, verification_code):
                 # Handle save login info dialog
                 from .bulk_tasks_playwright import handle_save_login_info_dialog
                 handle_save_login_info_dialog(page)
+                
+                # Clear human verification badge if previously set
+                clear_human_verification_badge(account_details['username'])
                 
                 return True
         except Exception as e:

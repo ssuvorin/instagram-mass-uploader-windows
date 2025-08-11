@@ -349,8 +349,75 @@ class AsyncVideoUniquifier:
         creation_time = now + datetime.timedelta(days=random_days)
         
         devices = [
-            ("Canon", "EOS R5"), ("Sony", "Alpha 7 IV"), ("Apple", "iPhone 14 Pro"),
-            ("Samsung", "S23 Ultra"), ("DJI", "Pocket 3"), ("GoPro", "Hero 11")
+            ("Apple", "iPhone 12"), ("Apple", "iPhone 12 Pro"), ("Apple", "iPhone 12 Pro Max"),
+            ("Apple", "iPhone 13"), ("Apple", "iPhone 13 mini"), ("Apple", "iPhone 13 Pro"), ("Apple", "iPhone 13 Pro Max"),
+            ("Apple", "iPhone 14"), ("Apple", "iPhone 14 Plus"), ("Apple", "iPhone 14 Pro"), ("Apple", "iPhone 14 Pro Max"),
+            ("Apple", "iPhone 15"), ("Apple", "iPhone 15 Plus"), ("Apple", "iPhone 15 Pro"), ("Apple", "iPhone 15 Pro Max"),
+            ("Apple", "iPhone SE (3rd Gen)"),
+            
+            ("Samsung", "Galaxy S21"), ("Samsung", "Galaxy S21 Ultra"),
+            ("Samsung", "Galaxy S22"), ("Samsung", "Galaxy S22 Ultra"),
+            ("Samsung", "Galaxy S23"), ("Samsung", "Galaxy S23 Ultra"),
+            ("Samsung", "Galaxy S24"), ("Samsung", "Galaxy S24+"), ("Samsung", "Galaxy S24 Ultra"),
+            ("Samsung", "Galaxy Note 20"),
+            ("Samsung", "Galaxy Z Fold 4"), ("Samsung", "Galaxy Z Fold 5"),
+            ("Samsung", "Galaxy Z Flip 4"), ("Samsung", "Galaxy Z Flip 5"),
+            ("Samsung", "Galaxy A54"), ("Samsung", "Galaxy A34"),
+            
+            ("Google", "Pixel 6"), ("Google", "Pixel 6 Pro"), ("Google", "Pixel 6a"),
+            ("Google", "Pixel 7"), ("Google", "Pixel 7 Pro"), ("Google", "Pixel 7a"),
+            ("Google", "Pixel 8"), ("Google", "Pixel 8 Pro"), ("Google", "Pixel 8a"),
+            ("Google", "Pixel Fold"),
+            
+            ("Sony", "Xperia 1 IV"), ("Sony", "Xperia 5 IV"), ("Sony", "Xperia 10 V"),
+            ("Sony", "Xperia 1 V"), ("Sony", "Xperia 5 V"), ("Sony", "Xperia Pro-I"), ("Sony", "Xperia 1 VI"),
+            
+            ("Xiaomi", "12T Pro"), ("Xiaomi", "13"), ("Xiaomi", "13 Pro"), ("Xiaomi", "13 Ultra"),
+            ("Xiaomi", "14"), ("Xiaomi", "14 Pro"), ("Xiaomi", "14 Ultra"),
+            ("Xiaomi", "Redmi Note 12"), ("Xiaomi", "Redmi Note 12 Pro"),
+            ("Xiaomi", "Redmi Note 13"), ("Xiaomi", "Redmi Note 13 Pro"),
+            ("Xiaomi", "Poco F5"), ("Xiaomi", "Poco F5 Pro"), ("Xiaomi", "Poco X6 Pro"),
+            
+            ("OnePlus", "9"), ("OnePlus", "9 Pro"), ("OnePlus", "10 Pro"), ("OnePlus", "10T"),
+            ("OnePlus", "11"), ("OnePlus", "11R"), ("OnePlus", "12"), ("OnePlus", "12R"),
+            ("OnePlus", "Nord 2T"), ("OnePlus", "Nord 3"),
+            
+            ("Huawei", "P50"), ("Huawei", "P50 Pro"), ("Huawei", "P60 Pro"),
+            ("Huawei", "Mate 50"), ("Huawei", "Mate 50 Pro"), ("Huawei", "Mate 60 Pro"),
+            ("Huawei", "Nova 10"), ("Huawei", "Nova 11"),
+            
+            ("Oppo", "Find X5"), ("Oppo", "Find X5 Pro"), ("Oppo", "Find X6 Pro"), ("Oppo", "Find X7 Ultra"),
+            ("Oppo", "Reno 9"), ("Oppo", "Reno 10"), ("Oppo", "Reno 11"), ("Oppo", "A98"),
+            
+            ("Vivo", "X90"), ("Vivo", "X90 Pro"), ("Vivo", "X100"), ("Vivo", "X100 Pro"),
+            ("Vivo", "Y78"), ("Vivo", "V29"),
+            
+            ("Nokia", "X30"), ("Nokia", "G60"), ("Nokia", "8.3 5G"),
+            
+            ("ASUS", "Zenfone 9"), ("ASUS", "Zenfone 10"), ("ASUS", "ROG Phone 7"), ("ASUS", "ROG Phone 8"),
+            
+            ("Motorola", "Edge 30 Pro"), ("Motorola", "Edge 40"), ("Motorola", "Edge 40 Pro"),
+            ("Motorola", "Razr 40"), ("Motorola", "Razr 40 Ultra"),
+            
+            ("Nothing", "Phone (1)"), ("Nothing", "Phone (2)"), ("Nothing", "Phone (2a)"),
+            
+            ("Honor", "Magic 5 Pro"), ("Honor", "Magic 6 Pro"), ("Honor", "Magic V2"),
+            
+            ("Realme", "GT 2 Pro"), ("Realme", "GT 5 Pro"), ("Realme", "11 Pro+"), ("Realme", "12 Pro+"),
+            
+            ("ZTE", "Axon 40 Ultra"), ("Nubia", "RedMagic 8 Pro"),
+            
+            ("Meizu", "20 Pro"), ("Infinix", "Zero 30 5G"), ("Infinix", "Note 30 Pro"),
+            ("Tecno", "Phantom X2 Pro"), ("Tecno", "Camon 20 Pro"),
+            
+            ("Lenovo", "Legion Phone Duel 2"), ("Black Shark", "5 Pro"),
+            ("iQOO", "12"), ("iQOO", "12 Pro"),
+            
+            ("Fairphone", "5"), ("CAT", "S62 Pro"), ("Sharp", "Aquos R8 Pro"), ("HTC", "U23 Pro"),
+            ("TCL", "40 Pro 5G"),
+            
+            # Non-phone devices kept for variety
+            ("Canon", "EOS R5"), ("Sony", "Alpha 7 IV"), ("DJI", "Pocket 3"), ("GoPro", "Hero 11"), ("Insta360", "X3")
         ]
         make, model = random.choice(devices)
         

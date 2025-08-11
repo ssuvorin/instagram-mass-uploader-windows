@@ -544,3 +544,99 @@ class FollowTaskAccount(models.Model):
 
     def __str__(self):
         return f"{self.account.username} in Follow Task {self.task.id}"
+
+
+# ===== Bulk Login Task Models =====
+class BulkLoginTask(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('RUNNING', 'Running'),
+        ('COMPLETED', 'Completed'),
+        ('FAILED', 'Failed'),
+        ('PARTIALLY_COMPLETED', 'Partially Completed'),
+    ]
+
+    name = models.CharField(max_length=120, default="Bulk Login")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    log = models.TextField(blank=True, default="")
+
+    def __str__(self):
+        return f"Bulk Login {self.id} - {self.status}"
+
+    def get_completed_count(self):
+        return self.accounts.filter(status='COMPLETED').count()
+
+    def get_total_count(self):
+        return self.accounts.count()
+
+    def get_completion_percentage(self):
+        total = self.get_total_count()
+        if total == 0:
+            return 0
+        return int(self.get_completed_count() / total * 100)
+
+
+class BulkLoginAccount(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('RUNNING', 'Running'),
+        ('COMPLETED', 'Completed'),
+        ('FAILED', 'Failed'),
+        ('PHONE_VERIFICATION_REQUIRED', 'Phone Verification Required'),
+        ('HUMAN_VERIFICATION_REQUIRED', 'Human Verification Required'),
+        ('SUSPENDED', 'Suspended'),
+    ]
+
+    bulk_task = models.ForeignKey(BulkLoginTask, on_delete=models.CASCADE, related_name='accounts')
+    account = models.ForeignKey(InstagramAccount, on_delete=models.CASCADE, related_name='bulk_logins')
+    proxy = models.ForeignKey(Proxy, on_delete=models.SET_NULL, null=True, blank=True, related_name='bulk_login_used_in')
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='PENDING')
+    log = models.TextField(blank=True, default="")
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.account.username} in {self.bulk_task.name}"
+
+
+# New: Bio link change task models
+class BioLinkChangeTask(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('RUNNING', 'Running'),
+        ('COMPLETED', 'Completed'),
+        ('FAILED', 'Failed'),
+    ]
+    name = models.CharField(max_length=120, default="Bio Link Change")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    link_url = models.URLField(max_length=500)
+    delay_min_sec = models.IntegerField(default=15)
+    delay_max_sec = models.IntegerField(default=45)
+    concurrency = models.IntegerField(default=1)
+    log = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Bio Task {self.id} - {self.status}"
+
+
+class BioLinkChangeTaskAccount(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('RUNNING', 'Running'),
+        ('COMPLETED', 'Completed'),
+        ('FAILED', 'Failed'),
+    ]
+    task = models.ForeignKey(BioLinkChangeTask, on_delete=models.CASCADE, related_name='accounts')
+    account = models.ForeignKey(InstagramAccount, on_delete=models.CASCADE, related_name='bio_tasks')
+    proxy = models.ForeignKey(Proxy, on_delete=models.SET_NULL, null=True, blank=True, related_name='bio_used_in')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    log = models.TextField(blank=True, default="")
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.account.username} in Bio Task {self.task.id}"

@@ -109,7 +109,7 @@
 
                         <!-- Content group -->
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle {% if active_tab in 'bulk_upload avatars' %}active{% endif %}" href="#" id="contentDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <a class="nav-link dropdown-toggle {% if active_tab in 'bulk_upload avatars bio' %}active{% endif %}" href="#" id="contentDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="bi bi-collection"></i> Content
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="contentDropdown">
@@ -120,6 +120,10 @@
                                 <li class="dropdown-header">Avatars</li>
                                 <li><a class="dropdown-item" href="{% url 'avatar_task_list' %}"><i class="bi bi-person-bounding-box me-2"></i>Avatar Tasks</a></li>
                                 <li><a class="dropdown-item" href="{% url 'create_avatar_task' %}"><i class="bi bi-plus-square me-2"></i>Create Avatar Task</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li class="dropdown-header">Bio Links</li>
+                                <li><a class="dropdown-item" href="{% url 'bio_task_list' %}"><i class="bi bi-link-45deg me-2"></i>Bio Link Tasks</a></li>
+                                <li><a class="dropdown-item" href="{% url 'create_bio_task' %}"><i class="bi bi-plus-square me-2"></i>Create Bio Link Task</a></li>
                             </ul>
                         </li>
 
@@ -158,6 +162,10 @@
                                 <li><a class="dropdown-item" href="{% url 'follow_category_create' %}"><i class="bi bi-plus-square me-2"></i>Create Category</a></li>
                                 <li><a class="dropdown-item" href="{% url 'follow_task_list' %}"><i class="bi bi-list-task me-2"></i>Follow Tasks</a></li>
                                 <li><a class="dropdown-item" href="{% url 'follow_task_create' %}"><i class="bi bi-plus-square me-2"></i>Create Follow Task</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li class="dropdown-header">Bulk Login</li>
+                                <li><a class="dropdown-item" href="{% url 'bulk_login_list' %}"><i class="bi bi-box-arrow-in-right me-2"></i>All Bulk Login Tasks</a></li>
+                                <li><a class="dropdown-item" href="{% url 'create_bulk_login' %}"><i class="bi bi-plus-square me-2"></i>Create Bulk Login Task</a></li>
                             </ul>
                         </li>
 

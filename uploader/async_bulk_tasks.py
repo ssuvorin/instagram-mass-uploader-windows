@@ -397,11 +397,13 @@ class AsyncFileManager:
 class AsyncLogger:
     """Асинхронный логгер для задач"""
     
-    def __init__(self, task_id: int, account_id: Optional[int] = None):
+    def __init__(self, task_id: int, account_id: Optional[int] = None, cache_ns: str = "task_logs", persist_db: bool = True):
         self.task_id = task_id
         self.account_id = account_id
         self.task_repo = AsyncTaskRepository()
         self.account_repo = AsyncAccountRepository()
+        self.cache_ns = cache_ns
+        self.persist_db = persist_db
     
     async def log(self, level: str, message: str, category: Optional[str] = None) -> None:
         """Логировать сообщение"""
@@ -426,7 +428,7 @@ class AsyncLogger:
             }
             
             # Сохраняем в cache для задачи
-            cache_key = f"task_logs_{self.task_id}"
+            cache_key = f"{self.cache_ns}_{self.task_id}"
             existing_logs = cache.get(cache_key, [])
             existing_logs.append(log_entry)
             
@@ -438,7 +440,7 @@ class AsyncLogger:
             
             # Если есть account_id, сохраняем также в account-specific cache
             if self.account_id:
-                account_cache_key = f"task_logs_{self.task_id}_account_{self.account_id}"
+                account_cache_key = f"{self.cache_ns}_{self.task_id}_account_{self.account_id}"
                 account_logs = cache.get(account_cache_key, [])
                 account_logs.append(log_entry)
                 
@@ -448,22 +450,18 @@ class AsyncLogger:
                 cache.set(account_cache_key, account_logs, timeout=3600)
             
             # Обновляем время последнего обновления
-            cache.set(f"task_last_update_{self.task_id}", timestamp, timeout=3600)
+            cache.set(f"{self.cache_ns.replace('logs','last_update')}_{self.task_id}", timestamp, timeout=3600)
             
         except Exception as e:
             print(f"[FAIL] [ASYNC_LOGGER] Error saving to cache: {str(e)}")
         
-        # Сохраняем в базу данных для критических событий
-        if self._is_critical_event(level, message, category):
+        # Сохраняем в базу данных для критических событий (опционально)
+        if self.persist_db and self._is_critical_event(level, message, category):
             try:
                 task = await self.task_repo.get_task(self.task_id)
                 await self.task_repo.update_task_log(task, f"[{timestamp}] {formatted_message}\n")
-                
-                if self.account_id:
-                    # Здесь нужно получить account_task по account_id
-                    pass
             except Exception as e:
-                print(f"[FAIL] [ASYNC_LOGGER] Error saving log to database: {str(e)}")
+                print(f"[FAIL] [ASYNC_LOGGER] Error saving to database: {str(e)}")
     
     def _is_critical_event(self, level: str, message: str, category: Optional[str]) -> bool:
         """Проверяет, является ли событие критическим"""

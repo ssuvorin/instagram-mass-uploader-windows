@@ -18,6 +18,9 @@ _async_logger = None  # type: ignore
 # Console silence flag
 SILENT_CONSOLE = os.getenv('SILENT_CONSOLE_LOGS') == '1'
 
+def is_console_enabled():
+    return os.getenv('SILENT_CONSOLE_LOGS') != '1'
+
 def set_async_logger(async_logger):
     """Register AsyncLogger-like instance to mirror logs into Django cache in async mode."""
     global _async_logger

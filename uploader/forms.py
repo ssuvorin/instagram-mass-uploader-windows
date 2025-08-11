@@ -11,6 +11,8 @@ from .models import (
     FollowCategory,
     FollowTarget,
     FollowTask,
+    BulkLoginTask,
+    BioLinkChangeTask,
 )
 from django.db.models import Sum, Value
 from django.db.models.functions import Coalesce
@@ -238,13 +240,45 @@ class CookieRobotForm(forms.Form):
         urls = [url.strip() for url in urls_text.split('\n') if url.strip()]
         
         if not urls:
-            raise forms.ValidationError("Please enter at least one URL")
-        
-        for url in urls:
-            if not url.startswith(('http://', 'https://')):
-                raise forms.ValidationError(f"Invalid URL: {url}. URLs must start with http:// or https://")
-        
+            raise forms.ValidationError('Please enter at least one URL')
         return urls
+
+
+# ===== Bulk Login Forms =====
+class BulkLoginTaskForm(forms.ModelForm):
+    selected_accounts = forms.ModelMultipleChoiceField(
+        queryset=None,
+        widget=forms.CheckboxSelectMultiple,
+        required=True,
+        label="Select Instagram accounts to login"
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['selected_accounts'].queryset = (
+            InstagramAccount.objects.all()
+            .order_by('-created_at')
+            .annotate(
+                uploaded_success_total=Coalesce(Sum('bulk_uploads__uploaded_success_count'), Value(0)),
+                uploaded_failed_total=Coalesce(Sum('bulk_uploads__uploaded_failed_count'), Value(0)),
+            )
+        )
+
+    class Meta:
+        model = BulkLoginTask
+        fields = []
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if not instance.name:
+            from django.utils import timezone
+            selected_accounts = self.cleaned_data.get('selected_accounts', [])
+            account_count = len(selected_accounts)
+            timestamp = timezone.now().strftime("%Y-%m-%d %H:%M")
+            instance.name = f"Bulk Login - {account_count} accounts - {timestamp}"
+        if commit:
+            instance.save()
+        return instance
 
 
 class BulkVideoLocationMentionsForm(forms.ModelForm):
@@ -298,13 +332,43 @@ class AvatarChangeTaskForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-select'}),
         label='Distribution strategy'
     )
-    delay_min_sec = forms.IntegerField(initial=15, min_value=1, label='Min delay (sec)')
-    delay_max_sec = forms.IntegerField(initial=45, min_value=1, label='Max delay (sec)')
-    concurrency = forms.IntegerField(initial=1, min_value=1, max_value=3, label='Concurrency')
+    delay_min_sec = forms.IntegerField(initial=15, min_value=1, label='Min delay (sec)', widget=forms.NumberInput(attrs={'class': 'form-control'}))
+    delay_max_sec = forms.IntegerField(initial=45, min_value=1, label='Max delay (sec)', widget=forms.NumberInput(attrs={'class': 'form-control'}))
+    concurrency = forms.IntegerField(initial=1, min_value=1, max_value=3, label='Concurrency', widget=forms.NumberInput(attrs={'class': 'form-control'}))
 
     class Meta:
         model = AvatarChangeTask
         fields = ['strategy', 'delay_min_sec', 'delay_max_sec', 'concurrency']
+
+    def clean(self):
+        data = super().clean()
+        min_d = data.get('delay_min_sec')
+        max_d = data.get('delay_max_sec')
+        if min_d and max_d and min_d > max_d:
+            raise forms.ValidationError('Min delay must be <= Max delay')
+        return data
+
+
+# New: form for bio link change task
+class BioLinkChangeTaskForm(forms.ModelForm):
+    selected_accounts = forms.ModelMultipleChoiceField(
+        queryset=InstagramAccount.objects.all().order_by('-created_at'),
+        widget=forms.CheckboxSelectMultiple,
+        required=True,
+        label="Select accounts"
+    )
+    link_url = forms.URLField(
+        widget=forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://example.com'}),
+        required=True,
+        label='Link to set in bio'
+    )
+    delay_min_sec = forms.IntegerField(initial=15, min_value=1, label='Min delay (sec)', widget=forms.NumberInput(attrs={'class': 'form-control'}))
+    delay_max_sec = forms.IntegerField(initial=45, min_value=1, label='Max delay (sec)', widget=forms.NumberInput(attrs={'class': 'form-control'}))
+    concurrency = forms.IntegerField(initial=1, min_value=1, max_value=3, label='Concurrency', widget=forms.NumberInput(attrs={'class': 'form-control'}))
+
+    class Meta:
+        model = BioLinkChangeTask
+        fields = ['link_url', 'delay_min_sec', 'delay_max_sec', 'concurrency']
 
     def clean(self):
         data = super().clean()

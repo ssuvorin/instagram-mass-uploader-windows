@@ -40,7 +40,8 @@ from .task_utils import (
     get_account_from_task, mark_account_as_used, get_task_with_accounts, 
     get_account_tasks, get_assigned_videos, get_all_task_videos, get_all_task_titles,
     handle_verification_error, handle_task_completion, handle_emergency_cleanup,
-    process_browser_result, handle_account_task_error, handle_critical_task_error
+    process_browser_result, handle_account_task_error, handle_critical_task_error,
+    clear_human_verification_badge
 )
 from .account_utils import (
     get_account_details, get_proxy_details, get_account_proxy,
@@ -1963,6 +1964,12 @@ def handle_login_flow(page, account_details):
         # Post-login reCAPTCHA check
         log_info("[SEARCH] Checking for post-login reCAPTCHA...", LogCategories.CAPTCHA)
         handle_recaptcha_if_present(page)
+        
+        # Clear human verification badge if it was previously set
+        try:
+            clear_human_verification_badge(account_details['username'])
+        except Exception:
+            pass
         
         log_success("[OK] Login flow completed successfully", LogCategories.LOGIN)
         return True

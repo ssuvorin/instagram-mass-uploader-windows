@@ -287,7 +287,7 @@ async def run_async_task_with_monitoring(task_id):
         print(f"\n{Colors.YELLOW}Warning: {unassigned_videos.count()} videos are not assigned to accounts{Colors.END}")
         
         # Assign videos to accounts
-        from uploader.views import assign_videos_to_accounts
+        from uploader.viewsBACKUP import assign_videos_to_accounts
         assign_videos_to_accounts(task)
         print(f"{Colors.GREEN}Assigned videos to accounts{Colors.END}")
     

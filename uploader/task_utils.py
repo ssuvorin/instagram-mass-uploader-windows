@@ -219,7 +219,7 @@ def process_browser_result(result, account_task, task):
                 log_message=f"[{timestamp_str}] [OK] {message}\n"
             )
             return 'completed', 1, 0
-            
+        
         elif status in ["PHONE_VERIFICATION_REQUIRED", "HUMAN_VERIFICATION_REQUIRED"]:
             emoji = '[PHONE]' if status == "PHONE_VERIFICATION_REQUIRED" else '[BOT]'
             update_account_task(
@@ -238,54 +238,86 @@ def process_browser_result(result, account_task, task):
                     log_info(f"Updated Instagram account {account.username} status to {status}")
                 else:
                     log_error("Could not get account from account_task to update status")
-            except Exception as status_error:
-                log_error(f"Error updating Instagram account status to {status}: {str(status_error)}")
+            except Exception as e:
+                log_error(f"Error updating Instagram account status: {str(e)}")
             
-            log_error(f"Verification required: {message}")
-            return 'failed', 0, 1
-            
+            return 'verification_required', 0, 1
+        
         elif status == "SUSPENDED":
-            emoji = '[BLOCK]'
             update_account_task(
                 account_task,
-                status=status,
+                status=TaskStatus.SUSPENDED,
                 completed_at=timezone.now(),
-                log_message=f"[{timestamp_str}] {emoji} {message}\n"
+                log_message=f"[{timestamp_str}] [BLOCK] Account suspended by Instagram\n"
             )
             
             # Update Instagram account status in database
             try:
                 account = get_account_from_task(account_task)
                 if account:
-                    account.status = 'SUSPENDED'
+                    account.status = TaskStatus.SUSPENDED
                     account.save(update_fields=['status'])
                     log_info(f"Updated Instagram account {account.username} status to SUSPENDED")
                 else:
                     log_error("Could not get account from account_task to update status")
-            except Exception as status_error:
-                log_error(f"Error updating Instagram account status to SUSPENDED: {str(status_error)}")
+            except Exception as e:
+                log_error(f"Error updating Instagram account status: {str(e)}")
             
-            log_error(f"Account suspended: {message}")
-            return 'failed', 0, 1
-            
-        else:
-            log_error(f"Task failed: {status} - {message}")
-            update_account_task(
-                account_task,
-                status=TaskStatus.FAILED,
-                completed_at=timezone.now(),
-                log_message=f"[{timestamp_str}] [FAIL] {status}: {message}\n"
-            )
-            return 'failed', 0, 1
-    else:
-        log_error(f"Unexpected result format from browser thread: {result}")
-        update_account_task(
-            account_task,
-            status=TaskStatus.FAILED,
-            completed_at=timezone.now(),
-            log_message=f"[{timestamp_str}] [FAIL] Unexpected result format from browser thread\n"
-        )
-        return 'failed', 0, 1
+            return 'suspended', 0, 1
+    
+    # Default case - failed
+    update_account_task(
+        account_task,
+        status=TaskStatus.FAILED,
+        completed_at=timezone.now(),
+        log_message=f"[{timestamp_str}] [FAIL] Unknown error occurred\n"
+    )
+    return 'failed', 0, 1
+
+
+# New helper: clear human verification badge after successful login
+def clear_human_verification_badge(username: str) -> None:
+    """Clear HUMAN_VERIFICATION_REQUIRED badge for the given Instagram account if present.
+    Sets account status back to ACTIVE after a successful login.
+    """
+    try:
+        account = InstagramAccount.objects.get(username=username)
+        if account.status == 'HUMAN_VERIFICATION_REQUIRED':
+            account.status = 'ACTIVE'
+            account.save(update_fields=['status'])
+            log_info(f"[DATABASE] Cleared human verification badge for {username}", LogCategories.LOGIN)
+    except InstagramAccount.DoesNotExist:
+        log_warning(f"[DATABASE] Instagram account {username} not found when clearing human verification", LogCategories.LOGIN)
+    except Exception as e:
+        log_warning(f"[DATABASE] Error clearing human verification for {username}: {str(e)}", LogCategories.LOGIN)
+
+
+async def clear_human_verification_badge_async(username: str) -> None:
+    """Async wrapper to clear HUMAN_VERIFICATION_REQUIRED badge without blocking the event loop."""
+    try:
+        from asgiref.sync import sync_to_async
+
+        @sync_to_async
+        def _fetch_account():
+            try:
+                return InstagramAccount.objects.get(username=username)
+            except InstagramAccount.DoesNotExist:
+                return None
+
+        @sync_to_async
+        def _save_active(account):
+            account.status = 'ACTIVE'
+            account.save(update_fields=['status'])
+
+        account = await _fetch_account()
+        if account is None:
+            log_warning(f"[DATABASE] Instagram account {username} not found when clearing human verification", LogCategories.LOGIN)
+            return
+        if account.status == 'HUMAN_VERIFICATION_REQUIRED':
+            await _save_active(account)
+            log_info(f"[DATABASE] Cleared human verification badge for {username}", LogCategories.LOGIN)
+    except Exception as e:
+        log_warning(f"[DATABASE] Error clearing human verification for {username}: {str(e)}", LogCategories.LOGIN)
 
 
 def handle_account_task_error(account_task, task, error):

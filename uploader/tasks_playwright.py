@@ -239,12 +239,26 @@ def run_cookie_robot_task(task_id):
         task.log += log_message + "\n"
         logger.info(log_message)
         
-        result = dolphin.run_cookie_robot_sync(
-            profile_id=account.dolphin_profile_id,
-            urls=task.urls,
-            headless=task.headless,
-            imageless=task.imageless
-        )
+        # Add retries for transient start/connect errors
+        backoffs = [0, 2, 5]
+        result = None
+        for attempt, delay in enumerate(backoffs, start=1):
+            if delay:
+                time.sleep(delay)
+            result = dolphin.run_cookie_robot_sync(
+                profile_id=account.dolphin_profile_id,
+                urls=task.urls,
+                headless=task.headless,
+                imageless=task.imageless
+            )
+            err = (result or {}).get('error') or ''
+            if not err or (
+                'Failed to start profile' not in err and 
+                'Missing port or wsEndpoint' not in err and 
+                'connect_over_cdp' not in err
+            ):
+                break
+            logger.info(f"[RETRY] Attempt {attempt} failed: {err}")
         
         # Update task with result
         if result.get('success', False):

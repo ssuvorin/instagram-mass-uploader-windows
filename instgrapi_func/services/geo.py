@@ -9,6 +9,7 @@ _COUNTRY_TO_LOCALE = {
     'BY': 'be_BY',
     'KZ': 'kk_KZ',
     'TR': 'tr_TR',
+    'IN': 'en_IN',
 }
 
 _COUNTRY_TO_CODE = {
@@ -18,6 +19,7 @@ _COUNTRY_TO_CODE = {
     'BY': 375,
     'KZ': 7,
     'TR': 90,
+    'IN': 91,
 }
 
 # Offsets in seconds (MSK +3:00 = 10800)
@@ -28,6 +30,7 @@ _COUNTRY_TO_TZ = {
     'BY': 10800,
     'KZ': 18000,
     'TR': 10800,
+    'IN': 19800,
 }
 
 
@@ -45,6 +48,7 @@ def _normalize_country(value: Optional[str]) -> Optional[str]:
         'BELARUS': 'BY', 'БЕЛАРУСЬ': 'BY', 'БЕЛАРУСЬ (БЕЛАРУСЬ)': 'BY',
         'KAZAKHSTAN': 'KZ', 'ҚАЗАҚСТАН': 'KZ',
         'TURKEY': 'TR', 'TÜRKİYE': 'TR',
+        'INDIA': 'IN', 'ИНДИЯ': 'IN',
     }
     return names.get(v) or None
 

@@ -8,7 +8,10 @@ logger = logging.getLogger(__name__)
 
 def validate_proxy(host, port, username=None, password=None, timeout=10, proxy_type='HTTP'):
     """
-    Validate if a proxy is working by attempting to connect to an external service.
+    Validate if a proxy is working by attempting to connect to external HTTPS services.
+
+    A proxy is considered VALID only if at least one HTTPS endpoint is reachable via the proxy.
+    HTTP-only success will NOT mark the proxy as valid.
     
     Args:
         host (str): Proxy host
@@ -27,12 +30,14 @@ def validate_proxy(host, port, username=None, password=None, timeout=10, proxy_t
     except (ValueError, TypeError):
         return False, "Invalid port number", {"country": None, "city": None}
     
-    # Test URLs to try
-    test_urls = [
-        "https://httpbin.org/ip",  # Returns JSON with IP
-        "https://www.google.com",  # Fallback
-        "http://httpbin.org/ip"    # HTTP fallback
+    # HTTPS targets must pass for the proxy to be considered valid
+    https_test_urls = [
+        "https://httpbin.org/ip",
+        "https://www.google.com",
+        "https://www.instagram.com"
     ]
+    # Optional HTTP endpoint used only for IP info retrieval; not used to decide validity
+    http_info_url = "http://httpbin.org/ip"
     
     geo_info = {"country": None, "city": None}
     proxy_type = proxy_type.upper()
@@ -51,52 +56,49 @@ def validate_proxy(host, port, username=None, password=None, timeout=10, proxy_t
         "https": proxy_url
     }
     
-    # Try each test URL
-    for test_url in test_urls:
+    https_ok = False
+    
+    # First, require HTTPS connectivity
+    for test_url in https_test_urls:
         try:
             logger.debug(f"Testing proxy {host}:{port} with URL: {test_url}")
             response = requests.get(test_url, proxies=proxies, timeout=timeout)
-            
             if response.status_code == 200:
-                # Try to get IP info from httpbin
+                https_ok = True
+                # If successful against httpbin HTTPS endpoint, try to log external IP
                 if "httpbin.org/ip" in test_url:
                     try:
                         ip_data = response.json()
                         proxy_ip = ip_data.get('origin', '').split(',')[0].strip()
                         if proxy_ip and proxy_ip != host:
                             logger.info(f"Proxy {host}:{port} working, external IP: {proxy_ip}")
-                    except:
+                    except Exception:
                         pass
-                
-                # If successful, try to get country information
-                try:
-                    ip_info = get_proxy_location(host, username)
-                    if ip_info:
-                        geo_info = ip_info
-                        return True, f"Proxy is working correctly ({geo_info.get('country', 'Unknown')})", geo_info
-                except Exception as e:
-                    logger.error(f"Error getting proxy location: {str(e)}")
-                    
-                return True, "Proxy is working correctly", geo_info
+                break
             else:
                 logger.warning(f"Proxy {host}:{port} returned status {response.status_code} for {test_url}")
-                continue  # Try next URL
-                
         except Timeout:
             logger.warning(f"Timeout testing proxy {host}:{port} with {test_url}")
-            continue  # Try next URL
         except ProxyError as e:
             logger.warning(f"Proxy error for {host}:{port} with {test_url}: {str(e)}")
-            continue  # Try next URL
         except RequestException as e:
             logger.warning(f"Request error for {host}:{port} with {test_url}: {str(e)}")
-            continue  # Try next URL
         except Exception as e:
             logger.error(f"Unexpected error testing proxy {host}:{port} with {test_url}: {str(e)}")
-            continue  # Try next URL
     
-    # If all URLs failed
-    return False, "Failed to connect through proxy (all test URLs failed)", geo_info
+    if not https_ok:
+        return False, "HTTPS check failed for all test URLs", geo_info
+    
+    # Optionally attempt to enrich geo info (best-effort; does not affect validity)
+    try:
+        ip_info = get_proxy_location(host, username)
+        if ip_info:
+            geo_info = ip_info
+            return True, f"Proxy is working correctly ({geo_info.get('country', 'Unknown')})", geo_info
+    except Exception as e:
+        logger.error(f"Error getting proxy location: {str(e)}")
+    
+    return True, "Proxy is working correctly", geo_info
 
 
 def _validate_socks5_proxy(host, port, username=None, password=None, timeout=10):

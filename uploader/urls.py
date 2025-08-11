@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from . import views_avatar
 from . import views_follow
+from .views_mod import views_bio
 
 urlpatterns = [
     # Dashboard
@@ -48,6 +49,14 @@ urlpatterns = [
     path('bulk-upload/<int:task_id>/bulk-edit-location-mentions/', views.bulk_edit_location_mentions, name='bulk_edit_location_mentions'),
     path('bulk-upload/video/<int:video_id>/edit-location-mentions/', views.edit_video_location_mentions, name='edit_video_location_mentions'),
     
+    # Bulk Login
+    path('bulk-login/', views.bulk_login_list, name='bulk_login_list'),
+    path('bulk-login/create/', views.create_bulk_login, name='create_bulk_login'),
+    path('bulk-login/<int:task_id>/', views.bulk_login_detail, name='bulk_login_detail'),
+    path('bulk-login/<int:task_id>/start/', views.start_bulk_login, name='start_bulk_login'),
+    path('bulk-login/<int:task_id>/delete/', views.delete_bulk_login, name='delete_bulk_login'),
+    path('bulk-login/<int:task_id>/logs/', views.get_bulk_login_logs, name='bulk_login_logs'),
+    
     # Cookies Dashboard
     path('cookies/', views.cookie_dashboard, name='cookie_dashboard'),
     path('cookies/tasks/', views.cookie_task_list, name='cookie_task_list'),
@@ -60,20 +69,26 @@ urlpatterns = [
     path('cookies/accounts/<int:account_id>/', views.account_cookies, name='account_cookies'),
     path('cookies/bulk/', views.bulk_cookie_robot, name='bulk_cookie_robot'),
 
-    # Avatars
+    # Captcha API
+    path('api/captcha-notification/', views.captcha_notification, name='captcha_notification'),
+    path('api/captcha-status/<int:task_id>/', views.get_captcha_status, name='get_captcha_status'),
+    path('api/captcha-clear/<int:task_id>/', views.clear_captcha_notification, name='clear_captcha_notification'),
+]
+
+urlpatterns += [
     path('avatars/', views_avatar.avatar_task_list, name='avatar_task_list'),
     path('avatars/create/', views_avatar.create_avatar_task, name='create_avatar_task'),
     path('avatars/<int:task_id>/', views_avatar.avatar_task_detail, name='avatar_task_detail'),
     path('avatars/<int:task_id>/start/', views_avatar.start_avatar_task, name='start_avatar_task'),
     path('avatars/<int:task_id>/logs/', views_avatar.get_avatar_task_logs, name='avatar_task_logs'),
     
-    # Captcha API
-    path('api/captcha-notification/', views.captcha_notification, name='captcha_notification'),
-    path('api/captcha-status/<int:task_id>/', views.get_captcha_status, name='get_captcha_status'),
-    path('api/captcha-clear/<int:task_id>/', views.clear_captcha_notification, name='clear_captcha_notification'),
-] 
-
-urlpatterns += [
+    # Bio link change
+    path('bio/', views_bio.bio_task_list, name='bio_task_list'),
+    path('bio/create/', views_bio.create_bio_task, name='create_bio_task'),
+    path('bio/<int:task_id>/', views_bio.bio_task_detail, name='bio_task_detail'),
+    path('bio/<int:task_id>/start/', views_bio.start_bio_task, name='start_bio_task'),
+    path('bio/<int:task_id>/logs/', views_bio.get_bio_task_logs, name='bio_task_logs'),
+    
     path('follow/categories/', views_follow.follow_category_list, name='follow_category_list'),
     path('follow/categories/create/', views_follow.follow_category_create, name='follow_category_create'),
     path('follow/categories/<int:category_id>/', views_follow.follow_category_detail, name='follow_category_detail'),
