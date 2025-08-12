@@ -144,12 +144,17 @@ class BulkUploadOrchestrator:
         visible = options.visible if options and options.visible is not None else settings.visible_browser
         concurrency = options.concurrency if options and options.concurrency else settings.concurrency_limit
         batch_size = settings.batch_size
+        batch_index = options.batch_index if options and options.batch_index is not None else None
+        batch_count = options.batch_count if options and options.batch_count is not None else None
 
         ui = ui_client or UiClient()
         try:
             await ui.update_task_status(aggregate.id, "RUNNING")
-            # Split accounts into batches
+            # Split accounts among workers if batch routing is provided
             accounts = aggregate.accounts
+            if batch_index is not None and batch_count and batch_count > 1:
+                accounts = [acc for i, acc in enumerate(accounts) if (i % batch_count) == batch_index]
+            # Local batching within this worker
             batches = [accounts[i:i+batch_size] for i in range(0, len(accounts), batch_size)]
             for b_idx, batch in enumerate(batches, start=1):
                 semaphore = asyncio.Semaphore(concurrency)

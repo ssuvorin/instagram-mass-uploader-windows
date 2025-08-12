@@ -51,6 +51,8 @@ class StartOptions(BaseModel):
     concurrency: Optional[int] = None
     headless: Optional[bool] = None
     visible: Optional[bool] = None
+    batch_index: Optional[int] = None
+    batch_count: Optional[int] = None
 
 
 class StartRequest(BaseModel):

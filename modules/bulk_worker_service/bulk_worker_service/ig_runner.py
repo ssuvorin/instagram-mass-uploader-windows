@@ -14,6 +14,9 @@ from .config import settings
 from .domain import BulkVideo, BulkUploadAccountTask
 from .ui_client import UiClient
 
+# Reuse existing ffmpeg uniquifier from the main project without changes
+from uploader.async_video_uniquifier import AsyncVideoUniquifier
+
 
 @dataclass
 class VideoMeta:
@@ -85,6 +88,17 @@ async def run_account_upload_with_metadata(ui: UiClient, task_id: int, account_t
 
     # Build metadata list
     videos_meta = _compute_videos_meta(videos, default_location, default_mentions_text, downloaded)
+
+    # Per-account uniquification via ffmpeg (as in the main project), before uploads
+    uniquifier = AsyncVideoUniquifier()
+    for vm in videos_meta:
+        try:
+            unique_path = await uniquifier.uniquify_video_async(vm.file_path, account_task.account.username, copy_number=1)
+            await ui.update_account_status(account_task.account_task_id, "RUNNING", log_append=f"[UNIQUIFY] Prepared unique video for {vm.video_id}\n")
+            vm.file_path = unique_path
+        except Exception as e:
+            # Fallback to original file if uniquification failed
+            await ui.update_account_status(account_task.account_task_id, "RUNNING", log_append=f"[UNIQUIFY_FAIL] Using original video for {vm.video_id}: {e}\n")
 
     # Prepare account and proxy
     account_payload = account_task.account.model_dump(by_alias=True)

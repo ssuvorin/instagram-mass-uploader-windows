@@ -146,10 +146,10 @@ class DolphinAnty:
         "1920x1080", "2560x1440", "1366x768",
         "1440x900", "1536x864", "1680x1050"
     ]
-    BROWSER_VERSIONS = ["133","134", "135", "136"]
+    BROWSER_VERSIONS = ["138", "139"]
     
-    # Stealth defaults for headers
-    DEFAULT_ACCEPT_LANGUAGE = "en-US,en;q=0.9"
+    # Stealth defaults for headers (Belarus locale with Russian interface)
+    DEFAULT_ACCEPT_LANGUAGE = "ru-BY,ru;q=0.9,en-US;q=0.8,en;q=0.7"
     
     def __init__(
         self,
@@ -323,25 +323,24 @@ class DolphinAnty:
         plat_ver = webgl.get("platformVersion") or default_versions[os_plat]
 
         # 5) Randomize modes per documentation
-        webrtc_mode  = random.choice(["off", "real", "altered", "manual"])
-        # canvas_mode  = random.choice(["off", "real", "noise"])
-        webgl_mode   = "noise"
+        webrtc_mode  = "altered"
+        webgl_mode   = "real"
         webgl_info_mode = "manual"
         cpu_mode     = "manual"
         mem_mode     = "manual"
-        cpu_value    = random.choice([2,4,8,16]) 
-        mem_value    = random.choice([2,4,8,16,32,64,128])
+        cpu_value    = random.choice([4, 8, 16]) 
+        mem_value    = random.choice([8, 16, 32])
         
         # 6) Randomize MAC address (manual)
         def random_mac():
             return ":".join(f"{random.randint(0,255):02X}" for _ in range(6))
-        mac_mode = random.choice(["off","manual"])
+        mac_mode = "manual"
         mac_payload: Dict[str, Any] = {"mode": mac_mode}
         if mac_mode == "manual":
             mac_payload["value"] = random_mac()
         
         # 7) Randomize DeviceName (manual)
-        dev_mode = random.choice(["off","manual"])
+        dev_mode = "manual"
         dev_payload: Dict[str, Any] = {"mode": dev_mode}
         if dev_mode == "manual":
             # e.g. DESKTOP-XXXXXXX
@@ -349,19 +348,15 @@ class DolphinAnty:
             dev_payload["value"] = f"DESKTOP-{suffix}"
 
         # 8) Randomize Fonts
-        fonts_mode = random.choice(["auto","manual"])
+        fonts_mode = "auto"
         fonts_payload: Dict[str, Any] = {"mode": fonts_mode}
-        if fonts_mode == "manual":
-            # pick a few common fonts
-            sample_fonts = ["Arial","Calibri","Times New Roman","Segoe UI","Verdana"]
-            fonts_payload["value"] = random.sample(sample_fonts, k=random.randint(2, len(sample_fonts)))
 
         # 9) Randomize Audio
-        audio_mode = random.choice(["real","noise"])
+        audio_mode = "real"
         audio_payload = {"mode": audio_mode}
         
         # 10) Timezone & Geolocation based on locale (kept simple and deterministic per region)
-        normalized_locale = (locale or "ru_RU").strip()
+        normalized_locale = (locale or "ru_BY").strip()
         lang_value_dash = normalized_locale.replace("_", "-")
 
         tz_payload: Dict[str, Any]
@@ -390,6 +385,18 @@ class DolphinAnty:
             ]
             lat, lon = random.choice(cities)
             geo_payload = {"mode": "manual", "latitude": lat, "longitude": lon}
+        elif normalized_locale in {"ru_BY", "ru-BY"}:
+            tz_payload = {"mode": "manual", "value": "Europe/Minsk"}
+            by_cities = [
+                (53.9006, 27.5590),  # Minsk
+                (52.4412, 30.9878),  # Gomel
+                (53.9138, 30.3364),  # Mogilev
+                (55.1904, 30.2049),  # Vitebsk
+                (53.6778, 23.8295),  # Hrodna
+                (52.0976, 23.7341),  # Brest
+            ]
+            lat, lon = random.choice(by_cities)
+            geo_payload = {"mode": "manual", "latitude": lat, "longitude": lon}
         else:
             # Default: Russia (original behavior)
             ru_timezones = [
@@ -404,7 +411,7 @@ class DolphinAnty:
             "tags":            tags,
             "platform":        os_plat,
             "platformVersion": plat_ver,
-            "mainWebsite":     random.choice(["google", "facebook", "crypto", "tiktok"]),
+            "mainWebsite":     "instagram",
             "browserType":     "anty",
 
             "useragent": {
@@ -413,12 +420,11 @@ class DolphinAnty:
             },
 
             "webrtc": {
-                "mode":     webrtc_mode,
-                **({"ipAddress": proxy["host"]} if webrtc_mode == "manual" else {})
+                "mode":     webrtc_mode
             },
 
             "canvas": {
-                "mode": 'noise'
+                "mode": "real"
             },
 
             "webgl": {
@@ -453,7 +459,7 @@ class DolphinAnty:
             },
 
             "mediaDevices": {"mode":"real"},
-            "doNotTrack":   random.choice([0,1]),
+            "doNotTrack":   0,
 
             "macAddress":   mac_payload,
             "deviceName":   dev_payload,
@@ -558,9 +564,19 @@ class DolphinAnty:
                 tags.append(account_data['tags'])
         
         logger.info(f"[TOOL] Creating profile for Instagram account: {username}")
-        locale = account_data.get('locale', 'ru_RU')
-        if locale not in {'en_US','en_IN','ru_RU'}:
-            locale = 'ru_RU'
+        # Prefer ru_BY (Belarus region) with Russian interface if using BY proxy
+        inferred_locale = None
+        try:
+            if proxy_data and isinstance(proxy_data, dict):
+                country = (proxy_data.get('country') or '').upper()
+                if country == 'BY' or 'belarus' in (proxy_data.get('region', '') or '').lower():
+                    inferred_locale = 'ru_BY'
+        except Exception:
+            inferred_locale = None
+
+        locale = account_data.get('locale') or inferred_locale or 'ru_BY'
+        if locale not in {'ru_BY'}:
+            locale = 'ru_BY'
         response = self.create_profile(name=name, proxy=proxy_data, tags=tags, locale=locale)
         
         # Extract profile ID from response
@@ -1021,7 +1037,9 @@ class DolphinAnty:
         try:
             # Accept-Language aligned with RU/EN mix by default (can be adjusted)
             try:
-                await context.set_extra_http_headers({"Accept-Language": (accept_language or self.DEFAULT_ACCEPT_LANGUAGE)})
+                # Fallback to ru-BY mapping if not provided (profile-aware resolution is applied by caller)
+                fallback_al = 'ru-BY,ru;q=0.9,en-US;q=0.8,en;q=0.7'
+                await context.set_extra_http_headers({"Accept-Language": (accept_language or fallback_al)})
             except Exception:
                 pass
             # Mask common automation flags
@@ -1034,8 +1052,6 @@ class DolphinAnty:
                 }
                 // languages
                 Object.defineProperty(navigator, 'languages', { get: () => navigator.language ? [navigator.language.split('-')[0], navigator.language] : ['en','en-US'] });
-                // plugins length
-                Object.defineProperty(navigator, 'plugins', { get: () => [1,2,3,4,5] });
                 // permissions query override (avoid notifications prompt anomalies)
                 const originalQuery = window.navigator.permissions && window.navigator.permissions.query;
                 if (originalQuery) {
@@ -1188,7 +1204,7 @@ class DolphinAnty:
                         logger.info(f"[FILE] Created new browser context")
                     
                     # Apply stealth patches to reduce automation detection
-                    resolved_al = self._resolve_accept_language(profile_id) or self.DEFAULT_ACCEPT_LANGUAGE
+                    resolved_al = self._resolve_accept_language(profile_id)
                     await self._apply_stealth_patches(context, accept_language=resolved_al)
                     
                     # Создаем новую страницу
@@ -2047,18 +2063,29 @@ class DolphinAnty:
                 # Sometimes profile is under 'browserProfile'
                 bp = data.get('browserProfile') or {}
                 locale_val = _val(bp, 'locale') or _val(bp, 'language')
+            # If no locale found, fallback to ru_BY mapping
             if not locale_val or not isinstance(locale_val, str):
-                return None
-            locale_val = locale_val.replace('_', '-')
-            lv = locale_val.lower()
-            # Map to Accept-Language strings
-            if lv.startswith('ru'):
-                return 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7'
+                return 'ru-BY,ru;q=0.9,en-US;q=0.8,en;q=0.7'
+            return self._accept_language_for_locale_str(locale_val)
+        except Exception:
+            # Robust fallback
+            return 'ru-BY,ru;q=0.9,en-US;q=0.8,en;q=0.7'
+
+    def _accept_language_for_locale_str(self, locale_str: str) -> str:
+        """Map a locale string like 'ru_BY' or 'en-US' to an Accept-Language header value."""
+        try:
+            norm = (locale_str or '').strip().replace('_', '-')
+            lv = norm.lower()
+            # Consolidate all Russian locales to ru-BY policy per project requirement
+            if lv.startswith('ru-by') or lv.startswith('ru'):
+                return 'ru-BY,ru;q=0.9,en-US;q=0.8,en;q=0.7'
             if lv.startswith('en-in'):
                 return 'en-IN,en;q=0.9'
-            if lv.startswith('en'):
+            if lv.startswith('en-us') or lv.startswith('en'):
                 return 'en-US,en;q=0.9'
             # Generic fallback using the detected locale
-            return f"{locale_val},{locale_val.split('-')[0]};q=0.9,en-US;q=0.8,en;q=0.7"
+            base = norm if norm else 'ru-BY'
+            primary = (base.split('-')[0] if '-' in base else base) or 'ru'
+            return f"{base},{primary};q=0.9,en-US;q=0.8,en;q=0.7"
         except Exception:
-            return None
+            return 'ru-BY,ru;q=0.9,en-US;q=0.8,en;q=0.7'
