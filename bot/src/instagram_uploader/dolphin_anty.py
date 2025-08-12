@@ -515,6 +515,18 @@ class DolphinAnty:
             logger.error(f"[FAIL] Profile creation failed: {e.message}")
             return {"success": False, "error": e.message}
 
+        # Attach payload/meta to response for persistence
+        try:
+            if isinstance(resp, dict):
+                resp.setdefault("_payload_used", payload)
+                resp.setdefault("_meta", {
+                    "geoip": geoip,
+                    "public_ip": public_ip,
+                    "strict_webrtc": bool(strict_webrtc)
+                })
+        except Exception:
+            pass
+
         # 14) Log result
         if resp and ("browserProfileId" in resp or resp.get("data", {}).get("id")):
             logger.info(f"[OK] Profile created: {resp}")

@@ -18,13 +18,8 @@ def create_cookie_robot_task(request):
             messages.error(request, 'Please select an account')
             return redirect('create_cookie_robot_task')
         
-        # Parse URLs
+        # Parse URLs (optional). If empty, they will be auto-generated per account.
         urls = [url.strip() for url in urls_text.split('\n') if url.strip()]
-        
-        if not urls:
-            logger.error("Cookie Robot task creation failed: No URLs provided")
-            messages.error(request, 'Please enter at least one URL')
-            return redirect('create_cookie_robot_task')
         
         # Get account
         try:
@@ -46,7 +41,10 @@ def create_cookie_robot_task(request):
         initial_log += log_message + "\n"
         logger.info(log_message)
         
-        log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] URLs: {urls}"
+        if urls:
+            log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] URLs: {urls}"
+        else:
+            log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] URLs: auto-generate per account from global top sites (28–47)"
         initial_log += log_message + "\n"
         logger.info(log_message)
         

@@ -85,7 +85,24 @@ class InstagramAccount(models.Model):
     notes = models.TextField(blank=True, default="")
     # New: phone number used for mobile device profile and account verification
     phone_number = models.CharField(max_length=32, null=True, blank=True)
+
+class DolphinProfileSnapshot(models.Model):
+    """Full snapshot of Dolphin profile payload/response to be able to recreate 1:1."""
+    account = models.OneToOneField(InstagramAccount, on_delete=models.CASCADE, related_name='dolphin_snapshot')
+    profile_id = models.CharField(max_length=100, db_index=True)
+    payload_json = models.JSONField()
+    response_json = models.JSONField()
+    meta_json = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
+    class Meta:
+        verbose_name = "Dolphin Profile Snapshot"
+        verbose_name_plural = "Dolphin Profile Snapshots"
+
+    def __str__(self):
+        return f"Snapshot for {self.account.username} ({self.profile_id})"
+
     class Meta:
         verbose_name = "Instagram account"
         verbose_name_plural = "Instagram accounts"

@@ -873,6 +873,20 @@ def create_dolphin_profile(request, account_id):
             # Save profile ID to account
             account.dolphin_profile_id = profile_id
             account.save(update_fields=['dolphin_profile_id'])
+            # Persist full snapshot for 1:1 recreation later
+            try:
+                from uploader.models import DolphinProfileSnapshot
+                DolphinProfileSnapshot.objects.update_or_create(
+                    account=account,
+                    defaults={
+                        'profile_id': str(profile_id),
+                        'payload_json': response.get('_payload_used') or {},
+                        'response_json': response,
+                        'meta_json': response.get('_meta') or {}
+                    }
+                )
+            except Exception as snap_err:
+                logger.warning(f"[CREATE PROFILE] Could not save Dolphin snapshot: {snap_err}")
             
             logger.info(f"[CREATE PROFILE] Successfully created Dolphin profile {profile_id} for account {account.username}")
             messages.success(request, f'Dolphin profile {profile_id} created successfully for account {account.username}!')
