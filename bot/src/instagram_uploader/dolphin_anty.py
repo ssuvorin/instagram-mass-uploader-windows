@@ -23,6 +23,8 @@ import sys
 import tempfile
 import platform
 import uuid
+import socket
+import ipaddress
 
 # Импортируем Windows совместимость
 try:
@@ -160,6 +162,8 @@ class DolphinAnty:
         self.api_key        = api_key
         self.base_url       = base_url.rstrip("/")
         self.local_api_base = local_api_base.rstrip("/")
+        # Simple in-memory cache for geo-IP lookups per proxy host
+        self._geoip_cache: Dict[str, Dict[str, Any]] = {}
 
     def _get_headers(self):
         """Get headers for API requests"""
@@ -294,7 +298,8 @@ class DolphinAnty:
         name: str,
         proxy: Dict[str, Any],
         tags: List[str],
-        locale: str = "ru_RU"
+        locale: str = "ru_RU",
+        strict_webrtc: bool = False
     ) -> Dict[str, Any]:
         """
         Create a fully randomized Dolphin Anty browser profile payload,
@@ -307,6 +312,10 @@ class DolphinAnty:
         # 2) Choose OS and browser version
         os_plat     = self.OS_PLATFORMS[0]
         browser_ver = random.choice(self.BROWSER_VERSIONS)
+
+        # 2b) Geo-IP for proxy to sync locale/TZ/geo and maybe WebRTC public IP
+        geoip = self._geoip_lookup(proxy)
+        public_ip = (geoip or {}).get("ip")
 
         # 3) Generate User-Agent
         ua = self.generate_user_agent(os_plat, browser_ver)
@@ -355,14 +364,36 @@ class DolphinAnty:
         audio_mode = "real"
         audio_payload = {"mode": audio_mode}
         
-        # 10) Timezone & Geolocation based on locale (kept simple and deterministic per region)
+        # 10) Timezone & Geolocation based on locale or GeoIP
+        # Determine locale if not provided, from geoip country
+        ip_cc = (geoip or {}).get("country_code")
+        if not locale or locale.strip() == "":
+            if ip_cc == "BY":
+                locale = "ru_BY"
+            elif ip_cc == "IN":
+                locale = "en_IN"
+            elif ip_cc == "US":
+                locale = "en_US"
+            else:
+                locale = "ru_BY"
         normalized_locale = (locale or "ru_BY").strip()
         lang_value_dash = normalized_locale.replace("_", "-")
 
         tz_payload: Dict[str, Any]
         geo_payload: Dict[str, Any]
 
-        if normalized_locale == "en_IN":
+        if (geoip and geoip.get("timezone") and geoip.get("latitude") and geoip.get("longitude")):
+            tz_payload = {"mode": "manual", "value": geoip.get("timezone")}
+            try:
+                lat = float(geoip.get("latitude"))
+                lon = float(geoip.get("longitude"))
+            except Exception:
+                lat, lon = None, None
+            if lat is not None and lon is not None:
+                geo_payload = {"mode": "manual", "latitude": lat, "longitude": lon}
+            else:
+                geo_payload = {"mode": "off"}
+        elif normalized_locale == "en_IN":
             # India
             tz_payload = {"mode": "manual", "value": "Asia/Kolkata"}
             # Randomly pick between Delhi and Mumbai for simple variety
@@ -411,7 +442,7 @@ class DolphinAnty:
             "tags":            tags,
             "platform":        os_plat,
             "platformVersion": plat_ver,
-            "mainWebsite":     "instagram",
+            "mainWebsite":     random.choice(["instagram","google","facebook","tiktok","twitter","youtube"]),
             "browserType":     "anty",
 
             "useragent": {
@@ -420,7 +451,8 @@ class DolphinAnty:
             },
 
             "webrtc": {
-                "mode":     webrtc_mode
+                "mode":     ("manual" if (strict_webrtc and public_ip) else webrtc_mode),
+                **({"ipAddress": public_ip} if (strict_webrtc and public_ip) else {})
             },
 
             "canvas": {
@@ -459,7 +491,7 @@ class DolphinAnty:
             },
 
             "mediaDevices": {"mode":"real"},
-            "doNotTrack":   0,
+            "doNotTrack":   (0 if random.random() < 0.85 else 1),
 
             "macAddress":   mac_payload,
             "deviceName":   dev_payload,
@@ -1057,7 +1089,7 @@ class DolphinAnty:
             log_action(f"[WARN] Error checking for human verification dialog: {str(e)}", "warning")
             return False
 
-    async def _apply_stealth_patches(self, context, accept_language: Optional[str] = None):
+    async def _apply_stealth_patches(self, context, accept_language: Optional[str] = None, profile_id: Optional[Union[str,int]] = None):
         """Apply additional anti-detection patches at context level."""
         try:
             # Accept-Language aligned with RU/EN mix by default (can be adjusted)
@@ -1067,6 +1099,35 @@ class DolphinAnty:
                 await context.set_extra_http_headers({"Accept-Language": (accept_language or fallback_al)})
             except Exception:
                 pass
+            # Try to fetch cpu/memory from profile for JS overrides
+            cpu_js = None
+            mem_js = None
+            if profile_id is not None:
+                try:
+                    prof = self.get_profile(profile_id)
+                    data = prof.get('data', prof)
+                    cpu_v = None
+                    mem_v = None
+                    try:
+                        cpu_obj = data.get('cpu') or (data.get('browserProfile') or {}).get('cpu')
+                        if isinstance(cpu_obj, dict):
+                            cpu_v = cpu_obj.get('value')
+                    except Exception:
+                        cpu_v = None
+                    try:
+                        mem_obj = data.get('memory') or (data.get('browserProfile') or {}).get('memory')
+                        if isinstance(mem_obj, dict):
+                            mem_v = mem_obj.get('value')
+                    except Exception:
+                        mem_v = None
+                    if isinstance(cpu_v, int) and cpu_v > 0:
+                        cpu_js = cpu_v
+                    if isinstance(mem_v, int) and mem_v > 0:
+                        # navigator.deviceMemory usually small ints (e.g., 4/8/16)
+                        mem_candidates = [2,4,8,16,32]
+                        mem_js = mem_v if mem_v in mem_candidates else 8
+                except Exception:
+                    pass
             # Mask common automation flags
             stealth_script = r"""
                 // navigator.webdriver
@@ -1098,6 +1159,14 @@ class DolphinAnty:
                   };
                 } catch (e) {}
             """
+            # Inject hardwareConcurrency/deviceMemory overrides if available
+            if cpu_js is not None or mem_js is not None:
+                overrides = ""
+                if cpu_js is not None:
+                    overrides += f"Object.defineProperty(navigator,'hardwareConcurrency',{{get:()=> {cpu_js}}});\n"
+                if mem_js is not None:
+                    overrides += f"Object.defineProperty(navigator,'deviceMemory',{{get:()=> {mem_js}}});\n"
+                stealth_script = overrides + stealth_script
             try:
                 await context.add_init_script(stealth_script)
             except Exception:
@@ -1230,7 +1299,7 @@ class DolphinAnty:
                     
                     # Apply stealth patches to reduce automation detection
                     resolved_al = self._resolve_accept_language(profile_id)
-                    await self._apply_stealth_patches(context, accept_language=resolved_al)
+                    await self._apply_stealth_patches(context, accept_language=resolved_al, profile_id=profile_id)
                     
                     # Создаем новую страницу
                     page = await context.new_page()
@@ -2186,5 +2255,74 @@ class DolphinAnty:
             if not candidates:
                 return None
             return random.choice(candidates)
+        except Exception:
+            return None
+
+    def _geoip_lookup(self, proxy: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Resolve proxy host to public geo-IP info. Returns dict with keys:
+        country_code, region, city, latitude, longitude, timezone, ip.
+        Caches results per host for the life of this instance.
+        """
+        try:
+            host = (proxy or {}).get("host")
+            if not host:
+                return None
+            if host in self._geoip_cache:
+                return self._geoip_cache[host]
+
+            # Resolve host to IP if hostname
+            ip_str = None
+            try:
+                ipaddress.ip_address(host)
+                ip_str = host
+            except ValueError:
+                try:
+                    ip_str = socket.gethostbyname(host)
+                except Exception:
+                    ip_str = None
+
+            if not ip_str:
+                return None
+
+            # Try ipapi.co
+            info = None
+            try:
+                r = requests.get(f"https://ipapi.co/{ip_str}/json/", timeout=5)
+                if r.status_code == 200:
+                    j = r.json()
+                    info = {
+                        "ip": j.get("ip", ip_str),
+                        "country_code": (j.get("country") or j.get("country_code") or "").upper(),
+                        "region": j.get("region"),
+                        "city": j.get("city"),
+                        "latitude": j.get("latitude"),
+                        "longitude": j.get("longitude"),
+                        "timezone": j.get("timezone"),
+                    }
+            except Exception:
+                info = None
+
+            # Fallback ipwho.is
+            if not info:
+                try:
+                    r = requests.get(f"https://ipwho.is/{ip_str}", timeout=5)
+                    if r.status_code == 200:
+                        j = r.json()
+                        if j.get("success"):
+                            info = {
+                                "ip": j.get("ip", ip_str),
+                                "country_code": (j.get("country_code") or "").upper(),
+                                "region": j.get("region"),
+                                "city": j.get("city"),
+                                "latitude": j.get("latitude"),
+                                "longitude": j.get("longitude"),
+                                "timezone": j.get("timezone"),
+                            }
+                except Exception:
+                    info = None
+
+            if info:
+                self._geoip_cache[host] = info
+            return info
         except Exception:
             return None
