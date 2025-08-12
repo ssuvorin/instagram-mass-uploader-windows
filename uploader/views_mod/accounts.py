@@ -129,18 +129,31 @@ def create_account(request):
             assigned_proxy = None
             dolphin_available = False
 
-            # Step 1: Assign an available proxy
+            # Step 1: Assign an available proxy according to selection
             try:
-                available_proxies = Proxy.objects.filter(is_active=True, assigned_account__isnull=True)
-                if available_proxies.exists():
-                    # Assign a random available proxy
-                    assigned_proxy = available_proxies.order_by('?').first()
+                proxy_selection = request.POST.get('proxy_selection', 'locale_only')
+                selected_locale = request.POST.get('profile_locale', 'ru_BY')
+                if selected_locale != 'ru_BY':
+                    selected_locale = 'ru_BY'
+
+                base_qs = Proxy.objects.filter(is_active=True, assigned_account__isnull=True)
+                if proxy_selection == 'locale_only':
+                    # Prefer proxies matching BY
+                    by_qs = base_qs.filter(
+                        models.Q(country__iexact='BY') | models.Q(country__icontains='Belarus') | models.Q(city__icontains='Belarus')
+                    )
+                    candidate_qs = by_qs if by_qs.exists() else base_qs
+                else:
+                    candidate_qs = base_qs
+
+                if candidate_qs.exists():
+                    assigned_proxy = candidate_qs.order_by('?').first()
                     account.proxy = assigned_proxy
                     account.current_proxy = assigned_proxy
                     account.save(update_fields=['proxy', 'current_proxy'])
                     assigned_proxy.assigned_account = account
                     assigned_proxy.save(update_fields=['assigned_account'])
-                    logger.info(f"[CREATE ACCOUNT] Assigned proxy {assigned_proxy} to account {account.username}")
+                    logger.info(f"[CREATE ACCOUNT] Assigned proxy {assigned_proxy} to account {account.username} (selection={proxy_selection})")
                 else:
                     logger.warning(f"[CREATE ACCOUNT] No available proxies found for account {account.username}. Skipping proxy assignment.")
                     messages.warning(request, f'Account {account.username} created, but no available proxy could be assigned. Please assign manually.')
@@ -178,11 +191,10 @@ def create_account(request):
                         proxy_data = assigned_proxy.to_dict()
                         logger.info(f"[CREATE ACCOUNT] Using proxy for profile: {proxy_data.get('host')}:{proxy_data.get('port')}")
 
-                        # Using updated create_profile method with proper fingerprint generation
-                        # Locale: try to read from POST (if present on the form), else default
-                        selected_locale = request.POST.get('profile_locale', 'ru_RU')
-                        if selected_locale not in {'en_US','en_IN','ru_RU'}:
-                            selected_locale = 'ru_RU'
+                        # Using updated create_profile with locale (ru_BY only)
+                        selected_locale = request.POST.get('profile_locale', 'ru_BY')
+                        if selected_locale != 'ru_BY':
+                            selected_locale = 'ru_BY'
                         response = dolphin.create_profile(
                             name=profile_name,
                             proxy=proxy_data,

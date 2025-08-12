@@ -126,9 +126,17 @@
                             </button>
                             {% else %}
                             {% if account.proxy %}
-                            <a href="{% url 'create_dolphin_profile' account_id=account.id %}" class="btn btn-sm btn-primary">
-                                <i class="bi bi-plus-circle"></i> Create Profile
-                            </a>
+                            <form method="post" action="{% url 'create_dolphin_profile' account_id=account.id %}" class="d-flex align-items-center gap-2">
+                                {% csrf_token %}
+                                <input type="hidden" name="profile_locale" value="ru_BY" />
+                                <select name="proxy_selection" class="form-select form-select-sm" style="width:auto;">
+                                    <option value="locale_only" selected>Прокси: BY</option>
+                                    <option value="any">Прокси: любые</option>
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-plus-circle"></i> Create Profile
+                                </button>
+                            </form>
                             {% else %}
                             <a href="{% url 'change_account_proxy' account_id=account.id %}" class="btn btn-sm btn-warning">
                                 <i class="bi bi-shield-lock"></i> Assign Proxy First

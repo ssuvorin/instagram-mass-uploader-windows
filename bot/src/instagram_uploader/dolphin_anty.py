@@ -577,6 +577,31 @@ class DolphinAnty:
         locale = account_data.get('locale') or inferred_locale or 'ru_BY'
         if locale not in {'ru_BY'}:
             locale = 'ru_BY'
+
+        # Optional: select proxy according to locale selection policy if not provided
+        try:
+            proxy_selection = (account_data.get('proxy_selection') or 'locale_only') if isinstance(account_data, dict) else 'locale_only'
+            proxy_pool = account_data.get('proxy_pool') if isinstance(account_data, dict) else None
+
+            # If proxy_data explicitly provided, optionally enforce strict locale match
+            strict_flag = bool(account_data.get('proxy_locale_strict')) if isinstance(account_data, dict) else False
+            if proxy_data and strict_flag:
+                target_country = self._country_from_locale(locale) or 'BY'
+                provided_country = self._extract_country_from_proxy(proxy_data)
+                if provided_country and provided_country != target_country:
+                    logger.error(f"[FAIL] Provided proxy country {provided_country} does not match required locale country {target_country}")
+                    return None
+
+            # If no proxy provided, try to select from pool
+            if not proxy_data and isinstance(proxy_pool, list) and proxy_pool:
+                selected = self._select_proxy_for_locale(locale, proxy_pool, mode=str(proxy_selection))
+                if not selected:
+                    logger.error(f"[FAIL] No suitable proxy found for selection mode '{proxy_selection}' and locale '{locale}'")
+                    return None
+                proxy_data = selected
+        except Exception as e:
+            logger.warning(f"[WARN] Proxy selection step failed, proceeding with given proxy: {str(e)}")
+
         response = self.create_profile(name=name, proxy=proxy_data, tags=tags, locale=locale)
         
         # Extract profile ID from response
@@ -2089,3 +2114,77 @@ class DolphinAnty:
             return f"{base},{primary};q=0.9,en-US;q=0.8,en;q=0.7"
         except Exception:
             return 'ru-BY,ru;q=0.9,en-US;q=0.8,en;q=0.7'
+
+    # ===== Proxy selection helpers =====
+    def _country_from_locale(self, locale: Optional[str]) -> Optional[str]:
+        """Extract ISO2 country code from locale string like 'ru_BY' or 'en-US'."""
+        try:
+            if not locale:
+                return None
+            norm = locale.replace('_', '-')
+            parts = norm.split('-')
+            if len(parts) >= 2 and len(parts[1]) == 2:
+                return parts[1].upper()
+            # Common explicit mappings
+            mapping = {
+                'ru_by': 'BY', 'ru-by': 'BY', 'ru_ru': 'RU', 'ru-ru': 'RU',
+                'en_us': 'US', 'en-us': 'US', 'en_in': 'IN', 'en-in': 'IN',
+            }
+            key = norm.lower()
+            return mapping.get(key)
+        except Exception:
+            return None
+
+    def _extract_country_from_proxy(self, proxy: Dict[str, Any]) -> Optional[str]:
+        """Best-effort extraction of country code from proxy metadata."""
+        try:
+            for key in ['country', 'countryCode', 'cc', 'iso', 'iso2']:
+                val = proxy.get(key)
+                if isinstance(val, str) and len(val.strip()) >= 2:
+                    return val.strip().upper()[:2]
+            # Try region text
+            region = (proxy.get('region') or proxy.get('location') or '')
+            if isinstance(region, str) and 'belarus' in region.lower():
+                return 'BY'
+        except Exception:
+            pass
+        return None
+
+    def _is_proxy_available(self, proxy: Dict[str, Any]) -> bool:
+        """Heuristic check if a proxy is marked available/free/active."""
+        try:
+            if isinstance(proxy.get('available'), bool):
+                return proxy['available'] is True
+            status = (proxy.get('status') or proxy.get('state') or '').lower()
+            if status in {'free', 'available', 'idle', 'active', 'alive', 'working'}:
+                return True
+            return True  # default permissive if unknown
+        except Exception:
+            return True
+
+    def _select_proxy_for_locale(self, locale: str, proxy_pool: List[Dict[str, Any]], mode: str = 'locale_only') -> Optional[Dict[str, Any]]:
+        """Select a proxy from pool according to selection mode:
+        - 'locale_only': pick only proxies whose country matches locale
+        - 'any': pick randomly among available proxies
+        Returns a proxy dict or None if not found.
+        """
+        try:
+            candidates: List[Dict[str, Any]] = []
+            pool = [p for p in proxy_pool if isinstance(p, dict)]
+            if not pool:
+                return None
+            if (mode or '').lower() == 'any':
+                candidates = [p for p in pool if self._is_proxy_available(p)] or pool
+            else:
+                target_country = self._country_from_locale(locale) or 'BY'
+                for p in pool:
+                    if not self._is_proxy_available(p):
+                        continue
+                    pc = self._extract_country_from_proxy(p)
+                    if pc == target_country:
+                        candidates.append(p)
+            if not candidates:
+                return None
+            return random.choice(candidates)
+        except Exception:
+            return None

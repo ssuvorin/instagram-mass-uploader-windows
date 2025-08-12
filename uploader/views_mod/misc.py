@@ -732,6 +732,12 @@ def create_dolphin_profile(request, account_id):
         messages.error(request, f'Account {account.username} needs a proxy before creating a Dolphin profile. Please assign a proxy first.')
         return redirect('change_account_proxy', account_id=account.id)
     
+    # Read UI params
+    proxy_selection = request.POST.get('proxy_selection', 'locale_only') if request.method == 'POST' else 'locale_only'
+    selected_locale = request.POST.get('profile_locale', 'ru_BY') if request.method == 'POST' else 'ru_BY'
+    if selected_locale != 'ru_BY':
+        selected_locale = 'ru_BY'
+    
     try:
         logger.info(f"[CREATE PROFILE] Creating Dolphin profile for account {account.username}")
         
@@ -755,6 +761,27 @@ def create_dolphin_profile(request, account_id):
             messages.error(request, "Failed to authenticate with Dolphin Anty API. Check your API token.")
             return redirect('account_detail', account_id=account.id)
         
+        # Optionally reassign proxy to locale-only BY
+        if request.method == 'POST' and proxy_selection == 'locale_only':
+            proxy_country = (account.proxy.country or '').strip() if account.proxy else ''
+            is_by = proxy_country.upper() == 'BY' or 'belarus' in proxy_country.lower()
+            if not is_by:
+                available_proxies = Proxy.objects.filter(is_active=True, assigned_account__isnull=True)
+                by_proxies = available_proxies.filter(
+                    Q(country__iexact='BY') | Q(country__icontains='Belarus') | Q(city__icontains='Belarus')
+                )
+                if by_proxies.exists():
+                    new_proxy = by_proxies.order_by('?').first()
+                    # Assign
+                    account.proxy = new_proxy
+                    account.current_proxy = new_proxy
+                    account.save(update_fields=['proxy', 'current_proxy'])
+                    new_proxy.assigned_account = account
+                    new_proxy.save(update_fields=['assigned_account'])
+                    logger.info(f"[CREATE PROFILE] Reassigned proxy to BY-only {new_proxy} for account {account.username}")
+                else:
+                    messages.warning(request, 'No available BY proxies found; using current proxy.')
+        
         # Create profile name
         random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
         profile_name = f"instagram_{account.username}_{random_suffix}"
@@ -769,7 +796,7 @@ def create_dolphin_profile(request, account_id):
             name=profile_name,
             proxy=proxy_data,
             tags=["instagram", "manual-created"],
-            locale='ru_RU'
+            locale=selected_locale
         )
         
         # Extract profile ID from response
