@@ -179,7 +179,8 @@ class DolphinAnty:
         endpoint: str,
         params: Dict[str, Any] = None,
         data: Any = None,
-        headers: Dict[str, Any] = None
+        headers: Dict[str, Any] = None,
+        json_data: Any = None,
     ) -> Any:
         if endpoint.startswith("http://") or endpoint.startswith("https://"):
             url = endpoint
@@ -197,7 +198,11 @@ class DolphinAnty:
         elif headers and headers.get("Content-Type") == "application/x-www-form-urlencoded":
             resp = requests.request(method, url, params=params, data=data, headers=hdrs)
         else:
-            resp = requests.request(method, url, params=params, json=data, headers=hdrs)
+            # Prefer explicit json_data if provided, fall back to data
+            if json_data is not None:
+                resp = requests.request(method, url, params=params, json=json_data, headers=hdrs)
+            else:
+                resp = requests.request(method, url, params=params, json=data, headers=hdrs)
 
         resp.raise_for_status()
         return resp.json()
@@ -2353,3 +2358,91 @@ class DolphinAnty:
             return info
         except Exception:
             return None
+
+    # --- Cookies API helpers ---
+    def get_cookies(self, profile_id: Union[str, int]) -> List[Dict[str, Any]]:
+        """
+        Retrieve cookies for a browser profile via Remote API.
+        Returns a list of cookie dicts or an empty list on failure.
+        """
+        try:
+            resp = self._make_request(
+                method="get",
+                endpoint=f"/browser_profiles/{profile_id}/cookies",
+            )
+            if isinstance(resp, dict) and "data" in resp:
+                return resp.get("data") or []
+            if isinstance(resp, list):
+                return resp
+            return []
+        except Exception as e:
+            logger.error(f"[FAIL] Failed to fetch cookies for profile {profile_id}: {e}")
+            return []
+
+    def update_cookies(self, profile_id: Union[str, int], cookies: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """PATCH cookies for a profile via Remote API (add/overwrite)."""
+        try:
+            resp = self._make_request(
+                method="patch",
+                endpoint=f"/browser_profiles/{profile_id}/cookies",
+                json_data=cookies,
+                headers={"Content-Type": "application/json"},
+            )
+            return resp if isinstance(resp, dict) else {"success": True}
+        except Exception as e:
+            logger.error(f"[FAIL] Failed to update cookies for profile {profile_id}: {e}")
+            return {"success": False, "error": str(e)}
+
+    def delete_cookies(self, profile_id: Union[str, int]) -> Dict[str, Any]:
+        """DELETE all cookies for a profile via Remote API."""
+        try:
+            resp = self._make_request(
+                method="delete",
+                endpoint=f"/browser_profiles/{profile_id}/cookies",
+            )
+            return resp if isinstance(resp, dict) else {"success": True}
+        except Exception as e:
+            logger.error(f"[FAIL] Failed to delete cookies for profile {profile_id}: {e}")
+            return {"success": False, "error": str(e)}
+
+    def import_cookies_local(
+        self,
+        profile_id: Union[str, int],
+        cookies: List[Dict[str, Any]],
+        transfer: int = 0,
+        cloud_sync_disabled: bool = False,
+        timeout_seconds: int = 20,
+    ) -> Dict[str, Any]:
+        """
+        Import cookies into a profile using the Local API endpoint:
+        POST {local_api_base}/cookies/import
+        Body: {"cookies": [...], "profileId": id, "transfer": 0, "cloudSyncDisabled": false}
+        """
+        url = f"{self.local_api_base}/cookies/import"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        payload = {
+            "cookies": cookies or [],
+            "profileId": profile_id,
+            "transfer": transfer,
+            "cloudSyncDisabled": bool(cloud_sync_disabled),
+        }
+        try:
+            logger.info(f"[TOOL] Importing {len(cookies or [])} cookies to profile {profile_id} via Local API")
+            resp = requests.post(url, headers=headers, json=payload, timeout=timeout_seconds)
+            if resp.status_code == 200:
+                try:
+                    data = resp.json()
+                except Exception:
+                    data = {"success": True}
+                logger.info(f"[OK] Cookies imported into profile {profile_id}")
+                return data if isinstance(data, dict) else {"success": True}
+            else:
+                logger.error(f"[FAIL] Local import cookies failed (HTTP {resp.status_code}): {resp.text[:200]}")
+                return {"success": False, "error": f"HTTP {resp.status_code}", "details": resp.text}
+        except Exception as e:
+            logger.error(f"[FAIL] Exception during local cookies import: {e}")
+            return {"success": False, "error": str(e)}

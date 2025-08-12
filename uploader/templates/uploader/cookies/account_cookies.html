@@ -12,8 +12,8 @@
         <a href="{% url 'cookie_dashboard' %}" class="btn btn-outline-secondary me-2">
             <i class="bi bi-arrow-left"></i> Back to Dashboard
         </a>
-        <a href="{% url 'create_cookie_robot_task' %}?account={{ account.id }}" class="btn btn-primary">
-            <i class="bi bi-robot"></i> Run Cookie Robot
+        <a href="{% url 'bulk_cookie_robot' %}" class="btn btn-primary">
+            <i class="bi bi-collection"></i> Bulk Cookie Robot
         </a>
     </div>
 </div>
@@ -152,7 +152,7 @@
                 {% else %}
                     <div class="alert alert-warning">
                         <i class="bi bi-exclamation-triangle"></i> No cookies found for this account.
-                        <a href="{% url 'create_cookie_robot_task' %}?account={{ account.id }}" class="alert-link">Run Cookie Robot</a> to collect cookies.
+                        Use <a href="{% url 'bulk_cookie_robot' %}" class="alert-link">Bulk Cookie Robot</a> to collect cookies.
                     </div>
                 {% endif %}
             </div>

@@ -185,8 +185,8 @@ class AsyncBulkLoginCoordinator:
                 # Pre-navigation warmup before login
                 # Step 1: connectivity check (generic internet)
                 try:
-                    await account_logger.log('INFO', "🌐 [CHECK] Connectivity test: example.com")
-                    await page.goto("https://example.com", wait_until="domcontentloaded", timeout=30000)
+                    await account_logger.log('INFO', "🌐 [CHECK] Connectivity test: google.com")
+                    await page.goto("https://google.com", wait_until="domcontentloaded", timeout=30000)
                 except Exception as e:
                     await account_logger.log('ERROR', f"[FAIL] Connectivity to internet failed: {str(e)}")
                     # Try to validate and mark proxy inactive if it's down

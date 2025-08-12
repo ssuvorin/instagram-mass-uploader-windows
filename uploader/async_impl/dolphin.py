@@ -201,6 +201,31 @@ async def run_dolphin_browser_async(account_details: Dict, videos: List, video_f
             return ("BROWSER_ERROR", 0, 1)
     
     finally:
+        # Persist latest cookies in DB regardless of outcome
+        try:
+            if dolphin and dolphin_profile_id:
+                from asgiref.sync import sync_to_async
+                # Prefer Remote API cookies; fallback to page context if needed
+                get_cookies_async = sync_to_async(dolphin.get_cookies)
+                cookies_list = await get_cookies_async(dolphin_profile_id)
+                if (not cookies_list) and page:
+                    try:
+                        cookies_list = await page.context.cookies()
+                    except Exception:
+                        cookies_list = []
+                if cookies_list:
+                    from uploader.models import InstagramAccount, InstagramCookies
+                    @sync_to_async
+                    def _save():
+                        acc = InstagramAccount.objects.get(username=username)
+                        InstagramCookies.objects.update_or_create(
+                            account=acc,
+                            defaults={'cookies_data': cookies_list, 'is_valid': True}
+                        )
+                    await _save()
+                    log_info(f"[COOKIES] [ASYNC] Saved {len(cookies_list)} cookies for {username}")
+        except Exception as cookie_err:
+            log_warning(f"[COOKIES] [ASYNC] Failed to persist cookies: {cookie_err}")
         # Cleanup browser session
         if preserve_state:
             log_info("[ASYNC_CLEANUP] Skipping browser cleanup to preserve upload state (no videos were uploaded)")

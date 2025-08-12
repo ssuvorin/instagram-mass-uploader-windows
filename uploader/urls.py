@@ -60,7 +60,6 @@ urlpatterns = [
     # Cookies Dashboard
     path('cookies/', views.cookie_dashboard, name='cookie_dashboard'),
     path('cookies/tasks/', views.cookie_task_list, name='cookie_task_list'),
-    path('cookies/tasks/create/', views.create_cookie_robot_task, name='create_cookie_robot_task'),
     path('cookies/tasks/<int:task_id>/', views.cookie_task_detail, name='cookie_task_detail'),
     path('cookies/tasks/<int:task_id>/start/', views.start_cookie_task, name='start_cookie_task'),
     path('cookies/tasks/<int:task_id>/stop/', views.stop_cookie_task, name='stop_cookie_task'),

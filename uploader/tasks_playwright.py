@@ -97,6 +97,31 @@ def run_bot_with_playwright(account, video_files, task_id):
         if stderr_text:
             logger.error(f"Errors:\n{stderr_text}")
         
+        # Try to persist latest cookies from Dolphin API after run (if profile exists)
+        try:
+            profile_id = account.dolphin_profile_id
+            api_key = os.environ.get("DOLPHIN_API_TOKEN", "")
+            if profile_id and api_key:
+                # Get Dolphin API host from environment (critical for Docker Windows deployment)
+                dolphin_api_host = os.environ.get("DOLPHIN_API_HOST", "http://localhost:3001/v1.0")
+                if not dolphin_api_host.endswith("/v1.0"):
+                    dolphin_api_host = dolphin_api_host.rstrip("/") + "/v1.0"
+                dolphin = DolphinAnty(api_key=api_key, local_api_base=dolphin_api_host)
+                cookies_list = dolphin.get_cookies(profile_id) or []
+                # Fallback: look for a cookies json path pattern in bot logs (not ideal), otherwise skip
+                if cookies_list:
+                    from uploader.models import InstagramCookies
+                    InstagramCookies.objects.update_or_create(
+                        account=account,
+                        defaults={
+                            'cookies_data': cookies_list,
+                            'is_valid': True,
+                        }
+                    )
+                    logger.info(f"[COOKIES] Saved {len(cookies_list)} cookies from Dolphin API for account {account.username}")
+        except Exception as ce:
+            logger.warning(f"[COOKIES] Failed to save cookies post-run: {ce}")
+
         # Clean up temporary files
         for file_path in temp_files:
             if os.path.exists(file_path):
@@ -286,6 +311,29 @@ def run_cookie_robot_task(task_id):
                 error_json = json.dumps(error_details, indent=2)
                 task.log += f"Full error details:\n{error_json}\n"
                 logger.error(f"Full API error: {error_json}")
+        
+        # Save cookies from Dolphin profile after robot execution
+        try:
+            api_key = os.environ.get("DOLPHIN_API_TOKEN", "")
+            if api_key and account.dolphin_profile_id:
+                # Use configured local API base for client init
+                dolphin_api_host = os.environ.get("DOLPHIN_API_HOST", "http://localhost:3001/v1.0")
+                if not dolphin_api_host.endswith("/v1.0"):
+                    dolphin_api_host = dolphin_api_host.rstrip("/") + "/v1.0"
+                dolphin_client = DolphinAnty(api_key=api_key, local_api_base=dolphin_api_host)
+                cookies_list = dolphin_client.get_cookies(account.dolphin_profile_id) or []
+                if cookies_list:
+                    from uploader.models import InstagramCookies
+                    InstagramCookies.objects.update_or_create(
+                        account=account,
+                        defaults={
+                            'cookies_data': cookies_list,
+                            'is_valid': True,
+                        }
+                    )
+                    logger.info(f"[COOKIES] Persisted {len(cookies_list)} cookies after robot run for {account.username}")
+        except Exception as ce:
+            logger.warning(f"[COOKIES] Could not persist cookies after robot run: {ce}")
         
         task.save()
         

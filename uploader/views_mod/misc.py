@@ -731,6 +731,35 @@ def bulk_cookie_robot(request):
     # GET request - show form
     # Get accounts with Dolphin profiles - sort by creation date descending (newest first)
     accounts = InstagramAccount.objects.filter(dolphin_profile_id__isnull=False).order_by('-created_at')
+    # Enrich accounts with proxy/cookies summaries for UI
+    try:
+        for acc in accounts:
+            # Proxy flags
+            proxy = getattr(acc, 'proxy', None)
+            acc.ui_has_proxy = bool(proxy)
+            acc.ui_proxy_active = bool(getattr(proxy, 'is_active', False))
+            acc.ui_proxy_status = getattr(proxy, 'status', '') or ''
+            # Cookies summary
+            cookies_obj = getattr(acc, 'cookies', None)
+            cookies_list = list(getattr(cookies_obj, 'cookies_data', []) or [])
+            domain_set = set()
+            instagram_session_active = False
+            for c in cookies_list:
+                try:
+                    dom = str(c.get('domain') or '').lstrip('.')
+                    if dom:
+                        domain_set.add(dom)
+                    if dom.endswith('instagram.com') and (c.get('name') or '').lower() == 'sessionid':
+                        val = c.get('value') or ''
+                        if isinstance(val, str) and len(val) >= 10:
+                            instagram_session_active = True
+                except Exception:
+                    continue
+            acc.ui_cookie_domains = len(domain_set)
+            acc.ui_cookie_total = len(cookies_list)
+            acc.ui_instagram_session = instagram_session_active
+    except Exception as _enrich_err:
+        logger.warning(f"[BULK COOKIE ROBOT] Could not enrich accounts with cookie summaries: {_enrich_err}")
     
     # Default URLs for the form
     default_urls = [

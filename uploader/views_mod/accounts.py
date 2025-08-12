@@ -44,11 +44,83 @@ def account_detail(request, account_id):
         id=account_id,
     )
     tasks = account.tasks.order_by('-created_at')
+
+    # Build compact cookie summary for UI
+    def _build_cookie_summary() -> dict:
+        try:
+            cookies_obj = getattr(account, 'cookies', None)
+            cookies_list = list(getattr(cookies_obj, 'cookies_data', []) or [])
+            total = len(cookies_list)
+            # Aggregate by normalized domain
+            from collections import Counter, defaultdict
+            domain_counter: Counter = Counter()
+            domain_to_names: dict = defaultdict(set)
+            for c in cookies_list:
+                try:
+                    dom = str(c.get('domain') or '').strip()
+                    if not dom:
+                        continue
+                    dom = dom.lstrip('.')
+                    domain_counter[dom] += 1
+                    nm = str(c.get('name') or '')
+                    if nm:
+                        domain_to_names[dom].add(nm)
+                except Exception:
+                    continue
+            unique_domains = len(domain_counter)
+            # Top domains compact list
+            top_pairs = domain_counter.most_common(12)
+            domains_compact = [
+                {
+                    'domain': d,
+                    'count': n
+                } for d, n in top_pairs
+            ]
+            # Instagram session detection
+            insta_names_present = set()
+            instagram_session_active = False
+            important_names = {
+                'sessionid', 'csrftoken', 'ds_user_id', 'Authorization',
+                'IG-U-DS-USER-ID', 'IG-INTENDED-USER-ID', 'IG-U-RUR', 'rur',
+                'mid', 'X-MID', 'X-IG-WWW-Claim'
+            }
+            for c in cookies_list:
+                dom = str(c.get('domain') or '').lstrip('.')
+                if dom.endswith('instagram.com'):
+                    nm = str(c.get('name') or '')
+                    if nm:
+                        insta_names_present.add(nm)
+                    if nm == 'sessionid':
+                        val = (c.get('value') or '')
+                        if isinstance(val, str) and len(val) >= 10:
+                            instagram_session_active = True
+            return {
+                'total_cookies': total,
+                'unique_domains': unique_domains,
+                'domains_compact': domains_compact,
+                'instagram_cookie_names': sorted(list(important_names.intersection(insta_names_present))),
+                'instagram_session_active': instagram_session_active,
+                'is_valid': bool(getattr(cookies_obj, 'is_valid', True)),
+                'last_updated': getattr(cookies_obj, 'last_updated', None),
+            }
+        except Exception:
+            return {
+                'total_cookies': 0,
+                'unique_domains': 0,
+                'domains_compact': [],
+                'instagram_cookie_names': [],
+                'instagram_session_active': False,
+                'is_valid': False,
+                'last_updated': None,
+            }
+
+    cookie_summary = _build_cookie_summary()
     
     context = {
         'account': account,
         'tasks': tasks,
-        'active_tab': 'accounts'
+        'active_tab': 'accounts',
+        'cookie_summary': cookie_summary,
     }
     return render(request, 'uploader/account_detail.html', context)
 
@@ -369,7 +441,21 @@ def import_accounts(request):
             try:
                 # Parse line
                 logger.info(f"[ACCOUNT {line_num}/{total_lines}] Processing line {line_num}")
-                parts = line.strip().split(':')
+                raw_line = line.strip()
+                # Support extended format: username:password||device_info|cookies
+                cookies_raw = None
+                if '||' in raw_line:
+                    auth_part, rest = raw_line.split('||', 1)
+                    parts = auth_part.split(':')
+                    # extract cookies part after first '|'
+                    try:
+                        rest_parts = rest.split('|')
+                        if len(rest_parts) > 1:
+                            cookies_raw = '|'.join(rest_parts[1:]).strip() or None
+                    except Exception:
+                        cookies_raw = None
+                else:
+                    parts = raw_line.split(':')
                  
                 if len(parts) < 2:
                     logger.warning(f"[ERROR] Line {line_num}: Invalid format. Expected at least username:password")
@@ -386,6 +472,7 @@ def import_accounts(request):
                 tfa_secret = None
                 email_username = None
                 email_password = None
+                parsed_cookies_list = []
                  
                 # Determine account type based on number of parts
                 if len(parts) == 2:
@@ -427,8 +514,31 @@ def import_accounts(request):
                     import re
                     tfa_secret = re.sub(r'\s+', '', parts[4])  # Remove all whitespace from 2FA key
                     logger.info(f"[INFO] Account {username} identified as TFA account with extended format")
-                 
-                 
+ 
+                # If cookies string provided, convert raw string of 'name=value; name2=value...' to list of dicts
+                if cookies_raw:
+                    try:
+                        logger.info(f"[COOKIES] Raw cookies string detected for {username} (length={len(cookies_raw)})")
+                        cookie_pairs = [c.strip() for c in cookies_raw.split(';') if c.strip()]
+                        for pair in cookie_pairs:
+                            if '=' not in pair:
+                                continue
+                            name, value = pair.split('=', 1)
+                            # Default cookie skeleton for Instagram domain
+                            parsed_cookies_list.append({
+                                'domain': '.instagram.com',
+                                'name': name.strip(),
+                                'value': value.strip(),
+                                'path': '/',
+                                'httpOnly': False,
+                                'secure': True,
+                                'session': True,
+                                'sameSite': 'no_restriction',
+                            })
+                    except Exception as ce:
+                        logger.warning(f"[COOKIES] Failed to parse raw cookies for {username}: {ce}")
+                        parsed_cookies_list = []
+
                 # Decide proxy assignment strategy
                 logger.info(f"[STEP 4/5] Deciding proxy for account: {username}")
                 assigned_proxy = None
@@ -485,7 +595,22 @@ def import_accounts(request):
                 else:
                     logger.info(f"[SUCCESS] Updated existing account: {username}")
                     updated_count += 1
-                     
+                 
+                # If cookies were parsed, save/update InstagramCookies record
+                try:
+                    if parsed_cookies_list:
+                        from uploader.models import InstagramCookies
+                        InstagramCookies.objects.update_or_create(
+                            account=account,
+                            defaults={
+                                'cookies_data': parsed_cookies_list,
+                                'is_valid': True,
+                            }
+                        )
+                        logger.info(f"[COOKIES] Saved {len(parsed_cookies_list)} cookies for {username}")
+                except Exception as e:
+                    logger.warning(f"[COOKIES] Failed to save cookies for {username}: {e}")
+
                 # Update proxy assignment only if we assigned a new proxy from pool
                 if assigned_proxy and (not existing_map.get(username) or not (existing_map[username].proxy or existing_map[username].current_proxy)):
                     assigned_proxy.assigned_account = account
@@ -531,12 +656,24 @@ def import_accounts(request):
                             profile_id = response.get("browserProfileId")
                             if not profile_id and isinstance(response.get("data"), dict):
                                 profile_id = response["data"].get("id")
-                                 
+                             
                         if profile_id:
                             account.dolphin_profile_id = profile_id
                             account.save(update_fields=['dolphin_profile_id'])
                             dolphin_created_count += 1
                             logger.info(f"[SUCCESS] Created Dolphin profile {profile_id} for account {username}")
+
+                            # Import cookies into the newly created profile if we have them
+                            try:
+                                if parsed_cookies_list:
+                                    # Prefer Local API import; if not available (free plan), fall back to Remote PATCH
+                                    imp = dolphin.import_cookies_local(profile_id, parsed_cookies_list)
+                                    if not (isinstance(imp, dict) and imp.get('success')):
+                                        logger.info(f"[DOLPHIN] Local import failed or unsupported, trying Remote PATCH for {username}")
+                                        dolphin.update_cookies(profile_id, parsed_cookies_list)
+                                    logger.info(f"[COOKIES] Imported cookies into Dolphin profile {profile_id} for {username}")
+                            except Exception as ice:
+                                logger.warning(f"[COOKIES] Failed to import cookies into profile {profile_id} for {username}: {ice}")
                         else:
                             error_message = response.get("error", "Unknown error")
                             detailed_error = ""

@@ -118,8 +118,8 @@
                         
                         <div class="btn-group">
                             {% if account.dolphin_profile_id %}
-                            <a href="{% url 'create_cookie_robot_task' %}?account={{ account.id }}" class="btn btn-sm btn-success">
-                                <i class="bi bi-browser-chrome"></i> Test Profile
+                            <a href="{% url 'bulk_cookie_robot' %}" class="btn btn-sm btn-success">
+                                <i class="bi bi-browser-chrome"></i> Cookie Robot (async)
                             </a>
                             <button type="button" class="btn btn-sm btn-outline-danger" disabled title="Profile reset not implemented yet">
                                 <i class="bi bi-arrow-clockwise"></i> Reset Profile
@@ -202,14 +202,32 @@
                         </div>
                         <div>
                             <h6 class="alert-heading">{% if account.cookies.is_valid %}Valid Cookies{% else %}Invalid Cookies{% endif %}</h6>
+                            <p class="mb-1 small text-muted">Last update: {{ cookie_summary.last_updated }}</p>
                             <p class="mb-0">
-                                {% if account.cookies.is_valid %}
-                                Cookies are valid and were last updated on {{ account.cookies.last_updated }}.
+                                Total: <strong>{{ cookie_summary.total_cookies }}</strong> • Domains: <strong>{{ cookie_summary.unique_domains }}</strong>
+                                {% if cookie_summary.instagram_session_active %}
+                                <span class="badge bg-success ms-2">Instagram session active</span>
                                 {% else %}
-                                Cookies are invalid or expired. Please warm up the account to refresh the cookies.
+                                <span class="badge bg-secondary ms-2">No active Instagram session</span>
+                                {% endif %}
+                                {% if cookie_summary.instagram_cookie_names and cookie_summary.instagram_cookie_names|length > 0 %}
+                                <div class="small mt-1">IG keys: {{ cookie_summary.instagram_cookie_names|join:', ' }}</div>
                                 {% endif %}
                             </p>
                         </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="text-muted mb-2">Top domains</div>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for item in cookie_summary.domains_compact %}
+                        <span class="badge bg-light text-dark border">
+                            {{ item.domain }} <span class="text-muted">×{{ item.count }}</span>
+                        </span>
+                        {% empty %}
+                        <span class="text-muted">No cookies stored</span>
+                        {% endfor %}
                     </div>
                 </div>
                 {% else %}
