@@ -6,6 +6,18 @@ class InstagramSelectors:
     
     # Upload button selectors - SEMANTIC APPROACH
     UPLOAD_BUTTON = [
+        # [TARGET] ПРИОРИТЕТ 0: Родительские элементы (самые устойчивые, RU/EN)
+        'a[role="link"]:has(svg[aria-label*="Новая публикация"])',
+        'a[role="link"]:has(span:has-text("Создать"))',
+        'a[role="link"]:has(svg[aria-label*="New post"])',
+        'a[role="link"]:has(span:has-text("Create"))',
+        'button:has(svg[aria-label*="Новая публикация"])',
+        'button:has(svg[aria-label*="New post"])',
+        'div[role="button"]:has(svg[aria-label*="Новая публикация"])',
+        'div[role="button"]:has(svg[aria-label*="New post"])',
+        'svg:has(title:has-text("Новая публикация"))',
+        'svg:has(title:has-text("New post"))',
+        
         # [TARGET] ПРИОРИТЕТ 1: Семантические атрибуты (самые устойчивые)
         'svg[aria-label="Новая публикация"]',
         'svg[aria-label*="Новая публикация"]',

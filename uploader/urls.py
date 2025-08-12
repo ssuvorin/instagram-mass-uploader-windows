@@ -100,4 +100,15 @@ urlpatterns += [
     path('follow/tasks/<int:task_id>/', views_follow.follow_task_detail, name='follow_task_detail'),
     path('follow/tasks/<int:task_id>/start/', views_follow.follow_task_start, name='follow_task_start'),
     path('follow/tasks/<int:task_id>/logs/', views_follow.follow_task_logs, name='follow_task_logs'),
+
+    # Warmup
+    path('warmup/', __import__('uploader.views_warmup', fromlist=['warmup_task_list']).warmup_task_list, name='warmup_task_list'),
+    path('warmup/create/', __import__('uploader.views_warmup', fromlist=['warmup_task_create']).warmup_task_create, name='warmup_task_create'),
+    path('warmup/<int:task_id>/', __import__('uploader.views_warmup', fromlist=['warmup_task_detail']).warmup_task_detail, name='warmup_task_detail'),
+    path('warmup/<int:task_id>/start/', __import__('uploader.views_warmup', fromlist=['warmup_task_start']).warmup_task_start, name='warmup_task_start'),
+    path('warmup/<int:task_id>/logs/', __import__('uploader.views_warmup', fromlist=['warmup_task_logs']).warmup_task_logs, name='warmup_task_logs'),
+] 
+
+urlpatterns += [
+    # External worker API routes temporarily disabled
 ] 

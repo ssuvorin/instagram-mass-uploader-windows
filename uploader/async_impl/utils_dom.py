@@ -249,7 +249,7 @@ async def wait_for_page_ready_async(page, max_wait_time=30.0) -> bool:
                     continue
                 
                 # Quick check: upload button visibility (one selector)
-                upload_button = await page.query_selector('[aria-label*="New post"], [aria-label*="Create"], [data-testid="new-post-button"]')
+                upload_button = await page.query_selector('[aria-label*="Новая публикация"], [aria-label*="Создать"], [aria-label*="New post"], [aria-label*="Create"], [data-testid="new-post-button"]')
                 if not upload_button or not await upload_button.is_visible():
                     log_info(f"[ASYNC_READY] [WAIT] Upload button not visible")
                     await asyncio.sleep(3)
@@ -270,26 +270,31 @@ async def wait_for_page_ready_async(page, max_wait_time=30.0) -> bool:
         log_info(f"[ASYNC_READY] [FAIL] Error in wait_for_page_ready_async: {str(e)}")
         return False
 
-async def find_element_with_selectors_async(page, selectors, element_name):
-    """Find element using list of selectors - ПОЛНАЯ КОПИЯ из sync"""
+async def find_element_with_selectors_async(page, selectors, element_name: str = "ELEMENT", *, timeout: Optional[float] = None):
+    """Unified finder: returns a single Locator (.first()) for given selectors; RU/EN safe.
+    Accepts legacy third positional arg (element_name) and optional timeout.
+    """
     try:
-        for selector in selectors:
+        for i, selector in enumerate(selectors):
             try:
-                if selector.startswith('//'):
-                    element = await page.query_selector(f"xpath={selector}")
-                else:
-                    element = await page.query_selector(selector)
-                
-                if element and await element.is_visible():
+                formatted = f"xpath={selector}" if selector.startswith('//') else selector
+                loc = page.locator(formatted).first()
+                # Minimal wait for visibility if requested
+                if timeout:
+                    await loc.wait_for(state="visible", timeout=timeout)
+                # Quick soft visibility probe
+                try:
+                    visible = await loc.is_visible()
+                except Exception:
+                    visible = True  # Some elements might not support is_visible; still attempt
+                if visible:
                     log_info(f"[ASYNC_UPLOAD] [OK] Found {element_name} with selector: {selector}")
-                    return element
+                    return loc
             except Exception as e:
                 log_info(f"[ASYNC_UPLOAD] Selector failed: {selector} - {str(e)}")
                 continue
-        
         log_info(f"[ASYNC_UPLOAD] [FAIL] {element_name} not found with any selector")
         return None
-        
     except Exception as e:
         log_info(f"[ASYNC_UPLOAD] [FAIL] Error finding {element_name}: {str(e)}")
         return None
@@ -1992,7 +1997,7 @@ async def verify_page_elements_state_async(page) -> bool:
             return False
         
         # Quick check: upload button
-        upload_button = await page.query_selector('[aria-label*="New post"], [aria-label*="Create"], [data-testid="new-post-button"]')
+        upload_button = await page.query_selector('[aria-label*="Новая публикация"], [aria-label*="Создать"], [aria-label*="New post"], [aria-label*="Create"], [data-testid="new-post-button"]')
         if not upload_button or not await upload_button.is_visible():
             log_info("[ASYNC_UPLOAD] [WARN] Upload button not found or not visible")
             return False

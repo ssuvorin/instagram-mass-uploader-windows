@@ -365,6 +365,23 @@ async def try_broader_upload_detection_async(page) -> bool:
         
         # Enhanced upload indicators with more comprehensive selectors
         upload_indicators = [
+            # High-priority: anchor/button parents for the New Post icon/text (RU/EN)
+            'a[role="link"]:has(svg[aria-label*="Новая публикация"])',
+            'a[role="link"]:has(svg[aria-label*="New post"])',
+            'a[role="link"]:has(span:has-text("Создать"))',
+            'a[role="link"]:has(span:has-text("Create"))',
+            'button:has(svg[aria-label*="Новая публикация"])',
+            'button:has(svg[aria-label*="New post"])',
+            'div[role="button"]:has(svg[aria-label*="Новая публикация"])',
+            'div[role="button"]:has(svg[aria-label*="New post"])',
+            
+            # Direct svg/title fallbacks
+            'svg[aria-label*="Новая публикация"]',
+            'svg[aria-label*="New post"]',
+            'svg:has(title:has-text("Новая публикация"))',
+            'svg:has(title:has-text("New post"))',
+            
+            # Text fallbacks (RU/EN)
             'div:has-text("Создать")',
             'div:has-text("Create")',
             'div:has-text("Публикация")',
@@ -379,6 +396,8 @@ async def try_broader_upload_detection_async(page) -> bool:
             'div[role="button"]:has-text("Create")',
             'div[role="button"]:has-text("Публикация")',
             'div[role="button"]:has-text("Post")',
+            
+            # File input hints
             'input[type="file"]',
             'input[accept*="video"]',
             'input[accept*="image"]',
@@ -396,7 +415,7 @@ async def try_broader_upload_detection_async(page) -> bool:
                     log_info(f"[ASYNC_UPLOAD] [TARGET] Found upload indicator: {indicator}")
                     
                     # ENHANCED: Click behavior for buttons and interactive elements
-                    if any(keyword in indicator.lower() for keyword in ['button', 'div[role="button"]']):
+                    if any(keyword in indicator.lower() for keyword in ['button', 'div[role="button"]', 'a[role="link"]']):
                         log_info(f"[ASYNC_UPLOAD] 🖱️ Clicking interactive element: {indicator}")
                         await click_element_with_behavior_async(page, element, "UPLOAD_INDICATOR")
                         
@@ -429,6 +448,7 @@ async def try_broader_upload_detection_async(page) -> bool:
                 'выбрать файлы', 'select files',
                 'загрузить файл', 'upload file',
                 'создать публикацию', 'create post',
+                'добавить публикацию', 'add post',
                 'добавить фото', 'add photo',
                 'добавить видео', 'add video',
                 'перетащите сюда', 'drag here',

@@ -14,7 +14,7 @@ import tempfile
 import json
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import time
 import logging
 
@@ -40,7 +40,8 @@ class UniqueVideoConfig:
     cut_enabled: bool = True
     contrast_enabled: bool = True
     color_enabled: bool = True
-    noise_enabled: bool = True
+    # Шум резко увеличивает итоговый битрейт при CRF — отключаем по умолчанию
+    noise_enabled: bool = False
     brightness_enabled: bool = True
     crop_enabled: bool = True
     zoompan_enabled: bool = True
@@ -57,6 +58,14 @@ class UniqueVideoConfig:
     
     # Формат видео
     video_format: str = "9:16"  # "1:1", "9:16", "16:9"
+
+    # Параметры кодирования (читаются из окружения при импорте, можно переопределить в рантайме)
+    crf: int = field(default_factory=lambda: int(os.getenv("VIDEO_CRF", "27")))
+    preset: str = field(default_factory=lambda: os.getenv("VIDEO_PRESET", "medium"))
+    audio_bitrate: str = field(default_factory=lambda: os.getenv("VIDEO_AUDIO_BITRATE", "96k"))
+    pix_fmt: str = field(default_factory=lambda: os.getenv("VIDEO_PIX_FMT", "yuv420p"))
+    profile: str = field(default_factory=lambda: os.getenv("VIDEO_PROFILE", "high"))
+    level: str = field(default_factory=lambda: os.getenv("VIDEO_LEVEL", "4.1"))
     
     @classmethod
     def create_random_config(cls, account_username: str = "") -> 'UniqueVideoConfig':
@@ -65,7 +74,8 @@ class UniqueVideoConfig:
             cut_enabled=random.choice([True, False]),
             contrast_enabled=random.choice([True, False]),
             color_enabled=random.choice([True, False]),
-            noise_enabled=random.choice([True, False]),
+            # Отключаем шум — главная причина «тяжёлых» файлов при CRF
+            noise_enabled=False,
             brightness_enabled=random.choice([True, False]),
             crop_enabled=random.choice([True, False]),
             zoompan_enabled=False,  # Отключаем zoompan - он медленный
@@ -231,9 +241,10 @@ class AsyncVideoUniquifier:
             print(f"🌈 [UNIQUIFY] Added color filter: hue=h={hue_value}")
         
         if config.noise_enabled:
-            noise_value = random.randint(5, 15)
+            # Делаем шум очень мягким, чтобы не раздувать битрейт
+            noise_value = random.randint(1, 3)
             filters.append(f"noise=alls={noise_value}:allf=t")
-            print(f"📺 [UNIQUIFY] Added noise filter: noise=alls={noise_value}")
+            print(f"📺 [UNIQUIFY] Added mild noise filter: noise=alls={noise_value}")
         
         if config.brightness_enabled:
             brightness_value = random.uniform(0.01, 0.1)
@@ -292,7 +303,18 @@ class AsyncVideoUniquifier:
         cmd = ["ffmpeg", "-y", "-i", input_path]
         cmd += ["-vf", ",".join(filters)]
         cmd += self._random_metadata(account_username)
-        cmd += ["-c:v", "libx264", "-preset", "fast", "-c:a", "aac", output_path]
+        cmd += [
+            "-c:v", "libx264",
+            "-preset", str(config.preset),
+            "-crf", str(config.crf),
+            "-pix_fmt", str(config.pix_fmt),
+            "-profile:v", str(config.profile),
+            "-level", str(config.level),
+            "-c:a", "aac",
+            "-b:a", str(config.audio_bitrate),
+            "-movflags", "+faststart",
+            output_path,
+        ]
         
         return cmd
     
@@ -569,8 +591,11 @@ def uniquify_video_sync(input_path: str, output_path: str, quality: int = 23) ->
             "-c:v", "libx264",
             "-crf", str(quality),
             "-preset", "medium",
+            "-pix_fmt", "yuv420p",
+            "-profile:v", "high",
+            "-level", "4.1",
             "-c:a", "aac",
-            "-b:a", "128k",
+            "-b:a", "96k",
             "-movflags", "+faststart",
             "-y",  # Перезаписывать выходной файл
             output_path

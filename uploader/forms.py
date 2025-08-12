@@ -13,6 +13,8 @@ from .models import (
     FollowTask,
     BulkLoginTask,
     BioLinkChangeTask,
+    WarmupTask,
+    WarmupTaskAccount,
 )
 from django.db.models import Sum, Value
 from django.db.models.functions import Coalesce
@@ -464,4 +466,68 @@ class FollowTaskForm(forms.ModelForm):
             raise forms.ValidationError('Follow counts must be >= 0')
         if fmin > fmax:
             raise forms.ValidationError('Follow min must be <= Follow max')
+        return data
+
+
+# New: WarmupTask form
+from .models import WarmupTask, WarmupTaskAccount  # noqa: E402
+
+
+class WarmupTaskForm(forms.ModelForm):
+    selected_accounts = forms.ModelMultipleChoiceField(
+        queryset=InstagramAccount.objects.all().order_by('-created_at'),
+        widget=forms.CheckboxSelectMultiple,
+        required=True,
+        label="Select accounts"
+    )
+
+    concurrency = forms.IntegerField(
+        initial=1,
+        min_value=1,
+        max_value=4,
+        label='Concurrency',
+        widget=forms.NumberInput(attrs={'class': 'form-control'})
+    )
+
+    class Meta:
+        model = WarmupTask
+        fields = [
+            'follow_category',
+            'delay_min_sec', 'delay_max_sec', 'concurrency',
+            'feed_scroll_min_count', 'feed_scroll_max_count',
+            'like_min_count', 'like_max_count',
+            'view_stories_min_count', 'view_stories_max_count',
+            'follow_min_count', 'follow_max_count',
+        ]
+        widgets = {
+            'follow_category': forms.Select(attrs={'class': 'form-select'}),
+            'delay_min_sec': forms.NumberInput(attrs={'class': 'form-control'}),
+            'delay_max_sec': forms.NumberInput(attrs={'class': 'form-control'}),
+            'feed_scroll_min_count': forms.NumberInput(attrs={'class': 'form-control'}),
+            'feed_scroll_max_count': forms.NumberInput(attrs={'class': 'form-control'}),
+            'like_min_count': forms.NumberInput(attrs={'class': 'form-control'}),
+            'like_max_count': forms.NumberInput(attrs={'class': 'form-control'}),
+            'view_stories_min_count': forms.NumberInput(attrs={'class': 'form-control'}),
+            'view_stories_max_count': forms.NumberInput(attrs={'class': 'form-control'}),
+            'follow_min_count': forms.NumberInput(attrs={'class': 'form-control'}),
+            'follow_max_count': forms.NumberInput(attrs={'class': 'form-control'}),
+        }
+
+    def clean(self):
+        data = super().clean()
+        def _check_pair(a, b, name):
+            if a is None or b is None:
+                return
+            if a < 0 or b < 0:
+                raise forms.ValidationError(f'{name} must be >= 0')
+            if a > b:
+                raise forms.ValidationError(f'{name} min must be <= max')
+        min_d = data.get('delay_min_sec')
+        max_d = data.get('delay_max_sec')
+        if min_d and max_d and min_d > max_d:
+            raise forms.ValidationError('Min delay must be <= Max delay')
+        _check_pair(data.get('feed_scroll_min_count'), data.get('feed_scroll_max_count'), 'Feed scroll count')
+        _check_pair(data.get('like_min_count'), data.get('like_max_count'), 'Like count')
+        _check_pair(data.get('view_stories_min_count'), data.get('view_stories_max_count'), 'Stories view count')
+        _check_pair(data.get('follow_min_count'), data.get('follow_max_count'), 'Follow count')
         return data

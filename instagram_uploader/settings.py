@@ -148,6 +148,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Worker service token for API auth
+WORKER_API_TOKEN = os.environ.get('WORKER_API_TOKEN', '')
+
 # Login settings
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'

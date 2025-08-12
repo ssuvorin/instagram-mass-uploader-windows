@@ -82,8 +82,21 @@ async def simulate_human_mouse_movement_async(page):
         log_info(f"[ASYNC_HUMAN] Mouse movement simulation error: {str(e)}")
 
 async def click_element_with_behavior_async(page, element, element_name):
-    """Click element with human behavior - ПОЛНАЯ КОПИЯ из sync"""
+    """Click element with human behavior - ПОЛНАЯ КОПИЯ из sync, enhanced for Locator.first() and visibility"""
     try:
+        # Normalize to a single Locator when possible
+        try:
+            if hasattr(element, "first"):
+                element = element.first()
+        except Exception:
+            pass
+        
+        # ENHANCED: Ensure element is in viewport
+        try:
+            await element.scroll_into_view_if_needed(timeout=2000)
+        except Exception:
+            pass
+        
         # ENHANCED: Additional element readiness check before clicking
         try:
             is_visible = await element.is_visible()
@@ -92,6 +105,10 @@ async def click_element_with_behavior_async(page, element, element_name):
             if not is_visible:
                 log_info(f"[ASYNC_UPLOAD] [WARN] {element_name} is not visible, waiting...")
                 await asyncio.sleep(2.0 + random.uniform(-0.5, 0.5))
+                try:
+                    await element.scroll_into_view_if_needed(timeout=2000)
+                except Exception:
+                    pass
                 is_visible = await element.is_visible()
                 
             if not is_enabled:
@@ -113,6 +130,12 @@ async def click_element_with_behavior_async(page, element, element_name):
         # Human decision pause
         decision_time = 1.0 + random.uniform(-0.3, 0.5)
         await asyncio.sleep(decision_time)
+        
+        # ENHANCED: Try hover before click to avoid overlay issues
+        try:
+            await element.hover(timeout=2000)
+        except Exception:
+            pass
         
         # Click element
         await element.click()
@@ -261,8 +284,19 @@ async def simulate_page_scan_async(page):
         log_info(f"[ASYNC_HUMAN] Page scan simulation error: {str(e)}")
 
 async def simulate_mouse_movement_to_element_async(page, element):
-    """Simulate human mouse movement to element - async version"""
+    """Simulate human mouse movement to element - async version, robust for Locator/ElementHandle"""
     try:
+        # Normalize to a single Locator and ensure in view
+        try:
+            if hasattr(element, "first"):
+                element = element.first()
+            try:
+                await element.scroll_into_view_if_needed(timeout=2000)
+            except Exception:
+                pass
+        except Exception:
+            pass
+        
         # Get element position
         box = await element.bounding_box()
         if box:

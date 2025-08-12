@@ -189,7 +189,7 @@ class VideoUniquelizerApp:
         """Slightly modify video to change hash with minimal noise"""
         def add_noise(image):
             noise = np.zeros(image.shape, dtype=np.uint8)
-            mask = np.random.choice([0, 1], size=image.shape[:2], p=[0.99, 0.01])
+            mask = np.random.choice([0, 1], size=image.shape[:2], p=[0.995, 0.005])
             noise[mask == 1] = np.random.normal(0, 0.3, noise[mask == 1].shape).astype(np.uint8)
             return np.clip(image + noise, 0, 255)
         return clip.fl_image(add_noise)
@@ -346,9 +346,16 @@ class VideoUniquelizerApp:
                         output_path,
                         codec="libx264",
                         audio_codec="aac",
-                        preset="ultrafast",
+                        preset="medium",
                         threads=2,
-                        ffmpeg_params=["-crf", "23"]
+                        ffmpeg_params=[
+                            "-crf", os.getenv("VIDEO_CRF", "27"),
+                            "-pix_fmt", os.getenv("VIDEO_PIX_FMT", "yuv420p"),
+                            "-profile:v", os.getenv("VIDEO_PROFILE", "high"),
+                            "-level", os.getenv("VIDEO_LEVEL", "4.1"),
+                            "-b:a", os.getenv("VIDEO_AUDIO_BITRATE", "96k"),
+                            "-movflags", "+faststart",
+                        ]
                     )
                     self.modify_exif(output_path)
 

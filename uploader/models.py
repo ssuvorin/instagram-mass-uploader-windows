@@ -640,3 +640,67 @@ class BioLinkChangeTaskAccount(models.Model):
 
     def __str__(self):
         return f"{self.account.username} in Bio Task {self.task.id}"
+
+
+# New: Warmup task models
+class WarmupTask(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('RUNNING', 'Running'),
+        ('COMPLETED', 'Completed'),
+        ('FAILED', 'Failed'),
+    ]
+
+    name = models.CharField(max_length=120, default="Warmup Task")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+
+    # Human-like delays between accounts
+    delay_min_sec = models.IntegerField(default=15)
+    delay_max_sec = models.IntegerField(default=45)
+
+    # Concurrency cap will be enforced at 4 in forms and workers
+    concurrency = models.IntegerField(default=1)
+
+    # Optional: use follow category for small follow actions during warmup
+    follow_category = models.ForeignKey('FollowCategory', on_delete=models.SET_NULL, null=True, blank=True, related_name='warmup_tasks')
+
+    # Action ranges
+    feed_scroll_min_count = models.IntegerField(default=1)
+    feed_scroll_max_count = models.IntegerField(default=3)
+
+    like_min_count = models.IntegerField(default=0)
+    like_max_count = models.IntegerField(default=3)
+
+    view_stories_min_count = models.IntegerField(default=0)
+    view_stories_max_count = models.IntegerField(default=5)
+
+    follow_min_count = models.IntegerField(default=0)
+    follow_max_count = models.IntegerField(default=2)
+
+    log = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Warmup Task {self.id} - {self.status}"
+
+
+class WarmupTaskAccount(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('RUNNING', 'Running'),
+        ('COMPLETED', 'Completed'),
+        ('FAILED', 'Failed'),
+    ]
+
+    task = models.ForeignKey(WarmupTask, on_delete=models.CASCADE, related_name='accounts')
+    account = models.ForeignKey(InstagramAccount, on_delete=models.CASCADE, related_name='warmup_tasks')
+    proxy = models.ForeignKey(Proxy, on_delete=models.SET_NULL, null=True, blank=True, related_name='warmup_used_in')
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    log = models.TextField(blank=True, default="")
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.account.username} in Warmup Task {self.task.id}"

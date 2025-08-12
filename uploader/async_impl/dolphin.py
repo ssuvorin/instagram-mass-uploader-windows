@@ -155,8 +155,8 @@ async def run_dolphin_browser_async(account_details: Dict, videos: List, video_f
                 
                 return ("SUCCESS", uploaded_count, failed_count)
             else:
-                # No videos uploaded -> preserve UI state to allow manual continuation/troubleshooting
-                preserve_state = True
+                # No videos uploaded -> by default do NOT preserve UI state; can override via env
+                preserve_state = os.environ.get("PRESERVE_BROWSER_ON_FAIL", "0").lower() in ("1", "true", "yes", "y")
                 log_error(f"[FAIL] [ASYNC_FAIL] No videos were uploaded despite successful operations")
                 return ("ERROR", 0, len(videos))
         else:
