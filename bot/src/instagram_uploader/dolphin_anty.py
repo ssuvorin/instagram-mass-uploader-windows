@@ -383,7 +383,13 @@ class DolphinAnty:
         geo_payload: Dict[str, Any]
 
         if (geoip and geoip.get("timezone") and geoip.get("latitude") and geoip.get("longitude")):
-            tz_payload = {"mode": "manual", "value": geoip.get("timezone")}
+            # Normalize timezone to string ID (ipwho.is returns an object)
+            tz_val = geoip.get("timezone")
+            if isinstance(tz_val, dict):
+                tz_str = tz_val.get("id") or tz_val.get("name") or tz_val.get("timezone") or "Europe/Minsk"
+            else:
+                tz_str = str(tz_val)
+            tz_payload = {"mode": "manual", "value": tz_str}
             try:
                 lat = float(geoip.get("latitude"))
                 lon = float(geoip.get("longitude"))
@@ -2332,6 +2338,15 @@ class DolphinAnty:
                             }
                 except Exception:
                     info = None
+
+            # Normalize timezone field to string ID if possible
+            try:
+                if info and isinstance(info.get("timezone"), dict):
+                    tz_obj = info.get("timezone")
+                    tz_str = tz_obj.get("id") or tz_obj.get("name") or tz_obj.get("timezone")
+                    info["timezone"] = tz_str or "Europe/Minsk"
+            except Exception:
+                pass
 
             if info:
                 self._geoip_cache[host] = info
