@@ -245,11 +245,13 @@ def import_accounts(request):
     if request.method == 'POST' and request.FILES.get('accounts_file'):
         accounts_file = request.FILES['accounts_file']
         
-        # Locale selection from form
-        selected_locale = request.POST.get('profile_locale', 'ru_RU')
-        allowed_locales = {'en_US', 'en_IN', 'ru_RU'}
-        if selected_locale not in allowed_locales:
-            selected_locale = 'ru_RU'
+        # UI params
+        proxy_selection = request.POST.get('proxy_selection', 'locale_only')
+        proxy_locale_strict = request.POST.get('proxy_locale_strict') == '1'
+        # Force ru_BY only
+        selected_locale = request.POST.get('profile_locale', 'ru_BY')
+        if selected_locale != 'ru_BY':
+            selected_locale = 'ru_BY'
         
         # Counters for status messages
         created_count = 0
@@ -302,7 +304,7 @@ def import_accounts(request):
             if len(parts) >= 2 and parts[0]:
                 parsed_usernames.append(parts[0])
         unique_usernames = list({u for u in parsed_usernames})
-
+ 
         existing_map = {
             acc.username: acc
             for acc in InstagramAccount.objects.filter(username__in=unique_usernames)
@@ -313,12 +315,24 @@ def import_accounts(request):
             if u in existing_map and not (getattr(existing_map[u], 'proxy', None) or getattr(existing_map[u], 'current_proxy', None))
         ]
         proxies_needed = len(new_usernames) + len(existing_without_proxy)
-
+ 
         available_proxies = Proxy.objects.filter(is_active=True, assigned_account__isnull=True)
+        if proxy_selection == 'locale_only':
+            by_only = available_proxies.filter(
+                Q(country__iexact='BY') | Q(country__icontains='Belarus') | Q(city__icontains='Belarus')
+            )
+            if proxy_locale_strict:
+                available_proxies = by_only
+            else:
+                if by_only.exists() and by_only.count() >= proxies_needed:
+                    available_proxies = by_only
         available_proxy_count = available_proxies.count()
         logger.info(f"[INFO] Proxy requirement: needed={proxies_needed} (new={len(new_usernames)}, existing_without_proxy={len(existing_without_proxy)}), available={available_proxy_count}")
-        
+         
         if available_proxy_count < proxies_needed:
+            if proxy_selection == 'locale_only' and proxy_locale_strict:
+                messages.error(request, f'Not enough BY proxies to satisfy strict requirement (needed {proxies_needed}, available {available_proxy_count}).')
+                return redirect('import_accounts')
             error_message = (
                 f"Not enough available proxies. Need {proxies_needed} "
                 f"(new: {len(new_usernames)}, missing: {len(existing_without_proxy)}) "
@@ -327,40 +341,40 @@ def import_accounts(request):
             logger.error(f"[ERROR] {error_message}")
             messages.error(request, error_message)
             return redirect('import_accounts')
-        
+         
         # Process accounts
         logger.info("[STEP 3/5] Processing accounts")
         for line_num, line in enumerate(lines, 1):
             if not line.strip():
                 logger.debug(f"[SKIP] Line {line_num}: Empty line, skipping")
                 continue  # Skip empty lines
-                
+                 
             try:
                 # Parse line
                 logger.info(f"[ACCOUNT {line_num}/{total_lines}] Processing line {line_num}")
                 parts = line.strip().split(':')
-                
+                 
                 if len(parts) < 2:
                     logger.warning(f"[ERROR] Line {line_num}: Invalid format. Expected at least username:password")
                     messages.warning(request, f'Line {line_num}: Invalid format. Expected at least username:password')
                     error_count += 1
                     continue
-                    
+                 
                 # Common fields
                 username = parts[0]
                 password = parts[1]
                 logger.info(f"[INFO] Processing account: {username}")
-                
+                 
                 # Default values
                 tfa_secret = None
                 email_username = None
                 email_password = None
-                
+                 
                 # Determine account type based on number of parts
                 if len(parts) == 2:
                     # Basic format: username:password (no 2FA, no email verification)
                     logger.info(f"[INFO] Account {username} identified as basic account (no 2FA, no email)")
-                
+                 
                 elif len(parts) == 3:
                     # This could be either a 2FA account or an email verification account
                     # Check if the third part looks like a 2FA secret (usually uppercase letters and numbers)
@@ -374,13 +388,13 @@ def import_accounts(request):
                         # Assume it's an email without password
                         email_username = parts[2]
                         logger.info(f"[INFO] Account {username} identified with email (no password)")
-                
+                 
                 elif len(parts) == 4:
                     # This is an email verification account (username:password:email:email_password)
                     email_username = parts[2]
                     email_password = parts[3]
                     logger.info(f"[INFO] Account {username} identified as email verification account")
-                
+                 
                 elif len(parts) == 5:
                     # This is a TFA account (username:password:email:email_password:tfa_secret)
                     email_username = parts[2]
@@ -388,7 +402,7 @@ def import_accounts(request):
                     import re
                     tfa_secret = re.sub(r'\s+', '', parts[4])  # Remove all whitespace from 2FA key
                     logger.info(f"[INFO] Account {username} identified as TFA account with email")
-                
+                 
                 elif len(parts) > 5:
                     # Extended format with additional fields
                     email_username = parts[2]
@@ -396,8 +410,8 @@ def import_accounts(request):
                     import re
                     tfa_secret = re.sub(r'\s+', '', parts[4])  # Remove all whitespace from 2FA key
                     logger.info(f"[INFO] Account {username} identified as TFA account with extended format")
-                
-                
+                 
+                 
                 # Decide proxy assignment strategy
                 logger.info(f"[STEP 4/5] Deciding proxy for account: {username}")
                 assigned_proxy = None
@@ -408,8 +422,13 @@ def import_accounts(request):
                         assigned_proxy = existing_acc.current_proxy or existing_acc.proxy
                         logger.info(f"[INFO] Reusing existing proxy for {username}: {assigned_proxy}")
                     else:
-                        # Get an unused active proxy
+                        # Get an unused active proxy from filtered set
                         available_proxies = Proxy.objects.filter(is_active=True, assigned_account__isnull=True)
+                        if proxy_selection == 'locale_only':
+                            by_proxies = available_proxies.filter(
+                                Q(country__iexact='BY') | Q(country__icontains='Belarus') | Q(city__icontains='Belarus')
+                            )
+                            available_proxies = by_proxies if by_proxies.exists() else available_proxies
                         if not available_proxies.exists():
                             error_message = f"No available proxies left for account {username}. Please add more proxies."
                             logger.error(f"[ERROR] {error_message}")
@@ -423,7 +442,7 @@ def import_accounts(request):
                     messages.error(request, error_message)
                     error_count += 1
                     continue
-                
+                 
                 # Check if account already exists
                 logger.info(f"[STEP 5/5] Creating or updating account: {username}")
                 # Build defaults without overwriting existing proxy unless we actually selected one
@@ -436,25 +455,25 @@ def import_accounts(request):
                 }
                 if assigned_proxy and (not existing_map.get(username) or not (existing_map[username].proxy or existing_map[username].current_proxy)):
                     defaults['proxy'] = assigned_proxy
-
+ 
                 account, created = InstagramAccount.objects.update_or_create(
                     username=username,
                     defaults=defaults
                 )
-                
+                 
                 if created:
                     logger.info(f"[SUCCESS] Created new account: {username}")
                     created_count += 1
                 else:
                     logger.info(f"[SUCCESS] Updated existing account: {username}")
                     updated_count += 1
-                    
+                     
                 # Update proxy assignment only if we assigned a new proxy from pool
                 if assigned_proxy and (not existing_map.get(username) or not (existing_map[username].proxy or existing_map[username].current_proxy)):
                     assigned_proxy.assigned_account = account
                     assigned_proxy.save()
                     logger.info(f"[INFO] Updated proxy assignment for account {username}")
-                
+                 
                 # Create Dolphin profile if API is available
                 if dolphin_available and (created or not account.dolphin_profile_id):
                     try:
@@ -462,7 +481,7 @@ def import_accounts(request):
                         random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
                         profile_name = f"instagram_{username}_{random_suffix}"
                         logger.info(f"[DOLPHIN] Creating Dolphin profile for account {username}")
-                        
+                         
                         # Prepare proxy data if available
                         proxy_data = None
                         if assigned_proxy:
@@ -472,14 +491,14 @@ def import_accounts(request):
                             logger.warning(f"[DOLPHIN] No proxy available for profile creation")
                             # This should never happen as we check for proxy availability earlier
                             continue
-                        
+                         
                         # Add a significant delay between creating each profile to prevent rate limiting
                         # This is especially important since we're generating unique fingerprints
                         if dolphin_created_count > 0:
                             delay_time = random.uniform(4.0, 7.0)  # Random delay between 4-7 seconds
                             logger.info(f"[DOLPHIN] Adding a {delay_time:.1f}-second delay before creating the next profile")
                             time.sleep(delay_time)
-                        
+                         
                         # Create Dolphin profile with proper fingerprint generation
                         response = dolphin.create_profile(
                             name=profile_name,
@@ -487,14 +506,14 @@ def import_accounts(request):
                             tags=["instagram", "auto-created"],
                             locale=selected_locale
                         )
-                        
+                         
                         # Extract profile ID from response
                         profile_id = None
                         if response and isinstance(response, dict):
                             profile_id = response.get("browserProfileId")
                             if not profile_id and isinstance(response.get("data"), dict):
                                 profile_id = response["data"].get("id")
-                                
+                                 
                         if profile_id:
                             account.dolphin_profile_id = profile_id
                             account.save(update_fields=['dolphin_profile_id'])
@@ -503,7 +522,7 @@ def import_accounts(request):
                         else:
                             error_message = response.get("error", "Unknown error")
                             detailed_error = ""
-                            
+                             
                             # Extract detailed validation errors
                             if isinstance(error_message, dict):
                                 if "fields" in error_message:
@@ -513,13 +532,13 @@ def import_accounts(request):
                                         error = field_error.get("error", "unknown error")
                                         values = field_error.get("values", [])
                                         validation_errors.append(f"{field}: {error} (expected: {', '.join(map(str, values))})")
-                                    
+                                     
                                     detailed_error = " | ".join(validation_errors)
                                 else:
                                     detailed_error = str(error_message)
                             else:
                                 detailed_error = str(error_message)
-                            
+                             
                             full_error = f"Failed to create Dolphin profile for account {username}: {detailed_error}"
                             logger.error(f"[ERROR] {full_error}")
                             messages.error(request, full_error)
@@ -529,18 +548,18 @@ def import_accounts(request):
                         error_message = f"Error creating Dolphin profile for account {username}: {str(e)}"
                         logger.error(f"[ERROR] {error_message}")
                         messages.error(request, error_message)
-                
+                 
             except Exception as e:
                 error_message = f"Error importing account at line {line_num}: {str(e)}"
                 logger.error(f"[ERROR] {error_message}")
                 messages.error(request, error_message)
                 error_count += 1
-        
+         
         # Show summary message
         logger.info(f"[SUMMARY] Import completed - Created: {created_count}, Updated: {updated_count}, Errors: {error_count}")
         if dolphin_available:
             logger.info(f"[SUMMARY] Dolphin profiles - Created: {dolphin_created_count}, Errors: {dolphin_error_count}")
-            
+             
         if created_count > 0 or updated_count > 0:
             success_msg = f'Import completed! Created: {created_count}, Updated: {updated_count}, Errors: {error_count}'
             if dolphin_available:
@@ -548,9 +567,9 @@ def import_accounts(request):
             messages.success(request, success_msg)
         else:
             messages.warning(request, f'No accounts were imported. Errors: {error_count}')
-            
+         
         return redirect('account_list')
-        
+     
     context = {
         'active_tab': 'import_accounts'
     }
