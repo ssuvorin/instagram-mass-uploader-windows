@@ -6,7 +6,58 @@ import re
 import ast
 import time
 import random
+import os
+import json
 
+# Global top sites list (~500). Consider moving to JSON config if you want to customize without code edits.
+_TOP_SITES_CACHE: list | None = None
+
+def _load_top_sites_from_json() -> list:
+    """Load top sites list from JSON. Path can be overridden via COOKIE_ROBOT_TOP_SITES_JSON env var."""
+    try:
+        # Compute default path: <project_root>/uploader/config/top_sites_500.json
+        base_dir = getattr(settings, 'BASE_DIR', os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        default_path = os.path.join(base_dir, 'uploader', 'config', 'top_sites_500.json')
+        json_path = os.environ.get('COOKIE_ROBOT_TOP_SITES_JSON', default_path)
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        # Normalize and filter
+        sites = [str(u).strip() for u in data if isinstance(u, str) and u.strip().startswith('http')]
+        # Deduplicate while preserving order
+        seen = set()
+        uniq_sites = []
+        for u in sites:
+            if u not in seen:
+                seen.add(u)
+                uniq_sites.append(u)
+        return uniq_sites
+    except Exception as e:
+        # Minimal fallback to avoid breaking tasks
+        return [
+            'https://google.com','https://youtube.com','https://facebook.com','https://twitter.com','https://instagram.com',
+            'https://wikipedia.org','https://amazon.com','https://reddit.com','https://yahoo.com','https://bing.com'
+        ]
+
+def _get_top_sites() -> list:
+    global _TOP_SITES_CACHE
+    if _TOP_SITES_CACHE is None:
+        _TOP_SITES_CACHE = _load_top_sites_from_json()
+    return _TOP_SITES_CACHE
+
+def _generate_urls_for_account(account_username: str, base_list: list, min_count: int = 28, max_count: int = 47) -> list:
+    """Deterministically-random subset for per-account URL list to ensure distribution and stability per account."""
+    try:
+        seed = hash(account_username) & 0xffffffff
+        rng = random.Random(seed)
+        n = rng.randint(min_count, max_count)
+        # Copy to avoid shuffling global list
+        pool = list(base_list)
+        rng.shuffle(pool)
+        return pool[:n]
+    except Exception:
+        # Fallback to simple random choice
+        count = random.randint(min_count, max_count)
+        return random.sample(base_list, min(count, len(base_list)))
 
 # Global semaphore for Cookie Robot concurrency (configurable via settings)
 _COOKIE_ROBOT_SEMAPHORE = threading.Semaphore(getattr(settings, 'COOKIE_ROBOT_CONCURRENCY', 5))
