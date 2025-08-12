@@ -49,9 +49,10 @@
                 </div>
                 
                 <div class="mb-3">
-                    <label for="urls" class="form-label">URLs to Visit</label>
-                    <textarea class="form-control" id="urls" name="urls" rows="10">{{ default_urls }}</textarea>
-                    <div class="form-text">Enter one URL per line, or leave empty to auto-generate 28–47 unique URLs per account from the global top sites JSON.</div>
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        For each selected account, Cookie Robot will automatically generate a unique set of 28–47 popular websites from the global list (configurable in <code>uploader/config/top_sites_500.json</code>). The selection is deterministic per account username to ensure variety without repetition across runs.
+                    </div>
                 </div>
                 
                 <div class="row mb-3">

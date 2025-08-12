@@ -631,6 +631,7 @@ def bulk_cookie_robot(request):
     if request.method == 'POST':
         # Get selected accounts
         account_ids = request.POST.getlist('accounts')
+        # URLs field deprecated in bulk UI; keep parsing if present for API compatibility
         urls_text = request.POST.get('urls', '')
         headless = request.POST.get('headless', '') == 'on'
         imageless = request.POST.get('imageless', '') == 'on'
