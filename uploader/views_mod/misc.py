@@ -650,9 +650,7 @@ def bulk_cookie_robot(request):
             messages.error(request, 'Please select at least one account')
             return redirect('bulk_cookie_robot')
         
-        if not urls:
-            messages.error(request, 'Please enter at least one URL')
-            return redirect('bulk_cookie_robot')
+        # If URLs empty, per-account lists will be auto-generated later in run_cookie_robot_task
         
         # Create tasks for each account
         created_tasks = []
@@ -672,7 +670,10 @@ def bulk_cookie_robot(request):
                 initial_log += safe_message + "\n"
                 logger.info(safe_message)
                 
-                log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [LIST] URLs to visit: {urls}"
+                if urls:
+                    log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [LIST] URLs to visit: {urls}"
+                else:
+                    log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [LIST] URLs: auto-generate per account from global top sites (28–47)"
                 safe_message = safe_log_message(log_message)
                 initial_log += safe_message + "\n"
                 logger.info(safe_message)
