@@ -494,6 +494,16 @@ def run_cookie_robot_task(task_id, urls, headless, imageless):
             except Exception as e:
                 logger.error(f"Error in task_logger_func: {str(e)}")
         
+        # Ensure URLs: if none provided, generate per-account from top sites JSON
+        try:
+            if not urls:
+                top_sites = _get_top_sites()
+                if top_sites and len(top_sites) >= 100:
+                    urls = _generate_urls_for_account(account.username, top_sites, 28, 47)
+                    task_logger_func(f"[LIST] Auto-generated {len(urls)} URLs from top sites for account {account.username}")
+        except Exception as gen_err:
+            task_logger_func(f"[WARNING] URL auto-generation failed: {gen_err}")
+
         # Run the cookie robot
         log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [START] Starting Cookie Robot on Dolphin profile {account.dolphin_profile_id}..."
         safe_message = safe_log_message(log_message)
