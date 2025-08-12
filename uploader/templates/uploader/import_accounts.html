@@ -107,6 +107,7 @@
                         <label for="profile_locale" class="form-label">Dolphin Profile Locale</label>
                         <select class="form-select" id="profile_locale" name="profile_locale">
                             <option value="ru_BY" selected>ru_BY (Русский интерфейс, регион BY)</option>
+                            <option value="en_IN">en_IN (English interface, India)</option>
                         </select>
                         <div class="form-text">Локаль профиля Dolphin. Используется для Accept-Language/TZ/Гео.</div>
                     </div>
@@ -114,16 +115,16 @@
                     <div class="mb-4">
                         <label for="proxy_selection" class="form-label">Proxy Selection</label>
                         <select class="form-select" id="proxy_selection" name="proxy_selection">
-                            <option value="locale_only" selected>Привязывать прокси к выбранной локации (BY)</option>
+                            <option value="locale_only" selected>Привязывать прокси к выбранной локации (по стране локали)</option>
                             <option value="any">Любые свободные прокси</option>
                         </select>
-                        <div class="form-text">Выберите, подбирать ли прокси строго под локаль (BY) или из любых свободных при импорте.</div>
+                        <div class="form-text">Выберите, подбирать ли прокси строго под локаль (страна выбранной локали) или из любых свободных при импорте.</div>
                     </div>
                     
                     <div class="form-check mb-4">
                         <input class="form-check-input" type="checkbox" value="1" id="proxy_locale_strict" name="proxy_locale_strict">
                         <label class="form-check-label" for="proxy_locale_strict">
-                            Только BY (если не хватает BY-прокси — прервать импорт)
+                            Только страна локали (если не хватает подходящих прокси — прервать импорт)
                         </label>
                     </div>
                     

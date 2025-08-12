@@ -248,10 +248,12 @@ def import_accounts(request):
         # UI params
         proxy_selection = request.POST.get('proxy_selection', 'locale_only')
         proxy_locale_strict = request.POST.get('proxy_locale_strict') == '1'
-        # Force ru_BY only
+        # Locale: support ru_BY and en_IN
         selected_locale = request.POST.get('profile_locale', 'ru_BY')
-        if selected_locale != 'ru_BY':
+        if selected_locale not in ['ru_BY', 'en_IN']:
             selected_locale = 'ru_BY'
+        # Derive target country from locale
+        locale_country = 'BY' if selected_locale == 'ru_BY' else 'IN'
         
         # Counters for status messages
         created_count = 0
@@ -318,20 +320,21 @@ def import_accounts(request):
  
         available_proxies = Proxy.objects.filter(is_active=True, assigned_account__isnull=True)
         if proxy_selection == 'locale_only':
-            by_only = available_proxies.filter(
-                Q(country__iexact='BY') | Q(country__icontains='Belarus') | Q(city__icontains='Belarus')
+            by_text = 'Belarus' if locale_country == 'BY' else 'India'
+            country_filtered = available_proxies.filter(
+                Q(country__iexact=locale_country) | Q(country__icontains=by_text) | Q(city__icontains=by_text)
             )
             if proxy_locale_strict:
-                available_proxies = by_only
+                available_proxies = country_filtered
             else:
-                if by_only.exists() and by_only.count() >= proxies_needed:
-                    available_proxies = by_only
+                if country_filtered.exists() and country_filtered.count() >= proxies_needed:
+                    available_proxies = country_filtered
         available_proxy_count = available_proxies.count()
         logger.info(f"[INFO] Proxy requirement: needed={proxies_needed} (new={len(new_usernames)}, existing_without_proxy={len(existing_without_proxy)}), available={available_proxy_count}")
          
         if available_proxy_count < proxies_needed:
             if proxy_selection == 'locale_only' and proxy_locale_strict:
-                messages.error(request, f'Not enough BY proxies to satisfy strict requirement (needed {proxies_needed}, available {available_proxy_count}).')
+                messages.error(request, f'Not enough {locale_country} proxies to satisfy strict requirement (needed {proxies_needed}, available {available_proxy_count}).')
                 return redirect('import_accounts')
             error_message = (
                 f"Not enough available proxies. Need {proxies_needed} "
@@ -425,10 +428,11 @@ def import_accounts(request):
                         # Get an unused active proxy from filtered set
                         available_proxies = Proxy.objects.filter(is_active=True, assigned_account__isnull=True)
                         if proxy_selection == 'locale_only':
-                            by_proxies = available_proxies.filter(
-                                Q(country__iexact='BY') | Q(country__icontains='Belarus') | Q(city__icontains='Belarus')
+                            country_text = 'Belarus' if locale_country == 'BY' else 'India'
+                            country_proxies = available_proxies.filter(
+                                Q(country__iexact=locale_country) | Q(country__icontains=country_text) | Q(city__icontains=country_text)
                             )
-                            available_proxies = by_proxies if by_proxies.exists() else available_proxies
+                            available_proxies = country_proxies if country_proxies.exists() else available_proxies
                         if not available_proxies.exists():
                             error_message = f"No available proxies left for account {username}. Please add more proxies."
                             logger.error(f"[ERROR] {error_message}")
