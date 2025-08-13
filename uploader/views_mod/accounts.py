@@ -114,13 +114,44 @@ def account_detail(request, account_id):
                 'last_updated': None,
             }
 
+    # Build mobile session summary (instagrapi settings presence)
+    def _build_session_summary() -> dict:
+        try:
+            device = getattr(account, 'device', None)
+            settings = getattr(device, 'session_settings', None) or {}
+            has_session = bool(settings)
+            auth = settings.get('authorization_data', {}) if isinstance(settings, dict) else {}
+            ds_user_id = auth.get('ds_user_id') or settings.get('ds_user_id')
+            sessionid = auth.get('sessionid') or settings.get('sessionid')
+            uuids = settings.get('uuids') if isinstance(settings, dict) else None
+            last_login_ts = settings.get('last_login') if isinstance(settings, dict) else None
+            return {
+                'present': has_session,
+                'ds_user_id': ds_user_id,
+                'has_sessionid': bool(sessionid),
+                'uuids': uuids or {},
+                'last_login_ts': last_login_ts,
+                'last_login_at': getattr(device, 'last_login_at', None),
+            }
+        except Exception:
+            return {
+                'present': False,
+                'ds_user_id': None,
+                'has_sessionid': False,
+                'uuids': {},
+                'last_login_ts': None,
+                'last_login_at': None,
+            }
+
     cookie_summary = _build_cookie_summary()
+    session_summary = _build_session_summary()
     
     context = {
         'account': account,
         'tasks': tasks,
         'active_tab': 'accounts',
         'cookie_summary': cookie_summary,
+        'session_summary': session_summary,
     }
     return render(request, 'uploader/account_detail.html', context)
 
@@ -331,6 +362,29 @@ def import_accounts(request):
     if request.method == 'POST' and request.FILES.get('accounts_file'):
         accounts_file = request.FILES['accounts_file']
         
+        # Helpers for cookie classification and extraction
+        def _detect_mobile_cookies(cookies_str: str, device_info: str | None) -> bool:
+            try:
+                s = (cookies_str or '').lower()
+                if 'authorization=' in s and 'bearer igt:' in s:
+                    return True
+                if 'x-mid=' in s and 'ig-u-ds-user-id=' in s:
+                    return True
+                if device_info and device_info.strip().lower().startswith(('android-', 'ios-', 'iphone-', 'mobile-')):
+                    return True
+            except Exception:
+                pass
+            return False
+        
+        def _extract_cookie_value(cookie_list: list, name: str) -> str | None:
+            for c in cookie_list or []:
+                try:
+                    if str(c.get('name') or '').lower() == name.lower():
+                        return c.get('value')
+                except Exception:
+                    continue
+            return None
+
         # UI params
         proxy_selection = request.POST.get('proxy_selection', 'locale_only')
         proxy_locale_strict = request.POST.get('proxy_locale_strict') == '1'
@@ -444,12 +498,15 @@ def import_accounts(request):
                 raw_line = line.strip()
                 # Support extended format: username:password||device_info|cookies
                 cookies_raw = None
+                device_info_raw = None
                 if '||' in raw_line:
                     auth_part, rest = raw_line.split('||', 1)
                     parts = auth_part.split(':')
                     # extract cookies part after first '|'
                     try:
                         rest_parts = rest.split('|')
+                        if len(rest_parts) >= 1:
+                            device_info_raw = (rest_parts[0] or '').strip() or None
                         if len(rest_parts) > 1:
                             cookies_raw = '|'.join(rest_parts[1:]).strip() or None
                     except Exception:
@@ -473,6 +530,7 @@ def import_accounts(request):
                 email_username = None
                 email_password = None
                 parsed_cookies_list = []
+                is_mobile_cookies = False
                  
                 # Determine account type based on number of parts
                 if len(parts) == 2:
@@ -535,6 +593,8 @@ def import_accounts(request):
                                 'session': True,
                                 'sameSite': 'no_restriction',
                             })
+                        # Classify cookies type
+                        is_mobile_cookies = _detect_mobile_cookies(cookies_raw, device_info_raw)
                     except Exception as ce:
                         logger.warning(f"[COOKIES] Failed to parse raw cookies for {username}: {ce}")
                         parsed_cookies_list = []
@@ -596,18 +656,63 @@ def import_accounts(request):
                     logger.info(f"[SUCCESS] Updated existing account: {username}")
                     updated_count += 1
                  
-                # If cookies were parsed, save/update InstagramCookies record
+                # If cookies were parsed, save/update appropriate storage (mobile vs desktop)
                 try:
                     if parsed_cookies_list:
-                        from uploader.models import InstagramCookies
-                        InstagramCookies.objects.update_or_create(
-                            account=account,
-                            defaults={
-                                'cookies_data': parsed_cookies_list,
-                                'is_valid': True,
+                        if is_mobile_cookies:
+                            from uploader.models import InstagramDevice
+                            # Build session payload for later instagrapi usage
+                            ds_user_id = _extract_cookie_value(parsed_cookies_list, 'ds_user_id')
+                            sessionid = _extract_cookie_value(parsed_cookies_list, 'sessionid')
+                            # Optional headers/cookies that map into settings
+                            mid_val = _extract_cookie_value(parsed_cookies_list, 'mid') or _extract_cookie_value(parsed_cookies_list, 'X-MID')
+                            ig_u_rur_val = _extract_cookie_value(parsed_cookies_list, 'IG-U-RUR') or _extract_cookie_value(parsed_cookies_list, 'rur')
+                            ig_www_claim_val = _extract_cookie_value(parsed_cookies_list, 'X-IG-WWW-Claim')
+                            # Derive UUIDs from device_info if present: android-<id>;phone_id;uuid;client_session_id
+                            uuids_dict = {}
+                            try:
+                                if device_info_raw:
+                                    di_parts = [p for p in device_info_raw.split(';') if p]
+                                    if di_parts:
+                                        # android_device_id is first token (may start with android-)
+                                        uuids_dict['android_device_id'] = di_parts[0]
+                                    if len(di_parts) >= 2:
+                                        uuids_dict['phone_id'] = di_parts[1]
+                                    if len(di_parts) >= 3:
+                                        uuids_dict['uuid'] = di_parts[2]
+                                    if len(di_parts) >= 4:
+                                        uuids_dict['client_session_id'] = di_parts[3]
+                            except Exception:
+                                uuids_dict = {}
+                            # Minimal instagrapi settings dict
+                            session_settings = {
+                                'uuids': uuids_dict,
+                                'mid': mid_val,
+                                'ig_u_rur': ig_u_rur_val,
+                                'ig_www_claim': ig_www_claim_val,
+                                'authorization_data': {
+                                    'ds_user_id': ds_user_id,
+                                    'sessionid': sessionid,
+                                },
+                                'cookies': {},
+                                # Optional timestamp for reference
+                                'last_login': int(time.time()),
                             }
-                        )
-                        logger.info(f"[COOKIES] Saved {len(parsed_cookies_list)} cookies for {username}")
+                            dev_obj, _ = InstagramDevice.objects.get_or_create(account=account)
+                            # Preserve existing device_settings; store session in session_settings in instagrapi format
+                            dev_obj.session_settings = session_settings
+                            dev_obj.save(update_fields=['session_settings', 'updated_at'])
+                            logger.info(f"[COOKIES] Saved mobile session ({len(parsed_cookies_list)} cookies) for {username} into InstagramDevice.session_settings")
+                        else:
+                            from uploader.models import InstagramCookies
+                            InstagramCookies.objects.update_or_create(
+                                account=account,
+                                defaults={
+                                    'cookies_data': parsed_cookies_list,
+                                    'is_valid': True,
+                                }
+                            )
+                            logger.info(f"[COOKIES] Saved desktop cookies ({len(parsed_cookies_list)}) for {username}")
                 except Exception as e:
                     logger.warning(f"[COOKIES] Failed to save cookies for {username}: {e}")
 
@@ -663,15 +768,17 @@ def import_accounts(request):
                             dolphin_created_count += 1
                             logger.info(f"[SUCCESS] Created Dolphin profile {profile_id} for account {username}")
 
-                            # Import cookies into the newly created profile if we have them
+                            # Import cookies into the newly created profile if we have DESKTOP cookies
                             try:
-                                if parsed_cookies_list:
+                                if parsed_cookies_list and not is_mobile_cookies:
                                     # Prefer Local API import; if not available (free plan), fall back to Remote PATCH
                                     imp = dolphin.import_cookies_local(profile_id, parsed_cookies_list)
                                     if not (isinstance(imp, dict) and imp.get('success')):
                                         logger.info(f"[DOLPHIN] Local import failed or unsupported, trying Remote PATCH for {username}")
                                         dolphin.update_cookies(profile_id, parsed_cookies_list)
                                     logger.info(f"[COOKIES] Imported cookies into Dolphin profile {profile_id} for {username}")
+                                elif parsed_cookies_list and is_mobile_cookies:
+                                    logger.info(f"[COOKIES] Skipped importing mobile cookies into Dolphin (desktop) profile for {username}")
                             except Exception as ice:
                                 logger.warning(f"[COOKIES] Failed to import cookies into profile {profile_id} for {username}: {ice}")
                         else:

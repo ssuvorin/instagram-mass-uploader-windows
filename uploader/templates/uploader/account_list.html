@@ -2,6 +2,17 @@
 
 {% block title %}Instagram Accounts - Instagram Uploader{% endblock %}
 
+{% block extra_css %}
+<style>
+	.table thead th { white-space: nowrap; font-weight:600; color:#64748b; }
+	.table td { vertical-align: middle; }
+	.table tbody tr:hover { background-color: #f9fafb; }
+	.badge-proxy { background: #fff; color: #111827; border: 1px solid #e5e7eb; }
+	.badge-status-active { background: rgba(16,185,129,.1); color: #10b981; border: 1px solid rgba(16,185,129,.2); }
+	.badge-status-inactive { background: rgba(239,68,68,.08); color: #ef4444; border: 1px solid rgba(239,68,68,.2); }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row mb-4">
     <div class="col-md-6">
@@ -113,7 +124,15 @@
                         </td>
                         <td>
                             {% if account.proxy %}
-                            <span class="text-nowrap">{{ account.proxy }}</span>
+                            <span class="badge badge-proxy" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ account.proxy.proxy_type }}://{{ account.proxy.host }}:{{ account.proxy.port }}">
+                                <i class="bi bi-geo-alt me-1"></i>
+                                {{ account.proxy.country|default:"-" }}{% if account.proxy.city %}, {{ account.proxy.city }}{% endif %}
+                            </span>
+                            {% if account.proxy.is_active %}
+                            <span class="badge badge-status-active ms-1">Active</span>
+                            {% else %}
+                            <span class="badge badge-status-inactive ms-1">Inactive</span>
+                            {% endif %}
                             {% else %}
                             <span class="text-muted">None</span>
                             {% endif %}
@@ -203,4 +222,14 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Enable Bootstrap tooltips on proxy badges
+(function(){
+	var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+	tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl); });
+})();
+</script>
 {% endblock %} 

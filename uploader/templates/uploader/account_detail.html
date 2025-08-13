@@ -194,6 +194,20 @@
                 </button>
             </div>
             <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="me-2 text-muted">Mobile session:</div>
+                    {% if session_summary.present and session_summary.has_sessionid %}
+                    <span class="badge bg-success"><i class="bi bi-phone me-1"></i> Present</span>
+                    {% else %}
+                    <span class="badge bg-secondary"><i class="bi bi-phone me-1"></i> Not found</span>
+                    {% endif %}
+                    {% if session_summary.ds_user_id %}
+                    <span class="badge bg-light text-dark border ms-2">ds_user_id: {{ session_summary.ds_user_id }}</span>
+                    {% endif %}
+                    {% if session_summary.last_login_at %}
+                    <span class="badge bg-info text-dark ms-2">last: {{ session_summary.last_login_at|date:"Y-m-d H:i" }}</span>
+                    {% endif %}
+                </div>
                 {% if account.cookies %}
                 <div class="alert {% if account.cookies.is_valid %}alert-success{% else %}alert-danger{% endif %} mb-4">
                     <div class="d-flex">
