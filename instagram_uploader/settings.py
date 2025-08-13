@@ -191,16 +191,29 @@ LOGGING = {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
-            'level': 'DEBUG',
+            'level': 'INFO',
+            'filters': ['mask_secrets', 'truncate_long', 'deduplicate'],
         },
         'file': {
             'class': 'logging.FileHandler',
             'filename': os.path.join(BASE_DIR, 'django.log'),
             'formatter': 'verbose',
             'level': 'INFO',
+            'filters': ['mask_secrets', 'truncate_long'],
         },
         'null': {
             'class': 'logging.NullHandler',
+        },
+    },
+    'filters': {
+        'mask_secrets': {
+            '()': 'uploader.logging_filters.MaskSecretsFilter'
+        },
+        'truncate_long': {
+            '()': 'uploader.logging_filters.TruncateLongFilter'
+        },
+        'deduplicate': {
+            '()': 'uploader.logging_filters.DeduplicateFilter'
         },
     },
     'loggers': {
@@ -212,6 +225,11 @@ LOGGING = {
         'uploader': {
             'handlers': ['console', 'file'],
             'level': 'DEBUG',
+            'propagate': False,
+        },
+        'bot.src.instagram_uploader.dolphin_anty': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
             'propagate': False,
         },
         'django.db.backends': {
