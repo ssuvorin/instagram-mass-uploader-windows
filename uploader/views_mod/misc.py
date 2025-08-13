@@ -758,6 +758,12 @@ def bulk_cookie_robot(request):
             acc.ui_cookie_domains = len(domain_set)
             acc.ui_cookie_total = len(cookies_list)
             acc.ui_instagram_session = instagram_session_active
+            # Mobile session (instagrapi settings) presence
+            try:
+                device = getattr(acc, 'device', None)
+                acc.ui_mobile_session_present = bool(getattr(device, 'session_settings', None))
+            except Exception:
+                acc.ui_mobile_session_present = False
     except Exception as _enrich_err:
         logger.warning(f"[BULK COOKIE ROBOT] Could not enrich accounts with cookie summaries: {_enrich_err}")
     
