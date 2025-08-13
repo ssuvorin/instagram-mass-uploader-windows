@@ -705,6 +705,12 @@
                                 </div>
                             </div>
                             
+                            <div class="alert alert-warning d-none" id="mobileSessionWarning">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                Some selected accounts have a mobile session (instagrapi). Consider using them in mobile flows only.
+                                <span class="ms-2 small text-muted">Count: <span id="mobileSessionCount">0</span></span>
+                            </div>
+
                             <div class="accounts-grid" id="accountsGrid">
                                 <div class="loading-spinner" id="loadingSpinner" style="display: none;">
                                     <div class="spinner"></div>
@@ -721,7 +727,10 @@
                                          data-has-dolphin="{{ account.dolphin_profile_id|yesno:'true,false' }}"
                                          data-last-login="{{ account.last_login|default:'never' }}"
                                          data-account-id="{{ account.id }}"
-                                         data-status="{{ account.status|lower }}">
+                                         data-status="{{ account.status|lower }}"
+                                          {% with dev=account.device %}
+                                          data-has-mobile-session="{% if dev and dev.session_settings %}true{% else %}false{% endif %}"
+                                          {% endwith %}>
                                         <input class="account-checkbox" type="checkbox" 
                                                name="selected_accounts" value="{{ account.id }}" 
                                                id="account_{{ account.id }}">
@@ -831,6 +840,14 @@
                                                             <i class="bi bi-exclamation-triangle me-1"></i>Needs Attention
                                                         </span>
                                                         {% endif %}
+
+                                                        {% with dev=account.device %}
+                                                        {% if dev and dev.session_settings %}
+                                                        <span class="badge-custom" style="background: rgba(245, 158, 11, 0.12); color: #b45309; border-color: rgba(245, 158, 11, 0.35);" data-bs-toggle="tooltip" title="Mobile session detected: instagrapi session present">
+                                                            <i class="bi bi-phone me-1"></i>Mobile Session
+                                                        </span>
+                                                        {% endif %}
+                                                        {% endwith %}
 
                                                         <!-- Upload counters (aggregated across tasks) -->
                                                         <span class="badge-custom" style="background: rgba(40, 167, 69, 0.1); color: #28a745; border-color: rgba(40, 167, 69, 0.3);">
@@ -1012,6 +1029,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const paginationInfo = document.getElementById('paginationInfo');
     const paginationText = document.getElementById('paginationText');
     const shortcutsHint = document.getElementById('shortcutsHint');
+    const mobileSessionWarning = document.getElementById('mobileSessionWarning');
+    const mobileSessionCountEl = document.getElementById('mobileSessionCount');
     
     // State
     let currentView = 'card';
@@ -1184,6 +1203,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 item.setAttribute('data-has-dolphin', item.dataset.hasDolphin);
                 item.setAttribute('data-last-login', item.dataset.lastLogin);
                 item.setAttribute('data-account-id', item.dataset.accountId);
+                item.setAttribute('data-has-mobile-session', item.dataset.hasMobileSession);
             }
         });
     }
@@ -1201,6 +1221,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const hasDolphin = item.dataset.hasDolphin === 'true';
                 const lastLogin = item.dataset.lastLogin;
                 const status = item.dataset.status || '';
+                const hasMobileSession = item.dataset.hasMobileSession === 'true';
                 
                 // Search filter
                 if (searchTerm && !username.includes(searchTerm)) {
@@ -1329,6 +1350,14 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Show warning if non-active accounts or invalid proxies are selected
         showNonActiveWarning(selectedNonActive, selectedActive);
+
+        // Update mobile session warning
+        const checkedMobileSessionBoxes = checkedBoxes.filter(cb => {
+            const item = cb.closest('.account-item');
+            return item.dataset.hasMobileSession === 'true';
+        });
+        mobileSessionCountEl.textContent = checkedMobileSessionBoxes.length;
+        mobileSessionWarning.classList.toggle('d-none', checkedMobileSessionBoxes.length === 0);
     }
     
     function showNonActiveWarning(nonActiveCount, activeCount) {
