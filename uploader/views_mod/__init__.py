@@ -1,7 +1,7 @@
 # Re-export split views
 from .dashboard import dashboard
 from .tasks import task_list, task_detail, create_task, start_task
-from .accounts import account_list, account_detail, delete_account, create_account, edit_account, warm_account, change_account_proxy, import_accounts
+from .accounts import account_list, account_detail, delete_account, create_account, edit_account, warm_account, change_account_proxy, import_accounts, import_accounts_ua_cookies
 from .proxies import proxy_list, create_proxy, edit_proxy, test_proxy, import_proxies, validate_all_proxies, _validate_proxies_background, delete_proxy
 from .bulk import bulk_upload_list, create_bulk_upload, bulk_upload_detail, add_bulk_videos, add_bulk_titles, start_bulk_upload, get_bulk_task_logs, delete_bulk_upload, assign_titles_to_videos, assign_videos_to_accounts, all_videos_assigned, all_titles_assigned
 from .cookie_robot import create_cookie_robot_task

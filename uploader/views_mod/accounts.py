@@ -364,17 +364,52 @@ def import_accounts(request):
         
         # Helpers for cookie classification and extraction
         def _detect_mobile_cookies(cookies_str: str, device_info: str | None) -> bool:
+            """
+            Heuristic classification:
+            - Count mobile markers (Authorization=Bearer IGT, X-MID, IG-U-*, device_info android/ios)
+            - Count web markers (sessionid, csrftoken, ds_user_id)
+            - Treat as mobile only if mobile markers clearly dominate (diff >= 2)
+            """
             try:
-                s = (cookies_str or '').lower()
-                if 'authorization=' in s and 'bearer igt:' in s:
-                    return True
-                if 'x-mid=' in s and 'ig-u-ds-user-id=' in s:
-                    return True
+                raw = cookies_str or ''
+                s_lower = raw.lower()
+                parts = [p.strip() for p in raw.split(';') if p.strip()]
+                names = set()
+                for p in parts:
+                    try:
+                        if '=' in p:
+                            nm = p.split('=', 1)[0].strip().lower()
+                            if nm:
+                                names.add(nm)
+                    except Exception:
+                        continue
+
+                mobile_score = 0
+                web_score = 0
+
+                if 'authorization=' in s_lower and 'bearer igt:' in s_lower:
+                    mobile_score += 1
+                if 'x-mid' in names:
+                    mobile_score += 1
+                if 'ig-u-ds-user-id' in names:
+                    mobile_score += 1
+                if 'ig-u-rur' in names or 'ig-intended-user-id' in names:
+                    mobile_score += 1
                 if device_info and device_info.strip().lower().startswith(('android-', 'ios-', 'iphone-', 'mobile-')):
-                    return True
+                    mobile_score += 1
+
+                if 'sessionid' in names:
+                    web_score += 2
+                if 'csrftoken' in names:
+                    web_score += 1
+                if 'ds_user_id' in names:
+                    web_score += 1
+
+                if mobile_score <= 0:
+                    return False
+                return (mobile_score - web_score) >= 2
             except Exception:
-                pass
-            return False
+                return False
         
         def _extract_cookie_value(cookie_list: list, name: str) -> str | None:
             for c in cookie_list or []:
@@ -504,16 +539,24 @@ def import_accounts(request):
                 if '||' in raw_line:
                     auth_part, rest = raw_line.split('||', 1)
                     parts = auth_part.split(':')
-                    # extract cookies part after first '|'
+                    # Robustly detect cookies segment from the rightmost 'segment containing ='
                     try:
-                        rest_parts = rest.split('|')
-                        if len(rest_parts) >= 1:
-                            device_info_raw = (rest_parts[0] or '').strip() or None
-                        if len(rest_parts) > 1:
-                            cookies_raw = '|'.join(rest_parts[1:]).strip() or None
-                        # If device info is explicitly empty (username:password|||cookies), treat as web cookies hint
-                        if not device_info_raw:
-                            explicit_no_device_info_hint = True
+                        segments = rest.split('|')
+                        cookies_idx = None
+                        for idx in range(len(segments) - 1, -1, -1):
+                            seg = (segments[idx] or '').strip()
+                            if not seg:
+                                continue
+                            if '=' in seg or 'sessionid=' in seg or 'ds_user_id=' in seg:
+                                cookies_idx = idx
+                                break
+                        if cookies_idx is not None:
+                            cookies_raw = '|'.join(segments[cookies_idx:]).strip() or None
+                            device_seg = [x for x in segments[:cookies_idx] if (x or '').strip()]
+                            device_info_raw = ('|'.join(device_seg).strip() or None) if device_seg else None
+                        else:
+                            # Fallback: assume first segment is device, no cookies
+                            device_info_raw = (segments[0] or '').strip() or None if segments else None
                     except Exception:
                         cookies_raw = None
                 elif '|' in raw_line:
@@ -1035,3 +1078,358 @@ def change_account_proxy(request, account_id):
     }
     
     return render(request, 'uploader/change_account_proxy.html', context)
+
+def import_accounts_ua_cookies(request):
+	"""
+	Import accounts in the UA+Cookies format on a separate page.
+	Supported lines:
+	- username:password|UA|cookies
+	- username:password|UA|device_info|cookies
+	Device info (if present) is expected as: android-<device>;phone_id;uuid;client_session_id
+	All provided cookies are treated as WEB cookies and imported into Dolphin profile.
+	"""
+	if request.method == 'POST' and request.FILES.get('accounts_file'):
+		accounts_file = request.FILES['accounts_file']
+
+		# Helpers for extraction
+		def _extract_cookie_value(cookie_list: list, name: str) -> str | None:
+			for c in cookie_list or []:
+				try:
+					if str(c.get('name') or '').lower() == name.lower():
+						return c.get('value')
+				except Exception:
+					continue
+			return None
+
+		# UI params (reuse existing semantics)
+		proxy_selection = request.POST.get('proxy_selection', 'locale_only')
+		proxy_locale_strict = request.POST.get('proxy_locale_strict') == '1'
+		selected_locale = request.POST.get('profile_locale', 'ru_BY')
+		if selected_locale not in ['ru_BY', 'en_IN']:
+			selected_locale = 'ru_BY'
+		locale_country = 'BY' if selected_locale == 'ru_BY' else 'IN'
+
+		created_count = 0
+		updated_count = 0
+		error_count = 0
+		dolphin_created_count = 0
+		dolphin_error_count = 0
+
+		# Initialize Dolphin Anty API client
+		try:
+			logger.info("[UA+COOKIES][STEP 1/5] Initializing Dolphin Anty API client")
+			api_key = os.environ.get("DOLPHIN_API_TOKEN", "")
+			if not api_key:
+				logger.error("[UA+COOKIES][ERROR] Dolphin API token not found in environment variables")
+				messages.error(request, "Dolphin API token not configured. Please set DOLPHIN_API_TOKEN environment variable.")
+				return redirect('import_ua_cookies')
+			# Get Dolphin API host
+			dolphin_api_host = os.environ.get("DOLPHIN_API_HOST", "http://localhost:3001/v1.0")
+			if not dolphin_api_host.endswith("/v1.0"):
+				dolphin_api_host = dolphin_api_host.rstrip("/") + "/v1.0"
+			dolphin = DolphinAnty(api_key=api_key, local_api_base=dolphin_api_host)
+			dolphin_available = dolphin.authenticate()
+			if dolphin_available:
+				logger.info("[UA+COOKIES][SUCCESS] Authenticated with Dolphin Anty API")
+			else:
+				logger.error("[UA+COOKIES][FAIL] Failed to authenticate with Dolphin Anty API")
+				messages.error(request, "Failed to authenticate with Dolphin Anty API. Check your API token.")
+		except Exception as e:
+			logger.error(f"[UA+COOKIES][ERROR] Error initializing Dolphin Anty API: {str(e)}")
+			dolphin_available = False
+			messages.error(request, f"Dolphin Anty API error: {str(e)}")
+			return redirect('import_ua_cookies')
+
+		# Read file content
+		logger.info("[UA+COOKIES][STEP 2/5] Reading accounts file content")
+		content = accounts_file.read().decode('utf-8')
+		lines = content.splitlines()
+		total_lines = len(lines)
+		logger.info(f"[UA+COOKIES][INFO] Found {total_lines} lines in the accounts file")
+
+		# Determine proxies needed for new accounts or existing accounts without proxy
+		parsed_usernames = []
+		for raw in lines:
+			s = (raw or '').strip()
+			if not s:
+				continue
+			left = s.split('|', 1)[0]
+			parts = left.split(':')
+			if len(parts) >= 2 and parts[0]:
+				parsed_usernames.append(parts[0])
+		unique_usernames = list({u for u in parsed_usernames})
+		existing_map = {acc.username: acc for acc in InstagramAccount.objects.filter(username__in=unique_usernames)}
+		new_usernames = [u for u in unique_usernames if u not in existing_map]
+		existing_without_proxy = [u for u in unique_usernames if u in existing_map and not (getattr(existing_map[u], 'proxy', None) or getattr(existing_map[u], 'current_proxy', None))]
+		proxies_needed = len(new_usernames) + len(existing_without_proxy)
+
+		available_proxies = Proxy.objects.filter(is_active=True, assigned_account__isnull=True)
+		if proxy_selection == 'locale_only':
+			by_text = 'Belarus' if locale_country == 'BY' else 'India'
+			country_filtered = available_proxies.filter(
+				Q(country__iexact=locale_country) | Q(country__icontains=by_text) | Q(city__icontains=by_text)
+			)
+			if proxy_locale_strict:
+				available_proxies = country_filtered
+			else:
+				if country_filtered.exists() and country_filtered.count() >= proxies_needed:
+					available_proxies = country_filtered
+		available_proxy_count = available_proxies.count()
+		logger.info(f"[UA+COOKIES][INFO] Proxy requirement: needed={proxies_needed}, available={available_proxy_count}")
+		if available_proxy_count < proxies_needed:
+			if proxy_selection == 'locale_only' and proxy_locale_strict:
+				messages.error(request, f'Not enough {locale_country} proxies to satisfy strict requirement (needed {proxies_needed}, available {available_proxy_count}).')
+				return redirect('import_ua_cookies')
+			error_message = (
+				f"Not enough available proxies. Need {proxies_needed} (new: {len(new_usernames)}, missing: {len(existing_without_proxy)}) "
+				f"but only have {available_proxy_count}. Please add more proxies before importing accounts."
+			)
+			logger.error(f"[UA+COOKIES][ERROR] {error_message}")
+			messages.error(request, error_message)
+			return redirect('import_ua_cookies')
+
+		# Process accounts
+		logger.info("[UA+COOKIES][STEP 3/5] Processing accounts")
+		for line_num, raw in enumerate(lines, 1):
+			if not (raw or '').strip():
+				logger.debug(f"[UA+COOKIES][SKIP] Line {line_num}: Empty line, skipping")
+				continue
+			try:
+				logger.info(f"[UA+COOKIES][ACCOUNT {line_num}/{total_lines}] Processing line {line_num}")
+				s = raw.strip()
+				segments = s.split('|')
+				left = (segments[0] or '').strip() if len(segments) >= 1 else ''
+				ua_string = (segments[1] or '').strip() if len(segments) >= 2 else None
+
+				# Determine cookies segment: search from the end for first segment containing '=' (name=value pattern)
+				cookies_idx = None
+				for idx in range(len(segments) - 1, -1, -1):
+					seg = (segments[idx] or '').strip()
+					if not seg:
+						continue
+					if '=' in seg or 'sessionid=' in seg or 'ds_user_id=' in seg:
+						cookies_idx = idx
+						break
+				cookies_raw = None
+				if cookies_idx is not None:
+					cookies_raw = '|'.join(segments[cookies_idx:]).strip() or None
+
+				# Device info: if there are segments between UA and cookies, join them; otherwise None
+				device_info_raw = None
+				if ua_string is not None and cookies_idx is not None and (cookies_idx - 2) >= 1:
+					mid_parts = segments[2:cookies_idx]
+					joined = '|'.join([p for p in mid_parts if p is not None])
+					device_info_raw = joined.strip() or None
+
+				parts = left.split(':', 1)
+				if len(parts) < 2:
+					logger.warning(f"[UA+COOKIES][ERROR] Line {line_num}: Invalid format. Expected username:password|UA|cookies")
+					messages.warning(request, f'Line {line_num}: Invalid format. Expected username:password|UA|cookies')
+					error_count += 1
+					continue
+				username = parts[0].strip()
+				password = parts[1].strip()
+
+				# Parse cookies into list of dicts for Dolphin
+				parsed_cookies_list = []
+				if cookies_raw:
+					try:
+						cookie_pairs = [c.strip() for c in cookies_raw.split(';') if c.strip()]
+						for pair in cookie_pairs:
+							if '=' not in pair:
+								continue
+							name, value = pair.split('=', 1)
+							parsed_cookies_list.append({
+								'domain': '.instagram.com',
+								'name': name.strip(),
+								'value': value.strip(),
+								'path': '/',
+								'httpOnly': False,
+								'secure': True,
+								'session': True,
+								'sameSite': 'no_restriction',
+							})
+					except Exception as ce:
+						logger.warning(f"[UA+COOKIES][COOKIES] Failed to parse cookies for {username}: {ce}")
+						parsed_cookies_list = []
+
+				# Assign proxy (reuse existing if present)
+				assigned_proxy = None
+				try:
+					existing_acc = existing_map.get(username)
+					if existing_acc and (existing_acc.current_proxy or existing_acc.proxy):
+						assigned_proxy = existing_acc.current_proxy or existing_acc.proxy
+						logger.info(f"[UA+COOKIES][INFO] Reusing existing proxy for {username}: {assigned_proxy}")
+					else:
+						avail = Proxy.objects.filter(is_active=True, assigned_account__isnull=True)
+						if proxy_selection == 'locale_only':
+							country_text = 'Belarus' if locale_country == 'BY' else 'India'
+							country_proxies = avail.filter(
+								Q(country__iexact=locale_country) | Q(country__icontains=country_text) | Q(city__icontains=country_text)
+							)
+							avail = country_proxies if country_proxies.exists() else avail
+						if not avail.exists():
+							error_message = f"No available proxies left for account {username}. Please add more proxies."
+							logger.error(f"[UA+COOKIES][ERROR] {error_message}")
+							messages.error(request, error_message)
+							return redirect('import_ua_cookies')
+						assigned_proxy = avail.order_by('?').first()
+						logger.info(f"[UA+COOKIES][SUCCESS] Assigned new proxy {assigned_proxy} to account {username}")
+				except Exception as e:
+					error_message = f"Error assigning proxy to account {username}: {str(e)}"
+					logger.error(f"[UA+COOKIES][ERROR] {error_message}")
+					messages.error(request, error_message)
+					error_count += 1
+					continue
+
+				# Create or update account
+				defaults = {
+					'password': password,
+					'notes': (f"UA: {ua_string[:200]}" if ua_string else "")
+				}
+				if assigned_proxy and (not existing_map.get(username) or not (existing_map[username].proxy or existing_map[username].current_proxy)):
+					defaults['proxy'] = assigned_proxy
+				account, created = InstagramAccount.objects.update_or_create(
+					username=username,
+					defaults=defaults
+				)
+				if created:
+					logger.info(f"[UA+COOKIES][SUCCESS] Created new account: {username}")
+					created_count += 1
+				else:
+					logger.info(f"[UA+COOKIES][SUCCESS] Updated existing account: {username}")
+					updated_count += 1
+
+				# Persist UA/device session snapshot for reference
+				try:
+					from uploader.models import InstagramDevice
+					dev_obj, _ = InstagramDevice.objects.get_or_create(account=account)
+					# Derive UUIDs from device_info if present
+					uuids_dict = {}
+					try:
+						if device_info_raw:
+							di_parts = [p for p in device_info_raw.split(';') if p]
+							if di_parts:
+								uuids_dict['android_device_id'] = di_parts[0]
+							if len(di_parts) >= 2:
+								uuids_dict['phone_id'] = di_parts[1]
+							if len(di_parts) >= 3:
+								uuids_dict['uuid'] = di_parts[2]
+							if len(di_parts) >= 4:
+								uuids_dict['client_session_id'] = di_parts[3]
+					except Exception:
+						uuids_dict = {}
+					# Extract some key values from cookies if available
+					ds_user_id = _extract_cookie_value(parsed_cookies_list, 'ds_user_id')
+					sessionid = _extract_cookie_value(parsed_cookies_list, 'sessionid')
+					mid_val = _extract_cookie_value(parsed_cookies_list, 'mid') or _extract_cookie_value(parsed_cookies_list, 'X-MID')
+					ig_u_rur_val = _extract_cookie_value(parsed_cookies_list, 'IG-U-RUR') or _extract_cookie_value(parsed_cookies_list, 'rur')
+					ig_www_claim_val = _extract_cookie_value(parsed_cookies_list, 'X-IG-WWW-Claim')
+					settings_snapshot = {
+						'uuids': uuids_dict,
+						'mobile_user_agent': ua_string,
+						'mid': mid_val,
+						'ig_u_rur': ig_u_rur_val,
+						'ig_www_claim': ig_www_claim_val,
+						'authorization_data': {
+							'ds_user_id': ds_user_id,
+							'sessionid': sessionid,
+						},
+						'last_login': int(time.time()),
+					}
+					dev_obj.session_settings = settings_snapshot
+					dev_obj.save(update_fields=['session_settings', 'updated_at'])
+				except Exception as se:
+					logger.warning(f"[UA+COOKIES][WARN] Could not persist device session snapshot for {username}: {se}")
+
+				# Update proxy assignment linkage
+				if assigned_proxy and (not existing_map.get(username) or not (existing_map[username].proxy or existing_map[username].current_proxy)):
+					assigned_proxy.assigned_account = account
+					assigned_proxy.save()
+
+				# Create Dolphin profile and import cookies (always as WEB cookies)
+				if dolphin_available and (created or not account.dolphin_profile_id):
+					try:
+						# Throttle between profile creations
+						if dolphin_created_count > 0:
+							delay_time = random.uniform(3.5, 6.5)
+							logger.info(f"[UA+COOKIES][DOLPHIN] Delay {delay_time:.1f}s before creating next profile")
+							time.sleep(delay_time)
+
+						profile_name = f"instagram_{username}_" + ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
+						logger.info(f"[UA+COOKIES][DOLPHIN] Creating Dolphin profile for account {username}")
+						proxy_data = assigned_proxy.to_dict() if assigned_proxy else None
+						response = dolphin.create_profile(
+							name=profile_name,
+							proxy=proxy_data,
+							tags=["instagram", "ua-cookies"],
+							locale=selected_locale
+						)
+						profile_id = None
+						if response and isinstance(response, dict):
+							profile_id = response.get("browserProfileId")
+							if not profile_id and isinstance(response.get("data"), dict):
+								profile_id = response["data"].get("id")
+						if profile_id:
+							account.dolphin_profile_id = profile_id
+							account.save(update_fields=['dolphin_profile_id'])
+							dolphin_created_count += 1
+							logger.info(f"[UA+COOKIES][SUCCESS] Created Dolphin profile {profile_id} for account {username}")
+							# Import cookies to Dolphin (prefer Local API)
+							try:
+								if parsed_cookies_list:
+									imp = dolphin.import_cookies_local(profile_id, parsed_cookies_list)
+									if not (isinstance(imp, dict) and imp.get('success')):
+										logger.info(f"[UA+COOKIES][DOLPHIN] Local import failed/unsupported, trying Remote PATCH for {username}")
+										dolphin.update_cookies(profile_id, parsed_cookies_list)
+									logger.info(f"[UA+COOKIES][COOKIES] Imported cookies into Dolphin profile {profile_id} for {username}")
+								else:
+									logger.info(f"[UA+COOKIES][COOKIES] No cookies parsed for {username}, skipping import")
+							except Exception as ice:
+								logger.warning(f"[UA+COOKIES][COOKIES] Failed to import cookies into profile {profile_id} for {username}: {ice}")
+						else:
+							error_message = response.get("error", "Unknown error") if isinstance(response, dict) else "Unknown error"
+							logger.error(f"[UA+COOKIES][ERROR] Failed to create Dolphin profile for account {username}: {error_message}")
+							messages.error(request, f"Failed to create Dolphin profile for account {username}: {error_message}")
+							dolphin_error_count += 1
+					except Exception as e:
+						dolphin_error_count += 1
+						logger.error(f"[UA+COOKIES][ERROR] Error creating Dolphin profile for account {username}: {str(e)}")
+						messages.error(request, f"Error creating Dolphin profile for account {username}: {str(e)}")
+
+				# Persist cookies in DB for reference
+				try:
+					from uploader.models import InstagramCookies
+					if parsed_cookies_list:
+						InstagramCookies.objects.update_or_create(
+							account=account,
+							defaults={'cookies_data': parsed_cookies_list, 'is_valid': True}
+						)
+						logger.info(f"[UA+COOKIES][COOKIES] Saved {len(parsed_cookies_list)} cookies for {username}")
+				except Exception as ce:
+					logger.warning(f"[UA+COOKIES][WARN] Failed to persist cookies in DB for {username}: {ce}")
+
+			except Exception as e:
+				error_message = f"[UA+COOKIES][ERROR] Error importing account at line {line_num}: {str(e)}"
+				logger.error(error_message)
+				messages.error(request, error_message)
+				error_count += 1
+
+		# Summary
+		logger.info(f"[UA+COOKIES][SUMMARY] Import completed - Created: {created_count}, Updated: {updated_count}, Errors: {error_count}")
+		if dolphin_available:
+			logger.info(f"[UA+COOKIES][SUMMARY] Dolphin profiles - Created: {dolphin_created_count}, Errors: {dolphin_error_count}")
+		if created_count > 0 or updated_count > 0:
+			msg = f'Import completed! Created: {created_count}, Updated: {updated_count}, Errors: {error_count}'
+			if dolphin_available:
+				msg += f', Dolphin profiles created: {dolphin_created_count}, Dolphin errors: {dolphin_error_count}'
+			messages.success(request, msg)
+		else:
+			messages.warning(request, f'No accounts were imported. Errors: {error_count}')
+		return redirect('account_list')
+
+	# GET: render page
+	context = {
+		'active_tab': 'accounts'
+	}
+	return render(request, 'uploader/import_accounts_ua_cookies.html', context)
