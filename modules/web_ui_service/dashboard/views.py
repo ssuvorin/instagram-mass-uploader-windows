@@ -16,7 +16,7 @@ def _worker_headers():
 
 
 def _worker_url(base: str, path: str) -> str:
-    return f"{base.rstrip('/')}{path}"
+    return f"{base.rstrip('/')}" + path
 
 
 def _pick_workers() -> list[str]:
@@ -121,4 +121,24 @@ def start_follow_via_worker(request, task_id: int):
     else:
         base = workers[0] if workers else settings.WORKER_BASE_URL
         requests.post(_worker_url(base, '/api/v1/follow/start'), params={"task_id": task_id}, headers=_worker_headers(), timeout=30)
-    return redirect('follow_task_detail', task_id=task_id) 
+    return redirect('follow_task_detail', task_id=task_id)
+
+
+def start_proxy_diag_via_worker(request, task_id: int):
+    workers = _pick_workers()
+    if workers and len(workers) > 1:
+        _dispatch_batches('/api/v1/proxy-diagnostics/start', task_id)
+    else:
+        base = workers[0] if workers else settings.WORKER_BASE_URL
+        requests.post(_worker_url(base, '/api/v1/proxy-diagnostics/start'), params={"task_id": task_id}, headers=_worker_headers(), timeout=30)
+    return redirect('bulk_upload_detail', task_id=task_id)
+
+
+def start_media_uniq_via_worker(request, task_id: int):
+    workers = _pick_workers()
+    if workers and len(workers) > 1:
+        _dispatch_batches('/api/v1/media-uniq/start', task_id)
+    else:
+        base = workers[0] if workers else settings.WORKER_BASE_URL
+        requests.post(_worker_url(base, '/api/v1/media-uniq/start'), params={"task_id": task_id}, headers=_worker_headers(), timeout=30)
+    return redirect('bulk_upload_detail', task_id=task_id) 

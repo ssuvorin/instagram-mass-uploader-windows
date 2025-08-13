@@ -1,5 +1,6 @@
 """Views module: accounts (split from monolith)."""
 from .common import *
+from django.db import models
 
 
 def account_list(request):
@@ -687,7 +688,6 @@ def import_accounts(request):
                     logger.error(f"[ERROR] {error_message}")
                     messages.error(request, error_message)
                     error_count += 1
-                    continue
                  
                 # Check if account already exists
                 logger.info(f"[STEP 5/5] Creating or updating account: {username}")

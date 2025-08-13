@@ -1012,6 +1012,9 @@
         <a href="{% url 'start_bulk_upload' task_id=task.id %}?async=true" class="btn btn-success btn-enhanced" id="startAsyncUploadBtn" title="Start with parallel account processing">
             <i class="bi bi-lightning-charge"></i> Start ASYNC Upload
         </a>
+        <a href="{% url 'start_bulk_upload_api' task_id=task.id %}" class="btn btn-success btn-enhanced" style="background: linear-gradient(135deg, #2563eb, #0ea5e9);" title="Start via API (instagrapi)">
+            <i class="bi bi-cloud-upload"></i> Start ASYNC via API
+        </a>
         <a href="{% url 'add_bulk_videos' task_id=task.id %}" class="btn btn-outline-primary btn-enhanced">
             <i class="bi bi-plus-circle"></i> Add More Videos
         </a>

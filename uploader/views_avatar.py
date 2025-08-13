@@ -19,6 +19,8 @@ from .models import (
 from .forms import AvatarChangeTaskForm
 
 from instgrapi_func.avatar_manager import change_avatar_for_account
+from instgrapi_func.services.session_store import DjangoDeviceSessionStore
+from instgrapi_func.services.device_service import ensure_persistent_device
 
 import logging
 logger = logging.getLogger(__name__)
@@ -124,9 +126,31 @@ def _build_proxy_dict(proxy: Proxy):
 def _ensure_device(account: InstagramAccount) -> InstagramDevice:
     device = getattr(account, 'device', None)
     if device:
+        # If exists but empty, try to populate from session or generate once
+        if not device.device_settings or not any(device.device_settings.get(k) for k in ("uuid","android_device_id","phone_id","client_session_id")) or not device.user_agent:
+            try:
+                store = DjangoDeviceSessionStore()
+                persisted = store.load(account.username) or {}
+                dev_settings, ua = ensure_persistent_device(account.username, persisted)
+                updates = []
+                if not device.device_settings:
+                    device.device_settings = dev_settings
+                    updates.append('device_settings')
+                if not device.user_agent and ua:
+                    device.user_agent = ua
+                    updates.append('user_agent')
+                if updates:
+                    device.save(update_fields=updates)
+            except Exception:
+                pass
         return device
-    device = InstagramDevice.objects.create(account=account, device_settings={}, user_agent="")
-    return device
+    try:
+        store = DjangoDeviceSessionStore()
+        persisted = store.load(account.username) or {}
+        dev_settings, ua = ensure_persistent_device(account.username, persisted)
+        return InstagramDevice.objects.create(account=account, device_settings=dev_settings, user_agent=(ua or ""))
+    except Exception:
+        return InstagramDevice.objects.create(account=account, device_settings={}, user_agent="")
 
 
 def _run_avatar_task_worker(task_id: int):

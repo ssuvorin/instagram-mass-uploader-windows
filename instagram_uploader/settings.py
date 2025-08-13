@@ -265,17 +265,17 @@ LOGGING = {
         # Instagrapi and HTTP request loggers
         'instagrapi': {
             'handlers': ['console'],
-            'level': 'DEBUG',
+            'level': os.getenv('INSTAGRAPI_LOG_LEVEL', 'INFO'),
             'propagate': False,
         },
         'public_request': {
             'handlers': ['console'],
-            'level': 'DEBUG',
+            'level': os.getenv('IG_HTTP_LOG_LEVEL', 'WARNING'),
             'propagate': False,
         },
         'private_request': {
             'handlers': ['console'],
-            'level': 'DEBUG',
+            'level': os.getenv('IG_HTTP_LOG_LEVEL', 'WARNING'),
             'propagate': False,
         },
         # Our auth/avatar services

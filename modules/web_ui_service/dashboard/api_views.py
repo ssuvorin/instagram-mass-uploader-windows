@@ -240,4 +240,108 @@ def media_uniq_aggregate(request, task_id: int):
         {"id": v.id, "url": None}
         for v in task.videos.order_by('order','id').all()
     ]
-    return JsonResponse({"id": task.id, "videos": videos}) 
+    return JsonResponse({"id": task.id, "videos": videos})
+
+
+# ===== Generic status endpoints for other kinds =====
+
+_KIND_TASK_MODEL = {
+    'bulk_login': BulkLoginTask,
+    'warmup': WarmupTask,
+    'avatar': AvatarChangeTask,
+    'bio': BioLinkChangeTask,
+    'follow': FollowTask,
+    'proxy_diag': BulkUploadTask,
+    'media_uniq': BulkUploadTask,
+}
+
+_KIND_ACCOUNT_MODEL = {
+    'bulk_login': BulkLoginAccount,
+    'warmup': WarmupTaskAccount,
+    'avatar': AvatarChangeTaskAccount,
+    'bio': BioLinkChangeTaskAccount,
+    'follow': FollowTaskAccount,
+    'proxy_diag': BulkUploadAccount,
+}
+
+
+def _get_task_model(kind: str):
+    return _KIND_TASK_MODEL.get(kind)
+
+
+def _get_account_model(kind: str):
+    return _KIND_ACCOUNT_MODEL.get(kind)
+
+
+@require_POST
+@csrf_exempt
+def generic_task_status(request, kind: str, task_id: int):
+    if not _auth_ok(request):
+        return _forbidden()
+    Model = _get_task_model(kind)
+    if not Model:
+        return JsonResponse({"detail": "Unknown kind"}, status=400)
+    task = get_object_or_404(Model, id=task_id)
+    try:
+        data = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except json.JSONDecodeError:
+        data = {}
+    status_val = data.get("status")
+    log = data.get("log")
+    log_append = data.get("log_append")
+    if hasattr(task, 'status') and status_val:
+        task.status = status_val
+    if hasattr(task, 'log') and (log or log_append):
+        if log:
+            task.log = (task.log or "") + log + "\n"
+        if log_append:
+            task.log = (task.log or "") + log_append + "\n"
+    task.save()
+    return JsonResponse({"ok": True, "status": getattr(task, 'status', None)})
+
+
+@require_POST
+@csrf_exempt
+def generic_account_status(request, kind: str, account_task_id: int):
+    if not _auth_ok(request):
+        return _forbidden()
+    Model = _get_account_model(kind)
+    if not Model:
+        return JsonResponse({"detail": "Unknown kind"}, status=400)
+    at = get_object_or_404(Model, id=account_task_id)
+    try:
+        data = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except json.JSONDecodeError:
+        data = {}
+    status_val = data.get("status")
+    log_append = data.get("log_append")
+    if hasattr(at, 'status') and status_val:
+        at.status = status_val
+    if hasattr(at, 'log') and log_append:
+        at.log = (at.log or "") + log_append + "\n"
+    at.save()
+    return JsonResponse({"ok": True, "status": getattr(at, 'status', None)})
+
+
+@require_POST
+@csrf_exempt
+def generic_account_counters(request, kind: str, account_task_id: int):
+    if not _auth_ok(request):
+        return _forbidden()
+    Model = _get_account_model(kind)
+    if not Model:
+        return JsonResponse({"detail": "Unknown kind"}, status=400)
+    at = get_object_or_404(Model, id=account_task_id)
+    try:
+        data = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except json.JSONDecodeError:
+        data = {}
+    # Best-effort counter fields if present
+    for key in ("success", "failed", "likes", "follows", "viewed"):
+        if hasattr(at, key) and key in data:
+            try:
+                setattr(at, key, (getattr(at, key) or 0) + int(data.get(key) or 0))
+            except Exception:
+                pass
+    at.save()
+    return JsonResponse({"ok": True}) 

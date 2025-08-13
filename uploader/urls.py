@@ -45,6 +45,7 @@ urlpatterns = [
     path('bulk-upload/<int:task_id>/add-videos/', views.add_bulk_videos, name='add_bulk_videos'),
     path('bulk-upload/<int:task_id>/add-titles/', views.add_bulk_titles, name='add_bulk_titles'),
     path('bulk-upload/<int:task_id>/start/', views.start_bulk_upload, name='start_bulk_upload'),
+    path('bulk-upload/<int:task_id>/start-api/', views.start_bulk_upload_api, name='start_bulk_upload_api'),
     path('bulk-upload/<int:task_id>/delete/', views.delete_bulk_upload, name='delete_bulk_upload'),
     path('bulk-upload/<int:task_id>/logs/', views.get_bulk_task_logs, name='bulk_task_logs'),
     path('bulk-upload/<int:task_id>/bulk-edit-location-mentions/', views.bulk_edit_location_mentions, name='bulk_edit_location_mentions'),

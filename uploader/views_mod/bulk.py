@@ -289,6 +289,85 @@ def start_bulk_upload(request, task_id):
         return redirect('bulk_upload_detail', task_id=task.id)
 
 
+def start_bulk_upload_api(request, task_id):
+    """Start a bulk upload task using instagrapi runner (API-based)."""
+    task = get_object_or_404(BulkUploadTask, id=task_id)
+    
+    # Check if task is already running
+    if task.status == TaskStatus.RUNNING:
+        messages.warning(request, f'Task "{task.name}" is already running!')
+        return redirect('bulk_upload_detail', task_id=task.id)
+    
+    # Check if task has videos and accounts
+    if not task.videos.exists():
+        messages.error(request, 'No videos found for this task!')
+        return redirect('bulk_upload_detail', task_id=task.id)
+    
+    if not task.accounts.exists():
+        messages.error(request, 'No accounts assigned to this task!')
+        return redirect('bulk_upload_detail', task_id=task.id)
+    
+    # Mark engine for this run
+    try:
+        cache.set(f"bulk_engine_{task.id}", "instagrapi", timeout=3600)
+    except Exception:
+        pass
+    
+    # Initialize WebLogger for this task so background logs are visible immediately
+    try:
+        from uploader.bulk_tasks_playwright import init_web_logger
+        init_web_logger(task.id)
+    except Exception:
+        pass
+    
+    # Use async mode - same as default starter
+    update_task_status(task, TaskStatus.RUNNING, "Task started in ASYNC mode (API)")
+    print(f"[TASK] Changing task {task.id}: {task.name} status to RUNNING [API]")
+    
+    # Assign videos to accounts if not already done
+    if not all_videos_assigned(task):
+        assign_videos_to_accounts(task)
+        print(f"[TASK] Assigning videos to accounts for task {task.id}: {task.name}")
+    
+    try:
+        from uploader.async_bulk_tasks import run_async_bulk_upload_task_sync
+        import threading
+        print(f"[TASK] Starting async API task in background for task {task.id}: {task.name}")
+        
+        def run_async_task():
+            try:
+                result = run_async_bulk_upload_task_sync(task_id)
+                print(f"[TASK] Async API task completed for task {task_id}: {result}")
+                # Do not overwrite final status; append a finishing log entry only
+                try:
+                    from django.utils import timezone
+                    ts = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
+                    msg = f"[{ts}] [FINISH] Async API task {'completed successfully' if result else 'finished with errors'}\n"
+                except Exception:
+                    msg = "[FINISH] Async API task finished\n"
+                try:
+                    # Append log without touching status
+                    from uploader.task_utils import update_task_log as _utl
+                    _utl(task, msg)
+                except Exception:
+                    pass
+            except Exception as e:
+                print(f"[TASK] Async API task failed for task {task_id}: {str(e)}")
+                update_task_status(task, TaskStatus.FAILED, f"Async API task failed: {str(e)}")
+        
+        thread = threading.Thread(target=run_async_task, daemon=True)
+        thread.start()
+        
+        messages.success(request, f'Async API bulk upload task "{task.name}" started successfully! You can monitor progress on this page.')
+        return redirect('bulk_upload_detail', task_id=task.id)
+        
+    except Exception as e:
+        print(f"[TASK] Failed to start async API task for task {task_id}: {str(e)}")
+        messages.error(request, f'Failed to start async API task: {str(e)}')
+        update_task_status(task, TaskStatus.FAILED, f"Failed to start async API task: {str(e)}")
+        return redirect('bulk_upload_detail', task_id=task.id)
+
+
 def get_bulk_task_logs(request, task_id):
     """Get logs for a bulk upload task as JSON with real-time updates"""
     from django.core.cache import cache

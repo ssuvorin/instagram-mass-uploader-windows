@@ -3,6 +3,8 @@ from typing import Dict, Optional, Tuple, Callable
 from .client_factory import IGClientFactory
 from .proxy import build_proxy_url
 from .auth_service import IGAuthService
+from .session_store import DjangoDeviceSessionStore
+from .device_service import ensure_persistent_device
 import logging
 from instagrapi.exceptions import ChallengeRequired  # type: ignore
 
@@ -50,11 +52,20 @@ class AvatarService:
                 on_log("avatar: missing credentials")
             return False, None
 
-        device_cfg = build_device_config(device_settings or {})
+        # Ensure persistent device based on DB/session
+        store = DjangoDeviceSessionStore()
+        persisted_settings = session_settings or store.load(username) or None
+        resolved_device, ua_hint = ensure_persistent_device(username, persisted_settings)
+        # Prefer passed-in user agent if present, else resolved
+        ua_final = (device_settings or {}).get("user_agent") or ua_hint
+        # Merge passed-in device overrides on top of resolved
+        merged_device = dict(resolved_device or {})
+        merged_device.update(device_settings or {})
+        device_cfg = build_device_config(merged_device)
         proxy_url = build_proxy_url(proxy or {})
-        user_agent = (device_settings or {}).get("user_agent")
-        country = (device_settings or {}).get("country")
-        locale = (device_settings or {}).get("locale")
+        user_agent = ua_final
+        country = (merged_device or {}).get("country")
+        locale = (merged_device or {}).get("locale")
 
         log.debug("Build client for %s | proxy=%s", username, proxy_url)
         if on_log:
@@ -62,7 +73,7 @@ class AvatarService:
         cl = IGClientFactory.create_client(
             device_config=device_cfg,
             proxy_url=proxy_url,
-            session_settings=session_settings,
+            session_settings=persisted_settings,
             user_agent=user_agent,
             country=country,
             locale=locale,
@@ -115,6 +126,26 @@ class AvatarService:
 
         try:
             settings = cl.get_settings()
+            # Persist updated session and fill missing device/user_agent if needed
+            try:
+                store.save(username, settings)
+                if on_log:
+                    on_log("avatar: session saved")
+                from uploader.models import InstagramAccount
+                acc = InstagramAccount.objects.filter(username=username).first()
+                if acc and getattr(acc, 'device', None):
+                    dev = acc.device
+                    updates = []
+                    if not dev.user_agent and settings.get('user_agent'):
+                        dev.user_agent = settings.get('user_agent')
+                        updates.append('user_agent')
+                    if not dev.device_settings:
+                        dev.device_settings = merged_device
+                        updates.append('device_settings')
+                    if updates:
+                        dev.save(update_fields=updates)
+            except Exception:
+                pass
             log.debug("Fetched updated settings for %s", username)
             if on_log:
                 on_log("avatar: fetched updated settings")

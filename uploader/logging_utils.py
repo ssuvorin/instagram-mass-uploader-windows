@@ -14,6 +14,7 @@ logger = logging.getLogger('uploader.bulk_tasks')
 
 # Async logger bridge (used in async mode)
 _async_logger = None  # type: ignore
+_async_loop = None  # type: ignore
 
 # Console silence flag
 SILENT_CONSOLE = os.getenv('SILENT_CONSOLE_LOGS') == '1'
@@ -24,7 +25,13 @@ def is_console_enabled():
 def set_async_logger(async_logger):
     """Register AsyncLogger-like instance to mirror logs into Django cache in async mode."""
     global _async_logger
+    global _async_loop
     _async_logger = async_logger
+    # Capture the current running loop so other threads can schedule onto it
+    try:
+        _async_loop = asyncio.get_running_loop()
+    except RuntimeError:
+        _async_loop = None
 
 
 def _get_web_logger_safe():
@@ -60,12 +67,21 @@ def _mirror_to_async_logger(level: str, message: str, category: Optional[str] = 
     """Schedule mirroring to AsyncLogger if configured and event loop is running."""
     if _async_logger is None:
         return
+    # First try same-thread scheduling
     try:
         loop = asyncio.get_running_loop()
+        try:
+            loop.create_task(_async_logger.log(level, message, category))
+            return
+        except Exception:
+            pass
     except RuntimeError:
-        return
+        pass
+    # Fallback: schedule onto the stored async loop from any thread
     try:
-        loop.create_task(_async_logger.log(level, message, category))
+        if _async_loop is not None:
+            import asyncio as _aio
+            _aio.run_coroutine_threadsafe(_async_logger.log(level, message, category), _async_loop)
     except Exception:
         pass
 
@@ -142,4 +158,66 @@ def log_warning(message: str, category: Optional[str] = None):
     _mirror_to_async_logger('WARNING', safe_message, category)
     logger.warning(safe_message)
     if not SILENT_CONSOLE:
-        print(f"[BULK TASK WARNING] {safe_message}") 
+        print(f"[BULK TASK WARNING] {safe_message}")
+
+
+# ---- Instagrapi → Web UI bridge ----
+class _WebUIForwardHandler(logging.Handler):
+    """Logging handler that forwards external logger records to Web UI logs."""
+    def emit(self, record: logging.LogRecord) -> None:  # noqa: D401
+        try:
+            message = self.format(record)
+        except Exception:
+            try:
+                message = record.getMessage()
+            except Exception:
+                message = str(record)
+        safe_message = safe_encode_message(message)
+        try:
+            web_logger = _get_web_logger_safe()
+            if web_logger:
+                level = record.levelname if record.levelname else 'INFO'
+                category = 'API'
+                # Prefix with source logger name to keep context
+                prefixed = f"[{record.name}] {safe_message}"
+                web_logger.log(level, prefixed, category)
+        except Exception:
+            pass
+        # Also mirror to async logger (UI live stream)
+        try:
+            _mirror_to_async_logger(record.levelname or 'INFO', f"[{record.name}] {safe_message}", 'API')
+        except Exception:
+            pass
+
+
+def attach_instagrapi_web_bridge() -> None:
+    """Attach a handler to instagrapi/public/private loggers to forward messages to Web UI.
+    Levels can be tuned with env:
+      - INSTAGRAPI_LOG_LEVEL (default INFO)
+      - IG_HTTP_LOG_LEVEL (default WARNING)
+      - FORWARD_IG_HTTP_TO_WEBUI (default 0)  # if 1, also forward HTTP logs
+    """
+    try:
+        ig_level = os.getenv('INSTAGRAPI_LOG_LEVEL', 'INFO').upper()
+        http_level = os.getenv('IG_HTTP_LOG_LEVEL', 'WARNING').upper()
+        forward_http = os.getenv('FORWARD_IG_HTTP_TO_WEBUI', '0') == '1'
+
+        handler = _WebUIForwardHandler()
+        handler.setFormatter(logging.Formatter('%(message)s'))
+
+        # instagrapi core logger
+        ig_logger = logging.getLogger('instagrapi')
+        ig_logger.setLevel(getattr(logging, ig_level, logging.INFO))
+        ig_logger.addHandler(handler)
+        ig_logger.propagate = True  # keep console/file per Django settings
+
+        # HTTP request loggers used by instagrapi
+        for name in ('public_request', 'private_request'):
+            lgr = logging.getLogger(name)
+            lgr.setLevel(getattr(logging, http_level, logging.WARNING))
+            lgr.propagate = True
+            if forward_http:
+                lgr.addHandler(handler)
+    except Exception:
+        # Never break main flow due to logging bridge
+        pass 

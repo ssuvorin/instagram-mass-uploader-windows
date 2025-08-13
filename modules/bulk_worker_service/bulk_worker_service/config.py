@@ -24,5 +24,8 @@ class Settings:
 
     log_level: str = os.getenv("LOG_LEVEL", "INFO")
 
+    # Default upload method for bulk worker: 'playwright' or 'instagrapi'
+    upload_method: str = os.getenv("UPLOAD_METHOD", "playwright").lower()
+
 
 settings = Settings() 

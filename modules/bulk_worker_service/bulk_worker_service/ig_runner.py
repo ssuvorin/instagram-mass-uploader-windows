@@ -9,6 +9,7 @@ from typing import List, Optional, Dict
 from bot.src.instagram_uploader.browser_dolphin import get_browser, get_page, close_browser
 from bot.src.instagram_uploader.auth_playwright import Auth
 from bot.src.instagram_uploader.upload_playwright import Upload
+from bot.src.instagram_uploader.dolphin_anty import DolphinAnty
 
 from .config import settings
 from .domain import BulkVideo, BulkUploadAccountTask
@@ -179,6 +180,20 @@ async def run_account_upload_with_metadata(ui: UiClient, task_id: int, account_t
         return success, failed + (total - (success + failed) if (success + failed) < total else 0), full_stdout, str(e)
     finally:
         try:
-            close_browser(browser)
-        except Exception:
-            pass 
+            # Try to persist latest cookies via Dolphin API for this profile (log-only here)
+            try:
+                if profile_id and settings.dolphin_api_token:
+                    local_api_base = settings.dolphin_api_host
+                    if not local_api_base.endswith("/v1.0"):
+                        local_api_base = local_api_base.rstrip("/") + "/v1.0"
+                    dolphin = DolphinAnty(api_key=settings.dolphin_api_token, local_api_base=local_api_base)
+                    cookies_list = dolphin.get_cookies(profile_id) or []
+                    if cookies_list:
+                        await ui.update_account_status(account_task.account_task_id, "RUNNING", log_append=f"[COOKIES] Retrieved {len(cookies_list)} cookies from Dolphin profile {profile_id}\n")
+            except Exception:
+                pass
+        finally:
+            try:
+                close_browser(browser)
+            except Exception:
+                pass 

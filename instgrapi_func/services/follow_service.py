@@ -8,6 +8,8 @@ from instagrapi.exceptions import ChallengeRequired  # type: ignore
 from .client_factory import IGClientFactory
 from .proxy import build_proxy_url
 from .auth_service import IGAuthService
+from .session_store import DjangoDeviceSessionStore
+from .device_service import ensure_persistent_device
 
 
 log = logging.getLogger('insta.follow')
@@ -43,16 +45,23 @@ class FollowService:
         session_settings: Optional[Dict],
         proxy: Optional[Dict],
     ) -> Client:
-        device_cfg = build_device_config(device_settings or {})
+        # Ensure persistent device
+        username = (self._username_hint or "").strip() if hasattr(self, '_username_hint') else ""
+        store = DjangoDeviceSessionStore()
+        persisted = session_settings or (store.load(username) if username else None)
+        resolved_device, ua_hint = ensure_persistent_device(username, persisted)
+        merged_device = dict(resolved_device or {})
+        merged_device.update(device_settings or {})
+        device_cfg = build_device_config(merged_device)
         proxy_url = build_proxy_url(proxy or {})
-        user_agent = (device_settings or {}).get("user_agent")
-        country = (device_settings or {}).get("country")
-        locale = (device_settings or {}).get("locale")
+        user_agent = (device_settings or {}).get("user_agent") or ua_hint
+        country = (merged_device or {}).get("country")
+        locale = (merged_device or {}).get("locale")
         log.debug("Build client | proxy=%s", proxy_url)
         cl = IGClientFactory.create_client(
             device_config=device_cfg,
             proxy_url=proxy_url,
-            session_settings=session_settings,
+            session_settings=persisted,
             user_agent=user_agent,
             country=country,
             locale=locale,
@@ -106,6 +115,8 @@ class FollowService:
                 on_log("follow: missing credentials")
             return False, target_user_id, None
 
+        # Keep username for _build_client to access session/device
+        self._username_hint = username
         cl = self._build_client(device_settings, session_settings, proxy)
 
         if not self.auth.ensure_logged_in(cl, username, password, on_log=on_log):
@@ -166,6 +177,10 @@ class FollowService:
 
         try:
             settings = cl.get_settings()
+            try:
+                DjangoDeviceSessionStore().save(username, settings)
+            except Exception:
+                pass
             if on_log:
                 on_log("follow: fetched updated settings")
             return True, resolved_user_id, settings

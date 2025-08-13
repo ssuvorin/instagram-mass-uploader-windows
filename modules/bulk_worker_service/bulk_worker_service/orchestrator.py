@@ -11,6 +11,13 @@ from .ui_client import UiClient
 from .runner import run_account_upload
 from .ig_runner import run_account_upload_with_metadata
 from .domain import BulkLoginAggregate, WarmupAggregate, AvatarAggregate, BioAggregate, FollowAggregate, ProxyDiagnosticsAggregate, MediaUniqAggregate
+from .instagrapi_runner import run_account_upload_instagrapi
+from .runners.warmup_runner import run_warmup_job
+from .runners.avatar_runner import run_avatar_job
+from .runners.bio_runner import run_bio_job
+from .runners.follow_runner import run_follow_job
+from .runners.proxy_diag_runner import run_proxy_diag_job
+from .runners.media_uniq_runner import run_media_uniq_job
 
 
 @dataclass
@@ -66,37 +73,37 @@ class BulkUploadOrchestrator:
     # ===== Other tasks (pull-mode) =====
     async def start_bulk_login_pull(self, task_id: int) -> str:
         job = self._new_job(task_id)
-        asyncio.create_task(self._run_simple_pull(job.job_id, task_id, kind="bulk_login"))
+        asyncio.create_task(self._run_bulk_login(job.job_id, task_id))
         return job.job_id
 
     async def start_warmup_pull(self, task_id: int) -> str:
         job = self._new_job(task_id)
-        asyncio.create_task(self._run_simple_pull(job.job_id, task_id, kind="warmup"))
+        asyncio.create_task(self._run_warmup(job.job_id, task_id))
         return job.job_id
 
     async def start_avatar_pull(self, task_id: int) -> str:
         job = self._new_job(task_id)
-        asyncio.create_task(self._run_simple_pull(job.job_id, task_id, kind="avatar"))
+        asyncio.create_task(self._run_avatar(job.job_id, task_id))
         return job.job_id
 
     async def start_bio_pull(self, task_id: int) -> str:
         job = self._new_job(task_id)
-        asyncio.create_task(self._run_simple_pull(job.job_id, task_id, kind="bio"))
+        asyncio.create_task(self._run_bio(job.job_id, task_id))
         return job.job_id
 
     async def start_follow_pull(self, task_id: int) -> str:
         job = self._new_job(task_id)
-        asyncio.create_task(self._run_simple_pull(job.job_id, task_id, kind="follow"))
+        asyncio.create_task(self._run_follow(job.job_id, task_id))
         return job.job_id
 
     async def start_proxy_diagnostics_pull(self, task_id: int) -> str:
         job = self._new_job(task_id)
-        asyncio.create_task(self._run_simple_pull(job.job_id, task_id, kind="proxy_diag"))
+        asyncio.create_task(self._run_proxy_diag(job.job_id, task_id))
         return job.job_id
 
     async def start_media_uniq_pull(self, task_id: int) -> str:
         job = self._new_job(task_id)
-        asyncio.create_task(self._run_simple_pull(job.job_id, task_id, kind="media_uniq"))
+        asyncio.create_task(self._run_media_uniq(job.job_id, task_id))
         return job.job_id
 
     async def _run_pull(self, job_id: str, task_id: int, ui_base: Optional[str], ui_token: Optional[str], options: Optional[StartOptions]) -> None:
@@ -146,10 +153,12 @@ class BulkUploadOrchestrator:
         batch_size = settings.batch_size
         batch_index = options.batch_index if options and options.batch_index is not None else None
         batch_count = options.batch_count if options and options.batch_count is not None else None
+        upload_method = (options.upload_method if options and options.upload_method is not None else settings.upload_method).lower()
 
         ui = ui_client or UiClient()
         try:
             await ui.update_task_status(aggregate.id, "RUNNING")
+            await ui.append_task_log(aggregate.id, f"[RUNNER] Upload method: {upload_method}\n")
             # Split accounts among workers if batch routing is provided
             accounts = aggregate.accounts
             if batch_index is not None and batch_count and batch_count > 1:
@@ -161,16 +170,28 @@ class BulkUploadOrchestrator:
 
                 async def _process_account(account_task):
                     async with semaphore:
-                        success, fail, _out, _err = await run_account_upload_with_metadata(
-                            ui=ui,
-                            task_id=aggregate.id,
-                            account_task=account_task,
-                            videos=aggregate.videos,
-                            default_location=aggregate.default_location,
-                            default_mentions_text=aggregate.default_mentions,
-                            headless=headless,
-                            visible=visible,
-                        )
+                        if upload_method == "instagrapi":
+                            success, fail, _out, _err = await run_account_upload_instagrapi(
+                                ui=ui,
+                                task_id=aggregate.id,
+                                account_task=account_task,
+                                videos=aggregate.videos,
+                                default_location=aggregate.default_location,
+                                default_mentions_text=aggregate.default_mentions,
+                                headless=headless,
+                                visible=visible,
+                            )
+                        else:
+                            success, fail, _out, _err = await run_account_upload_with_metadata(
+                                ui=ui,
+                                task_id=aggregate.id,
+                                account_task=account_task,
+                                videos=aggregate.videos,
+                                default_location=aggregate.default_location,
+                                default_mentions_text=aggregate.default_mentions,
+                                headless=headless,
+                                visible=visible,
+                            )
                         job.successful_accounts += 1 if fail == 0 and success > 0 else 0
                         job.failed_accounts += 1 if success == 0 else 0
                         job.total_uploaded += success
@@ -191,4 +212,147 @@ class BulkUploadOrchestrator:
             await ui.update_task_status(aggregate.id, "FAILED", log=f"{e}")
         finally:
             if not ui_client:
-                await ui.aclose() 
+                await ui.aclose()
+
+    # ===== Dedicated runners for other kinds =====
+    async def _run_bulk_login(self, job_id: str, task_id: int) -> None:
+        job = self._jobs[job_id]
+        job.status = "RUNNING"
+        ui = UiClient()
+        try:
+            # For now, treat bulk_login as a fast-pass that marks accounts as completed (auth-only runner can be added)
+            await ui.update_task_status_generic('bulk_login', task_id, status="RUNNING")
+            agg = await ui.get_aggregate('bulk_login', task_id)
+            parsed = BulkLoginAggregate.model_validate(agg)
+            success = 0
+            fail = 0
+            for at in parsed.accounts:
+                await ui.update_account_status_generic('bulk_login', at.account_task_id, status="COMPLETED", log_append="login: skipped (placeholder)\n")
+                success += 1
+            job.successful_accounts = success
+            job.failed_accounts = fail
+            job.status = "COMPLETED"
+            await ui.update_task_status_generic('bulk_login', task_id, status="COMPLETED")
+        except Exception as e:
+            job.status = "FAILED"
+            job.message = str(e)
+            try:
+                await ui.update_task_status_generic('bulk_login', task_id, status="FAILED", log=str(e))
+            except Exception:
+                pass
+        finally:
+            await ui.aclose()
+
+    async def _run_warmup(self, job_id: str, task_id: int) -> None:
+        job = self._jobs[job_id]
+        job.status = "RUNNING"
+        ui = UiClient()
+        try:
+            success, fail = await run_warmup_job(ui, task_id, concurrency=settings.concurrency_limit)
+            job.successful_accounts = success
+            job.failed_accounts = fail
+            job.status = "COMPLETED" if fail == 0 else ("FAILED" if success == 0 else "COMPLETED")
+        except Exception as e:
+            job.status = "FAILED"
+            job.message = str(e)
+            try:
+                await ui.update_task_status_generic('warmup', task_id, status="FAILED", log=str(e))
+            except Exception:
+                pass
+        finally:
+            await ui.aclose()
+
+    async def _run_avatar(self, job_id: str, task_id: int) -> None:
+        job = self._jobs[job_id]
+        job.status = "RUNNING"
+        ui = UiClient()
+        try:
+            success, fail = await run_avatar_job(ui, task_id, concurrency=settings.concurrency_limit)
+            job.successful_accounts = success
+            job.failed_accounts = fail
+            job.status = "COMPLETED" if fail == 0 else ("FAILED" if success == 0 else "COMPLETED")
+        except Exception as e:
+            job.status = "FAILED"
+            job.message = str(e)
+            try:
+                await ui.update_task_status_generic('avatar', task_id, status="FAILED", log=str(e))
+            except Exception:
+                pass
+        finally:
+            await ui.aclose()
+
+    async def _run_bio(self, job_id: str, task_id: int) -> None:
+        job = self._jobs[job_id]
+        job.status = "RUNNING"
+        ui = UiClient()
+        try:
+            success, fail = await run_bio_job(ui, task_id, concurrency=settings.concurrency_limit)
+            job.successful_accounts = success
+            job.failed_accounts = fail
+            job.status = "COMPLETED" if fail == 0 else ("FAILED" if success == 0 else "COMPLETED")
+        except Exception as e:
+            job.status = "FAILED"
+            job.message = str(e)
+            try:
+                await ui.update_task_status_generic('bio', task_id, status="FAILED", log=str(e))
+            except Exception:
+                pass
+        finally:
+            await ui.aclose()
+
+    async def _run_follow(self, job_id: str, task_id: int) -> None:
+        job = self._jobs[job_id]
+        job.status = "RUNNING"
+        ui = UiClient()
+        try:
+            success, fail = await run_follow_job(ui, task_id, concurrency=settings.concurrency_limit)
+            job.successful_accounts = success
+            job.failed_accounts = fail
+            job.status = "COMPLETED" if fail == 0 else ("FAILED" if success == 0 else "COMPLETED")
+        except Exception as e:
+            job.status = "FAILED"
+            job.message = str(e)
+            try:
+                await ui.update_task_status_generic('follow', task_id, status="FAILED", log=str(e))
+            except Exception:
+                pass
+        finally:
+            await ui.aclose()
+
+    async def _run_proxy_diag(self, job_id: str, task_id: int) -> None:
+        job = self._jobs[job_id]
+        job.status = "RUNNING"
+        ui = UiClient()
+        try:
+            success, fail = await run_proxy_diag_job(ui, task_id, concurrency=settings.concurrency_limit)
+            job.successful_accounts = success
+            job.failed_accounts = fail
+            job.status = "COMPLETED" if fail == 0 else ("FAILED" if success == 0 else "COMPLETED")
+        except Exception as e:
+            job.status = "FAILED"
+            job.message = str(e)
+            try:
+                await ui.update_task_status_generic('proxy_diag', task_id, status="FAILED", log=str(e))
+            except Exception:
+                pass
+        finally:
+            await ui.aclose()
+
+    async def _run_media_uniq(self, job_id: str, task_id: int) -> None:
+        job = self._jobs[job_id]
+        job.status = "RUNNING"
+        ui = UiClient()
+        try:
+            success, fail = await run_media_uniq_job(ui, task_id)
+            job.total_uploaded = success
+            job.total_failed_uploads = fail
+            job.status = "COMPLETED" if fail == 0 else ("FAILED" if success == 0 else "COMPLETED")
+        except Exception as e:
+            job.status = "FAILED"
+            job.message = str(e)
+            try:
+                await ui.update_task_status_generic('media_uniq', task_id, status="FAILED", log=str(e))
+            except Exception:
+                pass
+        finally:
+            await ui.aclose() 

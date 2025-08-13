@@ -32,6 +32,7 @@ from .views_mod import (
     all_videos_assigned,
     all_titles_assigned,
     start_bulk_upload,
+    start_bulk_upload_api,
     get_bulk_task_logs,
     delete_bulk_upload,
     create_cookie_robot_task,

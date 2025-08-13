@@ -37,6 +37,7 @@ aiohttp==3.9.5
 
 # Video processing support
 opencv-python-headless==4.8.1.78
+moviepy>=1.0.3
 
 # Enhanced logging and monitoring
 structlog==23.2.0

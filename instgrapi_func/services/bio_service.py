@@ -7,6 +7,8 @@ from instagrapi.exceptions import ChallengeRequired  # type: ignore
 from .client_factory import IGClientFactory
 from .proxy import build_proxy_url
 from .auth_service import IGAuthService
+from .session_store import DjangoDeviceSessionStore
+from .device_service import ensure_persistent_device
 
 log = logging.getLogger('insta.bio')
 
@@ -52,11 +54,16 @@ class BioService:
                 on_log("bio: missing credentials")
             return False, None
 
-        device_cfg = build_device_config(device_settings or {})
+        store = DjangoDeviceSessionStore()
+        persisted_settings = session_settings or store.load(username) or None
+        resolved_device, ua_hint = ensure_persistent_device(username, persisted_settings)
+        merged_device = dict(resolved_device or {})
+        merged_device.update(device_settings or {})
+        device_cfg = build_device_config(merged_device)
         proxy_url = build_proxy_url(proxy or {})
-        user_agent = (device_settings or {}).get("user_agent")
-        country = (device_settings or {}).get("country")
-        locale = (device_settings or {}).get("locale")
+        user_agent = (device_settings or {}).get("user_agent") or ua_hint
+        country = (merged_device or {}).get("country")
+        locale = (merged_device or {}).get("locale")
 
         log.debug("Build client for %s | proxy=%s", username, proxy_url)
         if on_log:
@@ -64,7 +71,7 @@ class BioService:
         cl = IGClientFactory.create_client(
             device_config=device_cfg,
             proxy_url=proxy_url,
-            session_settings=session_settings,
+            session_settings=persisted_settings,
             user_agent=user_agent,
             country=country,
             locale=locale,
@@ -88,6 +95,10 @@ class BioService:
                     settings = None
                     try:
                         settings = cl.get_settings()
+                        try:
+                            store.save(username, settings)
+                        except Exception:
+                            pass
                     except Exception:
                         pass
                     return True, settings
@@ -142,6 +153,10 @@ class BioService:
 
         try:
             settings = cl.get_settings()
+            try:
+                store.save(username, settings)
+            except Exception:
+                pass
             log.debug("Fetched updated settings for %s", username)
             if on_log:
                 on_log("bio: fetched updated settings")

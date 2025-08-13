@@ -6,6 +6,8 @@ from instagrapi import Client
 
 from .services.avatar_service import AvatarService
 from .services.auth_service import IGAuthService
+from .services.session_store import DjangoDeviceSessionStore
+from .services.device_service import ensure_persistent_device
 from .services.code_providers import (
     TOTPProvider,
     NullTwoFactorProvider,
@@ -108,11 +110,21 @@ def change_avatar_for_account(
     # Human-like small delay before action
     _default_delay(0.6, 1.4)
 
+    # Adopt persistent device/session before calling service
+    username = (account.get('username') or '').strip()
+    store = DjangoDeviceSessionStore()
+    persisted = session_settings or store.load(username) or None
+    resolved_device, ua_hint = ensure_persistent_device(username, persisted)
+    merged_device = dict(resolved_device or {})
+    merged_device.update(device_settings or {})
+    if ua_hint and 'user_agent' not in merged_device:
+        merged_device['user_agent'] = ua_hint
+
     return service.change_avatar(
         account=account,
         image_path=image_path,
-        device_settings=device_settings,
-        session_settings=session_settings,
+        device_settings=merged_device,
+        session_settings=persisted,
         proxy=proxy,
         on_log=on_log,
     ) 

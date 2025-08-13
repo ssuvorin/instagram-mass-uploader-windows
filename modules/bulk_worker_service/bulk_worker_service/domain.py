@@ -53,6 +53,7 @@ class StartOptions(BaseModel):
     visible: Optional[bool] = None
     batch_index: Optional[int] = None
     batch_count: Optional[int] = None
+    upload_method: Optional[Literal["playwright", "instagrapi"]] = None
 
 
 class StartRequest(BaseModel):

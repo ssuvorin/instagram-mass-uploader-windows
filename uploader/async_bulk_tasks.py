@@ -70,6 +70,21 @@ from .models import BulkUploadTask, InstagramAccount, VideoFile, BulkUploadAccou
 from .async_video_uniquifier import uniquify_video_for_account, cleanup_uniquifier_temp_files
 from .logging_utils import set_async_logger
 
+# Engine flag helpers
+def _get_engine_for_task(task_id: int) -> Optional[str]:
+    try:
+        from django.core.cache import cache as _cache
+        return _cache.get(f"bulk_engine_{task_id}")
+    except Exception:
+        return None
+
+def _clear_engine_for_task(task_id: int) -> None:
+    try:
+        from django.core.cache import cache as _cache
+        _cache.delete(f"bulk_engine_{task_id}")
+    except Exception:
+        pass
+
 # Настройка логирования
 logger = logging.getLogger(__name__)
 
@@ -718,16 +733,32 @@ class AsyncAccountProcessor:
                 await self.logger.log('WARNING', f"[WARN] Mismatch: {len(videos)} videos vs {len(video_files_to_upload)} files")
             
             # Импортируем асинхронную версию браузера
-            from .bulk_tasks_playwright_async import run_dolphin_browser_async
-            
-            # Запускаем браузер асинхронно
-            result = await run_dolphin_browser_async(
-                account_details,
-                videos,
-                video_files_to_upload,
-                self.task_data.id,
-                self.account_task.id
-            )
+            # Выбор движка выполнения: dolphin (по умолчанию) или instagrapi (API)
+            engine = None
+            try:
+                from django.core.cache import cache as _cache
+                engine = _cache.get(f"bulk_engine_{self.task_data.id}")
+            except Exception:
+                engine = None
+
+            if str(engine).lower() == 'instagrapi':
+                from .async_impl.instagrapi import run_instagrapi_upload_async
+                result = await run_instagrapi_upload_async(
+                    account_details,
+                    videos,
+                    video_files_to_upload,
+                    self.task_data.id,
+                    self.account_task.id
+                )
+            else:
+                from .bulk_tasks_playwright_async import run_dolphin_browser_async
+                result = await run_dolphin_browser_async(
+                    account_details,
+                    videos,
+                    video_files_to_upload,
+                    self.task_data.id,
+                    self.account_task.id
+                )
             
             return self._process_browser_result(result)
                 
@@ -855,6 +886,11 @@ class AsyncTaskCoordinator:
             total_time = self.end_time - self.start_time
             
             await logger.log('SUCCESS', f"Async task completed in {total_time:.1f}s")
+            # Clear engine flag after completion
+            try:
+                _clear_engine_for_task(self.task_id)
+            except Exception:
+                pass
             return True
             
         except Exception as e:
@@ -1232,6 +1268,12 @@ async def run_async_bulk_upload_task(task_id: int) -> bool:
             print("[CLEAN] Cleaned up uniquification temp files")
         except Exception as e:
             print(f"Warning: Failed to cleanup uniquification temp files: {str(e)}")
+        
+        # Clear engine flag regardless of result
+        try:
+            _clear_engine_for_task(task_id)
+        except Exception:
+            pass
         
         # КРИТИЧЕСКОЕ ДОБАВЛЕНИЕ: Always cleanup original video files from bulk_videos folder
         try:

@@ -28,13 +28,22 @@
 И соответствующие POST-эндпоинты для статусов/логов/счетчиков по каждому виду задач — по аналогии с Bulk Upload (см. `docs/BULK_WORKER_INTEGRATION.md`).
 
 ## Реализация Bulk Upload (внутри модуля)
-- `ig_runner.py` — вход, логин через `Auth`, загрузка через `Upload` с title/location/mentions, человеческие паузы.
-- `orchestrator.py` — батчирование, параллельность, статусы/логи.
+- `ig_runner.py` — Playwright + Dolphin: вход, логин через `Auth`, загрузка через `Upload` с title/location/mentions, человеческие паузы. В конце сессии воркер пытается получить cookies профиля через Dolphin Remote API и пишет в лог их количество (персист сохраняется на стороне веба).
+- `instagrapi_runner.py` — загрузка через `instagrapi` с использованием постоянного устройства/сессии (см. `instgrapi_func`), уникализация видео, логи, счётчики.
+- `orchestrator.py` — батчирование, параллельность, статусы/логи, выбор раннера.
 - `ui_client.py` — загрузка агрегата, медиа, публикация логов/статусов, поддержка абсолютного URL медиа.
+
+### Выбор механизма загрузки
+- Можно выбрать метод загрузки:
+  - Playwright: браузерный флоу (по умолчанию)
+  - Instagrapi: приватный API («как телефон»)
+- Способы управления:
+  - Глобально через ENV: `UPLOAD_METHOD=playwright|instagrapi`
+  - На запрос: `StartRequest.options.upload_method` (перекрывает ENV)
 
 ## Заготовки для остальных задач
 - Cookie Robot: `tasks/cookie_robot.py` — использует Dolphin API, готов к вызову из API (добавим эндпоинт при интеграции веба).
-- Bulk Login/Warmup/Avatar/Bio/Follow/Proxy/MediaUniq — эндпоинты и оркестратор готовы, ожидание агрегатов; подключение раннеров делается по шаблону `ig_runner.py`.
+- Bulk Login/Warmup/Avatar/Bio/Follow/Proxy/MediaUniq — эндпоинты и оркестратор готовы, ожидание агрегатов; подключение раннеров делается по шаблону `ig_runner.py`/`instagrapi_runner.py`.
 
 ## Установка и запуск
 1) Python 3.12 + Playwright:
@@ -43,7 +52,7 @@
    venv\Scripts\pip install -r modules\bulk_worker_service\requirements.txt
    venv\Scripts\python -m playwright install
    ```
-2) ENV (см. `.env.example`): `UI_API_BASE`, `UI_API_TOKEN`, `DOLPHIN_API_TOKEN`, `DOLPHIN_API_HOST`, `CONCURRENCY_LIMIT`, `HEADLESS`, `VISIBLE_BROWSER`.
+2) ENV (см. `.env.example`): `UI_API_BASE`, `UI_API_TOKEN`, `DOLPHIN_API_TOKEN`, `DOLPHIN_API_HOST`, `CONCURRENCY_LIMIT`, `HEADLESS`, `VISIBLE_BROWSER`, `UPLOAD_METHOD`.
 3) Запуск:
    ```bat
    modules\bulk_worker_service\start_server.bat
