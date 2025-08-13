@@ -93,6 +93,12 @@
 								<code>username:password||android-<device>;uuid1;uuid2;uuid3|cookie1=value1; cookie2=value2; ...</code>
 								<p class="small text-muted mt-1">If cookies are provided, they will be saved to the account and imported into the created Dolphin profile (local import if supported, otherwise remote API).</p>
 							</div>
+							<div class="mt-3">
+								<h6 class="fw-bold">Format 6: Web cookies only</h6>
+								<code>username:password|cookie1=value1; cookie2=value2; ...</code>
+								<p class="small text-muted mt-1">Use this for standard browser cookies (e.g., csrftoken, sessionid, ds_user_id). Device info is not required.</p>
+								<p class="small text-info mt-1"><i class="bi bi-info-circle"></i> Alternatively, you can also use <code>username:password|||cookie1=value1; ...</code> to explicitly indicate no device info.</p>
+							</div>
 						</div>
 					</div>
 				</div>

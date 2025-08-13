@@ -499,6 +499,8 @@ def import_accounts(request):
                 # Support extended format: username:password||device_info|cookies
                 cookies_raw = None
                 device_info_raw = None
+                web_format_hint = False
+                explicit_no_device_info_hint = False
                 if '||' in raw_line:
                     auth_part, rest = raw_line.split('||', 1)
                     parts = auth_part.split(':')
@@ -509,6 +511,18 @@ def import_accounts(request):
                             device_info_raw = (rest_parts[0] or '').strip() or None
                         if len(rest_parts) > 1:
                             cookies_raw = '|'.join(rest_parts[1:]).strip() or None
+                        # If device info is explicitly empty (username:password|||cookies), treat as web cookies hint
+                        if not device_info_raw:
+                            explicit_no_device_info_hint = True
+                    except Exception:
+                        cookies_raw = None
+                elif '|' in raw_line:
+                    # Support web cookies format: username:password|cookie1=value1; cookie2=value2; ...
+                    left, right = raw_line.split('|', 1)
+                    parts = left.split(':')
+                    try:
+                        cookies_raw = (right or '').strip() or None
+                        web_format_hint = True
                     except Exception:
                         cookies_raw = None
                 else:
@@ -594,7 +608,8 @@ def import_accounts(request):
                                 'sameSite': 'no_restriction',
                             })
                         # Classify cookies type
-                        is_mobile_cookies = _detect_mobile_cookies(cookies_raw, device_info_raw)
+                        classification = _detect_mobile_cookies(cookies_raw, device_info_raw)
+                        is_mobile_cookies = False if (web_format_hint or explicit_no_device_info_hint) else classification
                     except Exception as ce:
                         logger.warning(f"[COOKIES] Failed to parse raw cookies for {username}: {ce}")
                         parsed_cookies_list = []
