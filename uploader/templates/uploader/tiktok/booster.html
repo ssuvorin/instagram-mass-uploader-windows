@@ -1,0 +1,223 @@
+{% extends 'uploader/base.html' %}
+{% load static %}
+
+{% block title %}TikTok Booster{% endblock %}
+
+{% block extra_css %}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 col-xl-10 mx-auto">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <h1 class="h3 mb-0">TikTok API Manager</h1>
+            <div class="text-muted small">API: <code id="api-base"></code></div>
+        </div>
+
+        <div id="upload-section" class="card mb-4">
+            <div class="card-header"><i class="bi bi-upload me-2"></i>Upload Module</div>
+            <div class="card-body">
+                <form id="prepare-accounts-form" class="mb-4">
+                    <div class="mb-2 text-muted small">POST /upload/prepare_accounts</div>
+                    <div class="row g-3 align-items-end">
+                        <div class="col-sm-6 col-md-4">
+                            <label for="count" class="form-label">Number of Accounts to Prepare</label>
+                            <input type="number" class="form-control" id="count" name="count" value="20" required>
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-success"><i class="bi bi-people me-1"></i>Prepare Accounts</button>
+                        </div>
+                    </div>
+                </form>
+                <div id="prepare-accounts-response" class="mt-2"></div>
+
+                <form id="upload-videos-form" class="mb-4">
+                    <div class="mb-2 text-muted small">POST /upload/upload_videos/</div>
+                    <div class="row g-3 align-items-end">
+                        <div class="col-sm-8 col-md-6">
+                            <label for="videos" class="form-label">Upload Videos (multiple files)</label>
+                            <input type="file" class="form-control" id="videos" name="files" multiple required accept="video/*">
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-success"><i class="bi bi-cloud-upload me-1"></i>Upload Videos</button>
+                        </div>
+                    </div>
+                </form>
+                <div id="upload-videos-response" class="mt-2"></div>
+
+                <form id="upload-titles-form" class="mb-4">
+                    <div class="mb-2 text-muted small">POST /upload/upload_titles</div>
+                    <div class="row g-3 align-items-end">
+                        <div class="col-sm-8 col-md-6">
+                            <label for="titles" class="form-label">Upload Titles File (.txt)</label>
+                            <input type="file" class="form-control" id="titles" name="file" required accept=".txt">
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-success"><i class="bi bi-cloud-upload me-1"></i>Upload Titles</button>
+                        </div>
+                    </div>
+                </form>
+                <div id="upload-titles-response" class="mt-2"></div>
+
+                <form id="prepare-config-form" class="mb-4">
+                    <div class="mb-2 text-muted small">POST /upload/prepare_config</div>
+                    <div class="row g-3">
+                        <div class="col-sm-6 col-md-4">
+                            <label for="music_name" class="form-label">Music Name</label>
+                            <input type="text" class="form-control" id="music_name" name="music_name">
+                        </div>
+                        <div class="col-sm-6 col-md-4">
+                            <label for="location" class="form-label">Location</label>
+                            <input type="text" class="form-control" id="location" name="location">
+                        </div>
+                        <div class="col-12 col-md-8">
+                            <label for="mentions" class="form-label">Mentions (comma-separated)</label>
+                            <input type="text" class="form-control" id="mentions" name="mentions" placeholder="user1,user2">
+                        </div>
+                        <div class="col-sm-6 col-md-4">
+                            <label for="upload_cycles" class="form-label">Upload Cycles</label>
+                            <input type="number" class="form-control" id="upload_cycles" name="upload_cycles" value="5" required>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-success"><i class="bi bi-gear me-1"></i>Prepare Config</button>
+                        </div>
+                    </div>
+                </form>
+                <div id="prepare-config-response" class="mt-2"></div>
+
+                <form id="start-upload-form" class="mb-2">
+                    <div class="mb-2 text-muted small">POST /upload/start_upload</div>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-play-fill me-1"></i>Start Upload</button>
+                </form>
+                <div id="start-upload-response" class="mt-2"></div>
+            </div>
+        </div>
+
+        <div id="booster-section" class="card">
+            <div class="card-header"><i class="bi bi-lightning me-2"></i>Booster Module</div>
+            <div class="card-body">
+                <form id="upload-accounts-form" class="mb-4">
+                    <div class="mb-2 text-muted small">POST /booster/upload_accounts</div>
+                    <div class="row g-3 align-items-end">
+                        <div class="col-sm-8 col-md-6">
+                            <label for="accounts-file" class="form-label">Upload Accounts File (.txt)</label>
+                            <input type="file" class="form-control" id="accounts-file" name="file" required accept=".txt">
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-success"><i class="bi bi-file-earmark-arrow-up me-1"></i>Upload Accounts</button>
+                        </div>
+                    </div>
+                </form>
+                <div id="upload-accounts-response" class="mt-2"></div>
+
+                <form id="upload-proxies-form" class="mb-4">
+                    <div class="mb-2 text-muted small">POST /booster/upload_proxies</div>
+                    <div class="row g-3 align-items-end">
+                        <div class="col-sm-8 col-md-6">
+                            <label for="proxies-file" class="form-label">Upload Proxies File (.txt)</label>
+                            <input type="file" class="form-control" id="proxies-file" name="file" required accept=".txt">
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-success"><i class="bi bi-file-earmark-arrow-up me-1"></i>Upload Proxies</button>
+                        </div>
+                    </div>
+                </form>
+                <div id="upload-proxies-response" class="mt-2"></div>
+
+                <form id="prepare-booster-accounts-form" class="mb-3">
+                    <div class="mb-2 text-muted small">POST /booster/prepare_accounts</div>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-people-fill me-1"></i>Prepare Booster Accounts</button>
+                </form>
+                <div id="prepare-booster-accounts-response" class="mt-2"></div>
+
+                <form id="start-booster-form" class="mb-2">
+                    <div class="mb-2 text-muted small">POST /booster/start_booster</div>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-play-fill me-1"></i>Start Booster</button>
+                </form>
+                <div id="start-booster-response" class="mt-2"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const API_BASE = '{{ api_base|default:"http://localhost:8000" }}';
+    document.getElementById('api-base').textContent = API_BASE;
+
+    async function handleFormSubmit(event, endpoint, method = 'POST', isFormData = false) {
+        event.preventDefault();
+        const form = event.target;
+        let body;
+        if (isFormData) {
+            body = new FormData(form);
+        } else {
+            body = JSON.stringify(Object.fromEntries(new FormData(form)));
+        }
+        const responseElement = document.getElementById(`${form.id}-response`);
+        try {
+            const res = await fetch(`${API_BASE}${endpoint}`, {
+                method,
+                headers: isFormData ? {} : { 'Content-Type': 'application/json' },
+                body
+            });
+            const data = await res.json();
+            responseElement.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            if (!res.ok) throw new Error(`Error: ${res.status}`);
+        } catch (error) {
+            responseElement.innerHTML = `<pre style="color: red;">${error.message}</pre>`;
+        }
+    }
+
+    // Upload Module
+    document.getElementById('prepare-accounts-form').addEventListener('submit', (e) => handleFormSubmit(e, '/upload/prepare_accounts'));
+    document.getElementById('upload-videos-form').addEventListener('submit', (e) => handleFormSubmit(e, '/upload/upload_videos/', 'POST', true));
+    document.getElementById('upload-titles-form').addEventListener('submit', (e) => handleFormSubmit(e, '/upload/upload_titles', 'POST', true));
+    document.getElementById('prepare-config-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const formData = new FormData(form);
+
+        const mentions = formData.get('mentions')
+            ? formData.get('mentions').split(',').map(m => m.trim()).filter(m => m)
+            : [];
+
+        const body = JSON.stringify({
+            music_name: formData.get('music_name') || '',
+            location: formData.get('location') || '',
+            mentions: mentions,
+            upload_cycles: parseInt(formData.get('upload_cycles') || 5)
+        });
+
+        const responseElement = document.getElementById('prepare-config-response');
+
+        try {
+            const res = await fetch(`${API_BASE}/upload/prepare_config`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: body
+            });
+
+            if (!res.ok) {
+                const error = await res.json();
+                throw new Error(error.detail || `HTTP error ${res.status}`);
+            }
+
+            const data = await res.json();
+            responseElement.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        } catch (error) {
+            responseElement.innerHTML = `<pre style="color: red;">${error.message}</pre>`;
+        }
+    });
+    document.getElementById('start-upload-form').addEventListener('submit', (e) => handleFormSubmit(e, '/upload/start_upload'));
+
+    // Booster Module
+    document.getElementById('upload-accounts-form').addEventListener('submit', (e) => handleFormSubmit(e, '/booster/upload_accounts', 'POST', true));
+    document.getElementById('upload-proxies-form').addEventListener('submit', (e) => handleFormSubmit(e, '/booster/upload_proxies', 'POST', true));
+    document.getElementById('prepare-booster-accounts-form').addEventListener('submit', (e) => handleFormSubmit(e, '/booster/prepare_accounts'));
+    document.getElementById('start-booster-form').addEventListener('submit', (e) => handleFormSubmit(e, '/booster/start_booster'));
+</script>
+{% endblock %}
+
+

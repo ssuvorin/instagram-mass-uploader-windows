@@ -17,6 +17,7 @@ pyotp==2.8.0
 
 # Configuration and environment
 python-dotenv==1.0.0
+dj-database-url==2.2.0
 
 # HTTP requests and networking
 requests==2.32.3

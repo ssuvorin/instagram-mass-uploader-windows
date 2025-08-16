@@ -1,6 +1,7 @@
 """Misc views."""
 from .common import *
 from django.conf import settings
+from django.views.decorators.clickjacking import xframe_options_exempt
 import threading
 import re
 import ast
@@ -1410,6 +1411,20 @@ def cleanup_inactive_proxies(request):
         'active_tab': 'proxies'
     }
     return render(request, 'uploader/cleanup_inactive_proxies.html', context)
+
+
+@login_required
+def tiktok_booster(request):
+    """Render the TikTok Booster control page that calls external FastAPI endpoints.
+
+    Set API base via environment variable TIKTOK_API_BASE (default http://localhost:8000).
+    """
+    api_base = os.environ.get('TIKTOK_API_BASE', 'http://localhost:8000')
+    context = {
+        'active_tab': 'tiktok',
+        'api_base': api_base,
+    }
+    return render(request, 'uploader/tiktok/booster.html', context)
 def bulk_upload_logs(request, task_id):
     """Get bulk upload logs for a specific task"""
     try:

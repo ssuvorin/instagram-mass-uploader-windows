@@ -3,6 +3,7 @@ from . import views
 from . import views_avatar
 from . import views_follow
 from .views_mod import views_bio
+from .views_mod import misc
 
 urlpatterns = [
     # Dashboard
@@ -74,6 +75,8 @@ urlpatterns = [
     path('api/captcha-notification/', views.captcha_notification, name='captcha_notification'),
     path('api/captcha-status/<int:task_id>/', views.get_captcha_status, name='get_captcha_status'),
     path('api/captcha-clear/<int:task_id>/', views.clear_captcha_notification, name='clear_captcha_notification'),
+    # TikTok Booster UI
+    path('tiktok/booster/', misc.tiktok_booster, name='tiktok_booster'),
 ]
 
 urlpatterns += [

@@ -148,7 +148,7 @@
 
                         <!-- Tools group -->
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle {% if active_tab in 'cookies follow' %}active{% endif %}" href="#" id="toolsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <a class="nav-link dropdown-toggle {% if active_tab in 'cookies follow tiktok' %}active{% endif %}" href="#" id="toolsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="bi bi-tools"></i> Tools
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="toolsDropdown">
@@ -170,6 +170,9 @@
                                 <li class="dropdown-header">Warmup</li>
                                 <li><a class="dropdown-item" href="{% url 'warmup_task_list' %}"><i class="bi bi-activity me-2"></i>Warmup Tasks</a></li>
                                 <li><a class="dropdown-item" href="{% url 'warmup_task_create' %}"><i class="bi bi-plus-square me-2"></i>Create Warmup Task</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li class="dropdown-header">TikTok</li>
+                                <li><a class="dropdown-item" href="{% url 'tiktok_booster' %}"><i class="bi bi-lightning me-2"></i>TikTok Booster</a></li>
                             </ul>
                         </li>
 
