@@ -2435,15 +2435,16 @@ class DolphinAnty:
                 "Accept": "application/json",
             }
             # Include Authorization in JSON body as some versions require
-            resp = requests.post(
-                url,
-                headers=headers_post,
-                json={
-                    "profileId": profile_id,
-                    "Authorization": f"Bearer {self.api_key}",
-                },
-                timeout=timeout_seconds,
-            )
+            body = {
+                "profileId": profile_id,
+                "Authorization": f"Bearer {self.api_key}",
+            }
+            # Optional: include explicit login/password if provided via env for local API
+            local_login = os.environ.get("DOLPHIN_LOCAL_LOGIN") or os.environ.get("LOCAL_API_LOGIN")
+            local_password = os.environ.get("DOLPHIN_LOCAL_PASSWORD") or os.environ.get("LOCAL_API_PASSWORD")
+            if local_login and local_password:
+                body.update({"login": local_login, "password": local_password})
+            resp = requests.post(url, headers=headers_post, json=body, timeout=timeout_seconds)
             resp.raise_for_status()
             data = resp.json()
             if isinstance(data, dict) and "data" in data:
@@ -2489,9 +2490,27 @@ class DolphinAnty:
                     data = {"success": True}
                 logger.info(f"[OK] Cookies imported into profile {profile_id}")
                 return data if isinstance(data, dict) else {"success": True}
-            else:
-                logger.error(f"[FAIL] Local import cookies failed (HTTP {resp.status_code}): {resp.text[:200]}")
-                return {"success": False, "error": f"HTTP {resp.status_code}", "details": resp.text}
+            # If unauthorized or other error, try body-auth fallback
+            local_login = os.environ.get("DOLPHIN_LOCAL_LOGIN") or os.environ.get("LOCAL_API_LOGIN")
+            local_password = os.environ.get("DOLPHIN_LOCAL_PASSWORD") or os.environ.get("LOCAL_API_PASSWORD")
+            headers_fallback = {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            }
+            body = dict(payload)
+            body["Authorization"] = f"Bearer {self.api_key}"
+            if local_login and local_password:
+                body.update({"login": local_login, "password": local_password})
+            resp_fb = requests.post(url, headers=headers_fallback, json=body, timeout=timeout_seconds)
+            if resp_fb.status_code == 200:
+                try:
+                    data = resp_fb.json()
+                except Exception:
+                    data = {"success": True}
+                logger.info(f"[OK] Cookies imported (body-auth) into profile {profile_id}")
+                return data if isinstance(data, dict) else {"success": True}
+            logger.error(f"[FAIL] Local import cookies failed (HTTP {resp_fb.status_code}): {resp_fb.text[:200]}")
+            return {"success": False, "error": f"HTTP {resp_fb.status_code}", "details": resp_fb.text}
         except Exception as e:
             logger.error(f"[FAIL] Exception during local cookies import: {e}")
             return {"success": False, "error": str(e)}
