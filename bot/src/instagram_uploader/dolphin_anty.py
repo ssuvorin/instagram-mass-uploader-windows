@@ -2405,6 +2405,46 @@ class DolphinAnty:
             logger.error(f"[FAIL] Failed to delete cookies for profile {profile_id}: {e}")
             return {"success": False, "error": str(e)}
 
+    def get_cookies_local_export(self, profile_id: Union[str, int], timeout_seconds: int = 15) -> List[Dict[str, Any]]:
+        """
+        Retrieve cookies for a browser profile via Local API export endpoint.
+        Tries GET with query param, then POST with JSON body as fallback.
+        """
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Accept": "application/json",
+        }
+        # Try GET first
+        try:
+            url = f"{self.local_api_base}/cookies/export"
+            resp = requests.get(url, headers=headers, params={"profileId": profile_id}, timeout=timeout_seconds)
+            resp.raise_for_status()
+            data = resp.json()
+            if isinstance(data, dict) and "data" in data:
+                return data.get("data") or []
+            if isinstance(data, list):
+                return data
+        except Exception:
+            pass
+        # Try POST fallback
+        try:
+            url = f"{self.local_api_base}/cookies/export"
+            headers_post = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            }
+            resp = requests.post(url, headers=headers_post, json={"profileId": profile_id}, timeout=timeout_seconds)
+            resp.raise_for_status()
+            data = resp.json()
+            if isinstance(data, dict) and "data" in data:
+                return data.get("data") or []
+            if isinstance(data, list):
+                return data
+        except Exception as e:
+            logger.error(f"[FAIL] Local export cookies failed for profile {profile_id}: {e}")
+        return []
+
     def import_cookies_local(
         self,
         profile_id: Union[str, int],

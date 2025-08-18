@@ -864,9 +864,12 @@ def refresh_cookies_from_profiles(request):
     for acc in accounts:
         pid = acc.dolphin_profile_id
         try:
-            # 1) Try local
+            # 1) Try local Remote-API endpoint
             cookies_list = dolphin_local.get_cookies(pid) or []
-            # 2) Fallback to remote if local returns empty (e.g., unauthorized/not synced)
+            # 2) Try Local API export helper (separate endpoint) if empty
+            if not cookies_list:
+                cookies_list = dolphin_local.get_cookies_local_export(pid) or []
+            # 3) Fallback to remote cloud API as last resort
             if not cookies_list:
                 cookies_list = dolphin_remote.get_cookies(pid) or []
             # Persist only if list is a list of dicts
