@@ -853,7 +853,8 @@ def refresh_cookies_from_profiles(request):
         return redirect('bulk_cookie_robot')
 
     # Initialize client
-    dolphin = DolphinAnty(api_key=api_key, local_api_base=dolphin_api_host)
+    # Use the same host for both Remote and Local API to avoid hitting the public domain by default
+    dolphin = DolphinAnty(api_key=api_key, base_url=dolphin_api_host, local_api_base=dolphin_api_host)
 
     refreshed = 0
     errors = 0
