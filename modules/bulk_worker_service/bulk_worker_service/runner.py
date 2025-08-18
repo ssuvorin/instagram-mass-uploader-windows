@@ -11,6 +11,7 @@ from typing import List, Optional
 from .config import settings
 from .domain import BulkVideo, BulkUploadAccountTask
 from .ui_client import UiClient
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 
 @dataclass
@@ -42,6 +43,7 @@ async def _run_subprocess(cmd: List[str], env: Optional[dict] = None) -> tuple[i
     return process.returncode, stdout_bytes.decode(errors="ignore"), stderr_bytes.decode(errors="ignore")
 
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 async def run_account_upload(ui: UiClient, task_id: int, account_task: BulkUploadAccountTask, videos: List[BulkVideo], headless: bool, visible: bool) -> AccountRunResult:
     await ui.update_account_status(account_task.account_task_id, "RUNNING", log_append=f"Starting account {account_task.account.username}\n")
 

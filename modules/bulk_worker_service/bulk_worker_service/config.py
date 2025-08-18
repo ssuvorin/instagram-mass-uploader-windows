@@ -27,5 +27,11 @@ class Settings:
     # Default upload method for bulk worker: 'playwright' or 'instagrapi'
     upload_method: str = os.getenv("UPLOAD_METHOD", "playwright").lower()
 
+    # Worker self-identification/registration
+    worker_name: str = os.getenv("WORKER_NAME", "")
+    worker_base_url: str = os.getenv("WORKER_BASE_URL", "")
+    worker_capacity: int = int(os.getenv("WORKER_CAPACITY", "1"))
+    heartbeat_interval_secs: int = int(os.getenv("HEARTBEAT_INTERVAL_SECS", "30"))
+
 
 settings = Settings() 

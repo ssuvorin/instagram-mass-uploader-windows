@@ -78,3 +78,12 @@ WORKER_API_TOKEN = os.getenv('WORKER_API_TOKEN', '')
 WORKER_POOL = [h.strip() for h in os.getenv('WORKER_POOL', '').split(',') if h.strip()]
 DISPATCH_BATCH_SIZE = int(os.getenv('DISPATCH_BATCH_SIZE', '5'))
 DISPATCH_CONCURRENCY = int(os.getenv('DISPATCH_CONCURRENCY', '2')) 
+
+# Security: multiple tokens support and IP allowlist for API
+WORKER_API_TOKENS = [t.strip() for t in os.getenv('WORKER_API_TOKENS', '').split(',') if t.strip()]
+WORKER_ALLOWED_IPS = [ip.strip() for ip in os.getenv('WORKER_ALLOWED_IPS', '').split(',') if ip.strip()]
+
+# Optional reverse-proxy/HTTPS hints
+if os.getenv('SECURE_PROXY_SSL_HEADER', '0') in ('1','true','yes','on'):
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = os.getenv('USE_X_FORWARDED_HOST', '1') in ('1','true','yes','on')

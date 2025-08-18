@@ -139,7 +139,7 @@ class AsyncTaskRepository:
     """Асинхронный репозиторий для работы с задачами"""
     
     @staticmethod
-    @sync_to_async
+    @sync_to_async(thread_sensitive=False)
     def get_task(task_id: int) -> BulkUploadTask:
         """Получить задачу по ID"""
         return BulkUploadTask.objects.select_related().get(id=task_id)
@@ -163,13 +163,13 @@ class AsyncTaskRepository:
         return get_all_task_titles(task)
     
     @staticmethod
-    @sync_to_async
+    @sync_to_async(thread_sensitive=False)
     def update_task_status(task: BulkUploadTask, status: str, log_message: str = "") -> None:
         """Обновить статус задачи"""
         update_task_status(task, status, log_message)
     
     @staticmethod
-    @sync_to_async
+    @sync_to_async(thread_sensitive=False)
     def update_task_log(task: BulkUploadTask, log_message: str) -> None:
         """Обновить лог задачи"""
         update_task_log(task, log_message)
@@ -266,7 +266,7 @@ class AsyncTaskRepository:
             }
     
     @staticmethod
-    @sync_to_async
+    @sync_to_async(thread_sensitive=False)
     def close_django_connections() -> None:
         """Закрыть Django соединения"""
         import platform
@@ -309,19 +309,19 @@ class AsyncAccountRepository:
     """Асинхронный репозиторий для работы с аккаунтами"""
     
     @staticmethod
-    @sync_to_async
+    @sync_to_async(thread_sensitive=False)
     def get_account_details(account: InstagramAccount, proxy: Optional[Dict] = None) -> Dict[str, Any]:
         """Получить детали аккаунта"""
         return get_account_details(account, proxy)
     
     @staticmethod
-    @sync_to_async
+    @sync_to_async(thread_sensitive=False)
     def get_account_proxy(account_task: BulkUploadAccount, account: InstagramAccount) -> Optional[Dict]:
         """Получить прокси аккаунта"""
         return get_account_proxy(account_task, account)
     
     @staticmethod
-    @sync_to_async
+    @sync_to_async(thread_sensitive=False)
     def update_account_task(account_task: BulkUploadAccount, **kwargs) -> None:
         """Обновить задачу аккаунта"""
         update_account_task(account_task, **kwargs)
@@ -476,13 +476,22 @@ class AsyncLogger:
                 task = await self.task_repo.get_task(self.task_id)
                 await self.task_repo.update_task_log(task, f"[{timestamp}] {formatted_message}\n")
             except Exception as e:
-                print(f"[FAIL] [ASYNC_LOGGER] Error saving to database: {str(e)}")
+                # Attempt a one-shot connection reset and retry (non-blocking)
+                try:
+                    from django.db import connections
+                    for conn in connections.all():
+                        if conn.connection is not None:
+                            conn.close_if_unusable_or_obsolete()
+                    task = await self.task_repo.get_task(self.task_id)
+                    await self.task_repo.update_task_log(task, f"[{timestamp}] {formatted_message}\n")
+                except Exception:
+                    print(f"[FAIL] [ASYNC_LOGGER] Error saving to database: {str(e)}")
     
     def _is_critical_event(self, level: str, message: str, category: Optional[str]) -> bool:
         """Проверяет, является ли событие критическим"""
-        critical_keywords = ['error', 'failed', 'verification', 'suspension', 'timeout']
-        return (level.upper() in ['ERROR', 'CRITICAL'] or 
-                any(keyword in message.lower() for keyword in critical_keywords))
+        # Do not treat routine "verification" messages as critical to avoid DB writes spam
+        critical_keywords = ['error', 'failed', 'suspension', 'timeout']
+        return (level.upper() in ['ERROR', 'CRITICAL'] or any(kw in message.lower() for kw in critical_keywords))
     
     def _format_message(self, message: str, level: str, category: Optional[str]) -> str:
         """Форматирует сообщение для логирования"""

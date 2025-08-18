@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
 
 from uploader.models import (
     BulkUploadTask, BulkUploadAccount, BulkVideo,
@@ -16,16 +17,33 @@ from uploader.models import (
     BioLinkChangeTask, BioLinkChangeTaskAccount,
     FollowTask, FollowTaskAccount, FollowTarget,
 )
+from .models import TaskLock, WorkerNode
+
+
+def _ip_allowed(request) -> bool:
+    allow = getattr(settings, 'WORKER_ALLOWED_IPS', [])
+    if not allow:
+        return True
+    meta_ip = request.META.get('HTTP_X_FORWARDED_FOR') or request.META.get('REMOTE_ADDR')
+    client_ip = (meta_ip.split(',')[0] if meta_ip else '').strip()
+    return client_ip in allow
 
 
 def _auth_ok(request) -> bool:
+    if not _ip_allowed(request):
+        return False
     auth = request.headers.get("Authorization") or ""
-    token = settings.WORKER_API_TOKEN
-    if not token:
+    tokens = []
+    single = getattr(settings, 'WORKER_API_TOKEN', '')
+    if single:
+        tokens.append(single)
+    tokens.extend(getattr(settings, 'WORKER_API_TOKENS', []) or [])
+    if not tokens:
         return False
     if not auth.startswith("Bearer "):
         return False
-    return auth.split(" ", 1)[1] == token
+    presented = auth.split(" ", 1)[1]
+    return presented in tokens
 
 
 def _forbidden() -> HttpResponse:
@@ -72,10 +90,90 @@ def bulk_task_aggregate(request, task_id: int):
 def media_download(request, video_id: int):
     if not _auth_ok(request):
         return _forbidden()
-    v = get_object_or_404(BulkVideo, id=video_id)
-    if not v.video_file:
-        raise Http404("Video file not found")
-    return FileResponse(v.video_file.open("rb"), as_attachment=True, filename=v.video_file.name.split("/")[-1])
+    # Backward-compatible endpoint: try BulkVideo first, then AvatarImage
+    try:
+        v = BulkVideo.objects.get(id=video_id)
+        if not v.video_file:
+            raise Http404("Video file not found")
+        return FileResponse(
+            v.video_file.open("rb"),
+            as_attachment=True,
+            filename=v.video_file.name.split("/")[-1],
+        )
+    except BulkVideo.DoesNotExist:
+        img = get_object_or_404(AvatarImage, id=video_id)
+        if not img.image:
+            raise Http404("Image file not found")
+        return FileResponse(
+            img.image.open("rb"),
+            as_attachment=True,
+            filename=img.image.name.split("/")[-1],
+        )
+
+
+@require_GET
+@csrf_exempt
+def avatar_media_download(request, image_id: int):
+    if not _auth_ok(request):
+        return _forbidden()
+    img = get_object_or_404(AvatarImage, id=image_id)
+    if not img.image:
+        raise Http404("Image file not found")
+    return FileResponse(
+        img.image.open("rb"),
+        as_attachment=True,
+        filename=img.image.name.split("/")[-1],
+    )
+
+
+# ===== Worker registration & heartbeat =====
+
+@require_POST
+@csrf_exempt
+def worker_register(request):
+    if not _auth_ok(request):
+        return _forbidden()
+    try:
+        body = json.loads(request.body.decode('utf-8')) if request.body else {}
+    except json.JSONDecodeError:
+        body = {}
+    base_url = body.get('base_url') or ''
+    name = body.get('name') or ''
+    capacity = int(body.get('capacity') or 1)
+    if not base_url:
+        return JsonResponse({"detail": "base_url required"}, status=400)
+    node, _created = WorkerNode.objects.get_or_create(base_url=base_url, defaults={"name": name, "capacity": capacity})
+    if not _created:
+        changed = False
+        if name and node.name != name:
+            node.name = name
+            changed = True
+        if node.capacity != capacity:
+            node.capacity = capacity
+            changed = True
+        if changed:
+            node.save(update_fields=['name', 'capacity', 'updated_at'])
+    node.mark_heartbeat(ok=True)
+    return JsonResponse({"ok": True})
+
+
+@require_POST
+@csrf_exempt
+def worker_heartbeat(request):
+    if not _auth_ok(request):
+        return _forbidden()
+    try:
+        body = json.loads(request.body.decode('utf-8')) if request.body else {}
+    except json.JSONDecodeError:
+        body = {}
+    base_url = body.get('base_url') or ''
+    if not base_url:
+        return JsonResponse({"detail": "base_url required"}, status=400)
+    node = WorkerNode.objects.filter(base_url=base_url).first()
+    if not node:
+        return JsonResponse({"detail": "unknown worker"}, status=404)
+    node.mark_heartbeat(ok=True)
+    return JsonResponse({"ok": True})
 
 @require_POST
 @csrf_exempt
@@ -97,6 +195,12 @@ def bulk_task_status(request, task_id: int):
     if log_append:
         task.log = (task.log or "") + log_append + "\n"
     task.save(update_fields=['status','log','updated_at'])
+    # Release lock on terminal statuses
+    if status_val in ("COMPLETED", "FAILED"):
+        try:
+            TaskLock.objects.filter(kind='bulk', task_id=task_id).delete()
+        except Exception:
+            pass
     return JsonResponse({"ok": True, "status": task.status})
 
 @require_POST
@@ -297,6 +401,12 @@ def generic_task_status(request, kind: str, task_id: int):
         if log_append:
             task.log = (task.log or "") + log_append + "\n"
     task.save()
+    # Release lock on terminal statuses
+    if status_val in ("COMPLETED", "FAILED"):
+        try:
+            TaskLock.objects.filter(kind=kind, task_id=task_id).delete()
+        except Exception:
+            pass
     return JsonResponse({"ok": True, "status": getattr(task, 'status', None)})
 
 

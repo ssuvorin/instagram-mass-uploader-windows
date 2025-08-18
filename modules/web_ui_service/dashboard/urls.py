@@ -15,6 +15,7 @@ urlpatterns = [
     # Pull-mode APIs for worker (must be protected by token in views)
     path('api/bulk-tasks/<int:task_id>/aggregate', api_views.bulk_task_aggregate, name='api_bulk_task_aggregate'),
     path('api/media/<int:video_id>/download', api_views.media_download, name='api_media_download'),
+    path('api/media/images/<int:image_id>/download', api_views.avatar_media_download, name='api_avatar_media_download'),
     path('api/bulk-tasks/<int:task_id>/status', api_views.bulk_task_status, name='api_bulk_task_status'),
     path('api/bulk-accounts/<int:account_task_id>/status', api_views.bulk_account_status, name='api_bulk_account_status'),
     path('api/bulk-accounts/<int:account_task_id>/counters', api_views.bulk_account_counters, name='api_bulk_account_counters'),
@@ -32,4 +33,10 @@ urlpatterns = [
     path('api/<str:kind>/<int:task_id>/status', api_views.generic_task_status, name='api_generic_task_status'),
     path('api/<str:kind>/accounts/<int:account_task_id>/status', api_views.generic_account_status, name='api_generic_account_status'),
     path('api/<str:kind>/accounts/<int:account_task_id>/counters', api_views.generic_account_counters, name='api_generic_account_counters'),
+
+    # Worker registry and health
+    path('workers/', views.workers_list, name='workers_list'),
+    path('workers/health-poll', views.health_poll, name='workers_health_poll'),
+    path('api/worker/register', api_views.worker_register, name='api_worker_register'),
+    path('api/worker/heartbeat', api_views.worker_heartbeat, name='api_worker_heartbeat'),
 ] 

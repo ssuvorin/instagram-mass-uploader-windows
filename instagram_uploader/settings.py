@@ -89,9 +89,18 @@ WSGI_APPLICATION = 'instagram_uploader.wsgi.application'
 # Prefer DATABASE_URL (PostgreSQL) when provided; otherwise, fallback to SQLite
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
+    # Use persistent connections with health checks for long-running async tasks
+    # 'conn_max_age' can be overridden via env var; default to 600s
+    DB_CONN_MAX_AGE = int(os.environ.get('DB_CONN_MAX_AGE', '600'))
     DATABASES = {
-        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600, ssl_require=False)
+        'default': dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=DB_CONN_MAX_AGE,
+            ssl_require=False,
+        )
     }
+    # Enable Django connection health checks for long-running tasks
+    DATABASES['default']['CONN_HEALTH_CHECKS'] = True
 else:
     # Use DATABASE_PATH environment variable if set, otherwise use default location
     DATABASE_PATH = os.environ.get('DATABASE_PATH', BASE_DIR / 'db.sqlite3')

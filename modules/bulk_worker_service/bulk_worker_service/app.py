@@ -1,12 +1,16 @@
 from __future__ import annotations
 from fastapi import FastAPI, HTTPException
+import asyncio
+import httpx
 from fastapi.responses import JSONResponse
 
 from .domain import StartRequest, StartResponse, JobStatus, BulkLoginAggregate, WarmupAggregate, AvatarAggregate, BioAggregate, FollowAggregate, ProxyDiagnosticsAggregate, MediaUniqAggregate
 from .orchestrator import BulkUploadOrchestrator
+from .config import settings
 
 app = FastAPI(title="Bulk Worker Service", version="1.1.0")
 _orchestrator = BulkUploadOrchestrator()
+_heartbeat_task = None
 
 
 @app.get("/api/v1/health")
@@ -55,6 +59,43 @@ async def start_bulk_login(task_id: int):
         return StartResponse(job_id=job_id, accepted=True)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+async def _register_and_heartbeat():
+    if not settings.ui_api_base or not settings.ui_api_token or not settings.worker_base_url:
+        return
+    headers = {"Authorization": f"Bearer {settings.ui_api_token}", "Accept": "application/json"}
+    async with httpx.AsyncClient(base_url=settings.ui_api_base, headers=headers, timeout=settings.request_timeout_secs, verify=settings.verify_ssl) as client:
+        try:
+            await client.post("/api/worker/register", json={
+                "base_url": settings.worker_base_url,
+                "name": settings.worker_name,
+                "capacity": settings.worker_capacity,
+            })
+        except Exception:
+            pass
+        while True:
+            try:
+                await client.post("/api/worker/heartbeat", json={"base_url": settings.worker_base_url})
+            except Exception:
+                pass
+            await asyncio.sleep(max(10, settings.heartbeat_interval_secs))
+
+
+@app.on_event("startup")
+async def on_startup():
+    global _heartbeat_task
+    _heartbeat_task = asyncio.create_task(_register_and_heartbeat())
+
+
+@app.on_event("shutdown")
+async def on_shutdown():
+    global _heartbeat_task
+    try:
+        if _heartbeat_task:
+            _heartbeat_task.cancel()
+    except Exception:
+        pass
 
 
 @app.post("/api/v1/warmup/start", response_model=StartResponse)
