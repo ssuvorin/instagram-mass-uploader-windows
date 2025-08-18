@@ -735,11 +735,15 @@ def bulk_cookie_robot(request):
     # Enrich accounts with proxy/cookies summaries for UI
     try:
         for acc in accounts:
-            # Proxy flags
-            proxy = getattr(acc, 'proxy', None)
+            # Proxy flags (prefer current_proxy if present)
+            proxy = getattr(acc, 'current_proxy', None) or getattr(acc, 'proxy', None)
             acc.ui_has_proxy = bool(proxy)
             acc.ui_proxy_active = bool(getattr(proxy, 'is_active', False))
             acc.ui_proxy_status = getattr(proxy, 'status', '') or ''
+            try:
+                acc.ui_proxy_host_port = f"{getattr(proxy, 'host', '')}:{getattr(proxy, 'port', '')}" if proxy else ''
+            except Exception:
+                acc.ui_proxy_host_port = ''
             # Cookies summary
             cookies_obj = getattr(acc, 'cookies', None)
             cookies_list = list(getattr(cookies_obj, 'cookies_data', []) or [])

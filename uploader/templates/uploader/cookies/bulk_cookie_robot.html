@@ -221,6 +221,10 @@
                                             <div class="account-stats">
                                                 <small class="text-muted">Profile: {{ account.dolphin_profile_id }}</small>
                                                 <span class="mx-2 text-muted">•</span>
+                                                {% if account.ui_has_proxy and account.ui_proxy_host_port %}
+                                                    <small class="text-muted">Proxy: {{ account.ui_proxy_host_port }}</small>
+                                                    <span class="mx-2 text-muted">•</span>
+                                                {% endif %}
                                                 <small class="text-muted">{{ account.ui_cookie_total|default:0 }} cookies • {{ account.ui_cookie_domains|default:0 }} sites</small>
                                             </div>
                                             <div class="account-badges">
