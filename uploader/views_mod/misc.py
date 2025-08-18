@@ -821,6 +821,68 @@ def bulk_cookie_robot(request):
         'active_tab': 'cookies'
     }
     return render(request, 'uploader/cookies/bulk_cookie_robot.html', context)
+
+def refresh_cookies_from_profiles(request):
+    """Fetch and persist cookies from Dolphin profiles into DB and return to bulk page."""
+    if request.method != 'POST':
+        return redirect('bulk_cookie_robot')
+
+    try:
+        from bot.src.instagram_uploader.dolphin_anty import DolphinAnty
+    except Exception as e:
+        messages.error(request, f'Dolphin API client not available: {e}')
+        return redirect('bulk_cookie_robot')
+
+    # Read Dolphin API settings
+    api_key = os.environ.get('DOLPHIN_API_TOKEN', '')
+    if not api_key:
+        messages.error(request, 'DOLPHIN_API_TOKEN is not configured. Cannot refresh cookies.')
+        return redirect('bulk_cookie_robot')
+    dolphin_api_host = os.environ.get('DOLPHIN_API_HOST', 'http://localhost:3001/v1.0')
+    if not dolphin_api_host.endswith('/v1.0'):
+        dolphin_api_host = dolphin_api_host.rstrip('/') + '/v1.0'
+
+    # Determine target accounts: selected IDs if provided, otherwise all with profiles
+    selected_ids = request.POST.getlist('accounts')
+    qs = InstagramAccount.objects.filter(dolphin_profile_id__isnull=False)
+    if selected_ids:
+        qs = qs.filter(id__in=selected_ids)
+    accounts = list(qs)
+    if not accounts:
+        messages.warning(request, 'No accounts with Dolphin profiles selected/found.')
+        return redirect('bulk_cookie_robot')
+
+    # Initialize client
+    dolphin = DolphinAnty(api_key=api_key, local_api_base=dolphin_api_host)
+
+    refreshed = 0
+    errors = 0
+    total_cookies = 0
+
+    for acc in accounts:
+        pid = acc.dolphin_profile_id
+        try:
+            cookies_list = dolphin.get_cookies(pid) or []
+            # Persist only if list is a list of dicts
+            if isinstance(cookies_list, list):
+                InstagramCookies.objects.update_or_create(
+                    account=acc,
+                    defaults={'cookies_data': cookies_list, 'is_valid': True}
+                )
+                refreshed += 1
+                total_cookies += len(cookies_list)
+            else:
+                errors += 1
+        except Exception as e:
+            logger.warning(f"[COOKIES][REFRESH] Failed for {acc.username}/{pid}: {e}")
+            errors += 1
+
+    if refreshed:
+        messages.success(request, f'Refreshed cookies for {refreshed} accounts (total cookies: {total_cookies}).')
+    if errors:
+        messages.warning(request, f'Failed to refresh {errors} accounts. Check logs and Dolphin API connectivity.')
+
+    return redirect('bulk_cookie_robot')
 def create_dolphin_profile(request, account_id):
     """Create a Dolphin profile for an existing account"""
     account = get_object_or_404(InstagramAccount, id=account_id)

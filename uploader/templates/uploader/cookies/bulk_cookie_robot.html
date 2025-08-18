@@ -108,9 +108,17 @@
         <p class="text-muted mb-0">Run Cookie Robot on multiple accounts at once</p>
     </div>
     <div class="col-md-4 text-end">
-        <a href="{% url 'cookie_task_list' %}" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Tasks
-        </a>
+        <div class="d-flex justify-content-end gap-2">
+            <a href="{% url 'cookie_task_list' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Tasks
+            </a>
+            <form method="post" action="{% url 'refresh_cookies_from_profiles' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-primary" title="Fetch cookies from Dolphin profiles and persist to DB">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh Cookies
+                </button>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -259,6 +267,8 @@
                                         </div>
                                     </div>
                                 </label>
+                                <!-- Selected IDs will be submitted only on Start Cookie Robot; for Refresh, a global refresh is triggered.
+                                     If you want to refresh only selected, mirror selected IDs into the refresh form via JS. -->
                             </div>
                             {% empty %}
                             <div class="col-12">

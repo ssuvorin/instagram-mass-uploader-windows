@@ -70,6 +70,7 @@ urlpatterns = [
     path('cookies/tasks/<int:task_id>/logs/', views.get_cookie_task_logs, name='cookie_task_logs'),
     path('cookies/accounts/<int:account_id>/', views.account_cookies, name='account_cookies'),
     path('cookies/bulk/', views.bulk_cookie_robot, name='bulk_cookie_robot'),
+    path('cookies/bulk/refresh/', views.refresh_cookies_from_profiles, name='refresh_cookies_from_profiles'),
 
     # Captcha API
     path('api/captcha-notification/', views.captcha_notification, name='captcha_notification'),
