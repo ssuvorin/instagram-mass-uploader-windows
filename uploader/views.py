@@ -56,6 +56,7 @@ from .views_mod import (
     captcha_notification,
     get_captcha_status,
     clear_captcha_notification,
+    refresh_cookies_from_profiles,
     # Bulk Login
     bulk_login_list,
     create_bulk_login,
