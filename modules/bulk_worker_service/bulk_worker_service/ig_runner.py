@@ -180,7 +180,7 @@ async def run_account_upload_with_metadata(ui: UiClient, task_id: int, account_t
         return success, failed + (total - (success + failed) if (success + failed) < total else 0), full_stdout, str(e)
     finally:
         try:
-            # Try to persist latest cookies via Dolphin API for this profile (log-only here)
+            # Try to persist latest cookies via Dolphin API for this profile
             try:
                 if profile_id and settings.dolphin_api_token:
                     local_api_base = settings.dolphin_api_host
@@ -190,6 +190,18 @@ async def run_account_upload_with_metadata(ui: UiClient, task_id: int, account_t
                     cookies_list = dolphin.get_cookies(profile_id) or []
                     if cookies_list:
                         await ui.update_account_status(account_task.account_task_id, "RUNNING", log_append=f"[COOKIES] Retrieved {len(cookies_list)} cookies from Dolphin profile {profile_id}\n")
+                        
+                        # Save cookies to database
+                        try:
+                            from uploader.models import InstagramAccount, InstagramCookies
+                            account = InstagramAccount.objects.get(username=account_task.account.username)
+                            InstagramCookies.objects.update_or_create(
+                                account=account,
+                                defaults={'cookies_data': cookies_list, 'is_valid': True}
+                            )
+                            await ui.update_account_status(account_task.account_task_id, "RUNNING", log_append=f"[COOKIES] Saved {len(cookies_list)} cookies to database for {account.username}\n")
+                        except Exception as db_error:
+                            await ui.update_account_status(account_task.account_task_id, "RUNNING", log_append=f"[COOKIES] Failed to save cookies to DB: {db_error}\n")
             except Exception:
                 pass
         finally:

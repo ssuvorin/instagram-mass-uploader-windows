@@ -1469,6 +1469,18 @@ class DolphinAnty:
             return {"success": False, "error": f"Playwright automation error: {str(e)}"}
             
         finally:
+            # Export cookies to database before stopping profile
+            try:
+                if profile_id:
+                    cookies_list = self.get_cookies(profile_id)
+                    if cookies_list:
+                        logger.info(f"[COOKIES] [ASYNC_COOKIE_ROBOT] Exported {len(cookies_list)} cookies for profile {profile_id}")
+                        # Note: Cookies will be saved to DB by the calling code
+                    else:
+                        logger.warning(f"[COOKIES] [ASYNC_COOKIE_ROBOT] No cookies found for profile {profile_id}")
+            except Exception as e:
+                logger.error(f"[COOKIES] [ASYNC_COOKIE_ROBOT] Failed to export cookies for profile {profile_id}: {e}")
+            
             # Ensure profile is stopped if we started it
             if profile_started:
                 try:

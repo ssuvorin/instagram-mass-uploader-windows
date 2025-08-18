@@ -572,6 +572,33 @@ def run_cookie_robot_task(task_id, urls, headless, imageless):
             response_json = json.dumps(result.get('data', {}), indent=2)
             task.log += response_json + "\n"
             logger.info(f"Response JSON: {response_json}")
+            
+            # Export cookies to database after successful cookie robot execution
+            try:
+                cookies_list = dolphin.get_cookies(account.dolphin_profile_id) or []
+                if cookies_list:
+                    from uploader.models import InstagramCookies
+                    InstagramCookies.objects.update_or_create(
+                        account=account,
+                        defaults={
+                            'cookies_data': cookies_list,
+                            'is_valid': True,
+                        }
+                    )
+                    log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [COOKIES] Exported {len(cookies_list)} cookies to database for {account.username}"
+                    safe_message = safe_log_message(log_message)
+                    task.log += safe_message + "\n"
+                    logger.info(safe_message)
+                else:
+                    log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [COOKIES] No cookies found for {account.username}"
+                    safe_message = safe_log_message(log_message)
+                    task.log += safe_message + "\n"
+                    logger.warning(safe_message)
+            except Exception as e:
+                log_message = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] [COOKIES] Failed to export cookies for {account.username}: {e}"
+                safe_message = safe_log_message(log_message)
+                task.log += safe_message + "\n"
+                logger.error(safe_message)
         else:
             error_details = result.get('error', 'Unknown error')
             
