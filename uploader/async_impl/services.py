@@ -272,8 +272,9 @@ async def update_account_last_used_async(username: str):
         from django.utils import timezone
         from uploader.models import InstagramAccount
         
-        @sync_to_async
+        @sync_to_async(thread_sensitive=False)
         def update_last_used():
+            from django.db import connections
             try:
                 account = InstagramAccount.objects.get(username=username)
                 account.last_used = timezone.now()
@@ -283,8 +284,19 @@ async def update_account_last_used_async(username: str):
                 log_error(f"[FAIL] [DATABASE] Account not found: {username}")
                 return False
             except Exception as e:
-                log_error(f"[FAIL] [DATABASE] Error updating last_used: {str(e)}")
-                return False
+                # retry once with connection refresh
+                try:
+                    for conn in connections.all():
+                        if conn.connection is not None:
+                            conn.close_if_unusable_or_obsolete()
+                            conn.close()
+                    account = InstagramAccount.objects.get(username=username)
+                    account.last_used = timezone.now()
+                    account.save(update_fields=['last_used'])
+                    return True
+                except Exception as e2:
+                    log_error(f"[FAIL] [DATABASE] Error updating last_used after retry: {str(e2)}")
+                    return False
         
         return await update_last_used()
         

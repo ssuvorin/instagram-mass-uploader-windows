@@ -165,14 +165,37 @@ class AsyncTaskRepository:
     @staticmethod
     @sync_to_async(thread_sensitive=False)
     def update_task_status(task: BulkUploadTask, status: str, log_message: str = "") -> None:
-        """Обновить статус задачи"""
-        update_task_status(task, status, log_message)
+        """Обновить статус задачи с авто-повтором при сбое соединения"""
+        from django.db import connections
+        try:
+            update_task_status(task, status, log_message)
+        except Exception as e:
+            # Попытка авто-восстановления соединения и повтор
+            try:
+                for conn in connections.all():
+                    if conn.connection is not None:
+                        conn.close_if_unusable_or_obsolete()
+                        conn.close()
+                update_task_status(task, status, log_message)
+            except Exception:
+                raise e
     
     @staticmethod
     @sync_to_async(thread_sensitive=False)
     def update_task_log(task: BulkUploadTask, log_message: str) -> None:
-        """Обновить лог задачи"""
-        update_task_log(task, log_message)
+        """Обновить лог задачи с авто-повтором при сбое соединения"""
+        from django.db import connections
+        try:
+            update_task_log(task, log_message)
+        except Exception as e:
+            try:
+                for conn in connections.all():
+                    if conn.connection is not None:
+                        conn.close_if_unusable_or_obsolete()
+                        conn.close()
+                update_task_log(task, log_message)
+            except Exception:
+                raise e
     
     @staticmethod
     @sync_to_async
@@ -323,8 +346,19 @@ class AsyncAccountRepository:
     @staticmethod
     @sync_to_async(thread_sensitive=False)
     def update_account_task(account_task: BulkUploadAccount, **kwargs) -> None:
-        """Обновить задачу аккаунта"""
-        update_account_task(account_task, **kwargs)
+        """Обновить задачу аккаунта с авто-повтором при сбое соединения"""
+        from django.db import connections
+        try:
+            update_account_task(account_task, **kwargs)
+        except Exception as e:
+            try:
+                for conn in connections.all():
+                    if conn.connection is not None:
+                        conn.close_if_unusable_or_obsolete()
+                        conn.close()
+                update_account_task(account_task, **kwargs)
+            except Exception:
+                raise e
 
 # Асинхронная работа с файлами
 class AsyncFileManager:

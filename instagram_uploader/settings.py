@@ -101,6 +101,15 @@ if DATABASE_URL:
     }
     # Enable Django connection health checks for long-running tasks
     DATABASES['default']['CONN_HEALTH_CHECKS'] = True
+    # Optional: pgBouncer transaction pooling compatibility
+    # Set via env PGBOUNCER_MODE=transaction to document expected setup
+    PGBOUNCER_MODE = os.environ.get('PGBOUNCER_MODE', '').lower()
+    if PGBOUNCER_MODE == 'transaction':
+        # Typically no code change is needed; ensure server-side settings align.
+        # Here we document with a flag to aid debugging.
+        DATABASES['default']['OPTIONS'] = DATABASES['default'].get('OPTIONS', {})
+        # Example placeholder for transaction mode specific options if needed later
+        DATABASES['default']['OPTIONS'].setdefault('application_name', 'instagram_uploader_async')
 else:
     # Use DATABASE_PATH environment variable if set, otherwise use default location
     DATABASE_PATH = os.environ.get('DATABASE_PATH', BASE_DIR / 'db.sqlite3')
