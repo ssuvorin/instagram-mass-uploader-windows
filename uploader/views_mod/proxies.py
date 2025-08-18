@@ -329,6 +329,11 @@ def validate_all_proxies(request):
         messages.warning(request, 'No active proxies found in the system.')
         return redirect('proxy_list')
     
+    # Require authenticated user to attach messages/session to background thread
+    if not getattr(request.user, 'is_authenticated', False):
+        messages.error(request, 'You must be logged in to validate proxies.')
+        return redirect('proxy_list')
+    
     # Start the validation in a background thread to avoid timeout
     thread = threading.Thread(
         target=_validate_proxies_background,
@@ -346,15 +351,25 @@ def validate_all_proxies(request):
 
 def _validate_proxies_background(proxies, user_id):
     """Background task to validate proxies"""
-    from django.contrib.auth.models import User
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import AnonymousUser
     from django.contrib.messages import constants as message_constants
     from django.contrib.messages.storage.fallback import FallbackStorage
     from django.contrib.sessions.backends.db import SessionStore
     from django.http import HttpRequest
+    from django.db import connections
     
     # Create a fake request to use for messaging
     request = HttpRequest()
-    request.user = User.objects.get(id=user_id)
+    try:
+        if user_id is not None:
+            UserModel = get_user_model()
+            request.user = UserModel.objects.get(id=user_id)
+        else:
+            request.user = AnonymousUser()
+    except Exception:
+        # Fall back to anonymous if user not found
+        request.user = AnonymousUser()
     request.session = SessionStore()
     request.session.create()
     request._messages = FallbackStorage(request)
@@ -401,7 +416,9 @@ def _validate_proxies_background(proxies, user_id):
     
     # Execute validation in parallel
     with ThreadPoolExecutor(max_workers=thread_count) as executor:
-        results = list(executor.map(validate_proxy_worker, proxies))
+        # Evaluate queryset to list in main thread to avoid DB usage across threads during iteration
+        proxy_list = list(proxies)
+        results = list(executor.map(validate_proxy_worker, proxy_list))
         
     valid_count = sum(1 for r in results if r)
     invalid_count = sum(1 for r in results if not r)
@@ -412,6 +429,15 @@ def _validate_proxies_background(proxies, user_id):
         message_constants.SUCCESS,
         f'Proxy validation complete. Valid: {valid_count}, Invalid: {invalid_count}'
     )
+    
+    # Gently close DB connections opened by this background thread
+    try:
+        for conn in connections.all():
+            if conn.connection is not None:
+                conn.close_if_unusable_or_obsolete()
+                conn.close()
+    except Exception:
+        pass
 
 
 def delete_proxy(request, proxy_id):
