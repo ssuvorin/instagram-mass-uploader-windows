@@ -25,6 +25,7 @@ import platform
 import uuid
 import socket
 import ipaddress
+import http.client
 
 # Импортируем Windows совместимость
 try:
@@ -162,6 +163,10 @@ class DolphinAnty:
         self.api_key        = api_key
         self.base_url       = base_url.rstrip("/")
         self.local_api_base = local_api_base.rstrip("/")
+        # Public Sync API base (used by "Export cookies for single profile")
+        # Example: https://sync.dolphin-anty-api.com/?actionType=getCookies&browserProfileId=ID
+        # Allow overriding via env to support mirrors / enterprise deployments
+        self.sync_api_base  = os.environ.get("DOLPHIN_SYNC_API_BASE", "https://sync.dolphin-anty-api.com").rstrip("/")
         # Simple in-memory cache for geo-IP lookups per proxy host
         self._geoip_cache: Dict[str, Dict[str, Any]] = {}
 
@@ -2362,22 +2367,39 @@ class DolphinAnty:
     # --- Cookies API helpers ---
     def get_cookies(self, profile_id: Union[str, int]) -> List[Dict[str, Any]]:
         """
-        Retrieve cookies for a browser profile via Remote API.
-        Returns a list of cookie dicts or an empty list on failure.
+        Return cookies using only the working Sync API method.
+        """
+        cookies = self.export_cookies(profile_id)
+        if cookies:
+            logger.info(f"[GET_COOKIES] Success! Got {len(cookies)} cookies for profile {profile_id}")
+            return cookies
+        logger.warning(f"[GET_COOKIES] No cookies found for profile {profile_id}")
+        return []
+
+    def export_cookies(self, profile_id: Union[str, int], timeout_seconds: int = 15) -> List[Dict[str, Any]]:
+        """
+        Exact sample from docs: GET with headers only.
         """
         try:
-            resp = self._make_request(
-                method="get",
-                endpoint=f"/browser_profiles/{profile_id}/cookies",
-            )
-            if isinstance(resp, dict) and "data" in resp:
-                return resp.get("data") or []
-            if isinstance(resp, list):
-                return resp
-            return []
+            url = f"{self.sync_api_base}/?actionType=getCookies&browserProfileId={profile_id}"
+            token = self.api_key or os.environ.get("TOKEN") or os.environ.get("DOLPHIN_API_TOKEN")
+            headers = {"Content-Type": "application/json"}
+            if token:
+                headers["Authorization"] = f"Bearer {token}"
+            res = requests.request("GET", url, headers=headers, timeout=timeout_seconds)
+            res.raise_for_status()
+            payload = res.json()
+            if isinstance(payload, dict) and "data" in payload:
+                cookies_data = payload.get("data") or []
+                logger.info(f"[EXPORT_COOKIES] Success! Got {len(cookies_data)} cookies for profile {profile_id}")
+                return cookies_data
+            if isinstance(payload, list):
+                logger.info(f"[EXPORT_COOKIES] Success! Got {len(payload)} cookies for profile {profile_id}")
+                return payload
+            logger.warning(f"[EXPORT_COOKIES] Unexpected payload format for profile {profile_id}: {type(payload)}")
         except Exception as e:
-            logger.error(f"[FAIL] Failed to fetch cookies for profile {profile_id}: {e}")
-            return []
+            logger.error(f"[FAIL] export_cookies sync call failed for {profile_id}: {e}")
+        return []
 
     def update_cookies(self, profile_id: Union[str, int], cookies: List[Dict[str, Any]]) -> Dict[str, Any]:
         """PATCH cookies for a profile via Remote API (add/overwrite)."""
@@ -2455,6 +2477,14 @@ class DolphinAnty:
             logger.error(f"[FAIL] Local export cookies failed for profile {profile_id}: {e}")
         return []
 
+    def get_cookies_via_sync_api(self, profile_id: Union[str, int], timeout_seconds: int = 15) -> List[Dict[str, Any]]:
+        """
+        Fallback method - redirects to the working export_cookies method.
+        """
+        return self.export_cookies(profile_id, timeout_seconds)
+
+
+
     def import_cookies_local(
         self,
         profile_id: Union[str, int],
@@ -2513,4 +2543,26 @@ class DolphinAnty:
             return {"success": False, "error": f"HTTP {resp_fb.status_code}", "details": resp_fb.text}
         except Exception as e:
             logger.error(f"[FAIL] Exception during local cookies import: {e}")
-            return {"success": False, "error": str(e)}
+            # Final fallback using low-level http.client to avoid any requests/SSL quirks
+            try:
+                headers_low = {
+                    "Content-Type": "application/json",
+                }
+                body_low = dict(payload)
+                body_low["Authorization"] = f"Bearer {self.api_key}"
+                conn = http.client.HTTPConnection("127.0.0.1", 3001, timeout=timeout_seconds)
+                conn.request("POST", "/v1.0/cookies/import", json.dumps(body_low), headers_low)
+                resp_low = conn.getresponse()
+                raw = resp_low.read()
+                if resp_low.status == 200:
+                    try:
+                        data = json.loads(raw)
+                    except Exception:
+                        data = {"success": True}
+                    logger.info(f"[OK] Cookies imported into profile {profile_id} (http.client fallback)")
+                    return data if isinstance(data, dict) else {"success": True}
+                logger.error(f"[FAIL] Local import cookies failed (HTTP {resp_low.status}): {raw[:200]}")
+                return {"success": False, "error": f"HTTP {resp_low.status}", "details": raw[:200].decode(errors='ignore')}
+            except Exception as ee:
+                logger.error(f"[FAIL] http.client fallback error during local cookies import: {ee}")
+                return {"success": False, "error": str(e)}

@@ -853,10 +853,8 @@ def refresh_cookies_from_profiles(request):
         messages.warning(request, 'No accounts with Dolphin profiles selected/found.')
         return redirect('bulk_cookie_robot')
 
-    # Initialize client
-    # Prefer Local API host; prepare remote fallback client as well
-    dolphin_local = DolphinAnty(api_key=api_key, base_url=dolphin_api_host, local_api_base=dolphin_api_host)
-    dolphin_remote = DolphinAnty(api_key=api_key)
+    # Initialize client with working Sync API
+    dolphin_local = DolphinAnty(api_key=api_key, local_api_base=dolphin_api_host)
 
     refreshed = 0
     errors = 0
@@ -865,14 +863,8 @@ def refresh_cookies_from_profiles(request):
     for acc in accounts:
         pid = acc.dolphin_profile_id
         try:
-            # 1) Try local Remote-API endpoint
+            # Use only the working Sync API method
             cookies_list = dolphin_local.get_cookies(pid) or []
-            # 2) Try Local API export helper (separate endpoint) if empty
-            if not cookies_list:
-                cookies_list = dolphin_local.get_cookies_local_export(pid) or []
-            # 3) Fallback to remote cloud API as last resort
-            if not cookies_list:
-                cookies_list = dolphin_remote.get_cookies(pid) or []
             # Persist only if list is a list of dicts
             if isinstance(cookies_list, list):
                 InstagramCookies.objects.update_or_create(
