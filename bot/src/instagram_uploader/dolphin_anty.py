@@ -2410,6 +2410,7 @@ class DolphinAnty:
         Retrieve cookies for a browser profile via Local API export endpoint.
         Tries GET with query param, then POST with JSON body as fallback.
         """
+        # Some Local API setups expect token in body instead of header. Try both strategies.
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Accept": "application/json",
@@ -2430,11 +2431,19 @@ class DolphinAnty:
         try:
             url = f"{self.local_api_base}/cookies/export"
             headers_post = {
-                "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json",
                 "Accept": "application/json",
             }
-            resp = requests.post(url, headers=headers_post, json={"profileId": profile_id}, timeout=timeout_seconds)
+            # Include Authorization in JSON body as some versions require
+            resp = requests.post(
+                url,
+                headers=headers_post,
+                json={
+                    "profileId": profile_id,
+                    "Authorization": f"Bearer {self.api_key}",
+                },
+                timeout=timeout_seconds,
+            )
             resp.raise_for_status()
             data = resp.json()
             if isinstance(data, dict) and "data" in data:
