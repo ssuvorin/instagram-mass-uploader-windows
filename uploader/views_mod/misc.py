@@ -1512,14 +1512,37 @@ def cleanup_inactive_proxies(request):
 def tiktok_booster(request):
     """Render the TikTok Booster control page that calls external FastAPI endpoints.
 
-    Set API base via environment variable TIKTOK_API_BASE (default http://localhost:8000).
+    Set API base via environment variable TIKTOK_API_BASE (default http://94.141.161.231:8000).
     """
-    api_base = os.environ.get('TIKTOK_API_BASE', 'http://localhost:8000')
+    api_base = os.environ.get('TIKTOK_API_BASE', 'http://94.141.161.231:8000')
     context = {
         'active_tab': 'tiktok',
         'api_base': api_base,
     }
     return render(request, 'uploader/tiktok/booster.html', context)
+
+
+# tiktok_get_logs - Removed, API calls go directly to external server
+
+
+# tiktok_clear_logs - Removed, API calls go directly to external server
+
+
+# tiktok_prepare_accounts - Removed, API calls go directly to external server
+
+
+# tiktok_prepare_config - Removed, API calls go directly to external server
+
+
+# tiktok_start_upload - Removed, API calls go directly to external server
+
+
+# tiktok_prepare_booster_accounts - Removed, API calls go directly to external server
+
+
+# tiktok_start_booster - Removed, API calls go directly to external server
+
+
 def bulk_upload_logs(request, task_id):
     """Get bulk upload logs for a specific task"""
     try:

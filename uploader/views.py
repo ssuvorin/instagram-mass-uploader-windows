@@ -64,6 +64,8 @@ from .views_mod import (
     start_bulk_login,
     get_bulk_login_logs,
     delete_bulk_login,
+    # TikTok - Only UI rendering, no API handling
+    tiktok_booster,
 )
 
 from .views_mod.common import safe_log_message, logger
