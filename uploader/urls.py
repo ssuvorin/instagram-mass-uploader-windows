@@ -80,6 +80,7 @@ urlpatterns = [
     
     # TikTok Booster UI
     path('tiktok/booster/', misc.tiktok_booster, name='tiktok_booster'),
+    path('tiktok/booster/logs/', misc.get_api_server_logs, name='get_api_server_logs'),
 ]
 
 urlpatterns += [

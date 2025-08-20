@@ -1,0 +1,9 @@
+.idea
+.venv
+log.txt
+.env
+prepare_accounts/accounts/*
+prepare_accounts/videos/*
+prepare_accounts/proxy/*
+prepare_accounts/titles/*
+accounts/*

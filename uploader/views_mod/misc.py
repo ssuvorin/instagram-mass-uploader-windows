@@ -1580,6 +1580,57 @@ def tiktok_booster(request):
     return render(request, 'uploader/tiktok/booster.html', context)
 
 
+@login_required
+def get_api_server_logs(request):
+    """AJAX endpoint to fetch logs from the selected API server."""
+    import requests
+    import json
+    from django.http import JsonResponse
+
+    # Get the selected server from request or environment
+    server_url = request.GET.get('server_url') or os.environ.get('TIKTOK_API_BASE')
+
+    if not server_url:
+        return JsonResponse({'error': 'No server URL provided', 'logs': []})
+
+    try:
+        # Try to get logs from the API server
+        # Note: This is a placeholder - the actual API server might not have a logs endpoint
+        # We'll need to implement this on the API server side
+        logs_endpoint = f"{server_url}/logs"
+        response = requests.get(logs_endpoint, timeout=5)
+
+        if response.status_code == 200:
+            logs_data = response.json()
+            return JsonResponse({
+                'logs': logs_data.get('logs', []),
+                'server': server_url,
+                'status': 'success'
+            })
+        else:
+            return JsonResponse({
+                'logs': [],
+                'server': server_url,
+                'status': 'error',
+                'message': f'API server returned status {response.status_code}'
+            })
+
+    except requests.exceptions.RequestException as e:
+        return JsonResponse({
+            'logs': [],
+            'server': server_url,
+            'status': 'error',
+            'message': f'Failed to connect to API server: {str(e)}'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'logs': [],
+            'server': server_url,
+            'status': 'error',
+            'message': f'Unexpected error: {str(e)}'
+        })
+
+
 # tiktok_get_logs - Removed, API calls go directly to external server
 
 
