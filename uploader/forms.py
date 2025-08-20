@@ -29,9 +29,30 @@ class MultipleFileField(forms.FileField):
     widget = MultipleFileInput
 
     def clean(self, data, initial=None):
-        single_file = super().clean(data, initial)
-        if isinstance(single_file, list):
-            return single_file
+        # Accept both single file and list of files; validate each item
+        # Handle "no files" case explicitly to avoid misleading errors
+        if (data in (None, "") or (isinstance(data, (list, tuple)) and not data)):
+            if self.required and not initial:
+                raise forms.ValidationError(self.error_messages.get('required', 'This field is required.'))
+            return initial or []
+
+        # If multiple files were posted
+        if isinstance(data, (list, tuple)):
+            cleaned_files = []
+            errors = []
+            for f in data:
+                if not f:
+                    continue
+                try:
+                    cleaned_files.append(forms.FileField.clean(self, f, initial))
+                except forms.ValidationError as e:
+                    errors.extend(e.error_list)
+            if errors:
+                raise forms.ValidationError(errors)
+            return cleaned_files
+
+        # Single file path
+        single_file = forms.FileField.clean(self, data, initial)
         return [single_file] if single_file else []
 
 
@@ -325,6 +346,10 @@ class AvatarChangeTaskForm(forms.ModelForm):
         widget=MultipleFileInput(attrs={'multiple': True, 'class': 'form-control'}),
         validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png'])],
         required=True,
+        error_messages={
+            'required': 'Please select at least one image to upload.',
+            'invalid': 'Please upload valid image files (PNG/JPG).'
+        },
         label="Avatar images",
         help_text="You can select multiple PNG/JPG images"
     )

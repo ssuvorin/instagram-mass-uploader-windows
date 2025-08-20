@@ -563,7 +563,26 @@ class AsyncAccountProcessor:
         self.account_repo = AsyncAccountRepository()
         self.start_time = None
         self.end_time = None
-    
+
+        # Create log callback that bridges to async logger
+        self.log_callback = self._create_log_callback()
+
+    def _create_log_callback(self):
+        """Create a synchronous log callback that bridges to async logger"""
+        def log_callback(message: str):
+            # Use asyncio.run_coroutine_threadsafe to bridge sync to async
+            try:
+                import asyncio
+                future = asyncio.run_coroutine_threadsafe(
+                    self.logger.log('INFO', f"[API] {message}"),
+                    asyncio.get_event_loop()
+                )
+                # Don't wait for completion to avoid blocking
+            except Exception:
+                # Fallback to simple print if async bridge fails
+                print(f"[API] {message}")
+        return log_callback
+
     async def process(self) -> Tuple[str, int, int]:
         """Основной метод обработки аккаунта"""
         self.start_time = time.time()
@@ -791,7 +810,8 @@ class AsyncAccountProcessor:
                     videos,
                     video_files_to_upload,
                     self.task_data.id,
-                    self.account_task.id
+                    self.account_task.id,
+                    on_log=self.log_callback
                 )
             else:
                 from .bulk_tasks_playwright_async import run_dolphin_browser_async

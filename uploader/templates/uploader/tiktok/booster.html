@@ -245,13 +245,11 @@
     
     /* API status indicator */
     .api-status {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.5rem 1rem;
+        padding: 0.75rem 1rem;
         background: rgba(255, 255, 255, 0.1);
         border-radius: 8px;
         backdrop-filter: blur(10px);
+        min-width: 300px;
     }
     
     .status-indicator {
@@ -382,9 +380,25 @@
                     <p class="mb-0 opacity-75">Manage TikTok accounts, upload videos, and boost engagement</p>
                 </div>
                 <div class="api-status">
-                    <span class="status-indicator" id="api-status"></span>
-                    <span id="api-status-text">Checking...</span>
-                    <small class="ms-2 opacity-75">API: <code id="api-base" style="color: white;">{{ api_base|default:"http://localhost:8000" }}</code></small>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <label for="api-server-select" class="form-label text-white mb-0 small">API Server:</label>
+                        <select class="form-select form-select-sm" id="api-server-select" style="min-width: 200px;">
+                            {% for server in available_servers %}
+                            <option value="{{ server.url }}" {% if server.url == selected_server.url %}selected{% endif %}>
+                                {{ server.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="status-indicator" id="api-status"></span>
+                        <span id="api-status-text" class="small">Checking...</span>
+                        <small class="text-white-50">|</small>
+                        <a href="{{ selected_server.url }}/docs" target="_blank" class="text-white-50 small text-decoration-none" id="current-server-link" title="Open API docs">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>{{ selected_server.url }}
+                        </a>
+                    </div>
+                    <small class="text-white-50 d-block mt-1">{{ selected_server.description }}</small>
                 </div>
             </div>
         </div>
@@ -669,8 +683,48 @@ another.proxy.net:3128@proxyuser:secret</pre>
 
 {% block extra_js %}
 <script>
-    const API_BASE = '{{ api_base|default:"http://94.141.161.231:8000" }}';
-    document.getElementById('api-base').textContent = API_BASE;
+    // Global API_BASE variable - will be updated dynamically
+    let API_BASE = '{{ api_base|default:"http://94.141.161.231:8000" }}';
+
+    // Make available servers data accessible to JavaScript
+    window.availableServers = [
+        {% for server in available_servers %}
+        {
+            name: "{{ server.name }}",
+            url: "{{ server.url }}",
+            description: "{{ server.description }}"
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    // Server selection handler
+    document.getElementById('api-server-select').addEventListener('change', function(e) {
+        const selectedUrl = e.target.value;
+        const selectedOption = e.target.options[e.target.selectedIndex];
+
+        // Update global API_BASE
+        API_BASE = selectedUrl;
+
+        // Update current server display and link
+        const linkElement = document.getElementById('current-server-link');
+        linkElement.href = `${API_BASE}/docs`;
+        linkElement.lastChild.textContent = API_BASE;
+
+        // Update description (find the correct small element)
+        const statusContainer = e.target.closest('.api-status');
+        const descElement = statusContainer.querySelector('small:last-child');
+        if (descElement) {
+            // Find server description from available servers
+            const selectedServer = window.availableServers ? window.availableServers.find(s => s.url === selectedUrl) : null;
+            descElement.textContent = selectedServer ? selectedServer.description : 'Custom server';
+        }
+
+        // Re-check API status with new server
+        checkApiStatus();
+
+        // Add log entry
+        addLog(`Switched to API server: ${selectedUrl}`, 'info');
+    });
 
     // Global state
     let logs = [];
@@ -692,10 +746,20 @@ another.proxy.net:3128@proxyuser:secret</pre>
         
         try {
             // Check if TikTok API is accessible by trying to access /docs endpoint
-            const response = await fetch(`${API_BASE}/docs`);
+            const response = await fetch(`${API_BASE}/docs`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                },
+                // Add timeout to avoid hanging
+                signal: AbortSignal.timeout(5000)
+            });
+
             if (response.ok) {
                 statusIndicator.className = 'status-indicator status-success';
                 statusText.textContent = 'Connected';
+                addLog(`Successfully connected to API server: ${API_BASE}`, 'info');
+
                 // Get basic system info
                 updateSystemStatus({
                     profiles_count: 'N/A', // Would need separate endpoint
@@ -704,12 +768,13 @@ another.proxy.net:3128@proxyuser:secret</pre>
                     proxies_count: 'N/A'
                 });
             } else {
-                throw new Error('API not responding');
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
         } catch (error) {
             statusIndicator.className = 'status-indicator status-error';
             statusText.textContent = 'Disconnected';
             console.error('API connection error:', error);
+            addLog(`Failed to connect to API server ${API_BASE}: ${error.message}`, 'error');
         }
     }
 

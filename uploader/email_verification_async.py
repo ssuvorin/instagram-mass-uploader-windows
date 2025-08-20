@@ -43,7 +43,7 @@ def log_warning(message: str, category: str = None):
     """Async-compatible warning logging function"""
     print(f"[WARN] [EMAIL_ASYNC] {message}")
 
-async def get_email_verification_code_async(email_login: str, email_password: str, max_retries: int = 3) -> Optional[str]:
+async def get_email_verification_code_async(email_login: str, email_password: str, max_retries: int = 3, on_log=None) -> Optional[str]:
     """Get verification code from email using the Email class with enhanced logging and retry logic - ASYNC VERSION"""
     if not email_login or not email_password:
         log_warning("Email credentials not provided for verification code retrieval")
@@ -54,31 +54,47 @@ async def get_email_verification_code_async(email_login: str, email_password: st
         return None
         
     try:
-        log_info(f"Starting email verification code retrieval")
-        log_info(f"Email: {email_login}")
-        log_info(f"Max retries: {max_retries}")
+        if on_log:
+            on_log(f"Starting email verification code retrieval for {email_login}")
+            on_log(f"Max retries: {max_retries}")
+        else:
+            log_info(f"Starting email verification code retrieval")
+            log_info(f"Email: {email_login}")
+            log_info(f"Max retries: {max_retries}")
         
         # Запускаем синхронные операции в отдельном потоке
         def get_email_code():
             try:
                 # Create email client
                 email_client = Email(email_login, email_password)
-                log_info(f"Email client initialized successfully")
+                if on_log:
+                    on_log("Email client initialized successfully")
+                else:
+                    log_info(f"Email client initialized successfully")
                 
                 # First test the connection
-                log_info(f"Testing email connection...")
+                if on_log:
+                    on_log("Testing email connection...")
+                else:
+                    log_info(f"Testing email connection...")
                 connection_test = email_client.test_connection()
-                
+
                 if not connection_test:
-                    log_error(f"[FAIL] Email connection test failed")
-                    log_error(f"Please check:")
-                    log_error(f"- Email address: {email_login}")
-                    log_error(f"- Password is correct")
-                    log_error(f"- Email provider supports IMAP/POP3")
-                    log_error(f"- Two-factor authentication is disabled for email")
+                    if on_log:
+                        on_log("Email connection test failed - check credentials and IMAP settings")
+                    else:
+                        log_error(f"[FAIL] Email connection test failed")
+                        log_error(f"Please check:")
+                        log_error(f"- Email address: {email_login}")
+                        log_error(f"- Password is correct")
+                        log_error(f"- Email provider supports IMAP/POP3")
+                        log_error(f"- Two-factor authentication is disabled for email")
                     return None
-                
-                log_info(f"[OK] Email connection test successful")
+
+                if on_log:
+                    on_log("Email connection test successful")
+                else:
+                    log_info(f"[OK] Email connection test successful")
                 
                 # Now try to get verification code with retry logic
                 verification_code = email_client.get_verification_code(max_retries=max_retries, retry_delay=30)
@@ -93,27 +109,42 @@ async def get_email_verification_code_async(email_login: str, email_password: st
         verification_code = await loop.run_in_executor(None, get_email_code)
         
         if verification_code:
-            log_info(f"[OK] Successfully retrieved email verification code: {verification_code}")
-            
+            if on_log:
+                on_log(f"Successfully retrieved email verification code: {verification_code}")
+            else:
+                log_info(f"[OK] Successfully retrieved email verification code: {verification_code}")
+
             # Validate the code format (Instagram codes are 6 digits)
             if len(verification_code) == 6 and verification_code.isdigit():
-                log_info(f"[OK] Code format validation passed")
+                if on_log:
+                    on_log("Code format validation passed")
+                else:
+                    log_info(f"[OK] Code format validation passed")
                 return verification_code
             else:
-                log_warning(f"[WARN] Invalid code format: {verification_code} (expected 6 digits)")
+                if on_log:
+                    on_log(f"Invalid code format: {verification_code} (expected 6 digits)")
+                else:
+                    log_warning(f"[WARN] Invalid code format: {verification_code} (expected 6 digits)")
                 return None
         else:
-            log_warning("[FAIL] No verification code found in email after all retries")
-            log_warning("Possible reasons:")
-            log_warning("- Email not received yet (Instagram delays)")
-            log_warning("- Code is in a different email format")
-            log_warning("- Email was already read/deleted")
-            log_warning("- Email provider has connectivity issues")
+            if on_log:
+                on_log("No verification code found in email after all retries")
+            else:
+                log_warning("[FAIL] No verification code found in email after all retries")
+                log_warning("Possible reasons:")
+                log_warning("- Email not received yet (Instagram delays)")
+                log_warning("- Code is in a different email format")
+                log_warning("- Email was already read/deleted")
+                log_warning("- Email provider has connectivity issues")
             return None
             
     except Exception as e:
-        log_error(f"[FAIL] Error getting email verification code: {str(e)}")
-        log_error(f"Exception type: {type(e).__name__}")
+        if on_log:
+            on_log(f"Error getting email verification code: {str(e)}")
+        else:
+            log_error(f"[FAIL] Error getting email verification code: {str(e)}")
+            log_error(f"Exception type: {type(e).__name__}")
         return None
 
 async def get_2fa_code_async(tfa_secret: str) -> Optional[str]:

@@ -1512,12 +1512,70 @@ def cleanup_inactive_proxies(request):
 def tiktok_booster(request):
     """Render the TikTok Booster control page that calls external FastAPI endpoints.
 
-    Set API base via environment variable TIKTOK_API_BASE (default http://94.141.161.231:8000).
+    Supports multiple API servers configured via environment variables.
+    Default servers can be configured via TIKTOK_API_SERVERS as JSON.
+    Selected server can be overridden via TIKTOK_API_BASE.
     """
-    api_base = os.environ.get('TIKTOK_API_BASE', 'http://94.141.161.231:8000')
+    import json
+
+    # Default servers configuration
+    default_servers = [
+        {
+            'name': 'Primary Server',
+            'url': 'http://94.141.161.231:8000',
+            'description': 'Основной сервер для TikTok API'
+        },
+        {
+            'name': 'Local Development',
+            'url': 'http://localhost:8000',
+            'description': 'Локальный сервер для разработки'
+        }
+    ]
+
+    # Try to load servers from environment variable
+    servers_config = os.environ.get('TIKTOK_API_SERVERS', '')
+    if servers_config:
+        try:
+            # Handle both quoted and unquoted JSON strings
+            if servers_config.strip().startswith("'") and servers_config.strip().endswith("'"):
+                # Remove surrounding quotes and parse
+                servers_config = servers_config.strip("'\"")
+            elif servers_config.strip().startswith('"') and servers_config.strip().endswith('"'):
+                # Remove surrounding quotes and parse
+                servers_config = servers_config.strip("'\"")
+
+            servers = json.loads(servers_config)
+        except json.JSONDecodeError as e:
+            logger.warning(f"Failed to parse TIKTOK_API_SERVERS JSON: {e}. Using default servers.")
+            servers = default_servers
+    else:
+        servers = default_servers
+
+    # Get currently selected API base
+    selected_api_base = os.environ.get('TIKTOK_API_BASE', servers[0]['url'] if servers else 'http://94.141.161.231:8000')
+
+    # Find selected server info
+    selected_server = None
+    for server in servers:
+        if server['url'] == selected_api_base:
+            selected_server = server
+            break
+
+    # If no match found, create a custom server entry
+    if not selected_server:
+        selected_server = {
+            'name': 'Custom Server',
+            'url': selected_api_base,
+            'description': 'Пользовательский сервер'
+        }
+        servers.append(selected_server)
+
     context = {
         'active_tab': 'tiktok',
-        'api_base': api_base,
+        'api_base': selected_api_base,
+        'available_servers': servers,
+        'selected_server': selected_server,
+        'server_count': len(servers),
     }
     return render(request, 'uploader/tiktok/booster.html', context)
 

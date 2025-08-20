@@ -7,6 +7,8 @@ from django.db.models import Sum, Value
 from django.db.models.functions import Coalesce
 from django.urls import reverse
 from django.core.files.storage import default_storage
+from django.db import OperationalError, connections
+from django.db import close_old_connections
 import os
 import threading
 import random
@@ -124,37 +126,57 @@ def _build_proxy_dict(proxy: Proxy):
 
 
 def _ensure_device(account: InstagramAccount) -> InstagramDevice:
-    device = getattr(account, 'device', None)
+    # Avoid relation descriptor DB hit; query explicitly and handle DB interruptions
+    try:
+        device = InstagramDevice.objects.filter(account_id=account.id).first()
+    except OperationalError:
+        close_old_connections()
+        device = InstagramDevice.objects.filter(account_id=account.id).first()
+
     if device:
-        # If exists but empty, try to populate from session or generate once
         if not device.device_settings or not any(device.device_settings.get(k) for k in ("uuid","android_device_id","phone_id","client_session_id")) or not device.user_agent:
             try:
                 store = DjangoDeviceSessionStore()
                 persisted = store.load(account.username) or {}
                 dev_settings, ua = ensure_persistent_device(account.username, persisted)
                 updates = []
-                if not device.device_settings:
+                if not device.device_settings and dev_settings:
                     device.device_settings = dev_settings
                     updates.append('device_settings')
                 if not device.user_agent and ua:
                     device.user_agent = ua
                     updates.append('user_agent')
                 if updates:
-                    device.save(update_fields=updates)
+                    try:
+                        device.save(update_fields=updates)
+                    except OperationalError:
+                        close_old_connections()
+                        device.save(update_fields=updates)
             except Exception:
                 pass
         return device
+    # Create new device entry
     try:
         store = DjangoDeviceSessionStore()
         persisted = store.load(account.username) or {}
         dev_settings, ua = ensure_persistent_device(account.username, persisted)
-        return InstagramDevice.objects.create(account=account, device_settings=dev_settings, user_agent=(ua or ""))
+        try:
+            return InstagramDevice.objects.create(account=account, device_settings=dev_settings or {}, user_agent=(ua or ""))
+        except OperationalError:
+            close_old_connections()
+            return InstagramDevice.objects.create(account=account, device_settings=dev_settings or {}, user_agent=(ua or ""))
     except Exception:
-        return InstagramDevice.objects.create(account=account, device_settings={}, user_agent="")
+        try:
+            return InstagramDevice.objects.create(account=account, device_settings={}, user_agent="")
+        except OperationalError:
+            close_old_connections()
+            return InstagramDevice.objects.create(account=account, device_settings={}, user_agent="")
 
 
 def _run_avatar_task_worker(task_id: int):
     try:
+        # Reset DB connection state for this background thread
+        close_old_connections()
         task = AvatarChangeTask.objects.get(id=task_id)
         accounts = list(task.accounts.select_related('account', 'proxy').all())
         if not accounts or not task.images.exists():
@@ -174,6 +196,8 @@ def _run_avatar_task_worker(task_id: int):
         for idx, ta in enumerate(accounts):
             acc = ta.account
             try:
+                # Ensure DB connection is alive in loop
+                close_old_connections()
                 # human-like delay between accounts
                 delay = random.uniform(task.delay_min_sec, task.delay_max_sec)
                 time.sleep(delay)
@@ -239,24 +263,49 @@ def _run_avatar_task_worker(task_id: int):
                 else:
                     ta.status = 'FAILED'
                     on_log("failed")
-                ta.save(update_fields=['status', 'completed_at', 'log'] if hasattr(ta, 'log') else ['status', 'completed_at'])
-                task.save(update_fields=['log'])
+                try:
+                    ta.save(update_fields=['status', 'completed_at', 'log'] if hasattr(ta, 'log') else ['status', 'completed_at'])
+                except OperationalError:
+                    close_old_connections()
+                    ta.save(update_fields=['status', 'completed_at', 'log'] if hasattr(ta, 'log') else ['status', 'completed_at'])
+                try:
+                    task.save(update_fields=['log'])
+                except OperationalError:
+                    close_old_connections()
+                    task.save(update_fields=['log'])
             except Exception as e:
                 ta.status = 'FAILED'
                 ta.log = (ta.log or '') + f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] Error: {str(e)}\n"
                 ta.completed_at = timezone.now()
-                ta.save(update_fields=['status', 'log', 'completed_at'])
+                try:
+                    ta.save(update_fields=['status', 'log', 'completed_at'])
+                except OperationalError:
+                    close_old_connections()
+                    ta.save(update_fields=['status', 'log', 'completed_at'])
                 task.log += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] {acc.username} | exception {str(e)}\n"
-                task.save(update_fields=['log'])
+                try:
+                    task.save(update_fields=['log'])
+                except OperationalError:
+                    close_old_connections()
+                    task.save(update_fields=['log'])
 
         task.status = 'COMPLETED'
-        task.save(update_fields=['status'])
+        try:
+            task.save(update_fields=['status'])
+        except OperationalError:
+            close_old_connections()
+            task.save(update_fields=['status'])
     except Exception as e:
         try:
+            close_old_connections()
             task = AvatarChangeTask.objects.get(id=task_id)
             task.status = 'FAILED'
             task.log += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] fatal error: {str(e)}\n"
-            task.save(update_fields=['status', 'log'])
+            try:
+                task.save(update_fields=['status', 'log'])
+            except OperationalError:
+                close_old_connections()
+                task.save(update_fields=['status', 'log'])
         except Exception:
             logger.exception("Avatar task fatal error and failed to update task")
 

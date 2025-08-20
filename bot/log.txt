@@ -25451,3 +25451,39 @@ KeyboardInterrupt
 2025-08-13 14:05:24,779 - private_request - INFO - None [200] POST https://i.instagram.com/api/v1/qe/expose/ (269.0.0.18.75, OnePlus 6T Dev)
 2025-08-13 14:06:35,928 - urllib3.connectionpool - WARNING - Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'RemoteDisconnected('Remote end closed connection without response')': /rupload_igvideo/1755093776684_0_8627908801
 2025-08-13 14:07:03,678 - urllib3.connectionpool - WARNING - Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'RemoteDisconnected('Remote end closed connection without response')': /rupload_igvideo/1755093776684_0_8627908801
+2025-08-20 10:14:52,576 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 23
+2025-08-20 10:14:52,577 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 24
+2025-08-20 10:14:52,577 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 25
+2025-08-20 10:14:52,577 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 28
+2025-08-20 10:14:52,577 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 29
+2025-08-20 10:14:52,577 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 30
+2025-08-20 10:14:52,579 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 23
+2025-08-20 10:14:52,580 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 24
+2025-08-20 10:14:52,580 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 25
+2025-08-20 10:14:52,580 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 28
+2025-08-20 10:14:52,580 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 29
+2025-08-20 10:14:52,580 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 30
+2025-08-20 10:15:09,574 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 23
+2025-08-20 10:15:09,575 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 24
+2025-08-20 10:15:09,575 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 25
+2025-08-20 10:15:09,575 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 28
+2025-08-20 10:15:09,575 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 29
+2025-08-20 10:15:09,575 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 30
+2025-08-20 10:15:09,578 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 23
+2025-08-20 10:15:09,578 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 24
+2025-08-20 10:15:09,578 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 25
+2025-08-20 10:15:09,578 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 28
+2025-08-20 10:15:09,578 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 29
+2025-08-20 10:15:09,578 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 30
+2025-08-20 10:18:51,816 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 23
+2025-08-20 10:18:51,816 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 24
+2025-08-20 10:18:51,816 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 25
+2025-08-20 10:18:51,816 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 28
+2025-08-20 10:18:51,816 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 29
+2025-08-20 10:18:51,816 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 30
+2025-08-20 10:18:51,819 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 23
+2025-08-20 10:18:51,819 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 24
+2025-08-20 10:18:51,819 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 25
+2025-08-20 10:18:51,819 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 28
+2025-08-20 10:18:51,819 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 29
+2025-08-20 10:18:51,819 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 30

@@ -1433,3 +1433,349 @@ def import_accounts_ua_cookies(request):
 		'active_tab': 'accounts'
 	}
 	return render(request, 'uploader/import_accounts_ua_cookies.html', context)
+
+
+def import_accounts_bundle(request):
+	"""
+	Import accounts in the single-line "account-bundle" format for unofficial clients.
+
+	Expected general structure (sections separated by |):
+	- creds: "login:password[:email][:email_password]"
+	- ua: "Instagram <ver> Android (...)" or similar
+	- device ids: "android-xxxx;device_guid;phone_id;advertising_id" (optional)
+	- cookies/headers: "name=value; other=value; Authorization=Bearer IGT:2:<base64>" (optional)
+	- proxy: "scheme:host:port:username:password" (optional)
+
+	Parser is resilient: it detects segments by content, not position.
+	"""
+	if request.method == 'POST' and request.FILES.get('accounts_file'):
+		accounts_file = request.FILES['accounts_file']
+
+		# Helpers
+		def _extract_cookie_value(cookie_list: list, name: str) -> str | None:
+			for c in cookie_list or []:
+				try:
+					if str(c.get('name') or '').lower() == name.lower():
+						return c.get('value')
+				except Exception:
+					continue
+			return None
+
+		def _is_proxy_segment(seg: str) -> bool:
+			try:
+				s = (seg or '').strip()
+				if not s:
+					return False
+				# Expect at least host:port or scheme:host:port
+				colon_count = s.count(':')
+				if colon_count < 1:
+					return False
+				# Heuristics: if contains scheme and 3+ colons -> likely proxy with auth
+				low = s.lower()
+				if low.startswith(('http:', 'https:', 'socks5:')) and colon_count >= 3:
+					return True
+				# Or host:port:login:pass without scheme
+				if colon_count >= 3 and '=' not in s and ' ' not in s:
+					return True
+				return False
+			except Exception:
+				return False
+
+		def _parse_proxy(seg: str):
+			"""Return dict or None: {host, port, username, password, proxy_type}
+			Resolves domain to IP for DB storage.
+			"""
+			import socket
+			try:
+				s = (seg or '').strip()
+				parts = s.split(':')
+				proxy_type = 'HTTP'
+				host = ''
+				port = None
+				username = None
+				password = None
+				if s.lower().startswith(('http:', 'https:', 'socks5:')):
+					scheme = parts[0].lower()
+					if scheme == 'https':
+						proxy_type = 'HTTPS'
+					elif scheme == 'socks5':
+						proxy_type = 'SOCKS5'
+					else:
+						proxy_type = 'HTTP'
+					# scheme:host:port[:user][:pass]
+					if len(parts) >= 3:
+						host = parts[1]
+						port = parts[2]
+						if len(parts) >= 5:
+							username = parts[3] or None
+							password = parts[4] or None
+					elif len(parts) == 4:
+						host = parts[1]
+						port = parts[2]
+						username = parts[3] or None
+					else:
+						return None
+				else:
+					# host:port[:user][:pass]
+					if len(parts) < 2:
+						return None
+					host = parts[0]
+					port = parts[1]
+					if len(parts) >= 4:
+						username = parts[2] or None
+						password = parts[3] or None
+				# Resolve domain to IP if needed for DB model GenericIPAddressField
+				resolved_host = host
+				try:
+					# If host is already an IP, this will return it; if domain, resolve to first IP
+					resolved_host = socket.gethostbyname(host)
+				except Exception:
+					pass
+				return {
+					'host': resolved_host,
+					'port': int(port) if port is not None else None,
+					'username': username,
+					'password': password,
+					'proxy_type': proxy_type,
+					'_original_host': host,
+				}
+			except Exception:
+				return None
+
+		def _parse_cookies(raw: str) -> list[dict]:
+			cookies: list[dict] = []
+			for pair in [c.strip() for c in (raw or '').split(';') if c.strip()]:
+				if '=' not in pair:
+					continue
+				name, value = pair.split('=', 1)
+				cookies.append({
+					'domain': '.instagram.com',
+					'name': name.strip(),
+					'value': value.strip(),
+					'path': '/',
+					'httpOnly': False,
+					'secure': True,
+					'session': True,
+					'sameSite': 'no_restriction',
+				})
+			return cookies
+
+		def _decode_igt_bearer(raw: str) -> dict:
+			"""Extract ds_user_id/sessionid from Authorization=Bearer IGT:2:<b64> if present."""
+			import base64, json
+			try:
+				marker = 'Authorization=Bearer IGT:2:'
+				idx = raw.find(marker)
+				if idx == -1:
+					return {}
+				b64 = raw[idx + len(marker):].split(';', 1)[0].strip()
+				# Pad base64 if needed
+				padding = '=' * (-len(b64) % 4)
+				decoded = base64.b64decode(b64 + padding).decode('utf-8')
+				data = json.loads(decoded)
+				return {
+					'ds_user_id': data.get('ds_user_id'),
+					'sessionid': data.get('sessionid'),
+				}
+			except Exception:
+				return {}
+
+		# Read and split
+		content = accounts_file.read().decode('utf-8')
+		lines = content.splitlines()
+
+		# Precompute existing accounts map to reuse proxies if already assigned
+		parsed_usernames: list[str] = []
+		for _raw in lines:
+			s = (_raw or '').strip()
+			if not s:
+				continue
+			try:
+				left = s.split('|', 1)[0]
+				uname = left.split(':', 1)[0].strip()
+				if uname:
+					parsed_usernames.append(uname)
+			except Exception:
+				continue
+		unique_usernames = list({u for u in parsed_usernames})
+		existing_map = {acc.username: acc for acc in InstagramAccount.objects.filter(username__in=unique_usernames)}
+
+		created_count = 0
+		updated_count = 0
+		error_count = 0
+
+		for line_num, raw in enumerate(lines, 1):
+			if not (raw or '').strip():
+				continue
+			try:
+				s = raw.strip()
+				segments = [p for p in s.split('|')]
+				# creds: always left part before first |
+				left = segments[0] if segments else ''
+				cred_parts = left.split(':')
+				if len(cred_parts) < 2:
+					messages.warning(request, f'Line {line_num}: Invalid creds, expected username:password')
+					error_count += 1
+					continue
+				username = cred_parts[0].strip()
+				password = cred_parts[1].strip()
+				email_username = cred_parts[2].strip() if len(cred_parts) >= 3 else None
+				email_password = cred_parts[3].strip() if len(cred_parts) >= 4 else None
+
+				# detect proxy segment (prefer last matching)
+				proxy_idx = None
+				for idx in range(len(segments) - 1, -1, -1):
+					if _is_proxy_segment(segments[idx]):
+						proxy_idx = idx
+						break
+
+				# detect cookies start: from left to right, first seg containing '=' (name=value)
+				cookies_idx = None
+				for idx in range(1, len(segments)):
+					seg = (segments[idx] or '').strip()
+					if '=' in seg:
+						cookies_idx = idx
+						break
+
+				# UA: first segment with "Instagram" word
+				ua_idx = None
+				for idx in range(1, len(segments)):
+					if 'instagram' in (segments[idx] or '').lower():
+						ua_idx = idx
+						break
+
+				ua_string = (segments[ua_idx].strip() if ua_idx is not None else '') or ''
+				device_info_raw = None
+				if ua_idx is not None and cookies_idx is not None and (cookies_idx - ua_idx) > 1:
+					# Device info should be strictly between UA and cookies
+					mid_parts = segments[ua_idx + 1:cookies_idx]
+					joined = '|'.join([p for p in mid_parts if p is not None]).strip()
+					device_info_raw = joined or None
+
+				cookies_raw = None
+				if cookies_idx is not None:
+					end_idx = proxy_idx if proxy_idx is not None else len(segments)
+					cookies_raw = '|'.join(segments[cookies_idx:end_idx]).strip() or None
+
+				proxy_data = None
+				if proxy_idx is not None:
+					proxy_data = _parse_proxy(segments[proxy_idx])
+
+				# Parse cookies list and extract useful values
+				parsed_cookies_list: list[dict] = _parse_cookies(cookies_raw or '') if cookies_raw else []
+				ds_user_id = _extract_cookie_value(parsed_cookies_list, 'ds_user_id')
+				sessionid = _extract_cookie_value(parsed_cookies_list, 'sessionid')
+				mid_val = _extract_cookie_value(parsed_cookies_list, 'mid') or _extract_cookie_value(parsed_cookies_list, 'X-MID')
+				ig_u_rur_val = _extract_cookie_value(parsed_cookies_list, 'IG-U-RUR') or _extract_cookie_value(parsed_cookies_list, 'rur')
+				ig_www_claim_val = _extract_cookie_value(parsed_cookies_list, 'X-IG-WWW-Claim')
+				# If Authorization bearer present, try decode to enrich
+				if cookies_raw and 'Authorization=Bearer IGT:2:' in cookies_raw:
+					dec = _decode_igt_bearer(cookies_raw)
+					ds_user_id = ds_user_id or dec.get('ds_user_id')
+					sessionid = sessionid or dec.get('sessionid')
+
+				# Create/update account
+				defaults = {
+					'password': password,
+					'email_username': email_username,
+					'email_password': email_password,
+					'status': 'ACTIVE',
+					'notes': (f"UA: {ua_string[:200]}" if ua_string else ""),
+				}
+				account, created = InstagramAccount.objects.update_or_create(
+					username=username,
+					defaults=defaults
+				)
+				if created:
+					created_count += 1
+				else:
+					updated_count += 1
+
+				# Persist device/session snapshot for instagrapi usage
+				try:
+					from uploader.models import InstagramDevice
+					dev_obj, _ = InstagramDevice.objects.get_or_create(account=account)
+					uuids_dict = {}
+					try:
+						if device_info_raw:
+							di_parts = [p for p in device_info_raw.split(';') if p]
+							if di_parts:
+								uuids_dict['android_device_id'] = di_parts[0]
+							if len(di_parts) >= 2:
+								uuids_dict['phone_id'] = di_parts[1]
+							if len(di_parts) >= 3:
+								uuids_dict['uuid'] = di_parts[2]
+							if len(di_parts) >= 4:
+								uuids_dict['client_session_id'] = di_parts[3]
+					except Exception:
+						uuids_dict = {}
+					settings_snapshot = {
+						'uuids': uuids_dict,
+						'mobile_user_agent': ua_string or '',
+						'user_agent': ua_string or '',
+						'mid': mid_val,
+						'ig_u_rur': ig_u_rur_val,
+						'ig_www_claim': ig_www_claim_val,
+						'authorization_data': {
+							'ds_user_id': ds_user_id,
+							'sessionid': sessionid,
+						},
+						'last_login': int(time.time()),
+					}
+					dev_obj.session_settings = settings_snapshot
+					if ua_string and not dev_obj.user_agent:
+						dev_obj.user_agent = ua_string
+					dev_obj.save(update_fields=['session_settings', 'user_agent', 'updated_at'])
+				except Exception as se:
+					logger.warning(f"[BUNDLE] Could not persist device session for {username}: {se}")
+
+				# Persist cookies for reference (treated as WEB cookies)
+				try:
+					from uploader.models import InstagramCookies
+					if parsed_cookies_list:
+						InstagramCookies.objects.update_or_create(
+							account=account,
+							defaults={'cookies_data': parsed_cookies_list, 'is_valid': True}
+						)
+				except Exception as ce:
+					logger.warning(f"[BUNDLE] Failed to persist cookies for {username}: {ce}")
+
+				# Assign a free active proxy from pool if account has none (ignore proxy in bundle)
+				try:
+					assigned_proxy = None
+					prev_acc = existing_map.get(username)
+					if prev_acc and (prev_acc.current_proxy or prev_acc.proxy):
+						assigned_proxy = prev_acc.current_proxy or prev_acc.proxy
+						logger.info(f"[BUNDLE] Reusing existing proxy for {username}: {assigned_proxy}")
+					elif not (account.current_proxy or account.proxy):
+						avail = Proxy.objects.filter(is_active=True, assigned_account__isnull=True)
+						if avail.exists():
+							assigned_proxy = avail.order_by('?').first()
+							account.proxy = assigned_proxy
+							account.current_proxy = assigned_proxy
+							account.save(update_fields=['proxy', 'current_proxy'])
+							assigned_proxy.assigned_account = account
+							assigned_proxy.save(update_fields=['assigned_account'])
+							logger.info(f"[BUNDLE] Assigned free proxy {assigned_proxy} to {username}")
+						else:
+							logger.warning(f"[BUNDLE] No free proxies available to assign for {username}")
+				except Exception as pe:
+					logger.warning(f"[BUNDLE] Proxy assignment failed for {username}: {pe}")
+
+			except Exception as e:
+				logger.error(f"[BUNDLE] Error at line {line_num}: {e}")
+				messages.error(request, f'Line {line_num}: {e}')
+				error_count += 1
+
+		# Summary
+		if created_count or updated_count:
+			messages.success(request, f'Bundle import done. Created: {created_count}, Updated: {updated_count}, Errors: {error_count}')
+		else:
+			messages.warning(request, f'No accounts imported. Errors: {error_count}')
+		return redirect('account_list')
+
+	# GET: render page
+	context = {
+		'active_tab': 'accounts'
+	}
+	return render(request, 'uploader/import_accounts_bundle.html', context)

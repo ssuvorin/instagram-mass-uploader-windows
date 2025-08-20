@@ -13,6 +13,7 @@ from .views_mod import (
     create_proxy,
     import_accounts,
     import_accounts_ua_cookies,
+    import_accounts_bundle,
     warm_account,
     edit_account,
     change_account_proxy,

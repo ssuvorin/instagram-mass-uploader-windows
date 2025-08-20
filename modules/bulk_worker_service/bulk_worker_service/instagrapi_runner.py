@@ -76,6 +76,7 @@ async def run_account_upload_instagrapi(
             video_files_to_upload=unique_paths,
             task_id=task_id,
             account_task_id=account_task.account_task_id,
+            on_log=lambda msg: print(f"[API] {msg}"),
         )
         await ui.increment_counters(account_task.account_task_id, success=completed, failed=failed)
         final_status = "COMPLETED" if failed == 0 and completed > 0 else ("FAILED" if completed == 0 else "COMPLETED")

@@ -21,6 +21,7 @@ urlpatterns = [
     path('accounts/create/', views.create_account, name='create_account'),
     path('accounts/import/', views.import_accounts, name='import_accounts'),
     path('accounts/import-ua-cookies/', views.import_accounts_ua_cookies, name='import_ua_cookies'),
+    path('accounts/import-bundle/', views.import_accounts_bundle, name='import_accounts_bundle'),
     path('accounts/<int:account_id>/warm/', views.warm_account, name='warm_account'),
     path('accounts/<int:account_id>/edit/', views.edit_account, name='edit_account'),
     path('accounts/<int:account_id>/change-proxy/', views.change_account_proxy, name='change_account_proxy'),

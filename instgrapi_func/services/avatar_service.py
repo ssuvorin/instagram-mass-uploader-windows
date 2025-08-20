@@ -69,7 +69,7 @@ class AvatarService:
 
         log.debug("Build client for %s | proxy=%s", username, proxy_url)
         if on_log:
-            on_log(f"avatar: build client (proxy={'yes' if proxy_url else 'no'})")
+            on_log(f"build client (proxy={'yes' if proxy_url else 'no'})")
         cl = IGClientFactory.create_client(
             device_config=device_cfg,
             proxy_url=proxy_url,
@@ -83,45 +83,45 @@ class AvatarService:
         if not self.auth.ensure_logged_in(cl, username, password, on_log=on_log):
             log.debug("Auth failed for %s", username)
             if on_log:
-                on_log("avatar: auth failed")
+                on_log("auth failed")
             return False, None
 
         try:
             log.debug("Change profile picture for %s: %s", username, image_path)
             if on_log:
-                on_log("avatar: changing profile picture")
+                on_log("changing profile picture")
             cl.account_change_picture(image_path)
             log.debug("Profile picture changed for %s", username)
             if on_log:
-                on_log("avatar: picture changed")
+                on_log("picture changed")
         except ChallengeRequired as e:
             log.debug("ChallengeRequired on change picture for %s: %s", username, e)
             if on_log:
-                on_log("avatar: challenge required (email)")
+                on_log("challenge required (email)")
             try:
                 code = self.auth.provider.get_challenge_code(username, method="email") or ""
                 if not code:
                     log.debug("No challenge code available for %s", username)
                     if on_log:
-                        on_log("avatar: no email code available")
+                        on_log("no email code available")
                     return False, None
                 cl.challenge_resolve(code)
                 log.debug("Challenge resolved during avatar change for %s, retrying", username)
                 if on_log:
-                    on_log("avatar: challenge ok, retry")
+                    on_log("challenge ok, retry")
                 cl.account_change_picture(image_path)
                 log.debug("Profile picture changed after challenge for %s", username)
                 if on_log:
-                    on_log("avatar: picture changed after challenge")
+                    on_log("picture changed after challenge")
             except Exception as e2:
                 log.debug("Challenge resolving/retry failed for %s: %s", username, e2)
                 if on_log:
-                    on_log(f"avatar: challenge failed: {e2}")
+                    on_log(f"challenge failed: {e2}")
                 return False, None
         except Exception as e:
             log.debug("Change picture failed for %s: %s", username, e)
             if on_log:
-                on_log(f"avatar: change failed: {e}")
+                on_log(f"change failed: {e}")
             return False, None
 
         try:
@@ -130,7 +130,7 @@ class AvatarService:
             try:
                 store.save(username, settings)
                 if on_log:
-                    on_log("avatar: session saved")
+                    on_log("session saved")
                 from uploader.models import InstagramAccount
                 acc = InstagramAccount.objects.filter(username=username).first()
                 if acc and getattr(acc, 'device', None):
@@ -148,10 +148,10 @@ class AvatarService:
                 pass
             log.debug("Fetched updated settings for %s", username)
             if on_log:
-                on_log("avatar: fetched updated settings")
+                on_log("fetched updated settings")
             return True, settings
         except Exception as e:
             log.debug("Fetching settings failed for %s: %s", username, e)
             if on_log:
-                on_log(f"avatar: fetch settings failed: {e}")
+                on_log(f"fetch settings failed: {e}")
             return True, None 

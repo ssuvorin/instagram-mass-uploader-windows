@@ -41,6 +41,16 @@
 <form method="post" enctype="multipart/form-data" onsubmit="return validateAccountSelection()">
   {% csrf_token %}
 
+  {% if form.non_field_errors %}
+  <div class="alert alert-danger">
+    <ul class="mb-0">
+      {% for err in form.non_field_errors %}
+      <li>{{ err }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
   <div class="summary-bar" id="accountsSummary">
     <div class="d-flex align-items-center gap-3">
       <div>
@@ -143,9 +153,24 @@
     </div>
   </div>
 
+  {% if form.selected_accounts.errors %}
+  <div class="mt-2">
+    <div class="alert alert-danger py-2">
+      {% for err in form.selected_accounts.errors %}
+      <div>{{ err }}</div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
   <div class="mb-3">
     <label class="form-label">Avatar images</label>
     {{ form.images }}
+    {% if form.images.errors %}
+    <div class="text-danger small mt-1">
+      {% for err in form.images.errors %}<div>{{ err }}</div>{% endfor %}
+    </div>
+    {% endif %}
     <div class="form-text">Upload PNG/JPG images. If fewer images than accounts, they will be reused randomly (or one-to-one by order).</div>
   </div>
 
@@ -153,14 +178,23 @@
     <div class="col-md-6">
       <label class="form-label">Strategy</label>
       {{ form.strategy }}
+      {% if form.strategy.errors %}
+      <div class="text-danger small mt-1">{% for err in form.strategy.errors %}<div>{{ err }}</div>{% endfor %}</div>
+      {% endif %}
     </div>
     <div class="col-md-3">
       <label class="form-label">Min delay (sec)</label>
       {{ form.delay_min_sec }}
+      {% if form.delay_min_sec.errors %}
+      <div class="text-danger small mt-1">{% for err in form.delay_min_sec.errors %}<div>{{ err }}</div>{% endfor %}</div>
+      {% endif %}
     </div>
     <div class="col-md-3">
       <label class="form-label">Max delay (sec)</label>
       {{ form.delay_max_sec }}
+      {% if form.delay_max_sec.errors %}
+      <div class="text-danger small mt-1">{% for err in form.delay_max_sec.errors %}<div>{{ err }}</div>{% endfor %}</div>
+      {% endif %}
     </div>
   </div>
 
@@ -168,6 +202,9 @@
     <div class="col-md-3">
       <label class="form-label">Concurrency</label>
       {{ form.concurrency }}
+      {% if form.concurrency.errors %}
+      <div class="text-danger small mt-1">{% for err in form.concurrency.errors %}<div>{{ err }}</div>{% endfor %}</div>
+      {% endif %}
     </div>
   </div>
 

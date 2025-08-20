@@ -93,28 +93,71 @@ class AutoIMAPEmailProvider(NullTwoFactorProvider):
     Reuse existing project email verification logic (bulk async module) to fetch
     latest Instagram verification code from mailbox.
     """
-    def __init__(self, email: Optional[str], password: Optional[str]):
+    def __init__(self, email: Optional[str], password: Optional[str], on_log=None):
         self.email = (email or '').strip() or None
         self.password = (password or '').strip() or None
+        self.on_log = on_log
 
     def get_challenge_code(self, username: str, method: str) -> Optional[str]:
         if not self.email or not self.password:
+            if self.on_log:
+                self.on_log("Email credentials not provided for verification")
             return None
+
         try:
             from uploader.email_verification_async import get_email_verification_code_async  # type: ignore
-        except Exception:
+        except Exception as e:
+            if self.on_log:
+                self.on_log(f"Email verification module not available: {e}")
             return None
+
         try:
-            return asyncio.run(get_email_verification_code_async(self.email, self.password, max_retries=3))
+            if self.on_log:
+                self.on_log(f"Attempting to get email verification code from {self.email}")
+
+            # Create a custom version of get_email_verification_code_async that uses our on_log
+            async def get_code_with_logging():
+                return await get_email_verification_code_async(self.email, self.password, max_retries=3, on_log=self.on_log)
+
+            code = asyncio.run(get_code_with_logging())
+
+            if code:
+                if self.on_log:
+                    self.on_log(f"Successfully retrieved verification code: {code}")
+                return code
+            else:
+                if self.on_log:
+                    self.on_log("No verification code found in email")
+                return None
+
         except RuntimeError:
             # If there's already a running loop, create a new one in this thread
             try:
+                if self.on_log:
+                    self.on_log("Creating new event loop for email verification")
+
                 loop = asyncio.new_event_loop()
                 try:
-                    return loop.run_until_complete(get_email_verification_code_async(self.email, self.password, max_retries=3))
+                    async def get_code_with_logging():
+                        return await get_email_verification_code_async(self.email, self.password, max_retries=3, on_log=self.on_log)
+
+                    code = loop.run_until_complete(get_code_with_logging())
+
+                    if code:
+                        if self.on_log:
+                            self.on_log(f"Successfully retrieved verification code: {code}")
+                        return code
+                    else:
+                        if self.on_log:
+                            self.on_log("No verification code found in email")
+                        return None
                 finally:
                     loop.close()
-            except Exception:
+            except Exception as e:
+                if self.on_log:
+                    self.on_log(f"Error getting verification code: {e}")
                 return None
-        except Exception:
+        except Exception as e:
+            if self.on_log:
+                self.on_log(f"Error getting verification code: {e}")
             return None 

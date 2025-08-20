@@ -3,7 +3,7 @@ import os
 import random
 import time
 import asyncio
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Callable
 
 from uploader.logging_utils import log_info, log_error, log_success, attach_instagrapi_web_bridge
 
@@ -156,7 +156,7 @@ def _resolve_location(cl: 'IGClient', location_text: Optional[str]) -> Optional[
 	return None
 
 
-def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload: List[str], task_id: int, account_task_id: int) -> Tuple[str, int, int]:
+def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload: List[str], task_id: int, account_task_id: int, on_log: Optional[Callable[[str], None]] = None) -> Tuple[str, int, int]:
 	if Client is None:
 		log_error("[API] instagrapi not available")
 		return ("failed", 0, 1)
@@ -167,12 +167,15 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 	username = account_details.get('username')
 	password = account_details.get('password')
 	tfa_secret = (account_details.get('tfa_secret') or '')
-	email_login = (account_details.get('email_login') or '')
+	# Accept both 'email_login' and legacy 'email' key
+	email_login = (account_details.get('email_login') or account_details.get('email') or '')
 	email_password = (account_details.get('email_password') or '')
 	proxy_dict = account_details.get('proxy') or {}
 	proxy_url = build_proxy_url(proxy_dict)
 
 	log_info(f"[API] Starting instagrapi upload for {username}")
+	if on_log:
+		on_log(f"Starting instagrapi upload for {username}")
 
 	# Load persisted device + session if available
 	session_store = DjangoDeviceSessionStore()
@@ -214,6 +217,8 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 			pass
 	except Exception as e:
 		log_error(f"[API] failed to create client: {e}")
+		if on_log:
+			on_log(f"Failed to create client: {e}")
 		return ("failed", 0, 1)
 
 	# Auth: prefer existing session; fallback to login with TOTP/email
@@ -222,7 +227,9 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 		AutoIMAPEmailProvider(email_login, email_password),
 	])
 	auth = IGAuthService(provider)
-	if not auth.ensure_logged_in(cl, username, password, on_log=lambda m: log_info(m, "AUTH")):
+	if not auth.ensure_logged_in(cl, username, password, on_log=on_log):
+		if on_log:
+			on_log("Authentication failed")
 		return ("failed", 0, 1)
 
 	# Save refreshed session after auth and backfill device/user_agent if missing
@@ -230,6 +237,8 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 		settings = cl.get_settings()  # type: ignore[attr-defined]
 		session_store.save(username, settings)
 		log_info("[API] session saved")
+		if on_log:
+			on_log("Session saved")
 		# backfill user_agent into device if empty
 		try:
 			from uploader.models import InstagramAccount
@@ -282,6 +291,8 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 				location_obj = None
 
 			log_info(f"[UPLOAD] Reels {idx+1}/{len(video_files_to_upload)}: {os.path.basename(path)}")
+			if on_log:
+				on_log(f"Starting upload {idx+1}/{len(video_files_to_upload)}: {os.path.basename(path)}")
 			# Human-like pause before upload
 			time.sleep(random.uniform(1.5, 5.0))
 
@@ -304,20 +315,26 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 			completed += 1
 			if code:
 				log_success(f"[OK] Published: https://www.instagram.com/p/{code}/")
+				if on_log:
+					on_log(f"Upload successful: https://www.instagram.com/p/{code}/")
 			else:
 				log_success("[OK] Published a clip")
+				if on_log:
+					on_log("Upload successful")
 			# Human-like pause after upload
 			time.sleep(random.uniform(2.0, 8.0))
 		except Exception as e:
 			failed += 1
 			log_error(f"[FAIL] clip upload error: {e}")
+			if on_log:
+				on_log(f"Upload failed: {e}")
 			# small backoff
 			time.sleep(random.uniform(4.0, 12.0))
 
 	return ("success" if completed > 0 else "failed", completed, failed)
 
 
-async def run_instagrapi_upload_async(account_details: Dict, videos: List, video_files_to_upload: List[str], task_id: int, account_task_id: int) -> Tuple[str, int, int]:
+async def run_instagrapi_upload_async(account_details: Dict, videos: List, video_files_to_upload: List[str], task_id: int, account_task_id: int, on_log: Optional[Callable[[str], None]] = None) -> Tuple[str, int, int]:
 	"""Async wrapper for the sync instagrapi upload implementation."""
 	return await asyncio.to_thread(
 		_sync_upload_impl,
@@ -326,4 +343,5 @@ async def run_instagrapi_upload_async(account_details: Dict, videos: List, video
 		video_files_to_upload,
 		task_id,
 		account_task_id,
+		on_log,
 	) 
