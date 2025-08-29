@@ -1740,6 +1740,17 @@ def tiktok_booster_proxy_start(request):
     if request.method != 'POST':
         return _json_response({'detail': 'Method not allowed'}, status=405)
     api_base = _get_tiktok_api_base(request)
+    try:
+        resp = requests.post(f"{api_base}/booster/start_booster", timeout=60)
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        if resp.ok:
+            return _json_response(data, status=resp.status_code)
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
 
 
 @csrf_exempt
@@ -1775,17 +1786,6 @@ def tiktok_api_ping(request):
         return JsonResponse({"ok": False, "server_url": base, "status_code": resp.status_code, "detail": resp.text[:200]}, status=502)
     except requests.exceptions.RequestException as e:
         return JsonResponse({"ok": False, "server_url": base, "detail": str(e)}, status=502)
-    try:
-        resp = requests.post(f"{api_base}/booster/start_booster", timeout=60)
-        try:
-            data = resp.json()
-        except Exception:
-            data = {'detail': resp.text}
-        if resp.ok:
-            return _json_response(data, status=resp.status_code)
-        return _json_response(data, status=resp.status_code)
-    except requests.exceptions.RequestException as e:
-        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
 
 
 @login_required
@@ -1977,7 +1977,100 @@ def tiktok_videos_proxy_upload(request):
         for file in files:
             upload_files.append(('files', (file.name, file.read())))
         
-        resp = requests.post(f"{api_base}/videos/upload", files=upload_files, timeout=60)
+        # Upstream upload endpoint (server-side)
+        resp = requests.post(f"{api_base}/upload/upload_videos", files=upload_files, timeout=120)
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        if resp.ok:
+            return _json_response(data, status=resp.status_code)
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+@login_required
+def tiktok_videos_titles(request):
+    context = _tiktok_api_context(request)
+    return render(request, 'uploader/tiktok/videos_titles.html', context)
+
+@csrf_exempt
+@login_required
+def tiktok_videos_proxy_upload_titles(request):
+    """Proxy: upload titles file to external TikTok API from server side."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    api_base = _get_tiktok_api_base(request)
+    try:
+        file = request.FILES.get('file')
+        if not file:
+            return _json_response({'detail': 'No titles file provided'}, status=400)
+        files = {'file': (file.name, file.read())}
+        resp = requests.post(f"{api_base}/upload/upload_titles", files=files, timeout=60)
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        if resp.ok:
+            return _json_response(data, status=resp.status_code)
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+@login_required
+def tiktok_videos_prepare(request):
+    context = _tiktok_api_context(request)
+    return render(request, 'uploader/tiktok/videos_prepare.html', context)
+
+@csrf_exempt
+@login_required
+def tiktok_videos_proxy_prepare_config(request):
+    """Proxy: prepare upload configuration on upstream server."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    api_base = _get_tiktok_api_base(request)
+    try:
+        try:
+            payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+        except Exception:
+            payload = {}
+        resp = requests.post(
+            f"{api_base}/upload/prepare_config",
+            json={
+                'music_name': payload.get('music_name') or '',
+                'location': payload.get('location') or '',
+                'mentions': payload.get('mentions') or [],
+                'upload_cycles': int(payload.get('upload_cycles') or 5)
+            },
+            timeout=60
+        )
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        if resp.ok:
+            return _json_response(data, status=resp.status_code)
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+@login_required
+def tiktok_videos_start(request):
+    context = _tiktok_api_context(request)
+    return render(request, 'uploader/tiktok/videos_start.html', context)
+
+@csrf_exempt
+@login_required
+def tiktok_videos_proxy_start_upload(request):
+    """Proxy: start upload pipeline on upstream server."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    api_base = _get_tiktok_api_base(request)
+    try:
+        resp = requests.post(f"{api_base}/upload/start_upload", timeout=120)
         try:
             data = resp.json()
         except Exception:

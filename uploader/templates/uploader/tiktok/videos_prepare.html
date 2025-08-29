@@ -1,0 +1,79 @@
+{% extends 'uploader/base.html' %}
+{% load static %}
+
+{% block title %}TikTok Prepare Config{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h3 class="mb-0">Prepare Upload Configuration</h3>
+        <div>
+            <a href="{% url 'tiktok_videos_titles' %}" class="btn btn-outline-secondary me-2">← Back</a>
+            <a href="{% url 'tiktok_videos_start' %}" class="btn btn-primary">Next: Start Upload →</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form id="prepare-config-form">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Music Name</label>
+                        <input type="text" class="form-control" name="music_name" placeholder="Trending Song">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Location</label>
+                        <input type="text" class="form-control" name="location" placeholder="e.g., Moscow, Russia">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Upload Cycles</label>
+                        <input type="number" class="form-control" name="upload_cycles" value="5" min="1" max="50">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Mentions (comma-separated)</label>
+                        <input type="text" class="form-control" name="mentions" placeholder="user1,user2,user3">
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-success">Prepare Config</button>
+                </div>
+            </form>
+            <div id="result" class="mt-3"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('prepare-config-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const resultEl = document.getElementById('result');
+    resultEl.innerHTML = '';
+    const formData = new FormData(form);
+    const payload = {
+        music_name: formData.get('music_name') || '',
+        location: formData.get('location') || '',
+        upload_cycles: parseInt(formData.get('upload_cycles') || '5'),
+        mentions: (formData.get('mentions') || '').split(',').map(s => s.trim()).filter(Boolean)
+    };
+    try {
+        const res = await fetch('{% url "api_tiktok_videos_prepare_config" %}', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+            resultEl.innerHTML = '<div class="alert alert-success">Config prepared successfully</div>';
+        } else {
+            resultEl.innerHTML = `<div class=\"alert alert-danger\">${data.detail || 'Request failed'}</div>`;
+        }
+    } catch (err) {
+        resultEl.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+    }
+});
+</script>
+{% endblock %}
+
+

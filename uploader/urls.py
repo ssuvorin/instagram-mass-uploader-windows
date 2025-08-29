@@ -90,6 +90,9 @@ urlpatterns = [
     # TikTok Video Management (separate module)
     path('tiktok/videos/', misc.tiktok_videos, name='tiktok_videos'),
     path('tiktok/videos/upload/', misc.tiktok_videos_upload, name='tiktok_videos_upload'),
+    path('tiktok/videos/titles/', misc.tiktok_videos_titles, name='tiktok_videos_titles'),
+    path('tiktok/videos/prepare/', misc.tiktok_videos_prepare, name='tiktok_videos_prepare'),
+    path('tiktok/videos/start/', misc.tiktok_videos_start, name='tiktok_videos_start'),
     # Server-side proxy endpoints
     path('api/tiktok/booster/upload-accounts/', misc.tiktok_booster_proxy_upload_accounts, name='api_tiktok_booster_upload_accounts'),
     path('api/tiktok/booster/upload-proxies/', misc.tiktok_booster_proxy_upload_proxies, name='api_tiktok_booster_upload_proxies'),
@@ -100,6 +103,9 @@ urlpatterns = [
     
     # TikTok Video Upload proxy endpoints (separate module)
     path('api/tiktok/videos/upload/', misc.tiktok_videos_proxy_upload, name='api_tiktok_videos_upload'),
+    path('api/tiktok/videos/upload-titles/', misc.tiktok_videos_proxy_upload_titles, name='api_tiktok_videos_upload_titles'),
+    path('api/tiktok/videos/prepare-config/', misc.tiktok_videos_proxy_prepare_config, name='api_tiktok_videos_prepare_config'),
+    path('api/tiktok/videos/start-upload/', misc.tiktok_videos_proxy_start_upload, name='api_tiktok_videos_start_upload'),
 
     # Hashtag Analyzer
     path('tools/hashtag/', hashtag.hashtag_analyzer, name='hashtag_analyzer'),
