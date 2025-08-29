@@ -232,7 +232,7 @@ def ensure_persistent_device(username: str, persisted_settings: Optional[Dict] =
 
 	Return (device_settings, user_agent).
 	Order of preference:
-	1) Existing InstagramDevice.device_settings
+	1) Existing InstagramDevice.device_settings with UUIDs merged from session if available
 	2) Adopt from persisted session settings (device_settings/uuids/user_agent)
 	3) Generate a random new device and persist
 	"""
@@ -247,6 +247,25 @@ def ensure_persistent_device(username: str, persisted_settings: Optional[Dict] =
 			if dev_obj and dev_obj.device_settings:
 				device_settings = dict(dev_obj.device_settings)
 				user_agent = (dev_obj.user_agent or None)
+				
+				# CRITICAL: Merge UUIDs from session settings if available (bundle data takes priority)
+				if persisted_settings and persisted_settings.get('uuids'):
+					session_uuids = persisted_settings['uuids']
+					uuids_updated = False
+					for key in ("uuid", "android_device_id", "phone_id", "client_session_id"):
+						session_value = session_uuids.get(key)
+						if session_value and device_settings.get(key) != session_value:
+							device_settings[key] = session_value
+							uuids_updated = True
+					
+					# Update database if UUIDs were merged from session
+					if uuids_updated:
+						try:
+							dev_obj.device_settings = device_settings
+							dev_obj.save(update_fields=['device_settings'])
+						except Exception:
+							pass  # Continue even if DB update fails
+				
 				return device_settings, user_agent
 	except Exception:
 		# DB not available or other error; continue with session/random

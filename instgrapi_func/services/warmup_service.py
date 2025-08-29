@@ -5,7 +5,7 @@ import random
 import time
 
 from instagrapi import Client  # type: ignore
-from instagrapi.exceptions import ChallengeRequired  # type: ignore
+from instagrapi.exceptions import ChallengeRequired, PleaseWaitFewMinutes, LoginRequired  # type: ignore
 
 from .client_factory import IGClientFactory
 from .proxy import build_proxy_url

@@ -1,0 +1,49 @@
+{% extends 'uploader/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+  <h3>Анализ хэштега #{{ result.hashtag }}</h3>
+
+  <div class="row mt-3">
+    <div class="col-md-6">
+      <div class="card mb-3">
+        <div class="card-body">
+          <h5 class="card-title">Сводка</h5>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item">Всего постов (по данным IG): <strong>{{ result.total_medias_reported|default:0 }}</strong></li>
+            <li class="list-group-item">Загружено: <strong>{{ result.fetched_medias }}</strong></li>
+            <li class="list-group-item">С данными просмотров: <strong>{{ result.analyzed_medias }}</strong></li>
+            <li class="list-group-item">Страниц загружено: <strong>{{ result.pages_loaded }}</strong></li>
+            <li class="list-group-item">Суммарные просмотры: <strong>{{ result.total_views }}</strong></li>
+            <li class="list-group-item">Среднее на медиа: <strong>{{ result.average_views|floatformat:0 }}</strong></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card mb-3">
+        <div class="card-body">
+          <h5 class="card-title">Параметры</h5>
+          <p>Аккаунт: <strong>{{ selected_account.username }}</strong></p>
+          <p>Хэштег: <strong>#{{ result.hashtag }}</strong></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if logs %}
+  <div class="mt-3">
+    <h5>Логи (постранично)</h5>
+    <pre class="bg-light p-3" style="max-height: 420px; overflow:auto;">{% for l in logs %}{{ l }}
+{% endfor %}</pre>
+  </div>
+  {% endif %}
+
+  <div class="mt-3">
+    <a class="btn btn-secondary" href="{% url 'hashtag_analyzer' %}">Новый анализ</a>
+  </div>
+</div>
+{% endblock %}
+
+

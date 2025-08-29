@@ -86,6 +86,11 @@ class Email:
         'throwaway.com': {'server': 'imap.throwaway.email', 'port': 993, 'type': 'imap'},
         'throwaway.org': {'server': 'imap.throwaway.email', 'port': 993, 'type': 'imap'},
         
+        # TuberMail - temporary email provider (uses FirstMail infrastructure)
+        'tubermail.com': {'server': 'imap.firstmail.ltd', 'port': 993, 'type': 'imap'},
+        'tubermail.org': {'server': 'imap.firstmail.ltd', 'port': 993, 'type': 'imap'},
+        'tubermail.net': {'server': 'imap.firstmail.ltd', 'port': 993, 'type': 'imap'},
+        
         # Add more email providers as needed
     }
 
@@ -183,6 +188,15 @@ class Email:
         
         # Расширенный список fallback серверов с приоритетом для временных email провайдеров
         fallback_servers = [
+            # TuberMail серверы (высокий приоритет)
+            ('imap.tubermail.com', 993, 'imap'),
+            ('mail.tubermail.com', 993, 'imap'),
+            ('pop.tubermail.com', 995, 'pop3'),
+            ('smtp.tubermail.com', 993, 'imap'),  # Sometimes SMTP servers also handle IMAP
+            ('server.tubermail.com', 993, 'imap'),
+            ('mx.tubermail.com', 993, 'imap'),
+            ('tubermail.com', 993, 'imap'),  # Try direct domain
+            
             # FirstMail серверы (высокий приоритет для временных email)
             ('imap.firstmail.ltd', 995, 'pop3'),
             ('imap.firstmail.ltd', 993, 'imap'),  # Попробуем и IMAP

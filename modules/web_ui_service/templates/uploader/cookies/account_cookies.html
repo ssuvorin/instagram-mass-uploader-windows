@@ -1,0 +1,177 @@
+{% extends 'uploader/base.html' %}
+{% load uploader_extras %}
+
+{% block title %}Cookies for {{ account.username }} - Instagram Uploader{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1 class="h3 mb-3">Cookies for {{ account.username }}</h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'cookie_dashboard' %}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+        <a href="{% url 'bulk_cookie_robot' %}" class="btn btn-primary">
+            <i class="bi bi-collection"></i> Bulk Cookie Robot
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Account Details</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-4">Username</dt>
+                    <dd class="col-sm-8">{{ account.username }}</dd>
+                    
+                    <dt class="col-sm-4">Dolphin Profile</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge bg-info">{{ account.dolphin_profile_id }}</span>
+                    </dd>
+                    
+                    <dt class="col-sm-4">Status</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge bg-{{ account.status|lower }}">{{ account.status }}</span>
+                    </dd>
+                    
+                    <dt class="col-sm-4">Last Used</dt>
+                    <dd class="col-sm-8">{{ account.last_used|default_if_none:"Never" }}</dd>
+                    
+                    <dt class="col-sm-4">Cookies Valid</dt>
+                    <dd class="col-sm-8">
+                        {% if is_valid %}
+                            <span class="badge bg-success">Yes</span>
+                        {% else %}
+                            <span class="badge bg-danger">No</span>
+                        {% endif %}
+                    </dd>
+                    
+                    <dt class="col-sm-4">Last Updated</dt>
+                    <dd class="col-sm-8">{{ last_updated|default_if_none:"Never" }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Cookies Data</h5>
+                <span class="badge bg-primary">
+                    {% if cookies_data.cookies %}
+                        {{ cookies_data.cookies|length }} Cookies
+                    {% elif cookies_data|length > 0 %}
+                        {{ cookies_data|length }} Cookies
+                    {% else %}
+                        0 Cookies
+                    {% endif %}
+                </span>
+            </div>
+            <div class="card-body">
+                {% if cookies_data %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Domain</th>
+                                    <th>Path</th>
+                                    <th>Expires</th>
+                                    <th>Secure</th>
+                                    <th>HttpOnly</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if cookies_data.cookies %}
+                                    {% for cookie in cookies_data.cookies %}
+                                    <tr>
+                                        <td>{{ cookie.name }}</td>
+                                        <td>{{ cookie.domain }}</td>
+                                        <td>{{ cookie.path }}</td>
+                                        <td>
+                                            {% if cookie.expires %}
+                                                {{ cookie.expires|date:"Y-m-d" }}
+                                            {% else %}
+                                                Session
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if cookie.secure %}
+                                                <i class="bi bi-check-circle text-success"></i>
+                                            {% else %}
+                                                <i class="bi bi-x-circle text-danger"></i>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if cookie.httpOnly %}
+                                                <i class="bi bi-check-circle text-success"></i>
+                                            {% else %}
+                                                <i class="bi bi-x-circle text-danger"></i>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    {% for cookie in cookies_data %}
+                                    <tr>
+                                        <td>{{ cookie.name }}</td>
+                                        <td>{{ cookie.domain|default:"-" }}</td>
+                                        <td>{{ cookie.path|default:"/" }}</td>
+                                        <td>
+                                            {% if cookie.expirationDate %}
+                                                {{ cookie.expirationDate|date:"Y-m-d" }}
+                                            {% else %}
+                                                Session
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if cookie.secure %}
+                                                <i class="bi bi-check-circle text-success"></i>
+                                            {% else %}
+                                                <i class="bi bi-x-circle text-danger"></i>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if cookie.httpOnly %}
+                                                <i class="bi bi-check-circle text-success"></i>
+                                            {% else %}
+                                                <i class="bi bi-x-circle text-danger"></i>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i> No cookies found for this account.
+                        Use <a href="{% url 'bulk_cookie_robot' %}" class="alert-link">Bulk Cookie Robot</a> to collect cookies.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if cookies_data %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Raw Cookies Data</h5>
+            </div>
+            <div class="card-body">
+                <pre class="bg-dark text-light p-3 rounded" style="max-height: 300px; overflow-y: auto;">{{ cookies_data|pprint }}</pre>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %} 

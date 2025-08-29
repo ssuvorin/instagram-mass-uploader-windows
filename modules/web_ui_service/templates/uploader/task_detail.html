@@ -1,0 +1,141 @@
+{% load static %}
+{% extends "uploader/base.html" %}
+
+{% block title %}Task Details - Instagram Uploader{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="{% url 'task_list' %}" class="text-decoration-none">
+            <i class="bi bi-arrow-left"></i> Back to Tasks
+        </a>
+        <h2 class="mb-0 mt-2">Task #{{ task.id }}</h2>
+    </div>
+    <div>
+        {% if task.status == 'PENDING' %}
+        <form method="post" action="{% url 'start_task' task_id=task.id %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success">
+                <i class="bi bi-play-fill"></i> Start Task
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Task Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="text-muted mb-1">Status</div>
+                    {% if task.status == 'PENDING' %}
+                    <span class="badge badge-pending">Pending</span>
+                    {% elif task.status == 'RUNNING' %}
+                    <span class="badge badge-running">Running</span>
+                    {% elif task.status == 'COMPLETED' %}
+                    <span class="badge badge-completed">Completed</span>
+                    {% elif task.status == 'FAILED' %}
+                    <span class="badge badge-failed">Failed</span>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <div class="text-muted mb-1">Account</div>
+                    <a href="{% url 'account_detail' account_id=task.account.id %}">
+                        {{ task.account.username }}
+                    </a>
+                </div>
+
+                <div class="mb-3">
+                    <div class="text-muted mb-1">Created</div>
+                    <div>{{ task.created_at }}</div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="text-muted mb-1">Last Updated</div>
+                    <div>{{ task.updated_at }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-file-earmark-text"></i> Execution Log</h5>
+            </div>
+            <div class="card-body">
+                {% if task.log %}
+                <div id="log-container" style="background-color: #1e1e1e; color: #ffffff; padding: 10px; border-radius: 5px; font-family: monospace; max-height: 400px; overflow-y: auto;">
+                    <div id="logs">{{ task.log }}</div>
+                </div>
+                {% else %}
+                <p class="text-muted">No log data available</p>
+                {% endif %}
+            </div>
+            {% if task.status == 'RUNNING' %}
+            <div class="card-footer">
+                <button class="btn btn-sm btn-outline-primary" id="refreshLog">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh Log
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-film"></i> Video Files</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for video in task.video_files.all %}
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">Video #{{ forloop.counter }}</h6>
+                        <video width="100%" controls>
+                            <source src="{{ video.video_file.url }}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                        {% if video.caption %}
+                        <div class="mt-2">
+                            <strong>Caption:</strong>
+                            <p class="small">{{ video.caption }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <p class="text-muted text-center">No video files attached to this task.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Include logs formatting script -->
+<script src="{% static 'uploader/js/logs.js' %}"></script>
+
+{% if task.status == 'RUNNING' %}
+<script>
+document.getElementById('refreshLog').addEventListener('click', function() {
+    window.location.reload();
+});
+
+// Auto-refresh every 10 seconds if task is running
+setTimeout(function() {
+    window.location.reload();
+}, 10000);
+</script>
+{% endif %}
+{% endblock %} 

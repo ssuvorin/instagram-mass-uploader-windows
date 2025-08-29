@@ -1,0 +1,231 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}Bulk Change Proxy - Instagram Uploader{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="{% url 'account_list' %}" class="text-decoration-none">
+            <i class="bi bi-arrow-left"></i> Back to Accounts
+        </a>
+        <h2 class="mb-0 mt-2">Bulk Change Proxy</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-shield-lock"></i> Bulk Proxy Management</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-4">
+                    <div class="d-flex">
+                        <div class="me-3">
+                            <i class="bi bi-info-circle-fill fs-3"></i>
+                        </div>
+                        <div>
+                            <h6 class="alert-heading">Available Proxies</h6>
+                            <p class="mb-0">
+                                There are <strong>{{ available_proxies_count }}</strong> available proxies that can be assigned to accounts.
+                                {% if available_proxies_count == 0 %}
+                                <br><span class="text-warning">⚠️ No available proxies found. <a href="{% url 'create_proxy' %}" class="alert-link">Add proxies</a> first.</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-info">
+                    <div class="d-flex">
+                        <div class="me-3">
+                            <i class="bi bi-info-circle fs-3"></i>
+                        </div>
+                        <div>
+                            <h6 class="alert-heading">Auto-Assignment Logic</h6>
+                            <p class="mb-0">
+                                When auto-assigning proxies, the system will try to match regions when possible:
+                                <br>• Accounts with existing proxies will prefer proxies from the same region
+                                <br>• If no same-region proxy is available, a different region proxy will be assigned (force mode)
+                                <br>• Accounts without proxies will get any available proxy
+                                <br>• Dolphin profiles will be updated automatically if they exist
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <form method="post" id="bulkProxyForm">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <h6>Select Action:</h6>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="action" id="auto_assign" value="auto_assign" checked>
+                            <label class="form-check-label" for="auto_assign">
+                                <strong>Auto-assign available proxies</strong>
+                                <small class="text-muted d-block">Automatically assign available proxies to selected accounts. Updates Dolphin profiles if they exist.</small>
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="action" id="remove_all" value="remove_all">
+                            <label class="form-check-label" for="remove_all">
+                                <strong>Remove all proxies</strong>
+                                <small class="text-muted d-block">Remove proxy assignments from selected accounts. Note: Dolphin profiles will keep their proxy settings.</small>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <h6>Select Accounts:</h6>
+                        <div class="mb-3">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAll()">Select All</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectNone()">Select None</button>
+                            <button type="button" class="btn btn-sm btn-outline-info" onclick="selectWithoutProxy()">Select Without Proxy</button>
+                            <button type="button" class="btn btn-sm btn-outline-warning" onclick="selectWithDolphin()">Select With Dolphin Profile</button>
+                        </div>
+                        
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th width="50">
+                                            <input type="checkbox" id="selectAllCheckbox" onchange="toggleAll(this)">
+                                        </th>
+                                        <th>Username</th>
+                                        <th>Current Proxy</th>
+                                        <th>Dolphin Profile</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for account in accounts %}
+                                    <tr>
+                                        <td>
+                                            <input type="checkbox" name="account_ids" value="{{ account.id }}" 
+                                                   class="account-checkbox"
+                                                   data-has-proxy="{% if account.proxy %}true{% else %}false{% endif %}"
+                                                   data-has-dolphin="{% if account.dolphin_profile_id %}true{% else %}false{% endif %}">
+                                        </td>
+                                        <td>
+                                            <strong>{{ account.username }}</strong>
+                                        </td>
+                                        <td>
+                                            {% if account.proxy %}
+                                                <span class="badge bg-success">{{ account.proxy }}</span>
+                                                {% if account.proxy.country %}
+                                                    <small class="text-muted d-block">{{ account.proxy.country }}{% if account.proxy.city %}, {{ account.proxy.city }}{% endif %}</small>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="badge bg-secondary">No proxy</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if account.dolphin_profile_id %}
+                                                <span class="badge bg-info">{{ account.dolphin_profile_id }}</span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{% if account.status == 'ACTIVE' %}success{% elif account.status == 'BLOCKED' %}danger{% elif account.status == 'LIMITED' %}warning{% else %}secondary{% endif %}">
+                                                {{ account.get_status_display }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted">No accounts found</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary" onclick="return confirmAction()">
+                            <i class="bi bi-shield-check"></i> Apply Changes
+                        </button>
+                        <a href="{% url 'account_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function selectAll() {
+    document.querySelectorAll('.account-checkbox').forEach(cb => cb.checked = true);
+    updateSelectAllCheckbox();
+}
+
+function selectNone() {
+    document.querySelectorAll('.account-checkbox').forEach(cb => cb.checked = false);
+    updateSelectAllCheckbox();
+}
+
+function selectWithoutProxy() {
+    document.querySelectorAll('.account-checkbox').forEach(cb => {
+        cb.checked = cb.dataset.hasProxy === 'false';
+    });
+    updateSelectAllCheckbox();
+}
+
+function selectWithDolphin() {
+    document.querySelectorAll('.account-checkbox').forEach(cb => {
+        cb.checked = cb.dataset.hasDolphin === 'true';
+    });
+    updateSelectAllCheckbox();
+}
+
+function toggleAll(checkbox) {
+    document.querySelectorAll('.account-checkbox').forEach(cb => cb.checked = checkbox.checked);
+}
+
+function updateSelectAllCheckbox() {
+    const checkboxes = document.querySelectorAll('.account-checkbox');
+    const checkedBoxes = document.querySelectorAll('.account-checkbox:checked');
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    
+    if (checkedBoxes.length === 0) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = false;
+    } else if (checkedBoxes.length === checkboxes.length) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = true;
+    } else {
+        selectAllCheckbox.indeterminate = true;
+    }
+}
+
+function confirmAction() {
+    const selectedAccounts = document.querySelectorAll('.account-checkbox:checked');
+    const action = document.querySelector('input[name="action"]:checked').value;
+    
+    if (selectedAccounts.length === 0) {
+        alert('Please select at least one account.');
+        return false;
+    }
+    
+    let message = '';
+    if (action === 'auto_assign') {
+        message = `Are you sure you want to auto-assign proxies to ${selectedAccounts.length} selected accounts?\n\nThis will also update Dolphin profiles if they exist.`;
+    } else if (action === 'remove_all') {
+        message = `Are you sure you want to remove proxies from ${selectedAccounts.length} selected accounts?\n\nNote: Dolphin profiles will keep their proxy settings.`;
+    }
+    
+    return confirm(message);
+}
+
+// Update select all checkbox when individual checkboxes change
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.account-checkbox').forEach(cb => {
+        cb.addEventListener('change', updateSelectAllCheckbox);
+    });
+    updateSelectAllCheckbox();
+});
+</script>
+{% endblock %} 

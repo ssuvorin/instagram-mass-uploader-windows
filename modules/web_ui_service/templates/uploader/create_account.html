@@ -1,0 +1,155 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}Create Account - Instagram Uploader{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="{% url 'account_list' %}" class="text-decoration-none">
+            <i class="bi bi-arrow-left"></i> Back to Accounts
+        </a>
+        <h2 class="mb-0 mt-2">Create New Instagram Account</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-person-plus"></i> Account Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label for="{{ form.username.id_for_label }}" class="form-label">Instagram Username</label>
+                            <input type="text" name="{{ form.username.name }}" id="{{ form.username.id_for_label }}" class="form-control {% if form.username.errors %}is-invalid{% endif %}" value="{{ form.username.value|default:'' }}" required>
+                            {% if form.username.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.username.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-4">
+                            <label for="{{ form.password.id_for_label }}" class="form-label">Instagram Password</label>
+                            <input type="password" name="{{ form.password.name }}" id="{{ form.password.id_for_label }}" class="form-control {% if form.password.errors %}is-invalid{% endif %}" value="{{ form.password.value|default:'' }}" required>
+                            {% if form.password.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.password.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label for="{{ form.email_username.id_for_label }}" class="form-label">Email Username (Optional)</label>
+                            <input type="text" name="{{ form.email_username.name }}" id="{{ form.email_username.id_for_label }}" class="form-control {% if form.email_username.errors %}is-invalid{% endif %}" value="{{ form.email_username.value|default:'' }}">
+                            {% if form.email_username.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.email_username.errors }}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">Used for email verification if needed</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-4">
+                            <label for="{{ form.email_password.id_for_label }}" class="form-label">Email Password (Optional)</label>
+                            <input type="password" name="{{ form.email_password.name }}" id="{{ form.email_password.id_for_label }}" class="form-control {% if form.email_password.errors %}is-invalid{% endif %}" value="{{ form.email_password.value|default:'' }}">
+                            {% if form.email_password.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.email_password.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label for="{{ form.tfa_secret.id_for_label }}" class="form-label">2FA Secret Key (Optional)</label>
+                            <input type="text" name="{{ form.tfa_secret.name }}" id="{{ form.tfa_secret.id_for_label }}" class="form-control {% if form.tfa_secret.errors %}is-invalid{% endif %}" value="{{ form.tfa_secret.value|default:'' }}" placeholder="ABCDEF123456...">
+                            {% if form.tfa_secret.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.tfa_secret.errors }}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">Enter the secret key for 2FA if enabled. <span class="text-info">Spaces will be automatically removed.</span></div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-4">
+                            <label for="{{ form.proxy.id_for_label }}" class="form-label">Proxy (Optional)</label>
+                            <select name="{{ form.proxy.name }}" id="{{ form.proxy.id_for_label }}" class="form-select {% if form.proxy.errors %}is-invalid{% endif %}">
+                                <option value="">-- No Proxy --</option>
+                                {% for proxy in form.proxy.field.queryset %}
+                                <option value="{{ proxy.id }}" {% if form.proxy.value|stringformat:"i" == proxy.id|stringformat:"i" %}selected{% endif %}>
+                                    {{ proxy }} {% if not proxy.is_active %} (Inactive){% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% if form.proxy.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.proxy.errors }}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">Assign a proxy for this account</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label">Profile Locale</label>
+                            <input type="hidden" name="profile_locale" value="ru_BY" />
+                            <div class="form-control" readonly>ru_BY (Русский интерфейс, регион BY)</div>
+                            <div class="form-text">Локаль профиля Dolphin. Используется для Accept-Language/TZ/Гео.</div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label">Proxy Selection</label>
+                            <select name="proxy_selection" class="form-select">
+                                <option value="locale_only" selected>Привязывать прокси к выбранной локации (BY)</option>
+                                <option value="any">Любые свободные прокси</option>
+                            </select>
+                            <div class="form-text">Выберите, подбирать ли прокси строго под локаль (BY) или из любых свободных.</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="{{ form.status.id_for_label }}" class="form-label">Account Status</label>
+                        <select name="{{ form.status.name }}" id="{{ form.status.id_for_label }}" class="form-select {% if form.status.errors %}is-invalid{% endif %}">
+                            {% for value, text in form.status.field.choices %}
+                            <option value="{{ value }}" {% if form.status.value == value %}selected{% endif %}>{{ text }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if form.status.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.status.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="{{ form.notes.id_for_label }}" class="form-label">Notes (Optional)</label>
+                        <textarea name="{{ form.notes.name }}" id="{{ form.notes.id_for_label }}" class="form-control {% if form.notes.errors %}is-invalid{% endif %}" rows="3">{{ form.notes.value|default:'' }}</textarea>
+                        {% if form.notes.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.notes.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Create Account
+                        </button>
+                        <a href="{% url 'account_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

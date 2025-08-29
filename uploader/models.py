@@ -595,6 +595,28 @@ class BulkLoginTask(models.Model):
         return int(self.get_completed_count() / total * 100)
 
 
+# ===== Hashtag Analytics =====
+class HashtagAnalytics(models.Model):
+    hashtag = models.CharField(max_length=150, db_index=True)
+    total_medias_reported = models.IntegerField(default=0)
+    fetched_medias = models.IntegerField(default=0)
+    analyzed_medias = models.IntegerField(default=0)
+    pages_loaded = models.IntegerField(default=0)
+    total_views = models.BigIntegerField(default=0)
+    average_views = models.FloatField(default=0.0)
+    info_json = models.JSONField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['hashtag', 'created_at']),
+        ]
+        verbose_name = 'Hashtag analytics'
+        verbose_name_plural = 'Hashtag analytics'
+
+    def __str__(self):
+        return f"#{self.hashtag} at {self.created_at:%Y-%m-%d %H:%M}"
+
 class BulkLoginAccount(models.Model):
     STATUS_CHOICES = [
         ('PENDING', 'Pending'),

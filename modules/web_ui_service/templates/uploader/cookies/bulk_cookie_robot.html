@@ -1,0 +1,473 @@
+{% extends 'uploader/base.html' %}
+{% load static %}
+
+{% block title %}Bulk Cookie Robot{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Reuse styled account selection UI from async bulk upload */
+    .accounts-controls {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.25rem;
+        border-radius: 12px 12px 0 0;
+        border-bottom: none;
+    }
+    .accounts-controls .form-control {
+        border-radius: 25px;
+        border: 2px solid rgba(255,255,255,0.3);
+        background: rgba(255,255,255,0.1);
+        color: white;
+        padding-left: 2.5rem;
+    }
+    .accounts-controls .form-control::placeholder { color: rgba(255,255,255,0.7); }
+    .accounts-controls .form-control:focus {
+        background: rgba(255,255,255,0.2);
+        border-color: rgba(255,255,255,0.6);
+        box-shadow: 0 0 0 0.2rem rgba(255,255,255,0.25);
+        color: white;
+    }
+    .search-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.7); z-index: 10; }
+    .search-wrapper { position: relative; }
+    .controls-row { margin-bottom: 1rem; }
+    .filter-pills { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
+    .filter-pill { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 0.25rem 0.75rem; border-radius: 15px; font-size: 0.8rem; cursor: pointer; transition: all 0.3s ease; user-select: none; }
+    .filter-pill:hover { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.5); }
+    .filter-pill.active { background: white; color: #667eea; border-color: white; font-weight: 600; }
+    .bulk-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .bulk-action-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 0.4rem 0.8rem; border-radius: 15px; font-size: 0.8rem; cursor: pointer; transition: all 0.3s ease; user-select: none; display: flex; align-items: center; gap: 0.25rem; }
+    .bulk-action-btn:hover { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.5); }
+    .view-toggle { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; padding: 0.25rem; display: flex; }
+    .view-toggle-btn { background: transparent; border: none; color: rgba(255,255,255,0.7); padding: 0.4rem 0.8rem; border-radius: 15px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 0.25rem; }
+    .view-toggle-btn.active { background: white; color: #667eea; }
+    .accounts-grid { padding: 1rem; max-height: 600px; overflow-y: auto; background: #f8f9fb; border-radius: 0 0 12px 12px; position: relative; }
+    .compact-mode .accounts-grid { padding: 0.5rem; }
+    .account-item { margin-bottom: 0.75rem; transition: all 0.3s ease; }
+    .compact-mode .account-item { margin-bottom: 0.5rem; }
+    .account-card { border: 2px solid #e9ecef; border-radius: 12px; background: white; transition: all 0.3s ease; padding: 1rem; position: relative; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); cursor: pointer; }
+    .compact-mode .account-card { padding: 0.6rem; border-radius: 8px; border-width: 1px; }
+    .account-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); transform: scaleX(0); transition: transform 0.3s ease; }
+    .compact-mode .account-card::before { height: 3px; }
+    .account-card:hover { border-color: #667eea; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.15); }
+    .compact-mode .account-card:hover { box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15); }
+    .account-card:hover::before { transform: scaleX(1); }
+    .account-card.selected { border-color: #667eea; background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%); box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2); }
+    .account-card.selected::before { transform: scaleX(1); }
+    .account-checkbox { position: absolute; opacity: 0; pointer-events: none; }
+    .custom-checkbox { width: 24px; height: 24px; border: 2px solid #dee2e6; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; background: white; flex-shrink: 0; }
+    .compact-mode .custom-checkbox { width: 20px; height: 20px; border-width: 1px; border-radius: 4px; }
+    .custom-checkbox i { color: white; font-size: 14px; opacity: 0; transition: opacity 0.3s ease; }
+    .compact-mode .custom-checkbox i { font-size: 12px; }
+    .account-checkbox:checked ~ .account-card .custom-checkbox { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-color: #667eea; }
+    .account-checkbox:checked ~ .account-card .custom-checkbox i { opacity: 1; }
+    .account-info { display: flex; align-items: center; flex: 1; }
+    .account-details { margin-left: 1rem; flex: 1; }
+    .compact-mode .account-details { margin-left: 0.75rem; }
+    .account-username { font-weight: 600; color: #2d3748; margin-bottom: 0.25rem; font-size: 1rem; }
+    .compact-mode .account-username { font-size: 0.9rem; margin-bottom: 0.15rem; }
+    .account-stats { color: #718096; font-size: 0.875rem; margin-bottom: 0.5rem; }
+    .compact-mode .account-stats { font-size: 0.75rem; margin-bottom: 0.25rem; }
+    .account-badges { display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
+    .compact-mode .account-badges { gap: 0.25rem; margin-top: 0.25rem; }
+    .badge-custom { padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 500; border: 1px solid; }
+    .compact-mode .badge-custom { padding: 0.15rem 0.5rem; border-radius: 8px; font-size: 0.65rem; }
+    .badge-proxy { background: rgba(34, 197, 94, 0.1); color: #059669; border-color: rgba(34, 197, 94, 0.3); }
+    .badge-dolphin { background: rgba(59, 130, 246, 0.1); color: #2563eb; border-color: rgba(59, 130, 246, 0.3); }
+    .accounts-summary { background: white; border: 2px solid #e9ecef; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; }
+    .summary-left { display: flex; align-items: center; gap: 1rem; }
+    .selected-count { font-size: 1.5rem; font-weight: 700; color: #667eea; }
+    .total-count { color: #718096; font-size: 0.875rem; }
+    .summary-stats { display: flex; gap: 1rem; font-size: 0.8rem; color: #718096; }
+    .stat-item { display: flex; align-items: center; gap: 0.25rem; }
+    .list-mode .account-item { margin-bottom: 0.25rem; }
+    .list-mode .account-card { padding: 0.75rem 1rem; border-radius: 6px; border-width: 1px; }
+    .list-mode .account-info { justify-content: space-between; }
+    .list-mode .account-details { margin-left: 0.75rem; display: flex; align-items: center; justify-content: space-between; width: 100%; }
+    .list-mode .account-username { margin-bottom: 0; font-size: 0.9rem; }
+    .list-mode .account-stats { display: none; }
+    .list-mode .account-badges { margin-top: 0; gap: 0.25rem; }
+    .list-mode .badge-custom { padding: 0.1rem 0.4rem; font-size: 0.6rem; }
+    .accounts-grid::-webkit-scrollbar { width: 8px; }
+    .accounts-grid::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+    .accounts-grid::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 4px; }
+    .accounts-grid::-webkit-scrollbar-thumb:hover { background: #a0aec0; }
+    .pagination-info { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: white; border-top: 1px solid #e9ecef; border-radius: 0 0 12px 12px; font-size: 0.875rem; color: #718096; }
+    .page-size-selector { display: flex; align-items: center; gap: 0.5rem; }
+    .page-size-selector select { border: 1px solid #e9ecef; border-radius: 6px; padding: 0.25rem 0.5rem; font-size: 0.8rem; }
+    .loading-spinner { display: flex; justify-content: center; align-items: center; padding: 2rem; color: #667eea; }
+    .spinner { width: 2rem; height: 2rem; border: 2px solid #e9ecef; border-top: 2px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .hidden { display: none !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="mb-1 fw-bold">Bulk Cookie Robot</h2>
+        <p class="text-muted mb-0">Run Cookie Robot on multiple accounts at once</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <div class="d-flex justify-content-end gap-2">
+            <a href="{% url 'cookie_task_list' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Tasks
+            </a>
+            <form method="post" action="{% url 'refresh_cookies_from_profiles' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-primary" title="Fetch cookies from Dolphin profiles and persist to DB">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh Cookies
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+        <h6 class="m-0 font-weight-bold text-primary">Create Bulk Cookie Robot Tasks</h6>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label class="form-label">Select Accounts</label>
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Only accounts with Dolphin profiles are shown. Use search, filters and view modes to select accounts. Cards show proxy status, Dolphin binding, cookie domains count, and Instagram session presence.
+                </div>
+
+                <div class="accounts-summary" id="accountsSummary">
+                    <div class="summary-left">
+                        <div>
+                            <div class="selected-count" id="selectedCount">0</div>
+                            <div class="total-count" id="totalCount">of {{ accounts|length }} accounts selected</div>
+                        </div>
+                        <div class="summary-stats">
+                            <div class="stat-item"><i class="bi bi-shield-check text-success"></i><span id="proxyCount">0</span> with proxy</div>
+                            <div class="stat-item"><i class="bi bi-instagram"></i><span id="igCount">0</span> IG session</div>
+                            <div class="stat-item"><i class="bi bi-globe2"></i><span id="domainsAvg">0</span> avg sites</div>
+                            <div class="stat-item text-warning d-none" id="mobileSessionStat"><i class="bi bi-phone"></i><span id="mobileSessionCount">0</span> mobile sessions</div>
+                        </div>
+                    </div>
+                    <div class="page-size-selector">
+                        <label>Show:</label>
+                        <select id="pageSize">
+                            <option value="20">20</option>
+                            <option value="50" selected>50</option>
+                            <option value="100">100</option>
+                            <option value="all">All</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm" id="accountsWidget">
+                    <div class="accounts-controls">
+                        <div class="controls-row">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <div class="search-wrapper">
+                                        <i class="bi bi-search search-icon"></i>
+                                        <input type="text" id="accountSearch" class="form-control" placeholder="Search accounts by username...">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex justify-content-end align-items-center gap-2">
+                                        <div class="view-toggle">
+                                            <button type="button" class="view-toggle-btn active" data-view="card"><i class="bi bi-grid-3x3-gap"></i> Cards</button>
+                                            <button type="button" class="view-toggle-btn" data-view="compact"><i class="bi bi-list"></i> Compact</button>
+                                            <button type="button" class="view-toggle-btn" data-view="list"><i class="bi bi-list-ul"></i> List</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="controls-row">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="filter-pills">
+                                        <div class="filter-pill active" data-filter="all"><i class="bi bi-check-all me-1"></i>All</div>
+                                        <div class="filter-pill" data-filter="proxy"><i class="bi bi-shield-check me-1"></i>With Proxy</div>
+                                        <div class="filter-pill" data-filter="ig"><i class="bi bi-instagram me-1"></i>IG Session</div>
+                                        <div class="filter-pill" data-filter="no_ig"><i class="bi bi-instagram me-1"></i>No IG Session</div>
+                                        <div class="filter-pill" data-filter="mobile"><i class="bi bi-phone me-1"></i>Mobile Session</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="bulk-actions justify-content-end">
+                                        <div class="bulk-action-btn" id="selectAll"><i class="bi bi-check-all"></i> Select All</div>
+                                        <div class="bulk-action-btn" id="selectNone"><i class="bi bi-x"></i> Clear</div>
+                                        <div class="bulk-action-btn" id="selectRandom"><i class="bi bi-shuffle"></i> Random 10</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accounts-grid" id="accountsGrid">
+                        <div class="loading-spinner" id="loadingSpinner" style="display: none;">
+                            <div class="spinner"></div>
+                            <span class="ms-2">Loading accounts...</span>
+                        </div>
+                        <div class="row" id="accountsContainer">
+                            {% for account in accounts %}
+                            <div class="col-lg-6 col-md-12 account-item"
+                                 data-username="{{ account.username|lower }}"
+                                 data-has-proxy="{% if account.ui_has_proxy %}true{% else %}false{% endif %}"
+                                 data-proxy-active="{% if account.ui_proxy_active %}true{% else %}false{% endif %}"
+                                 data-has-dolphin="true"
+                                 data-cookie-domains="{{ account.ui_cookie_domains|default:0 }}"
+                                 data-has-ig-session="{% if account.ui_instagram_session %}true{% else %}false{% endif %}"
+                                 data-has-mobile-session="{% if account.ui_mobile_session_present %}true{% else %}false{% endif %}"
+                                 data-account-id="{{ account.id }}">
+                                <input class="account-checkbox" type="checkbox" name="accounts" value="{{ account.id }}" id="account_{{ account.id }}">
+                                <label class="account-card" for="account_{{ account.id }}">
+                                    <div class="account-info">
+                                        <div class="custom-checkbox"><i class="bi bi-check"></i></div>
+                                        <div class="account-details">
+                                            <div class="account-username">{{ account.username }}</div>
+                                            <div class="account-stats">
+                                                <small class="text-muted">Profile: {{ account.dolphin_profile_id }}</small>
+                                                <span class="mx-2 text-muted">•</span>
+                                                {% if account.ui_has_proxy and account.ui_proxy_host_port %}
+                                                    <small class="text-muted">Proxy: {{ account.ui_proxy_host_port }}</small>
+                                                    <span class="mx-2 text-muted">•</span>
+                                                {% endif %}
+                                                <small class="text-muted">{{ account.ui_cookie_total|default:0 }} cookies • {{ account.ui_cookie_domains|default:0 }} sites</small>
+                                            </div>
+                                            <div class="account-badges">
+                                                {% if account.ui_has_proxy %}
+                                                    {% if account.ui_proxy_active %}
+                                                    <span class="badge-custom badge-proxy"><i class="bi bi-shield-check me-1"></i>Proxy OK</span>
+                                                    {% else %}
+                                                    <span class="badge-custom" style="background: rgba(239, 68, 68, 0.1); color: #dc2626; border-color: rgba(239, 68, 68, 0.3);"><i class="bi bi-exclamation-octagon me-1"></i>Proxy Inactive</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="badge-custom" style="background: rgba(156, 163, 175, 0.1); color: #6b7280; border-color: rgba(156, 163, 175, 0.3);"><i class="bi bi-shield me-1"></i>No Proxy</span>
+                                                {% endif %}
+
+                                                <span class="badge-custom badge-dolphin"><i class="bi bi-laptop me-1"></i>Dolphin</span>
+
+                                                <span class="badge-custom" style="background: rgba(59, 130, 246, 0.1); color: #2563eb; border-color: rgba(59, 130, 246, 0.3);">
+                                                    <i class="bi bi-globe2 me-1"></i>{{ account.ui_cookie_domains|default:0 }} sites
+                                                </span>
+
+                                                {% if account.ui_instagram_session %}
+                                                <span class="badge-custom" style="background: rgba(34, 197, 94, 0.1); color: #059669; border-color: rgba(34, 197, 94, 0.3);"><i class="bi bi-instagram me-1"></i>IG session</span>
+                                                {% else %}
+                                                <span class="badge-custom" style="background: rgba(156, 163, 175, 0.1); color: #6b7280; border-color: rgba(156, 163, 175, 0.3);"><i class="bi bi-instagram me-1"></i>No IG session</span>
+                                                {% endif %}
+
+                                                {% if account.ui_mobile_session_present %}
+                                                <span class="badge-custom" style="background: rgba(245, 158, 11, 0.12); color: #b45309; border-color: rgba(245, 158, 11, 0.35);" data-bs-toggle="tooltip" title="Mobile session detected: instagrapi session present">
+                                                    <i class="bi bi-phone me-1"></i>Mobile Session
+                                                </span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </label>
+                                <!-- Selected IDs will be submitted only on Start Cookie Robot; for Refresh, a global refresh is triggered.
+                                     If you want to refresh only selected, mirror selected IDs into the refresh form via JS. -->
+                            </div>
+                            {% empty %}
+                            <div class="col-12">
+                                <div class="alert alert-warning mb-0">No accounts with Dolphin profiles found. Please create accounts with Dolphin profiles first.</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="no-results text-center text-muted" id="noResults" style="display: none;">
+                            <i class="bi bi-search"></i>
+                            <p class="mb-0">No accounts found matching your search</p>
+                        </div>
+                    </div>
+                    <div class="pagination-info" id="paginationInfo">
+                        <span id="paginationText">Showing 1-50 of {{ accounts|length }} accounts</span>
+                        <div id="paginationControls" style="display: none;">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="prevPage" disabled><i class="bi bi-chevron-left"></i> Previous</button>
+                            <span class="mx-2" id="pageInfo">Page 1 of 1</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="nextPage" disabled>Next <i class="bi bi-chevron-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="headless" name="headless">
+                        <label class="form-check-label" for="headless">Headless Mode</label>
+                        <div class="form-text">Run without visible browser window</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="imageless" name="imageless">
+                        <label class="form-check-label" for="imageless">Disable Images</label>
+                        <div class="form-text">Don't load images to save bandwidth</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-robot"></i> Start Cookie Robot on Selected Accounts
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('accountSearch');
+    const accountItems = document.querySelectorAll('.account-item');
+    const accountCheckboxes = document.querySelectorAll('.account-checkbox');
+    const accountCards = document.querySelectorAll('.account-card');
+    const selectedCountEl = document.getElementById('selectedCount');
+    const totalCountEl = document.getElementById('totalCount');
+    const proxyCountEl = document.getElementById('proxyCount');
+    const igCountEl = document.getElementById('igCount');
+    const mobileSessionStat = document.getElementById('mobileSessionStat');
+    const mobileSessionCountEl = document.getElementById('mobileSessionCount');
+    const paginationText = document.getElementById('paginationText');
+    const accountsWidget = document.getElementById('accountsWidget');
+
+    let currentView = 'card';
+    let currentFilter = 'all';
+    let currentPage = 1;
+    let pageSize = 50;
+    let totalAccounts = accountItems.length;
+    let filteredAccounts = [...accountItems];
+    let visibleAccounts = [];
+
+    updateAccountsDisplay();
+
+    searchInput.addEventListener('input', debounce(function() { filterAndPaginate(); }, 300));
+
+    document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentView = this.dataset.view;
+            updateViewMode();
+        });
+    });
+
+    document.querySelectorAll('.filter-pill').forEach(pill => {
+        pill.addEventListener('click', function() {
+            document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+            this.classList.add('active');
+            currentFilter = this.dataset.filter;
+            filterAndPaginate();
+        });
+    });
+
+    document.getElementById('selectAll').addEventListener('click', function() {
+        visibleAccounts.forEach(item => {
+            const checkbox = item.querySelector('.account-checkbox');
+            checkbox.checked = true;
+            updateCardSelection(checkbox);
+        });
+        updateCounter();
+    });
+
+    document.getElementById('selectNone').addEventListener('click', function() {
+        accountCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+            updateCardSelection(checkbox);
+        });
+        updateCounter();
+    });
+
+    document.getElementById('selectRandom').addEventListener('click', function() {
+        accountCheckboxes.forEach(checkbox => { checkbox.checked = false; updateCardSelection(checkbox); });
+        const shuffled = [...visibleAccounts].sort(() => 0.5 - Math.random());
+        const selected = shuffled.slice(0, Math.min(10, shuffled.length));
+        selected.forEach(item => { const cb = item.querySelector('.account-checkbox'); cb.checked = true; updateCardSelection(cb); });
+        updateCounter();
+    });
+
+    document.getElementById('pageSize').addEventListener('change', function() {
+        pageSize = this.value === 'all' ? 9999 : parseInt(this.value);
+        currentPage = 1;
+        filterAndPaginate();
+    });
+
+    accountCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() { updateCardSelection(this); updateCounter(); });
+        updateCardSelection(checkbox);
+    });
+
+    function updateViewMode() {
+        accountsWidget.className = accountsWidget.className.replace(/\b(compact-mode|list-mode)\b/g, '');
+        if (currentView === 'compact') { accountsWidget.classList.add('compact-mode'); updateColumnClasses('col-lg-4 col-md-6'); }
+        else if (currentView === 'list') { accountsWidget.classList.add('list-mode'); updateColumnClasses('col-12'); }
+        else { updateColumnClasses('col-lg-6 col-md-12'); }
+    }
+
+    function updateColumnClasses(newClasses) {
+        accountItems.forEach(item => { item.className = 'account-item ' + newClasses; });
+    }
+
+    function filterAndPaginate() {
+        const searchTerm = (searchInput.value || '').toLowerCase().trim();
+        filteredAccounts = Array.from(accountItems).filter(item => {
+            const username = item.dataset.username || '';
+            const hasProxy = item.dataset.hasProxy === 'true';
+            const hasIG = item.dataset.hasIgSession === 'true';
+            const hasMobileSession = item.dataset.hasMobileSession === 'true';
+            if (searchTerm && !username.includes(searchTerm)) return false;
+            switch(currentFilter) {
+                case 'proxy': return hasProxy;
+                case 'ig': return hasIG;
+                case 'mobile': return hasMobileSession;
+                case 'no_ig': return !hasIG;
+                default: return true;
+            }
+        });
+        const totalFiltered = filteredAccounts.length;
+        const totalPages = Math.ceil(totalFiltered / pageSize);
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = Math.min(startIndex + pageSize, totalFiltered);
+        visibleAccounts = filteredAccounts.slice(startIndex, endIndex);
+        accountItems.forEach(item => item.classList.add('hidden'));
+        visibleAccounts.forEach(item => item.classList.remove('hidden'));
+        updatePaginationInfo(startIndex + 1, endIndex, totalFiltered);
+        document.getElementById('noResults').style.display = totalFiltered === 0 && (searchTerm || currentFilter !== 'all') ? 'block' : 'none';
+        updateCounter();
+    }
+
+    function updatePaginationInfo(start, end, total) {
+        paginationText.textContent = total === 0 ? 'No accounts found' : `Showing ${start}-${end} of ${total} accounts`;
+    }
+
+    function updateCardSelection(checkbox) {
+        const card = checkbox.nextElementSibling;
+        if (checkbox.checked) card.classList.add('selected'); else card.classList.remove('selected');
+    }
+
+    function updateCounter() {
+        const checkedBoxes = Array.from(accountCheckboxes).filter(cb => cb.checked);
+        const selectedProxy = checkedBoxes.filter(cb => cb.closest('.account-item').dataset.hasProxy === 'true').length;
+        const selectedIG = checkedBoxes.filter(cb => cb.closest('.account-item').dataset.hasIgSession === 'true').length;
+        const selectedMobile = checkedBoxes.filter(cb => cb.closest('.account-item').dataset.hasMobileSession === 'true').length;
+        selectedCountEl.textContent = checkedBoxes.length;
+        totalCountEl.textContent = `of ${totalAccounts} accounts selected`;
+        proxyCountEl.textContent = selectedProxy;
+        igCountEl.textContent = selectedIG;
+        mobileSessionCountEl.textContent = selectedMobile;
+        mobileSessionStat.classList.toggle('d-none', selectedMobile === 0);
+        // average domains among selected
+        const domains = checkedBoxes.map(cb => parseInt(cb.closest('.account-item').dataset.cookieDomains || '0', 10) || 0);
+        const avg = domains.length ? Math.round(domains.reduce((a,b)=>a+b,0) / domains.length) : 0;
+        const domainsAvgEl = document.getElementById('domainsAvg');
+        if (domainsAvgEl) domainsAvgEl.textContent = avg;
+    }
+
+    function updateAccountsDisplay() { filterAndPaginate(); updateCounter(); }
+
+    function debounce(func, wait) { let timeout; return function(...args){ clearTimeout(timeout); timeout = setTimeout(()=>func.apply(this,args), wait); }; }
+});
+</script>
+{% endblock %} 

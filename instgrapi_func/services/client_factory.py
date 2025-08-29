@@ -1,9 +1,20 @@
 from typing import Optional, Dict
 from instagrapi import Client
+from instagrapi.exceptions import ChallengeRequired, TwoFactorRequired  # type: ignore
 from .geo import resolve_geo
 
 
 class IGClientFactory:
+    @staticmethod
+    def _challenge_code_handler(username, choice):
+        """Custom challenge handler that raises ChallengeRequired instead of prompting for input"""
+        raise ChallengeRequired(f"Challenge required for {username}: {choice}")
+    
+    @staticmethod
+    def _two_factor_code_handler(username):
+        """Custom 2FA handler that raises TwoFactorRequired instead of prompting for input"""
+        raise TwoFactorRequired(f"Two-factor authentication required for {username}")
+
     @staticmethod
     def create_client(
         device_config: Optional[Dict] = None,

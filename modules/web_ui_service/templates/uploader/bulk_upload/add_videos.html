@@ -1,0 +1,106 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}Add Videos - Bulk Upload - Instagram Uploader{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="mb-4 fw-bold">Add Videos to "{{ task.name }}"</h2>
+        <p class="text-muted">Upload videos to be included in this bulk upload task.</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'bulk_upload_detail' task_id=task.id %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Task Details
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-7">
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0"><i class="bi bi-film"></i> Upload Videos</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <label for="id_video_file" class="form-label fw-bold">{{ form.video_file.label }}</label>
+                        <input type="file" name="video_file" class="form-control form-control-lg" id="id_video_file" multiple required>
+                        <div class="form-text text-muted">{{ form.video_file.help_text }}</div>
+                    </div>
+                    
+                    <div class="alert alert-info d-flex align-items-center">
+                        <i class="bi bi-info-circle-fill me-2 fs-4"></i>
+                        <div>Videos will be evenly distributed among your selected accounts.</div>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg px-5">
+                            <i class="bi bi-upload me-2"></i> Upload Videos
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0"><i class="bi bi-collection"></i> Current Videos ({{ videos.count }})</h5>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if videos %}
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Filename</th>
+                                <th>Assigned To</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for video in videos %}
+                            <tr>
+                                <td class="text-center">{{ forloop.counter }}</td>
+                                <td>{{ video.video_file.name|slice:"14:" }}</td>
+                                <td>
+                                    {% if video.assigned_to %}
+                                    {{ video.assigned_to.account.username }}
+                                    {% else %}
+                                    <span class="text-muted fst-italic">Not assigned</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-film fs-1 text-muted mb-3 d-block"></i>
+                    <p class="text-muted">No videos uploaded yet</p>
+                    <p class="small text-muted">Upload videos using the form on the left.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between mt-4">
+    <a href="{% url 'bulk_upload_detail' task_id=task.id %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Task Details
+    </a>
+    {% if videos.exists %}
+    <a href="{% url 'add_bulk_titles' task_id=task.id %}" class="btn btn-primary">
+        Next: Add Titles <i class="bi bi-arrow-right"></i>
+    </a>
+    {% endif %}
+</div>
+{% endblock %} 

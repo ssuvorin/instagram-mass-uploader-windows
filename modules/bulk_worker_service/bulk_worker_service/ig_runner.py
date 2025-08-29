@@ -5,6 +5,9 @@ import random
 from dataclasses import dataclass
 from typing import List, Optional, Dict
 
+# Initialize Django for database access
+from . import django_init
+
 # Rely on PYTHONPATH including repo root
 from bot.src.instagram_uploader.browser_dolphin import get_browser, get_page, close_browser
 from bot.src.instagram_uploader.auth_playwright import Auth
@@ -15,8 +18,8 @@ from .config import settings
 from .domain import BulkVideo, BulkUploadAccountTask
 from .ui_client import UiClient
 
-# Reuse existing ffmpeg uniquifier from the main project without changes
-from uploader.async_video_uniquifier import AsyncVideoUniquifier
+# Use copied Instagram automation modules from local package
+from .instagram_automation.async_video_uniquifier import AsyncVideoUniquifier
 
 
 @dataclass
@@ -191,7 +194,7 @@ async def run_account_upload_with_metadata(ui: UiClient, task_id: int, account_t
                     if cookies_list:
                         await ui.update_account_status(account_task.account_task_id, "RUNNING", log_append=f"[COOKIES] Retrieved {len(cookies_list)} cookies from Dolphin profile {profile_id}\n")
                         
-                        # Save cookies to database
+                        # Save cookies to database - worker service has Django access
                         try:
                             from uploader.models import InstagramAccount, InstagramCookies
                             account = InstagramAccount.objects.get(username=account_task.account.username)

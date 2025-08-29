@@ -1,0 +1,107 @@
+{% extends 'uploader/base.html' %}
+{% load static %}
+
+{% block title %}TikTok Booster · Step 4: Start Booster{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="tiktok-header mb-4">
+        <div class="content">
+            <h2 class="mb-1">TikTok Booster</h2>
+            <p class="mb-0 text-white-50">Step 4 of 4 — Start Booster</p>
+        </div>
+    </div>
+
+    <div class="mb-3 d-flex justify-content-between">
+        <a href="{% url 'tiktok_booster_prepare' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+        <a href="{% url 'tiktok_booster' %}" class="btn btn-outline-secondary"><i class="bi bi-grid"></i> Booster Dashboard</a>
+    </div>
+
+    <div class="tiktok-card">
+        <div class="card-header">
+            <h5><i class="bi bi-play-fill"></i>Start Booster</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <form id="start-booster-form">
+                        <button type="submit" class="btn btn-success" id="start-booster-btn"><i class="bi bi-play"></i> Start</button>
+                        <div class="progress-container d-none mt-3" id="booster-progress-container">
+                            <div class="progress">
+                                <div class="progress-bar" role="progressbar" style="width: 0%" id="booster-progress-bar"></div>
+                            </div>
+                            <small class="text-muted" id="booster-progress-text">0% complete</small>
+                        </div>
+                    </form>
+                    <div id="start-booster-response" class="alert mt-3 d-none"></div>
+                </div>
+                <div class="col-md-4">
+                    <div class="api-status p-3 bg-light rounded border">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="me-2">API Server:</span>
+                            <a id="current-server-link" href="{{ api_base }}/docs" target="_blank">{{ api_base }}</a>
+                        </div>
+                        <select id="api-server-select" class="form-select">
+                            {% for s in available_servers %}
+                            <option value="{{ s.url }}" {% if s.url == api_base %}selected{% endif %}>{{ s.name }} — {{ s.url }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between">
+        <a href="{% url 'tiktok_booster_prepare' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Step 3</a>
+        <a href="{% url 'tiktok_booster' %}" class="btn btn-outline-primary"><i class="bi bi-grid"></i> Finish</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let API_BASE = '{{ api_base|default:"http://94.141.161.231:8000" }}';
+let isBoosting = false;
+
+document.getElementById('api-server-select').addEventListener('change', function(e){
+  API_BASE = e.target.value;
+  const link = document.getElementById('current-server-link');
+  link.href = `${API_BASE}/docs`;
+  link.textContent = API_BASE;
+});
+
+document.getElementById('start-booster-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (isBoosting) return;
+  isBoosting = true;
+  const btn = document.getElementById('start-booster-btn');
+  const progressContainer = document.getElementById('booster-progress-container');
+  const progressBar = document.getElementById('booster-progress-bar');
+  const progressText = document.getElementById('booster-progress-text');
+  const respBox = document.getElementById('start-booster-response');
+  respBox.className = 'alert mt-3 d-none';
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-pause-fill me-2"></i>Boosting...';
+  progressContainer.classList.remove('d-none');
+  try{
+    const res = await fetch(`${API_BASE}/booster/start_booster`, { method:'POST' });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok){ throw new Error(data.detail || 'Start failed'); }
+    respBox.className = 'alert alert-success mt-3';
+    respBox.textContent = data.message || 'Started';
+    progressBar.style.width = '100%';
+    progressText.textContent = 'Started';
+  }catch(err){
+    respBox.className = 'alert alert-danger mt-3';
+    respBox.textContent = err.message;
+  }finally{
+    isBoosting = false;
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-play-fill me-2"></i>Start';
+  }
+});
+</script>
+{% endblock %}
+
+

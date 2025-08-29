@@ -1,0 +1,1 @@
+# UI Core package for distributed architecture

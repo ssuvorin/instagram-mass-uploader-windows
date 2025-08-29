@@ -1580,6 +1580,86 @@ def tiktok_booster(request):
     return render(request, 'uploader/tiktok/booster.html', context)
 
 
+def _tiktok_api_context() -> dict:
+    """Build context with API servers from environment for TikTok booster pages."""
+    # Default servers configuration
+    default_servers = [
+        {
+            'name': 'Primary Server',
+            'url': 'http://94.141.161.231:8000',
+            'description': 'Основной сервер для TikTok API'
+        },
+        {
+            'name': 'Local Development',
+            'url': 'http://localhost:8000',
+            'description': 'Локальный сервер для разработки'
+        }
+    ]
+
+    # Try to load servers from environment variable
+    servers_config = os.environ.get('TIKTOK_API_SERVERS', '')
+    if servers_config:
+        try:
+            # Handle both quoted and unquoted JSON strings
+            if servers_config.strip().startswith("'") and servers_config.strip().endswith("'"):
+                servers_config = servers_config.strip('\'"')
+            elif servers_config.strip().startswith('"') and servers_config.strip().endswith('"'):
+                servers_config = servers_config.strip('\'"')
+            servers = json.loads(servers_config)
+        except Exception as e:
+            logger.warning(f"Failed to parse TIKTOK_API_SERVERS JSON: {e}. Using default servers.")
+            servers = default_servers
+    else:
+        servers = default_servers
+
+    selected_api_base = os.environ.get('TIKTOK_API_BASE', servers[0]['url'] if servers else 'http://94.141.161.231:8000')
+
+    selected_server = None
+    for server in servers:
+        if server['url'] == selected_api_base:
+            selected_server = server
+            break
+    if not selected_server:
+        selected_server = {
+            'name': 'Custom Server',
+            'url': selected_api_base,
+            'description': 'Пользовательский сервер'
+        }
+        servers.append(selected_server)
+
+    return {
+        'active_tab': 'tiktok',
+        'api_base': selected_api_base,
+        'available_servers': servers,
+        'selected_server': selected_server,
+        'server_count': len(servers),
+    }
+
+
+@login_required
+def tiktok_booster_upload_accounts(request):
+    context = _tiktok_api_context()
+    return render(request, 'uploader/tiktok/booster_upload_accounts.html', context)
+
+
+@login_required
+def tiktok_booster_upload_proxies(request):
+    context = _tiktok_api_context()
+    return render(request, 'uploader/tiktok/booster_upload_proxies.html', context)
+
+
+@login_required
+def tiktok_booster_prepare(request):
+    context = _tiktok_api_context()
+    return render(request, 'uploader/tiktok/booster_prepare.html', context)
+
+
+@login_required
+def tiktok_booster_start(request):
+    context = _tiktok_api_context()
+    return render(request, 'uploader/tiktok/booster_start.html', context)
+
+
 @login_required
 def get_api_server_logs(request):
     """AJAX endpoint to fetch logs from the selected API server."""

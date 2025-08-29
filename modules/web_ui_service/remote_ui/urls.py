@@ -5,9 +5,9 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # UI from existing uploader app
-    path('', include('uploader.urls')),
-    # Dashboard thin overrides and API
+    # Main UI functionality via API (replaces direct uploader dependency)
+    path('', include('ui_core.urls')),
+    # Dashboard monitoring and API integration
     path('', include('dashboard.urls')),
 ]
 

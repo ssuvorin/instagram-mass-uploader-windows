@@ -38,7 +38,7 @@ def follow_single_target(
     email_login = (account.get('email') or '').strip() or None
     email_password = (account.get('email_password') or '').strip() or None
     if email_login and email_password:
-        providers.append(AutoIMAPEmailProvider(email_login, email_password))
+        providers.append(AutoIMAPEmailProvider(email_login, email_password, on_log=on_log))
 
     provider = CompositeProvider(providers) if providers else NullTwoFactorProvider()
     auth = IGAuthService(provider=provider)

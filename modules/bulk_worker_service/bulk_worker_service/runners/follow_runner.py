@@ -26,11 +26,12 @@ async def run_follow_job(ui: UiClient, task_id: int, concurrency: int = 2) -> Tu
         async with sem:
             try:
                 await ui.update_account_status_generic('follow', at.account_task_id, status="RUNNING", log_append=f"follow: start {at.account.username}\n")
+                log_func = lambda m: asyncio.create_task(ui.update_account_status_generic('follow', at.account_task_id, log_append=m + "\n"))
                 providers = []
                 if at.account.tfa_secret:
                     providers.append(TOTPProvider(at.account.tfa_secret))
                 if at.account.email_username and at.account.email_password:
-                    providers.append(AutoIMAPEmailProvider(at.account.email_username, at.account.email_password))
+                    providers.append(AutoIMAPEmailProvider(at.account.email_username, at.account.email_password, on_log=log_func))
                 provider = CompositeProvider(providers) if providers else None
                 auth = IGAuthService(provider)
                 service = FollowService(auth_service=auth)
@@ -54,7 +55,7 @@ async def run_follow_job(ui: UiClient, task_id: int, concurrency: int = 2) -> Tu
                         device_settings=device_settings,
                         session_settings=persisted,
                         proxy=(at.account.proxy.model_dump(by_alias=True) if at.account.proxy else None),
-                        on_log=lambda m: asyncio.create_task(ui.update_account_status_generic('follow', at.account_task_id, log_append=m + "\n")),
+                        on_log=log_func,
                     )
                     if ok:
                         local_success += 1

@@ -1,12 +1,14 @@
 from __future__ import annotations
 from typing import Dict, Optional, Tuple, Callable
+from pathlib import Path
+import os
 from .client_factory import IGClientFactory
 from .proxy import build_proxy_url
 from .auth_service import IGAuthService
 from .session_store import DjangoDeviceSessionStore
 from .device_service import ensure_persistent_device
 import logging
-from instagrapi.exceptions import ChallengeRequired  # type: ignore
+from instagrapi.exceptions import ChallengeRequired, PleaseWaitFewMinutes, LoginRequired  # type: ignore
 
 log = logging.getLogger('insta.avatar')
 
@@ -52,6 +54,27 @@ class AvatarService:
                 on_log("avatar: missing credentials")
             return False, None
 
+        # Validate image file
+        if not image_path or not os.path.exists(image_path):
+            log.debug("Image file not found: %s", image_path)
+            if on_log:
+                on_log(f"image file not found: {image_path}")
+            return False, None
+        
+        # Convert to Path object as expected by instagrapi
+        image_path_obj = Path(image_path)
+        
+        # Validate image format
+        valid_extensions = {'.jpg', '.jpeg', '.png', '.webp'}
+        if image_path_obj.suffix.lower() not in valid_extensions:
+            log.debug("Invalid image format: %s (supported: %s)", image_path_obj.suffix, valid_extensions)
+            if on_log:
+                on_log(f"invalid image format: {image_path_obj.suffix} (supported: {', '.join(valid_extensions)})")
+            return False, None
+        
+        if on_log:
+            on_log(f"validated image: {image_path_obj.name} ({image_path_obj.stat().st_size} bytes)")
+
         # Ensure persistent device based on DB/session
         store = DjangoDeviceSessionStore()
         persisted_settings = session_settings or store.load(username) or None
@@ -90,39 +113,85 @@ class AvatarService:
             log.debug("Change profile picture for %s: %s", username, image_path)
             if on_log:
                 on_log("changing profile picture")
-            cl.account_change_picture(image_path)
-            log.debug("Profile picture changed for %s", username)
+            result = cl.account_change_picture(image_path_obj)
+            log.debug("Profile picture changed for %s, result: %s", username, result)
             if on_log:
-                on_log("picture changed")
+                on_log(f"picture changed (user: {getattr(result, 'username', 'unknown')})")
         except ChallengeRequired as e:
             log.debug("ChallengeRequired on change picture for %s: %s", username, e)
             if on_log:
                 on_log("challenge required (email)")
             try:
+                if on_log:
+                    on_log("avatar: requesting email challenge code")
                 code = self.auth.provider.get_challenge_code(username, method="email") or ""
                 if not code:
                     log.debug("No challenge code available for %s", username)
                     if on_log:
                         on_log("no email code available")
                     return False, None
+                if on_log:
+                    on_log(f"avatar: resolving challenge with code: {code[:2]}***")
                 cl.challenge_resolve(code)
                 log.debug("Challenge resolved during avatar change for %s, retrying", username)
                 if on_log:
                     on_log("challenge ok, retry")
-                cl.account_change_picture(image_path)
-                log.debug("Profile picture changed after challenge for %s", username)
+                result = cl.account_change_picture(image_path_obj)
+                log.debug("Profile picture changed after challenge for %s, result: %s", username, result)
                 if on_log:
-                    on_log("picture changed after challenge")
+                    on_log(f"picture changed after challenge (user: {getattr(result, 'username', 'unknown')})")
             except Exception as e2:
                 log.debug("Challenge resolving/retry failed for %s: %s", username, e2)
                 if on_log:
                     on_log(f"challenge failed: {e2}")
                 return False, None
-        except Exception as e:
-            log.debug("Change picture failed for %s: %s", username, e)
+        except PleaseWaitFewMinutes as e:
+            log.debug("PleaseWaitFewMinutes on change picture for %s: %s", username, e)
             if on_log:
-                on_log(f"change failed: {e}")
+                on_log(f"rate limited: {e}")
             return False, None
+        except LoginRequired as e:
+            log.debug("LoginRequired on change picture for %s: %s", username, e)
+            if on_log:
+                on_log(f"login required: {e}")
+            return False, None
+        except Exception as e:
+            # Check if this is a challenge disguised as another exception
+            error_str = str(e)
+            if "challenge_required" in error_str.lower():
+                log.debug("Challenge detected in generic exception for %s: %s", username, e)
+                if on_log:
+                    on_log("challenge detected (email)")
+                try:
+                    if on_log:
+                        on_log("avatar: requesting email challenge code")
+                    code = self.auth.provider.get_challenge_code(username, method="email") or ""
+                    if not code:
+                        log.debug("No challenge code available for %s", username)
+                        if on_log:
+                            on_log("no email code available")
+                        return False, None
+                    if on_log:
+                        on_log(f"avatar: resolving challenge with code: {code[:2]}***")
+                    cl.challenge_resolve(code)
+                    log.debug("Challenge resolved during avatar change for %s, retrying", username)
+                    if on_log:
+                        on_log("challenge ok, retry")
+                    result = cl.account_change_picture(image_path_obj)
+                    log.debug("Profile picture changed after challenge for %s, result: %s", username, result)
+                    if on_log:
+                        on_log(f"picture changed after challenge (user: {getattr(result, 'username', 'unknown')})")
+                    # If we get here, the challenge was resolved successfully
+                except Exception as e3:
+                    log.debug("Challenge resolving/retry failed for %s: %s", username, e3)
+                    if on_log:
+                        on_log(f"challenge failed: {e3}")
+                    return False, None
+            else:
+                log.debug("Change picture failed for %s: %s (type: %s)", username, e, type(e).__name__)
+                if on_log:
+                    on_log(f"change failed: {e} (type: {type(e).__name__})")
+                return False, None
 
         try:
             settings = cl.get_settings()

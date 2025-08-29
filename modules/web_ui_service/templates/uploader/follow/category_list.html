@@ -1,0 +1,30 @@
+{% extends 'uploader/base.html' %}
+{% block content %}
+<h2>Follow Categories</h2>
+<div class="mb-3">
+  <a href="{% url 'follow_category_create' %}" class="btn btn-primary">Create Category</a>
+  <a href="{% url 'follow_task_create' %}" class="btn btn-success">Create Follow Task</a>
+</div>
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Description</th>
+      <th>Targets</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for c in categories %}
+    <tr>
+      <td>{{ c.name }}</td>
+      <td>{{ c.description|default:'-' }}</td>
+      <td>{{ c.targets.count }}</td>
+      <td><a href="{% url 'follow_category_detail' c.id %}" class="btn btn-sm btn-outline-secondary">Open</a></td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="4" class="text-muted">No categories</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

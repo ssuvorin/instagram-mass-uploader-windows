@@ -128,7 +128,7 @@
 
                         <!-- Accounts & Proxies group -->
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle {% if active_tab in 'accounts proxies' %}active{% endif %}" href="#" id="accountsGroupDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <a class="nav-link dropdown-toggle {% if active_tab in 'accounts proxies tools' %}active{% endif %}" href="#" id="accountsGroupDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="bi bi-people"></i> Accounts & Proxies
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="accountsGroupDropdown">
@@ -144,6 +144,10 @@
                                 
                                 <li><a class="dropdown-item" href="{% url 'import_proxies' %}"><i class="bi bi-file-earmark-arrow-up me-2"></i>Import Proxies</a></li>
                                 <li><a class="dropdown-item" href="{% url 'validate_all_proxies' %}"><i class="bi bi-shield-check me-2"></i>Validate All</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li class="dropdown-header">Password Reset</li>
+                                <li><a class="dropdown-item" href="{% url 'password_reset_tool' %}"><i class="bi bi-key me-2"></i>Password Reset</a></li>
+                                <li><a class="dropdown-item" href="{% url 'bulk_password_reset' %}"><i class="bi bi-collection me-2"></i>Bulk Password Reset</a></li>
                             </ul>
                         </li>
 
@@ -174,6 +178,9 @@
                                 <li><hr class="dropdown-divider"></li>
                                 <li class="dropdown-header">TikTok</li>
                                 <li><a class="dropdown-item" href="{% url 'tiktok_booster' %}"><i class="bi bi-lightning me-2"></i>TikTok Booster</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li class="dropdown-header">Instagram</li>
+                                <li><a class="dropdown-item" href="{% url 'hashtag_analyzer' %}"><i class="bi bi-hash me-2"></i>Hashtag Analyzer</a></li>
                             </ul>
                         </li>
 

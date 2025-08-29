@@ -1,0 +1,1576 @@
+{% extends "uploader/base.html" %}
+{% load static %}
+
+{% block title %}{{ task.name }} - Bulk Upload - Instagram Uploader{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Main dashboard styling */
+    .task-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: var(--apple-text, white);
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .task-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 200px;
+        height: 200px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 50%;
+        transform: translate(50px, -50px);
+    }
+    
+    .task-title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .task-meta {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .status-pending { background: rgba(255, 193, 7, 0.2); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.3); }
+    .status-running { background: rgba(23, 162, 184, 0.2); color: #17a2b8; border: 1px solid rgba(23, 162, 184, 0.3); }
+    .status-completed { background: rgba(40, 167, 69, 0.2); color: #28a745; border: 1px solid rgba(40, 167, 69, 0.3); }
+    .status-failed { background: rgba(220, 53, 69, 0.2); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.3); }
+    .status-partial { background: rgba(102, 126, 234, 0.2); color: #667eea; border: 1px solid rgba(102, 126, 234, 0.3); }
+    .status-suspended { background: rgba(108, 117, 125, 0.2); color: #6c757d; border: 1px solid rgba(108, 117, 125, 0.3); }
+    .status-phone_verification_required { background: rgba(255, 102, 0, 0.2); color: #ff6600; border: 1px solid rgba(255, 102, 0, 0.3); }
+    .status-human_verification_required { background: rgba(255, 193, 7, 0.2); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.3); }
+    
+    .progress-container {
+        background: rgba(255,255,255,0.15);
+        border-radius: 10px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .progress-enhanced {
+        height: 12px;
+        border-radius: 6px;
+        background: rgba(255,255,255,0.2);
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .progress-bar-enhanced {
+        height: 100%;
+        background: linear-gradient(90deg, #28a745, #34ce57);
+        border-radius: 6px;
+        transition: width 0.5s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .progress-bar-enhanced::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+        animation: shimmer 2s infinite;
+    }
+    
+    @keyframes shimmer {
+        0% { left: -100%; }
+        100% { left: 100%; }
+    }
+    
+    .progress-text {
+        color: var(--apple-text, white);
+        font-weight: 600;
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    /* Stats cards */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: var(--apple-card, white);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        border: 1px solid #e9ecef;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        min-height: 200px;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+    
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--accent-color);
+    }
+    
+    .stat-card.accounts { --accent-color: #667eea; }
+    .stat-card.videos { --accent-color: #f093fb; }
+    .stat-card.titles { --accent-color: #ffecd2; }
+    .stat-card.location { --accent-color: #ff9a56; }
+    .stat-card.progress { --accent-color: #a8edea; }
+    
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-card.accounts .stat-icon { background: rgba(102, 126, 234, 0.1); color: #667eea; }
+    .stat-card.videos .stat-icon { background: rgba(240, 147, 251, 0.1); color: #f093fb; }
+    .stat-card.titles .stat-icon { background: rgba(255, 236, 210, 0.3); color: #ff9a56; }
+    .stat-card.location .stat-icon { background: rgba(255, 154, 86, 0.1); color: #ff9a56; }
+    .stat-card.progress .stat-icon { background: rgba(168, 237, 234, 0.3); color: #4facfe; }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--apple-text, #2d3748);
+        line-height: 1;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stat-label {
+        color: var(--apple-text-secondary, #718096);
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+    
+    .stat-change {
+        font-size: 0.8rem;
+        margin-top: auto;
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-weight: 500;
+    }
+    
+    .stat-change.positive { background: rgba(40, 167, 69, 0.1); color: #28a745; }
+    .stat-change.neutral { background: rgba(108, 117, 125, 0.1); color: #6c757d; }
+    
+    /* Action panel */
+    .action-panel {
+        background: var(--apple-card, white);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        border: 1px solid #e9ecef;
+        margin-bottom: 2rem;
+    }
+    
+    .action-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--apple-text, #2d3748);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    
+    .btn-enhanced {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+        position: relative;
+        overflow: hidden;
+        margin: 0.25rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .btn-enhanced:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .btn-enhanced i {
+        font-size: 1.1rem;
+    }
+    
+    .btn-start {
+        background: linear-gradient(135deg, #28a745, #34ce57);
+        border: none;
+        color: white;
+        font-size: 1.1rem;
+        padding: 1rem 2rem;
+    }
+    
+    .btn-start:hover {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+    }
+    
+    .btn-start:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+    
+    /* Async button specific styling */
+    #startAsyncUploadBtn {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        position: relative;
+    }
+    
+    #startAsyncUploadBtn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: left 0.5s;
+    }
+    
+    #startAsyncUploadBtn:hover::before {
+        left: 100%;
+    }
+    
+    #startAsyncUploadBtn:hover {
+        background: linear-gradient(135deg, #20c997, #17a2b8);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+    }
+    
+    /* Mode comparison info */
+    .mode-info {
+        background: linear-gradient(135deg, #e3f2fd, #f8f9fa);
+        border: 1px solid #bbdefb;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .mode-comparison {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-top: 0.5rem;
+    }
+    
+    .mode-card {
+        background: white;
+        border-radius: 6px;
+        padding: 0.75rem;
+        border: 1px solid #e9ecef;
+    }
+    
+    .mode-card.sync {
+        border-left: 4px solid #007bff;
+    }
+    
+    .mode-card.async {
+        border-left: 4px solid #28a745;
+    }
+    
+    .mode-title {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    
+    .mode-desc {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    
+    /* Data tables */
+    .data-section {
+        background: var(--apple-card, white);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        border: 1px solid #e9ecef;
+        margin-bottom: 1.5rem;
+    }
+    
+    .data-header {
+        background: #f8f9fa;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e9ecef;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .data-title {
+        font-weight: 600;
+        color: var(--apple-text, #2d3748);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .data-count {
+        background: #667eea;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .table-enhanced {
+        margin: 0;
+        font-size: 0.9rem;
+    }
+    
+    .table-enhanced th {
+        background: #f8f9fa;
+        border: none;
+        padding: 1rem;
+        font-weight: 600;
+        color: #495057;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .table-enhanced td {
+        padding: 1rem;
+        border: none;
+        border-bottom: 1px solid #f8f9fa;
+        vertical-align: middle;
+    }
+    
+    .table-enhanced tbody tr:hover {
+        background: #f8f9fb;
+    }
+    
+    .account-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        text-decoration: none;
+        color: #495057;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .account-badge:hover {
+        background: #667eea;
+        color: white;
+        text-decoration: none;
+    }
+    
+    .status-mini {
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border: 1px solid;
+    }
+    
+    .video-filename {
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        background: #f8f9fa;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+    }
+    
+    .title-preview {
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        cursor: help;
+    }
+    
+    /* Logs section */
+    .logs-section {
+        background: var(--apple-card, white);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        border: 1px solid #e9ecef;
+    }
+    
+    .logs-nav {
+        background: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        padding: 0 1.5rem;
+    }
+    
+    .logs-nav .nav-link {
+        border: none;
+        padding: 1rem 1.5rem;
+        color: #495057;
+        font-weight: 500;
+        position: relative;
+        transition: all 0.3s ease;
+    }
+    
+    .logs-nav .nav-link.active {
+        background: none;
+        color: #667eea;
+        border-bottom: 3px solid #667eea;
+    }
+    
+    .logs-nav .nav-link:hover {
+        background: rgba(102, 126, 234, 0.05);
+        color: #667eea;
+    }
+    
+    .log-container {
+        background: #1e1e1e;
+        color: #f8f8f8;
+        font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+        padding: 1rem;
+        max-height: 800px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        line-height: 1.4;
+        font-size: 0.85rem;
+        border-radius: 8px;
+        border: 1px solid #333;
+    }
+    
+    .log-line {
+        padding: 0.1rem 0;
+        border-bottom: none;
+    }
+    
+    .log-line:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+    
+    .account-log-header {
+        background: #f8f9fa;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e9ecef;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .account-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .account-stats {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .account-stats .badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .account-stats small {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    
+    .proxy-info {
+        background: rgba(102, 126, 234, 0.1);
+        color: #667eea;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    
+    .assigned-videos {
+        margin-top: 1rem;
+        padding: 1rem 1.5rem;
+        background: #f8f9fb;
+    }
+    
+    .video-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        background: white;
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    .video-item:last-child {
+        margin-bottom: 0;
+    }
+    
+    /* Empty states */
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #6c757d;
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    
+    /* Responsive design */
+    @media (max-width: 768px) {
+        .task-header {
+            padding: 1.5rem;
+        }
+        
+        .task-title {
+            font-size: 1.5rem;
+        }
+        
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .action-buttons {
+            flex-direction: column;
+            width: 100%;
+        }
+        
+        .btn-enhanced {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .stat-card {
+            min-height: 160px;
+        }
+    }
+    
+    /* Animations */
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+    
+    .status-running .status-badge {
+        animation: pulse 2s infinite;
+    }
+    
+    /* Confirmation modal styling */
+    .modal-content {
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    }
+    
+    .modal-header {
+        border-bottom: 1px solid #e9ecef;
+        padding: 1.5rem;
+    }
+    
+    .modal-body {
+        padding: 1.5rem;
+    }
+    
+    .modal-footer {
+        border-top: 1px solid #e9ecef;
+        padding: 1.5rem;
+    }
+
+    /* Captcha Banner Styling */
+    .captcha-banner {
+        background-color: #fff3cd;
+        color: #856404;
+        padding: 1rem 0;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        z-index: 1050; /* Bootstrap modal z-index */
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .captcha-banner .container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .captcha-icon {
+        font-size: 2rem;
+        color: #ffc107;
+    }
+
+    .captcha-content h5 {
+        margin-bottom: 0.25rem;
+    }
+
+    .captcha-content p {
+        margin-bottom: 0;
+    }
+
+    /* Chrome-like warning banner for captcha */
+    .chrome-warning {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1050;
+        width: 380px;
+        max-width: calc(100% - 40px);
+        background: #fff8e1;
+        border: 1px solid #ffe082;
+        color: #8a6d3b;
+        border-radius: 10px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        overflow: hidden;
+        display: none;
+    }
+    .chrome-warning .bar {
+        height: 4px;
+        background: linear-gradient(90deg, #ffc107, #ff9800);
+    }
+    .chrome-warning .content {
+        display: flex;
+        gap: 12px;
+        padding: 12px 14px;
+        align-items: flex-start;
+    }
+    .chrome-warning .icon {
+        flex: 0 0 auto;
+        font-size: 20px;
+        line-height: 1;
+        color: #ff9800;
+    }
+    .chrome-warning .text {
+        flex: 1;
+        font-size: 14px;
+    }
+    .chrome-warning .actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 6px;
+    }
+    .btn-small {
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        border: 1px solid rgba(0,0,0,0.08);
+        background: white;
+        color: #555;
+        cursor: pointer;
+    }
+    .btn-small.primary {
+        background: #ffecb3;
+        border-color: #ffe082;
+        color: #8a6d3b;
+        font-weight: 600;
+    }
+    .btn-small:hover { filter: brightness(0.98); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div id="captchaBanner" class="chrome-warning" role="alert" aria-live="polite" data-task-id="{{ task.id }}">
+    <div class="bar"></div>
+    <div class="content">
+        <div class="icon">⚠️</div>
+        <div class="text">
+            <div id="captchaBannerText"><strong>Manual action required:</strong> reCAPTCHA detected. Please solve it in the opened browser profile.</div>
+            <div class="actions">
+                <button class="btn-small primary" onclick="location.reload()">Refresh</button>
+                <button class="btn-small" id="captchaDismissBtn" type="button">Dismiss</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+    (function() {
+        const banner = document.getElementById('captchaBanner');
+        const taskId = banner?.dataset?.taskId;
+        const textEl = document.getElementById('captchaBannerText');
+        const dismissBtn = document.getElementById('captchaDismissBtn');
+        let lastShownTs = 0;
+        let isActive = false; // current captcha active state
+        
+        function playSoundOnce() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+                oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+            } catch (e) {
+                // noop
+            }
+        }
+        
+        async function clearServerNotification() {
+            try {
+                await fetch(`/api/captcha-clear/${taskId}/`, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            } catch (e) { /* ignore */ }
+        }
+        
+        async function pollCaptcha() {
+            try {
+                const res = await fetch(`/api/captcha-status/${taskId}/`, { cache: 'no-store' });
+                if (!res.ok) throw new Error('bad response');
+                const data = await res.json();
+                if (data.captcha_detected) {
+                    // New detection or updated timestamp → show and beep once
+                    if ((data.timestamp || 0) !== lastShownTs) {
+                        lastShownTs = data.timestamp || Date.now()/1000;
+                        if (data.message) textEl.textContent = data.message;
+                        playSoundOnce();
+                    }
+                    banner.style.display = 'block';
+                    document.body.style.marginTop = '80px';
+                    isActive = true;
+                } else {
+                    // Resolved → hide and ensure server flag cleared
+                    if (isActive) {
+                        await clearServerNotification();
+                    }
+                    banner.style.display = 'none';
+                    document.body.style.marginTop = '0';
+                    isActive = false;
+                }
+            } catch (e) {
+                // ignore
+            } finally {
+                setTimeout(pollCaptcha, 4000);
+            }
+        }
+        
+        if (dismissBtn) {
+            dismissBtn.addEventListener('click', async function() {
+                banner.style.display = 'none';
+                document.body.style.marginTop = '0';
+                isActive = false;
+                await clearServerNotification();
+            });
+        }
+        
+        pollCaptcha();
+    })();
+    </script>
+</div>
+
+<!-- Task Header -->
+<div class="task-header">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h1 class="task-title">{{ task.name }}</h1>
+            <div class="task-meta">
+                <div class="status-badge status-{{ task.status|lower }}">
+                    {% if task.status == 'PENDING' %}
+                        <i class="bi bi-clock"></i> Pending
+                    {% elif task.status == 'RUNNING' %}
+                        <i class="bi bi-play-circle"></i> Running
+                    {% elif task.status == 'COMPLETED' %}
+                        <i class="bi bi-check-circle"></i> Completed
+                    {% elif task.status == 'PARTIALLY_COMPLETED' %}
+                        <i class="bi bi-check-circle-fill"></i> Partially Completed
+                    {% elif task.status == 'FAILED' %}
+                        <i class="bi bi-x-circle"></i> Failed
+                    {% endif %}
+                </div>
+                <div class="text-white-50">
+                    <i class="bi bi-calendar3"></i> Created {{ task.created_at|date:"M d, Y H:i" }}
+                </div>
+                {% if task.updated_at != task.created_at %}
+                <div class="text-white-50">
+                    <i class="bi bi-arrow-clockwise"></i> Updated {{ task.updated_at|timesince }} ago
+                </div>
+                {% endif %}
+            </div>
+            
+            {% if task.status == 'RUNNING' or task.status == 'PARTIALLY_COMPLETED' %}
+            <div class="progress-container">
+                <div class="progress-enhanced">
+                    <div class="progress-bar-enhanced" id="progressBar"></div>
+                </div>
+                <div class="progress-text">
+                    <span id="progressText">{{ task.get_completed_count }} of {{ task.get_total_count }} accounts completed ({{ task.get_completion_percentage }}%)</span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'bulk_upload_list' %}" class="btn btn-light">
+                <i class="bi bi-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Grid -->
+<div class="stats-grid">
+    <div class="stat-card accounts">
+        <div class="stat-icon">
+            <i class="bi bi-people"></i>
+        </div>
+        <div class="stat-number">{{ accounts|length }}</div>
+        <div class="stat-label">Selected Accounts</div>
+        {% if task.status != 'PENDING' %}
+        <div class="stat-change positive">
+            <i class="bi bi-check-circle"></i>
+            {{ task.get_completed_count }} completed
+        </div>
+        {% else %}
+        <div class="stat-change neutral">
+            <i class="bi bi-clock"></i>
+            Ready to start
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="stat-card videos">
+        <div class="stat-icon">
+            <i class="bi bi-camera-video"></i>
+        </div>
+        <div class="stat-number">{{ task.videos.count }}</div>
+        <div class="stat-label">Videos to Upload</div>
+        <div class="stat-change neutral">
+            <i class="bi bi-distribute-horizontal"></i>
+            Distributed among accounts
+        </div>
+    </div>
+    
+    <div class="stat-card titles">
+        <div class="stat-icon">
+            <i class="bi bi-file-text"></i>
+        </div>
+        <div class="stat-number">{{ titles|length }}</div>
+        <div class="stat-label">Captions/Titles</div>
+        {% if titles|length >= task.videos.count %}
+        <div class="stat-change positive">
+            <i class="bi bi-check-circle"></i>
+            All videos have captions
+        </div>
+        {% elif titles|length > 0 %}
+        <div class="stat-change neutral">
+            <i class="bi bi-exclamation-triangle"></i>
+            Some videos without captions
+        </div>
+        {% else %}
+        <div class="stat-change neutral">
+            <i class="bi bi-info-circle"></i>
+            No captions added
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="stat-card location">
+        <div class="stat-icon">
+            <i class="fas fa-map-marker-alt"></i>
+        </div>
+        <div class="stat-number">
+            {% if task.default_location or task.default_mentions %}
+                <i class="bi bi-check-circle text-success"></i>
+            {% else %}
+                <i class="bi bi-dash-circle text-muted"></i>
+            {% endif %}
+        </div>
+        <div class="stat-label">Location & Mentions</div>
+        {% if task.default_location and task.default_mentions %}
+        <div class="stat-change positive">
+            <i class="bi bi-check-circle"></i>
+            Both configured
+        </div>
+        {% elif task.default_location %}
+        <div class="stat-change neutral">
+            <i class="bi bi-geo-alt"></i>
+            Location only
+        </div>
+        {% elif task.default_mentions %}
+        <div class="stat-change neutral">
+            <i class="bi bi-at"></i>
+            Mentions only
+        </div>
+        {% else %}
+        <div class="stat-change neutral">
+            <i class="bi bi-info-circle"></i>
+            Not configured
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="stat-card progress">
+        <div class="stat-icon">
+            <i class="bi bi-speedometer2"></i>
+        </div>
+        <div class="stat-number">{{ task.get_completion_percentage }}%</div>
+        <div class="stat-label">Completion Progress</div>
+        {% if task.status == 'RUNNING' %}
+        <div class="stat-change positive">
+            <i class="bi bi-play-circle"></i>
+            Currently uploading
+        </div>
+        {% elif task.status == 'COMPLETED' %}
+        <div class="stat-change positive">
+            <i class="bi bi-check-circle"></i>
+            Upload finished
+        </div>
+        {% else %}
+        <div class="stat-change neutral">
+            <i class="bi bi-pause-circle"></i>
+            Not started
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Action Panel -->
+{% if task.status == 'PENDING' %}
+<div class="action-panel">
+    <div class="action-title">
+        <i class="bi bi-gear"></i>
+        Task Actions
+    </div>
+    <div class="action-buttons">
+        {% if task.videos.count == 0 %}
+        <a href="{% url 'add_bulk_videos' task_id=task.id %}" class="btn btn-warning btn-enhanced">
+            <i class="bi bi-camera-video"></i> Add Videos First
+        </a>
+        <div class="text-muted">You need to add videos before starting the upload</div>
+        {% elif accounts|length == 0 %}
+        <a href="{% url 'create_bulk_upload' %}" class="btn btn-warning btn-enhanced">
+            <i class="bi bi-people"></i> Add Accounts First
+        </a>
+        <div class="text-muted">You need to select accounts before starting the upload</div>
+        {% else %}
+        <a href="{% url 'start_bulk_upload' task_id=task.id %}?async=true" class="btn btn-success btn-enhanced" id="startAsyncUploadBtn" title="Start with parallel account processing">
+            <i class="bi bi-lightning-charge"></i> Start ASYNC Upload
+        </a>
+        <a href="{% url 'start_bulk_upload_api' task_id=task.id %}" class="btn btn-success btn-enhanced" style="background: linear-gradient(135deg, #2563eb, #0ea5e9);" title="Start via API (instagrapi)">
+            <i class="bi bi-cloud-upload"></i> Start ASYNC via API
+        </a>
+        <a href="{% url 'add_bulk_videos' task_id=task.id %}" class="btn btn-outline-primary btn-enhanced">
+            <i class="bi bi-plus-circle"></i> Add More Videos
+        </a>
+        <a href="{% url 'add_bulk_titles' task_id=task.id %}" class="btn btn-outline-info btn-enhanced">
+            <i class="bi bi-file-text"></i> {{ titles|length|yesno:"Update,Add" }} Captions
+        </a>
+        <a href="{% url 'bulk_edit_location_mentions' task_id=task.id %}" class="btn btn-outline-warning btn-enhanced">
+            <i class="fas fa-map-marker-alt"></i> Edit Location & Mentions
+        </a>
+        {% endif %}
+        
+        
+        <button type="button" class="btn btn-outline-danger btn-enhanced" data-bs-toggle="modal" data-bs-target="#deleteTaskModal">
+            <i class="bi bi-trash3"></i> Delete Task
+        </button>
+    </div>
+    
+    {% if task.videos.count > 0 and accounts|length > 0 %}
+    <div class="mt-3 p-3 bg-light rounded">
+        <div class="row text-center">
+            <div class="col-md-4">
+                <div class="text-muted small">Ready to upload</div>
+                <div class="fw-bold text-success">{{ task.videos.count }} videos</div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-muted small">Using accounts</div>
+                <div class="fw-bold text-primary">{{ accounts|length }} accounts</div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-muted small">With captions</div>
+                <div class="fw-bold text-info">{{ titles|length }} captions</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Data Tables -->
+<div class="row">
+    <div class="col-lg-6">
+        <div class="data-section">
+            <div class="data-header">
+                <h5 class="data-title">
+                    <i class="bi bi-people"></i>
+                    Selected Accounts
+                    <span class="data-count">{{ accounts|length }}</span>
+                </h5>
+            </div>
+            {% if accounts %}
+            <div class="table-responsive">
+                <table class="table table-enhanced">
+                    <thead>
+                        <tr>
+                            <th>Account</th>
+                            <th>Videos</th>
+                            <th>Uploaded</th>
+                            <th>Failed</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for account_task in accounts %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'account_detail' account_id=account_task.account.id %}" class="account-badge">
+                                    <i class="bi bi-person-circle"></i>
+                                    {{ account_task.account.username }}
+                                </a>
+                                {% if account_task.proxy %}
+                                <div class="mt-1">
+                                    <small class="proxy-info">
+                                        <i class="bi bi-shield-check"></i>
+                                        {{ account_task.proxy.host }}:{{ account_task.proxy.port }}
+                                    </small>
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ task.videos.count }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-success">{{ account_task.uploaded_success_count }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-danger">{{ account_task.uploaded_failed_count }}</span>
+                            </td>
+                            <td>
+                                <span class="status-mini status-{{ account_task.status|lower }}">
+                                    {% if account_task.status == 'RUNNING' %}
+                                        <i class="bi bi-play-circle"></i>
+                                    {% elif account_task.status == 'COMPLETED' %}
+                                        <i class="bi bi-check-circle"></i>
+                                    {% elif account_task.status == 'FAILED' %}
+                                        <i class="bi bi-x-circle"></i>
+                                    {% elif account_task.status == 'SUSPENDED' %}
+                                        <i class="bi bi-ban"></i>
+                                    {% elif account_task.status == 'PHONE_VERIFICATION_REQUIRED' %}
+                                        <i class="bi bi-phone"></i>
+                                    {% elif account_task.status == 'HUMAN_VERIFICATION_REQUIRED' %}
+                                        <i class="bi bi-person-check"></i>
+                                    {% elif account_task.status == 'PENDING' %}
+                                        <i class="bi bi-clock"></i>
+                                    {% endif %}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="bi bi-people"></i>
+                <h6>No accounts selected</h6>
+                <p>Add accounts to start uploading videos</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="data-section">
+            <div class="data-header">
+                <h5 class="data-title">
+                    <i class="bi bi-camera-video"></i>
+                    Videos
+                    <span class="data-count">{{ task.videos.count }}</span>
+                </h5>
+            </div>
+            {% if task.videos %}
+            <div class="table-responsive">
+                <table class="table table-enhanced">
+                    <thead>
+                        <tr>
+                            <th>Filename</th>
+                            <th>Assigned To</th>
+                            <th>Caption</th>
+                            <th>Location</th>
+                            <th>Mentions</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for video in task.videos.all %}
+                        <tr>
+                            <td>
+                                <span class="video-filename">
+                                    {{ video.video_file.name|slice:"14:" }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if video.assigned_to %}
+                                <span class="badge bg-primary">{{ video.assigned_to.account.username }}</span>
+                                {% else %}
+                                <span class="text-muted">Not assigned</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if video.title_data %}
+                                <span class="title-preview" title="{{ video.title_data.title }}">
+                                    {{ video.title_data.title|truncatechars:30 }}
+                                </span>
+                                {% else %}
+                                <span class="text-muted">No caption</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if video.get_effective_location %}
+                                    <span class="badge bg-info">
+                                        {% if video.location %}
+                                            {{ video.get_effective_location }}
+                                        {% else %}
+                                            {{ video.get_effective_location }} (default)
+                                        {% endif %}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">Not set</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if video.get_effective_mentions_list %}
+                                    {% for mention in video.get_effective_mentions_list %}
+                                        <span class="badge bg-success me-1">
+                                            {% if video.mentions %}
+                                                {{ mention }}
+                                            {% else %}
+                                                {{ mention }} (default)
+                                            {% endif %}
+                                        </span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-muted">Not set</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if task.status == 'PENDING' %}
+                                    <a href="{% url 'edit_video_location_mentions' video.id %}" 
+                                       class="btn btn-sm btn-outline-primary" title="Edit location and mentions">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="bi bi-camera-video"></i>
+                <h6>No videos added</h6>
+                <p>Upload videos to get started</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Logs Section -->
+{% if task.status != 'PENDING' %}
+<div class="logs-section">
+    <div class="data-header">
+        <h5 class="data-title">
+            <i class="bi bi-terminal"></i>
+            Execution Logs
+        </h5>
+    </div>
+    
+    <div class="logs-nav">
+        <ul class="nav nav-tabs border-0" id="logTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="main-log-tab" data-bs-toggle="tab" data-bs-target="#main-log" 
+                        type="button" role="tab" aria-controls="main-log" aria-selected="true">
+                    <i class="bi bi-list-ul"></i> Main Log
+                </button>
+            </li>
+            {% for account_task in accounts %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="account-{{ account_task.id }}-tab" data-bs-toggle="tab" 
+                        data-bs-target="#account-{{ account_task.id }}" type="button" role="tab" 
+                        aria-controls="account-{{ account_task.id }}" aria-selected="false">
+                    <i class="bi bi-person"></i> {{ account_task.account.username }}
+                    <span class="status-mini status-{{ account_task.status|lower }}">
+                        {% if account_task.status == 'RUNNING' %}
+                            <i class="bi bi-play-circle"></i>
+                        {% elif account_task.status == 'COMPLETED' %}
+                            <i class="bi bi-check-circle"></i>
+                        {% elif account_task.status == 'FAILED' %}
+                            <i class="bi bi-x-circle"></i>
+                        {% elif account_task.status == 'SUSPENDED' %}
+                            <i class="bi bi-ban"></i>
+                        {% elif account_task.status == 'PHONE_VERIFICATION_REQUIRED' %}
+                            <i class="bi bi-phone"></i>
+                        {% elif account_task.status == 'HUMAN_VERIFICATION_REQUIRED' %}
+                            <i class="bi bi-person-check"></i>
+                        {% elif account_task.status == 'PENDING' %}
+                            <i class="bi bi-clock"></i>
+                        {% endif %}
+                    </span>
+                    <span class="badge bg-success ms-2">{{ account_task.uploaded_success_count }}</span>
+                    <span class="badge bg-danger ms-1">{{ account_task.uploaded_failed_count }}</span>
+                </button>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    
+    <div class="tab-content" id="logTabsContent">
+        <div class="tab-pane fade show active" id="main-log" role="tabpanel" aria-labelledby="main-log-tab">
+            <div class="log-container">
+                <div id="logs">{{ task.log|default:"No logs available yet..." }}</div>
+            </div>
+            <div class="mt-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleLogHeight('main-log')">
+                    <i class="bi bi-arrows-expand"></i> Развернуть логи
+                </button>
+            </div>
+        </div>
+        
+        {% for account_task in accounts %}
+        <div class="tab-pane fade" id="account-{{ account_task.id }}" role="tabpanel" aria-labelledby="account-{{ account_task.id }}-tab">
+            <div class="account-log-header">
+                <div class="account-info">
+                    <strong>
+                        <i class="bi bi-person-circle"></i>
+                        {{ account_task.account.username }}
+                    </strong>
+                    {% if account_task.proxy %}
+                    <span class="proxy-info">
+                        <i class="bi bi-shield-check"></i>
+                        Proxy: {{ account_task.proxy.host }}:{{ account_task.proxy.port }}
+                    </span>
+                    {% endif %}
+                    <span class="status-mini status-{{ account_task.status|lower }}">
+                        {% if account_task.status == 'RUNNING' %}
+                            <i class="bi bi-play-circle"></i>
+                        {% elif account_task.status == 'COMPLETED' %}
+                            <i class="bi bi-check-circle"></i>
+                        {% elif account_task.status == 'FAILED' %}
+                            <i class="bi bi-x-circle"></i>
+                        {% elif account_task.status == 'SUSPENDED' %}
+                            <i class="bi bi-ban"></i>
+                        {% elif account_task.status == 'PHONE_VERIFICATION_REQUIRED' %}
+                            <i class="bi bi-phone"></i>
+                        {% elif account_task.status == 'HUMAN_VERIFICATION_REQUIRED' %}
+                            <i class="bi bi-person-check"></i>
+                        {% elif account_task.status == 'PENDING' %}
+                            <i class="bi bi-clock"></i>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="account-stats">
+                    <span class="badge bg-secondary">{{ account_task.assigned_videos.count }} videos assigned</span>
+                    {% if account_task.started_at %}
+                    <small>Started: {{ account_task.started_at|timesince }} ago</small>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="log-container">
+                <div id="account-logs-{{ account_task.id }}">{{ account_task.log|default:"No logs for this account yet..." }}</div>
+            </div>
+            <div class="mt-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleLogHeight('account-{{ account_task.id }}')">
+                    <i class="bi bi-arrows-expand"></i> Развернуть логи
+                </button>
+            </div>
+            
+            {% if account_task.assigned_videos.exists %}
+            <div class="assigned-videos">
+                <h6><i class="bi bi-camera-video"></i> Assigned Videos ({{ account_task.assigned_videos.count }})</h6>
+                {% for video in account_task.assigned_videos.all %}
+                <div class="video-item">
+                    <div>
+                        <span class="video-filename">{{ video.video_file.name|slice:"14:" }}</span>
+                        {% if video.title_data %}
+                        <div class="text-muted small mt-1">{{ video.title_data.title|truncatechars:60 }}</div>
+                        {% endif %}
+                    </div>
+                    {% if video.title_data %}
+                    <span class="badge bg-success">Has Caption</span>
+                    {% else %}
+                    <span class="badge bg-secondary">No Caption</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteTaskModal" tabindex="-1" aria-labelledby="deleteTaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteTaskModalLabel">
+                    <i class="bi bi-exclamation-triangle text-danger"></i>
+                    Confirm Deletion
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete task <strong>{{ task.name }}</strong>?</p>
+                
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>This action cannot be undone!</strong><br>
+                    This will permanently delete:
+                    <ul class="mt-2 mb-0">
+                        <li>{{ task.videos.count }} uploaded videos</li>
+                        <li>{{ titles|length }} captions/titles</li>
+                        <li>{{ accounts|length }} account assignments</li>
+                        <li>All execution logs</li>
+                    </ul>
+                </div>
+                
+                {% if task.status == 'RUNNING' %}
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>Warning:</strong> This task is currently running. Deleting it will immediately stop all upload processes.
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </button>
+                <a href="{% url 'delete_bulk_upload' task_id=task.id %}" class="btn btn-danger">
+                    <i class="bi bi-trash3"></i> Delete Permanently
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Include logs formatting script -->
+<script src="{% static 'uploader/js/logs.js' %}"></script>
+
+<!-- Derive account IDs from DOM to avoid template-time JS injections -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tabButtons = document.querySelectorAll('button[id^="account-"][id$="-tab"]');
+    const ids = Array.from(tabButtons)
+        .map(btn => {
+            try { return parseInt(btn.id.replace('account-','').replace('-tab',''), 10); } catch(e) { return NaN; }
+        })
+        .filter(id => !Number.isNaN(id));
+    window.accountTaskIds = ids;
+});
+</script>
+
+{% if task.status == 'RUNNING' or task.status == 'PENDING' %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get account IDs from DOM-derived global
+    const accountTaskIds = window.accountTaskIds || [];
+    
+    // Set initial progress bar width
+    const progressBar = document.getElementById('progressBar');
+    if (progressBar) {
+        progressBar.style.width = '{{ task.get_completion_percentage }}%';
+    }
+    
+    // Setup automatic log updating for main task log
+    setupLogUpdater('{% url "bulk_task_logs" task_id=task.id %}', 2000);
+    
+    // Setup per-account log updaters
+    accountTaskIds.forEach(function(accountId) {
+        const targetId = 'account-logs-' + accountId;
+        const url = '{% url "bulk_task_logs" task_id=task.id %}' + '?account_id=' + accountId;
+        setupLogUpdater(url, 2000, targetId);
+    });
+    
+    // Progress update function
+    function updateTaskProgress() {
+        fetch('{% url "bulk_task_logs" task_id=task.id %}')
+            .then(response => response.json())
+            .then(data => {
+                // Update progress bar
+                if (data.completion_percentage !== undefined) {
+                    const progressBar = document.getElementById('progressBar');
+                    const progressText = document.getElementById('progressText');
+                    
+                    if (progressBar) {
+                        progressBar.style.width = data.completion_percentage + '%';
+                    }
+                    
+                    if (progressText && data.completed_count !== undefined && data.total_count !== undefined) {
+                        progressText.textContent = `${data.completed_count} of ${data.total_count} accounts completed (${data.completion_percentage}%)`;
+                    }
+                }
+                
+                // Update status badge
+                if (data.status) {
+                    const statusBadge = document.querySelector('.status-badge');
+                    if (statusBadge) {
+                        // Remove all status classes
+                        statusBadge.classList.remove('status-pending', 'status-running', 'status-completed', 'status-failed', 'status-partial');
+                        
+                        // Add appropriate class and update content
+                        statusBadge.classList.add('status-' + data.status.toLowerCase());
+                        
+                        let icon = '';
+                        let text = '';
+                        switch(data.status) {
+                            case 'PENDING':
+                                icon = 'bi-clock';
+                                text = 'Pending';
+                                break;
+                            case 'RUNNING':
+                                icon = 'bi-play-circle';
+                                text = 'Running';
+                                break;
+                            case 'COMPLETED':
+                                icon = 'bi-check-circle';
+                                text = 'Completed';
+                                break;
+                            case 'PARTIALLY_COMPLETED':
+                                icon = 'bi-check-circle-fill';
+                                text = 'Partially Completed';
+                                statusBadge.classList.add('status-partial');
+                                break;
+                            case 'FAILED':
+                                icon = 'bi-x-circle';
+                                text = 'Failed';
+                                break;
+                        }
+                        
+                        statusBadge.innerHTML = `<i class="bi ${icon}"></i> ${text}`;
+                    }
+                }
+                
+                // Do not reload the page on completion; keep logs visible as-is
+            })
+            .catch(() => {});
+    }
+    
+    // Periodic progress updates
+    setInterval(updateTaskProgress, 3000);
+});
+</script>
+{% else %}
+<script>
+// Function to toggle log container height
+function toggleLogHeight(tabId) {
+    const tabPane = document.getElementById(tabId);
+    if (tabPane) {
+        const logContainer = tabPane.querySelector('.log-container');
+        if (logContainer) {
+            if (logContainer.style.maxHeight === 'none' || logContainer.style.maxHeight === '') {
+                logContainer.style.maxHeight = '800px';
+                event.target.innerHTML = '<i class="bi bi-arrows-expand"></i> Развернуть логи';
+            } else {
+                logContainer.style.maxHeight = 'none';
+                event.target.innerHTML = '<i class="bi bi-arrows-collapse"></i> Свернуть логи';
+            }
+        }
+    }
+}
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Derive account IDs from DOM
+    const tabButtons = document.querySelectorAll('button[id^="account-"][id$="-tab"]');
+    const accountTaskIds = Array.from(tabButtons)
+        .map(btn => {
+            try { return parseInt(btn.id.replace('account-','').replace('-tab',''), 10); } catch(e) { return NaN; }
+        })
+        .filter(id => !Number.isNaN(id));
+    
+    // For completed tasks, format the main logs
+    const logsDiv = document.getElementById('logs');
+    if (logsDiv && logsDiv.textContent) {
+        logsDiv.innerHTML = renderLog(logsDiv.textContent);
+    }
+    
+    // Format each account log
+    accountTaskIds.forEach(function(accountId) {
+        const accountLogsDiv = document.getElementById('account-logs-' + accountId);
+        if (accountLogsDiv && accountLogsDiv.textContent) {
+            accountLogsDiv.innerHTML = renderLog(accountLogsDiv.textContent);
+        }
+    });
+});
+</script>
+{% endif %}
+
+<!-- Captcha Banner JavaScript -->
+<script></script>
+{% endblock %} 

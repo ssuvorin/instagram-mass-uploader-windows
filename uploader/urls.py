@@ -2,8 +2,10 @@ from django.urls import path
 from . import views
 from . import views_avatar
 from . import views_follow
+from . import views_password_reset
 from .views_mod import views_bio
 from .views_mod import misc
+from .views_mod import hashtag
 
 urlpatterns = [
     # Dashboard
@@ -80,7 +82,19 @@ urlpatterns = [
     
     # TikTok Booster UI
     path('tiktok/booster/', misc.tiktok_booster, name='tiktok_booster'),
+    path('tiktok/booster/upload-accounts/', misc.tiktok_booster_upload_accounts, name='tiktok_booster_upload_accounts'),
+    path('tiktok/booster/upload-proxies/', misc.tiktok_booster_upload_proxies, name='tiktok_booster_upload_proxies'),
+    path('tiktok/booster/prepare/', misc.tiktok_booster_prepare, name='tiktok_booster_prepare'),
+    path('tiktok/booster/start/', misc.tiktok_booster_start, name='tiktok_booster_start'),
     path('tiktok/booster/logs/', misc.get_api_server_logs, name='get_api_server_logs'),
+
+    # Hashtag Analyzer
+    path('tools/hashtag/', hashtag.hashtag_analyzer, name='hashtag_analyzer'),
+    
+    # Password Reset Tools
+    path('tools/password-reset/', views_password_reset.password_reset_tool, name='password_reset_tool'),
+    path('tools/bulk-password-reset/', views_password_reset.bulk_password_reset, name='bulk_password_reset'),
+    path('api/password-reset/', views_password_reset.password_reset_api, name='password_reset_api'),
 ]
 
 urlpatterns += [

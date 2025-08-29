@@ -1,0 +1,293 @@
+{% extends "uploader/base.html" %}
+{% load static %}
+
+{% block title %}Create Bulk Login Task - Instagram Uploader{% endblock %}
+
+{% block extra_css %}
+<style>
+    .accounts-controls { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem; border-radius: 12px 12px 0 0; }
+    .search-wrapper { position: relative; }
+    .search-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.7); }
+    .accounts-controls .form-control { border-radius: 25px; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; padding-left: 2.5rem; }
+    .accounts-grid { padding: 1rem; max-height: 600px; overflow-y: auto; background: #f8f9fb; border-radius: 0 0 12px 12px; position: relative; }
+    .account-item { margin-bottom: 0.75rem; }
+    .account-card { border: 2px solid #e9ecef; border-radius: 12px; background: white; padding: 1rem; position: relative; display: flex; gap: 12px; align-items: center; cursor: pointer; }
+    .account-card.selected { border-color: #667eea; background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%); }
+    .account-checkbox { position: absolute; opacity: 0; pointer-events: none; }
+    .custom-checkbox { width: 22px; height: 22px; border: 2px solid #dee2e6; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: white; flex-shrink: 0; }
+    .custom-checkbox i { color: white; font-size: 14px; opacity: 0; }
+    .account-checkbox:checked ~ .account-card .custom-checkbox { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-color: #667eea; }
+    .account-checkbox:checked ~ .account-card .custom-checkbox i { opacity: 1; }
+    .account-username { font-weight: 600; color: #2d3748; }
+    .account-stats { color: #718096; font-size: 0.875rem; }
+    .account-badges { display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
+    .badge-custom { padding: 0.25rem 0.6rem; border-radius: 12px; font-size: 0.72rem; font-weight: 500; border: 1px solid; }
+    .badge-proxy-ok { background: rgba(34, 197, 94, 0.1); color: #059669; border-color: rgba(34, 197, 94, 0.3); }
+    .badge-proxy-bad { background: rgba(239, 68, 68, 0.1); color: #dc2626; border-color: rgba(239, 68, 68, 0.3); }
+    .summary-bar { background: white; border: 2px solid #e9ecef; border-radius: 12px; padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    /* View toggle */
+    .view-toggle { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; padding: 0.25rem; display: inline-flex; gap: 4px; }
+    .view-toggle-btn { background: transparent; border: none; color: #fff; padding: 0.3rem 0.7rem; border-radius: 15px; cursor: pointer; }
+    .view-toggle-btn.active { background: white; color: #667eea; }
+    /* Compact mode */
+    .compact-mode .account-card { padding: 0.6rem; border-radius: 8px; border-width: 1px; }
+    .compact-mode .custom-checkbox { width: 20px; height: 20px; border-width: 1px; border-radius: 4px; }
+    .compact-mode .badge-custom { padding: 0.15rem 0.5rem; border-radius: 8px; font-size: 0.65rem; }
+    /* List mode */
+    .list-mode .account-item { margin-bottom: 0.25rem; }
+    .list-mode .account-card { padding: 0.75rem 1rem; border-radius: 6px; border-width: 1px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2 class="fw-bold mb-4"><i class="bi bi-plus-circle me-2"></i>Create Bulk Login Task</h2>
+
+<form method="post" onsubmit="return validateAccountSelection()">
+  {% csrf_token %}
+
+  <div class="summary-bar" id="accountsSummary">
+    <div class="d-flex align-items-center gap-3">
+      <div>
+        <div class="fw-bold" id="selectedCount">0</div>
+        <div class="text-muted small" id="totalCount">of {{ form.selected_accounts.field.queryset.count }} accounts selected</div>
+      </div>
+      <div class="d-flex gap-3 text-muted small" id="summaryStats">
+        <div><i class="bi bi-check-circle text-success"></i> <span id="activeCount">{{ form.selected_accounts.field.queryset|length }}</span> active</div>
+        <div><i class="bi bi-shield-check"></i> <span id="proxyCount">0</span> with proxy</div>
+        <div><i class="bi bi-exclamation-triangle text-warning"></i> <span id="problemsCount">0</span> issues</div>
+      </div>
+    </div>
+    <div style="min-width:240px">
+      <div class="search-wrapper">
+        <i class="bi bi-search search-icon"></i>
+        <input type="text" id="accountSearch" class="form-control" placeholder="Search accounts by username...">
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3 border-0 shadow-sm" id="accountsWidget">
+    <div class="accounts-controls">
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <div class="view-toggle">
+            <button type="button" class="view-toggle-btn active" data-view="card"><i class="bi bi-grid-3x3-gap"></i> Cards</button>
+            <button type="button" class="view-toggle-btn" data-view="compact"><i class="bi bi-list"></i> Compact</button>
+            <button type="button" class="view-toggle-btn" data-view="list"><i class="bi bi-list-ul"></i> List</button>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-light btn-sm" id="selectAll"><i class="bi bi-check-all"></i> Select All</button>
+            <button type="button" class="btn btn-light btn-sm" id="selectNone"><i class="bi bi-x"></i> Clear</button>
+            <button type="button" class="btn btn-light btn-sm" id="selectRandom"><i class="bi bi-shuffle"></i> Random 10</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="accounts-grid">
+      <div class="row" id="accountsContainer">
+        {% for account in form.selected_accounts.field.queryset %}
+        <div class="col-lg-6 col-md-12 account-item"
+             data-username="{{ account.username|lower }}"
+             data-has-proxy="{{ account.proxy|yesno:'true,false' }}"
+             data-proxy-active="{% if account.proxy %}{{ account.proxy.is_active|yesno:'true,false' }}{% else %}false{% endif %}"
+             data-status="{{ account.status|lower }}">
+          <input class="account-checkbox" type="checkbox" name="selected_accounts" value="{{ account.id }}" id="account_{{ account.id }}">
+          <label class="account-card" for="account_{{ account.id }}">
+            <div class="custom-checkbox"><i class="bi bi-check"></i></div>
+            <div class="flex-grow-1">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="account-username">{{ account.username }}</div>
+                <div class="account-stats">
+                  {% if account.status == 'ACTIVE' %}
+                    <i class="bi bi-check-circle-fill text-success me-1"></i>
+                    <span class="text-success">Active</span>
+                  {% elif account.status == 'BLOCKED' %}
+                    <i class="bi bi-x-circle-fill text-danger me-1"></i>
+                    <span class="text-danger">Blocked</span>
+                  {% elif account.status == 'LIMITED' %}
+                    <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>
+                    <span class="text-warning">Limited</span>
+                  {% else %}
+                    <span class="text-muted">{{ account.get_status_display }}</span>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="account-badges">
+                {% if account.proxy %}
+                  {% if account.proxy.is_active %}
+                    <span class="badge-custom badge-proxy-ok"><i class="bi bi-shield-check me-1"></i>Proxy OK</span>
+                  {% else %}
+                    <span class="badge-custom badge-proxy-bad"><i class="bi bi-exclamation-octagon me-1"></i>Proxy Inactive</span>
+                  {% endif %}
+                {% endif %}
+                {% if account.dolphin_profile_id %}
+                  <span class="badge-custom" style="background: rgba(59, 130, 246, 0.1); color: #2563eb; border-color: rgba(59, 130, 246, 0.3);"><i class="bi bi-laptop me-1"></i>Dolphin</span>
+                {% endif %}
+              </div>
+            </div>
+          </label>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center text-muted py-4">No accounts found</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div id="nonActiveWarningContainer"></div>
+
+  <div class="text-end">
+    <button type="submit" class="btn btn-success"><i class="bi bi-check2-circle me-2"></i>Create</button>
+    <a href="{% url 'bulk_login_list' %}" class="btn btn-light">Cancel</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('accountSearch');
+  const accountItems = document.querySelectorAll('.account-item');
+  const accountCheckboxes = document.querySelectorAll('.account-checkbox');
+  const selectedCountEl = document.getElementById('selectedCount');
+  const totalCountEl = document.getElementById('totalCount');
+  const proxyCountEl = document.getElementById('proxyCount');
+  const activeCountEl = document.getElementById('activeCount');
+  const problemsCountEl = document.getElementById('problemsCount');
+  const accountsWidget = document.getElementById('accountsWidget');
+  let currentView = 'card';
+
+  // View toggle handlers
+  document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      currentView = this.dataset.view;
+      updateViewMode();
+    });
+  });
+
+  function updateViewMode() {
+    accountsWidget.className = accountsWidget.className.replace(/\b(compact-mode|list-mode)\b/g, '').trim();
+    if (currentView === 'compact') {
+      accountsWidget.classList.add('compact-mode');
+      updateColumnClasses('col-lg-4 col-md-6');
+    } else if (currentView === 'list') {
+      accountsWidget.classList.add('list-mode');
+      updateColumnClasses('col-12');
+    } else {
+      updateColumnClasses('col-lg-6 col-md-12');
+    }
+  }
+
+  function updateColumnClasses(newClasses) {
+    accountItems.forEach(item => {
+      item.className = 'account-item ' + newClasses;
+      // keep dataset attributes intact
+      if (item.dataset.username) {
+        item.setAttribute('data-username', item.dataset.username);
+        item.setAttribute('data-has-proxy', item.dataset.hasProxy);
+        item.setAttribute('data-proxy-active', item.dataset.proxyActive);
+        item.setAttribute('data-status', item.dataset.status);
+      }
+    });
+  }
+
+  function filterList() {
+    const q = (searchInput.value || '').toLowerCase().trim();
+    accountItems.forEach(item => {
+      const match = (item.dataset.username || '').includes(q);
+      item.style.display = match ? '' : 'none';
+    });
+  }
+
+  searchInput.addEventListener('input', debounce(filterList, 200));
+
+  document.getElementById('selectAll').addEventListener('click', function() {
+    accountItems.forEach(item => {
+      if (item.style.display !== 'none') {
+        const cb = item.querySelector('.account-checkbox');
+        cb.checked = true; updateCardSelection(cb);
+      }
+    });
+    updateCounter();
+  });
+  document.getElementById('selectNone').addEventListener('click', function() {
+    accountCheckboxes.forEach(cb => { cb.checked = false; updateCardSelection(cb); });
+    updateCounter();
+  });
+  document.getElementById('selectRandom').addEventListener('click', function() {
+    const visible = Array.from(accountItems).filter(i => i.style.display !== 'none');
+    const shuffled = [...visible].sort(() => 0.5 - Math.random());
+    const pick = shuffled.slice(0, Math.min(10, shuffled.length));
+    accountCheckboxes.forEach(cb => { cb.checked = false; updateCardSelection(cb); });
+    pick.forEach(item => { const cb = item.querySelector('.account-checkbox'); cb.checked = true; updateCardSelection(cb); });
+    updateCounter();
+  });
+
+  accountCheckboxes.forEach(cb => {
+    cb.addEventListener('change', function() { updateCardSelection(this); updateCounter(); });
+    updateCardSelection(cb);
+  });
+
+  function updateCardSelection(cb) {
+    const card = cb.nextElementSibling;
+    if (cb.checked) card.classList.add('selected'); else card.classList.remove('selected');
+  }
+
+  function updateCounter() {
+    const checked = Array.from(accountCheckboxes).filter(cb => cb.checked);
+    const selectedProxy = checked.filter(cb => cb.closest('.account-item').dataset.hasProxy === 'true').length;
+    const selectedActive = checked.filter(cb => cb.closest('.account-item').dataset.status === 'active').length;
+    const selectedNonActive = checked.length - selectedActive;
+    const invalidProxyAll = Array.from(accountItems).filter(item => item.dataset.hasProxy === 'true' && item.dataset.proxyActive === 'false').length;
+    const activeAll = Array.from(accountItems).filter(item => item.dataset.status === 'active').length;
+
+    selectedCountEl.textContent = checked.length;
+    totalCountEl.textContent = `of ${accountItems.length} accounts selected`;
+    proxyCountEl.textContent = selectedProxy;
+    if (activeCountEl) activeCountEl.textContent = activeAll;
+    if (problemsCountEl) problemsCountEl.textContent = invalidProxyAll;
+
+    showWarning(selectedNonActive, checked.filter(cb => cb.closest('.account-item').dataset.hasProxy === 'true' && cb.closest('.account-item').dataset.proxyActive === 'false').length, selectedActive);
+  }
+
+  function showWarning(nonActiveSel, invalidProxySel, activeSel) {
+    const container = document.getElementById('nonActiveWarningContainer');
+    container.innerHTML = '';
+    if (nonActiveSel > 0 || invalidProxySel > 0) {
+      const div = document.createElement('div');
+      div.className = 'alert alert-warning mt-3';
+      div.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>
+        <strong>Warning:</strong> ${nonActiveSel} non-ACTIVE selected.
+        ${invalidProxySel > 0 ? `<br/><strong>Warning:</strong> ${invalidProxySel} selected account(s) have inactive/invalid proxy.` : ''}
+        <br><small class="text-muted">Tip: Prefer ACTIVE accounts with valid proxies for successful login.</small>`;
+      container.appendChild(div);
+    }
+  }
+
+  function debounce(fn, wait) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), wait); }; }
+
+  // initial
+  filterList();
+  updateViewMode();
+  updateCounter();
+
+  // expose for form onsubmit
+  window.validateAccountSelection = function validateAccountSelection() {
+    const checked = Array.from(document.querySelectorAll('.account-checkbox')).filter(cb => cb.checked);
+    if (checked.length === 0) { alert('Please select at least one account.'); return false; }
+    const selectedActive = checked.filter(cb => cb.closest('.account-item').dataset.status === 'active').length;
+    const selectedNonActive = checked.length - selectedActive;
+    const invalidProxySel = checked.filter(cb => cb.closest('.account-item').dataset.hasProxy === 'true' && cb.closest('.account-item').dataset.proxyActive === 'false').length;
+    if (selectedActive === 0) { alert('No ACTIVE accounts selected.'); return false; }
+    if (selectedNonActive > 0 || invalidProxySel > 0) {
+      return confirm(`Warning: ${selectedNonActive} non-ACTIVE selected.` + (invalidProxySel>0? `\nWarning: ${invalidProxySel} selected account(s) have inactive/invalid proxy.`:'' ) + `\n\nOnly ${selectedActive} ACTIVE account(s) will likely succeed. Continue?`);
+    }
+    return true;
+  }
+});
+</script>
+{% endblock %}

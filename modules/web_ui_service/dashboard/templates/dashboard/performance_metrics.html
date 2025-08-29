@@ -1,0 +1,395 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Performance Metrics - System Monitoring{% endblock %}
+
+{% block extra_css %}
+<style>
+    .metric-chart {
+        height: 300px;
+        margin-bottom: 20px;
+    }
+    
+    .performance-card {
+        border-left: 4px solid #28a745;
+        transition: all 0.3s;
+    }
+    
+    .performance-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .server-badge {
+        font-family: 'Courier New', monospace;
+        font-size: 0.8em;
+        background: #f8f9fa;
+        padding: 2px 6px;
+        border-radius: 4px;
+        border: 1px solid #dee2e6;
+    }
+    
+    .metric-value {
+        font-size: 1.5em;
+        font-weight: bold;
+    }
+    
+    .metric-table {
+        font-size: 0.9em;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-chart-area text-success"></i> Performance Metrics</h1>
+        <div>
+            <a href="{% url 'monitoring_dashboard' %}" class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+            <a href="{% url 'error_logs_view' %}" class="btn btn-outline-danger btn-sm">
+                <i class="fas fa-exclamation-triangle"></i> Error Logs
+            </a>
+            <button class="btn btn-outline-info btn-sm" onclick="refreshMetrics()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger">
+        <i class="fas fa-exclamation-circle"></i> {{ error }}
+    </div>
+    {% else %}
+
+    <!-- Performance Overview -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card performance-card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-microchip text-warning fa-2x mb-2"></i>
+                    <div class="metric-value text-warning">
+                        {% if performance_data.cpu_usage %}
+                            {{ performance_data.cpu_usage|length }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </div>
+                    <small class="text-muted">Active Workers</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card performance-card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-tasks text-primary fa-2x mb-2"></i>
+                    <div class="metric-value text-primary">
+                        {% if performance_data.task_throughput %}
+                            {% for worker in performance_data.task_throughput %}{{ worker.value|add:0 }}{% if not forloop.last %} + {% endif %}{% endfor %}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </div>
+                    <small class="text-muted">Total Tasks Completed</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card performance-card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-memory text-info fa-2x mb-2"></i>
+                    <div class="metric-value text-info">
+                        {% if performance_data.memory_usage %}
+                            {% widthratio performance_data.memory_usage|length 1 1 %}
+                        {% else %}
+                            0
+                        {% endif %}GB
+                    </div>
+                    <small class="text-muted">Total Memory Usage</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card performance-card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-clock text-success fa-2x mb-2"></i>
+                    <div class="metric-value text-success">{{ last_updated|date:"H:i" }}</div>
+                    <small class="text-muted">Last Updated</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Tables -->
+    <div class="row">
+        <!-- CPU Usage -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-0 shadow">
+                <div class="card-header">
+                    <h5><i class="fas fa-microchip text-warning"></i> CPU Usage by Server</h5>
+                </div>
+                <div class="card-body">
+                    {% if performance_data.cpu_usage %}
+                    <div class="table-responsive">
+                        <table class="table metric-table">
+                            <thead>
+                                <tr>
+                                    <th>Worker</th>
+                                    <th>Server IP</th>
+                                    <th>CPU %</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for worker_data in performance_data.cpu_usage %}
+                                <tr>
+                                    <td><strong>{{ worker_data.worker }}</strong></td>
+                                    <td>
+                                        <span class="server-badge">
+                                            <i class="fas fa-server"></i> {{ worker_data.server_ip }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="progress flex-grow-1 me-2" style="height: 20px;">
+                                                <div class="progress-bar 
+                                                    {% if worker_data.value > 80 %}bg-danger{% elif worker_data.value > 60 %}bg-warning{% else %}bg-success{% endif %}" 
+                                                    style="width: {{ worker_data.value }}%">
+                                                    {{ worker_data.value|floatformat:1 }}%
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if worker_data.value > 80 %}
+                                        <span class="badge bg-danger">High</span>
+                                        {% elif worker_data.value > 60 %}
+                                        <span class="badge bg-warning">Medium</span>
+                                        {% else %}
+                                        <span class="badge bg-success">Normal</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-info-circle"></i> No CPU data available
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Memory Usage -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-0 shadow">
+                <div class="card-header">
+                    <h5><i class="fas fa-memory text-info"></i> Memory Usage by Server</h5>
+                </div>
+                <div class="card-body">
+                    {% if performance_data.memory_usage %}
+                    <div class="table-responsive">
+                        <table class="table metric-table">
+                            <thead>
+                                <tr>
+                                    <th>Worker</th>
+                                    <th>Server IP</th>
+                                    <th>Memory</th>
+                                    <th>SSH Access</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for worker_data in performance_data.memory_usage %}
+                                <tr>
+                                    <td><strong>{{ worker_data.worker }}</strong></td>
+                                    <td>
+                                        <span class="server-badge">
+                                            <i class="fas fa-server"></i> {{ worker_data.server_ip }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <span class="me-2">{{ worker_data.value|floatformat:0 }}MB</span>
+                                            <div class="progress flex-grow-1" style="height: 15px;">
+                                                {% with mem_percent=worker_data.value|floatformat:0|add:0 %}
+                                                {% widthratio mem_percent 2048 100 as progress_width %}
+                                                <div class="progress-bar bg-info" style="width: {{ progress_width }}%"></div>
+                                                {% endwith %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="showSSHCommands('{{ worker_data.server_ip }}', '{{ worker_data.worker }}')">
+                                            <i class="fas fa-terminal"></i> SSH
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-info-circle"></i> No memory data available
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Task Throughput -->
+        <div class="col-md-12 mb-4">
+            <div class="card border-0 shadow">
+                <div class="card-header">
+                    <h5><i class="fas fa-tasks text-primary"></i> Task Throughput by Server</h5>
+                </div>
+                <div class="card-body">
+                    {% if performance_data.task_throughput %}
+                    <div class="table-responsive">
+                        <table class="table metric-table">
+                            <thead>
+                                <tr>
+                                    <th>Worker Name</th>
+                                    <th>Server IP</th>
+                                    <th>Tasks Completed</th>
+                                    <th>Performance</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for worker_data in performance_data.task_throughput %}
+                                <tr>
+                                    <td><strong>{{ worker_data.worker }}</strong></td>
+                                    <td>
+                                        <span class="server-badge">
+                                            <i class="fas fa-network-wired"></i> {{ worker_data.server_ip }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ worker_data.value }}</span>
+                                    </td>
+                                    <td>
+                                        {% if worker_data.value > 100 %}
+                                        <span class="badge bg-success">Excellent</span>
+                                        {% elif worker_data.value > 50 %}
+                                        <span class="badge bg-info">Good</span>
+                                        {% elif worker_data.value > 10 %}
+                                        <span class="badge bg-warning">Fair</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Low</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="showSSHCommands('{{ worker_data.server_ip }}', '{{ worker_data.worker }}')">
+                                            <i class="fas fa-terminal"></i> SSH
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-info" onclick="checkWorkerHealth('{{ worker_data.server_ip }}')">
+                                            <i class="fas fa-heartbeat"></i> Health
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-info-circle"></i> No throughput data available
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% endif %}
+
+    <!-- Last Updated Info -->
+    <div class="text-center text-muted mt-4">
+        <small><i class="fas fa-clock"></i> Last updated: {{ last_updated }}</small>
+    </div>
+</div>
+
+<!-- SSH Commands Modal -->
+<div class="modal fade" id="sshModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Server Access - Performance Monitoring</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Server:</strong> <span id="modalServerIP"></span></p>
+                <p><strong>Worker:</strong> <span id="modalWorkerName"></span></p>
+                
+                <div class="alert alert-info">
+                    <h6>Performance Monitoring Commands:</h6>
+                    <pre><code># Connect to server
+ssh user@<span class="modal-server-placeholder"></span>
+
+# Check system resources
+htop
+iostat 1 5
+vmstat 1 5</code></pre>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <h6>Worker Performance Analysis:</h6>
+                    <pre><code># Worker-specific monitoring
+sudo journalctl -u bulk_worker_service -f
+ps aux | grep python | grep worker
+netstat -tlnp | grep :8088
+
+# Resource usage
+sudo ss -tulpn | grep LISTEN
+df -h
+free -h</code></pre>
+                </div>
+                
+                <div class="alert alert-secondary">
+                    <h6>Performance Optimization:</h6>
+                    <pre><code># Restart worker if needed
+sudo systemctl restart bulk_worker_service
+
+# Check worker health
+curl http://localhost:8088/api/v1/health
+
+# Monitor logs
+tail -f /path/to/logs/worker.log</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function refreshMetrics() {
+    window.location.reload();
+}
+
+function showSSHCommands(serverIP, workerName) {
+    document.getElementById('modalServerIP').textContent = serverIP;
+    document.getElementById('modalWorkerName').textContent = workerName;
+    document.querySelectorAll('.modal-server-placeholder').forEach(el => {
+        el.textContent = serverIP;
+    });
+    
+    new bootstrap.Modal(document.getElementById('sshModal')).show();
+}
+
+function checkWorkerHealth(serverIP) {
+    const healthUrl = `http://${serverIP}:8088/api/v1/health`;
+    window.open(healthUrl, '_blank');
+}
+
+// Auto-refresh every 30 seconds
+setInterval(refreshMetrics, 30000);
+</script>
+{% endblock %}

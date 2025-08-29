@@ -1,0 +1,243 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}Cleanup Inactive Proxies - Instagram Uploader{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="{% url 'proxy_list' %}" class="text-decoration-none">
+            <i class="bi bi-arrow-left"></i> Back to Proxies
+        </a>
+        <h2 class="mb-0 mt-2">Cleanup Inactive Proxies</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-trash"></i> Proxy Cleanup Options</h5>
+            </div>
+            <div class="card-body">
+                {% if total_inactive == 0 %}
+                <div class="alert alert-success">
+                    <div class="d-flex">
+                        <div class="me-3">
+                            <i class="bi bi-check-circle fs-3"></i>
+                        </div>
+                        <div>
+                            <h6 class="alert-heading">No Cleanup Needed</h6>
+                            <p class="mb-0">
+                                All proxies in the system are active. No inactive proxies found to clean up.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <a href="{% url 'proxy_list' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-left"></i> Back to Proxy List
+                    </a>
+                </div>
+                
+                {% else %}
+                
+                <!-- Statistics -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-danger text-white">
+                            <div class="card-body text-center">
+                                <h3 class="mb-0">{{ total_inactive }}</h3>
+                                <small>Total Inactive</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body text-center">
+                                <h3 class="mb-0">{{ assigned_inactive }}</h3>
+                                <small>Assigned to Accounts</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-secondary text-white">
+                            <div class="card-body text-center">
+                                <h3 class="mb-0">{{ unassigned_inactive }}</h3>
+                                <small>Unassigned</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body text-center">
+                                <h3 class="mb-0">{{ available_active_proxies }}</h3>
+                                <small>Available Active</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Affected Accounts -->
+                {% if affected_accounts %}
+                <div class="alert alert-warning mb-4">
+                    <div class="d-flex">
+                        <div class="me-3">
+                            <i class="bi bi-exclamation-triangle fs-3"></i>
+                        </div>
+                        <div>
+                            <h6 class="alert-heading">Accounts with Inactive Proxies</h6>
+                            <p class="mb-2">
+                                The following {{ affected_accounts.count }} account(s) are currently using inactive proxies:
+                            </p>
+                            <div class="row">
+                                {% for account in affected_accounts %}
+                                <div class="col-md-6 mb-2">
+                                    <span class="badge bg-warning text-dark">
+                                        {{ account.username }} 
+                                        {% if account.dolphin_profile_id %}
+                                            <i class="bi bi-browser-chrome" title="Has Dolphin Profile"></i>
+                                        {% endif %}
+                                        → {{ account.proxy.host }}:{{ account.proxy.port }}
+                                    </span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Cleanup Options -->
+                <div class="row">
+                    <!-- Option 1: Delete only unassigned -->
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="bi bi-shield-check"></i> Safe Cleanup</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text">
+                                    Delete only <strong>{{ unassigned_inactive }}</strong> unassigned inactive proxies.
+                                    Accounts with inactive proxies will keep them.
+                                </p>
+                                <ul class="list-unstyled small text-muted">
+                                    <li><i class="bi bi-check text-success"></i> Safe for accounts</li>
+                                    <li><i class="bi bi-check text-success"></i> No Dolphin profiles affected</li>
+                                    <li><i class="bi bi-x text-danger"></i> Doesn't fix account issues</li>
+                                </ul>
+                            </div>
+                            <div class="card-footer">
+                                {% if unassigned_inactive > 0 %}
+                                <form method="post" style="display: inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete_only_unassigned">
+                                    <button type="submit" class="btn btn-outline-primary btn-sm w-100">
+                                        Delete {{ unassigned_inactive }} Unassigned
+                                    </button>
+                                </form>
+                                {% else %}
+                                <button class="btn btn-outline-secondary btn-sm w-100" disabled>
+                                    No Unassigned to Delete
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Option 2: Reassign and delete -->
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0"><i class="bi bi-arrow-repeat"></i> Smart Cleanup</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text">
+                                    Reassign accounts to active proxies, then delete all inactive proxies.
+                                    System will try to match regions when possible.
+                                    Updates Dolphin profiles automatically.
+                                </p>
+                                <ul class="list-unstyled small text-muted">
+                                    <li><i class="bi bi-check text-success"></i> Fixes account proxy issues</li>
+                                    <li><i class="bi bi-check text-success"></i> Prefers same-region proxies</li>
+                                    <li><i class="bi bi-check text-success"></i> Force assigns different regions if needed</li>
+                                    <li><i class="bi bi-check text-success"></i> Updates Dolphin profiles</li>
+                                    {% if can_reassign_all %}
+                                    <li><i class="bi bi-check text-success"></i> Enough active proxies available</li>
+                                    {% else %}
+                                    <li><i class="bi bi-exclamation text-warning"></i> Not enough active proxies</li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                            <div class="card-footer">
+                                <form method="post" style="display: inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="reassign_and_delete">
+                                    <button type="submit" class="btn btn-success btn-sm w-100" 
+                                            onclick="return confirm('This will reassign {{ assigned_inactive }} accounts to new proxies and delete {{ total_inactive }} inactive proxies. Continue?')">
+                                        Reassign & Delete All
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Option 3: Force delete -->
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-header bg-danger text-white">
+                                <h6 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Force Cleanup</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text">
+                                    Delete all inactive proxies immediately. Accounts will be left without proxies.
+                                    <strong>Use with caution!</strong>
+                                </p>
+                                <ul class="list-unstyled small text-muted">
+                                    <li><i class="bi bi-x text-danger"></i> Accounts left without proxies</li>
+                                    <li><i class="bi bi-x text-danger"></i> Dolphin profiles may break</li>
+                                    <li><i class="bi bi-check text-success"></i> Cleans up everything</li>
+                                </ul>
+                            </div>
+                            <div class="card-footer">
+                                <form method="post" style="display: inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="force_delete">
+                                    <button type="submit" class="btn btn-danger btn-sm w-100" 
+                                            onclick="return confirm('⚠️ WARNING: This will delete {{ total_inactive }} inactive proxies and leave {{ assigned_inactive }} accounts without proxies!\n\nDolphin profiles may become unusable. Are you absolutely sure?')">
+                                        Force Delete All
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recommendations -->
+                <div class="alert alert-info mt-4">
+                    <div class="d-flex">
+                        <div class="me-3">
+                            <i class="bi bi-lightbulb fs-3"></i>
+                        </div>
+                        <div>
+                            <h6 class="alert-heading">Recommendations</h6>
+                            <ul class="mb-0">
+                                {% if can_reassign_all %}
+                                <li><strong>Recommended:</strong> Use "Smart Cleanup" to automatically fix all issues</li>
+                                {% else %}
+                                <li><strong>Warning:</strong> Only {{ available_active_proxies }} active proxies available for {{ assigned_inactive }} accounts</li>
+                                <li><strong>Suggestion:</strong> Add more active proxies before cleanup, or use "Safe Cleanup"</li>
+                                {% endif %}
+                                <li>Always backup your data before performing bulk operations</li>
+                                <li>Consider validating all proxies first to ensure accurate status</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

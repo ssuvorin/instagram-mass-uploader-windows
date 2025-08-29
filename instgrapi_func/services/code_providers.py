@@ -99,65 +99,132 @@ class AutoIMAPEmailProvider(NullTwoFactorProvider):
         self.on_log = on_log
 
     def get_challenge_code(self, username: str, method: str) -> Optional[str]:
+        if self.on_log:
+            self.on_log(f"📧 [EMAIL_CHALLENGE] Starting challenge code retrieval for {username}")
+            self.on_log(f"📧 [EMAIL_CHALLENGE] Method: {method}")
+            self.on_log(f"📧 [EMAIL_CHALLENGE] Email: {self.email}")
+            
         if not self.email or not self.password:
             if self.on_log:
-                self.on_log("Email credentials not provided for verification")
+                self.on_log("📧 [EMAIL_CHALLENGE] ❌ Email credentials not provided for verification")
             return None
 
+        if self.on_log:
+            self.on_log(f"📧 [EMAIL_CHALLENGE] ✅ Email credentials available: {self.email} (password: {'yes' if self.password else 'no'})")
+
+        # First try using the synchronous email client which works better in instagrapi context
+        if self.on_log:
+            self.on_log(f"📧 [EMAIL_CHALLENGE] 🔍 Attempting sync email client approach")
+        
+        try:
+            # Import the synchronous email client
+            try:
+                from bot.src.instagram_uploader.email_client import Email
+            except Exception as e:
+                if self.on_log:
+                    self.on_log(f"📧 [EMAIL_CHALLENGE] ❌ Email client not available: {e}")
+                return None
+            
+            # Create email client and test connection first
+            email_client = Email(self.email, self.password)
+            if self.on_log:
+                self.on_log(f"📧 [EMAIL_CHALLENGE] 📧 Email client created for {self.email}")
+            
+            # Test connection
+            if not email_client.test_connection():
+                if self.on_log:
+                    self.on_log(f"📧 [EMAIL_CHALLENGE] ❌ Email connection test failed")
+                return None
+            
+            if self.on_log:
+                self.on_log(f"📧 [EMAIL_CHALLENGE] ✅ Email connection test successful")
+            
+            # Get verification code with retry logic
+            code = email_client.get_verification_code(max_retries=3, retry_delay=10)
+            
+            if code:
+                if self.on_log:
+                    self.on_log(f"📧 [EMAIL_CHALLENGE] ✅ Successfully retrieved verification code: {code}")
+                return code
+            else:
+                if self.on_log:
+                    self.on_log("📧 [EMAIL_CHALLENGE] ❌ No verification code found in email")
+                return None
+                
+        except Exception as e:
+            if self.on_log:
+                self.on_log(f"📧 [EMAIL_CHALLENGE] ❌ Sync email client failed: {e}")
+
+        # Fallback to async approach if sync fails
+        if self.on_log:
+            self.on_log(f"📧 [EMAIL_CHALLENGE] 🔄 Falling back to async email approach")
+        
         try:
             from uploader.email_verification_async import get_email_verification_code_async  # type: ignore
         except Exception as e:
             if self.on_log:
-                self.on_log(f"Email verification module not available: {e}")
+                self.on_log(f"📧 [EMAIL_CHALLENGE] ❌ Email verification module not available: {e}")
             return None
 
         try:
-            if self.on_log:
-                self.on_log(f"Attempting to get email verification code from {self.email}")
-
-            # Create a custom version of get_email_verification_code_async that uses our on_log
-            async def get_code_with_logging():
-                return await get_email_verification_code_async(self.email, self.password, max_retries=3, on_log=self.on_log)
-
-            code = asyncio.run(get_code_with_logging())
-
-            if code:
-                if self.on_log:
-                    self.on_log(f"Successfully retrieved verification code: {code}")
-                return code
-            else:
-                if self.on_log:
-                    self.on_log("No verification code found in email")
-                return None
-
-        except RuntimeError:
-            # If there's already a running loop, create a new one in this thread
+            # Try to run async code in current thread
+            import asyncio
+            
+            # Check if we're already in an event loop
             try:
-                if self.on_log:
-                    self.on_log("Creating new event loop for email verification")
-
-                loop = asyncio.new_event_loop()
-                try:
-                    async def get_code_with_logging():
-                        return await get_email_verification_code_async(self.email, self.password, max_retries=3, on_log=self.on_log)
-
-                    code = loop.run_until_complete(get_code_with_logging())
-
+                loop = asyncio.get_running_loop()
+                if loop.is_running():
+                    # We're in an async context, need to run in thread
+                    if self.on_log:
+                        self.on_log(f"📧 [EMAIL_CHALLENGE] 🔄 Running in thread due to existing event loop")
+                    
+                    import concurrent.futures
+                    import threading
+                    
+                    def run_async_in_thread():
+                        new_loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(new_loop)
+                        try:
+                            async def get_code_with_logging():
+                                return await get_email_verification_code_async(self.email, self.password, max_retries=3, on_log=self.on_log)
+                            
+                            return new_loop.run_until_complete(get_code_with_logging())
+                        finally:
+                            new_loop.close()
+                    
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = executor.submit(run_async_in_thread)
+                        code = future.result(timeout=30)  # 30 second timeout
+                    
                     if code:
                         if self.on_log:
-                            self.on_log(f"Successfully retrieved verification code: {code}")
+                            self.on_log(f"📧 [EMAIL_CHALLENGE] ✅ Successfully retrieved verification code: {code}")
                         return code
                     else:
                         if self.on_log:
-                            self.on_log("No verification code found in email")
+                            self.on_log("📧 [EMAIL_CHALLENGE] ❌ No verification code found in email")
                         return None
-                finally:
-                    loop.close()
-            except Exception as e:
+                        
+            except RuntimeError:
+                # No running loop, we can use asyncio.run
                 if self.on_log:
-                    self.on_log(f"Error getting verification code: {e}")
-                return None
+                    self.on_log(f"📧 [EMAIL_CHALLENGE] 🔄 Using asyncio.run (no existing loop)")
+                
+                async def get_code_with_logging():
+                    return await get_email_verification_code_async(self.email, self.password, max_retries=3, on_log=self.on_log)
+
+                code = asyncio.run(get_code_with_logging())
+
+                if code:
+                    if self.on_log:
+                        self.on_log(f"📧 [EMAIL_CHALLENGE] ✅ Successfully retrieved verification code: {code}")
+                    return code
+                else:
+                    if self.on_log:
+                        self.on_log("📧 [EMAIL_CHALLENGE] ❌ No verification code found in email")
+                    return None
+
         except Exception as e:
             if self.on_log:
-                self.on_log(f"Error getting verification code: {e}")
+                self.on_log(f"📧 [EMAIL_CHALLENGE] ❌ Error getting verification code: {e}")
             return None 

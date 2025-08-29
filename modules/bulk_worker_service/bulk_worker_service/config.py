@@ -32,6 +32,30 @@ class Settings:
     worker_base_url: str = os.getenv("WORKER_BASE_URL", "")
     worker_capacity: int = int(os.getenv("WORKER_CAPACITY", "1"))
     heartbeat_interval_secs: int = int(os.getenv("HEARTBEAT_INTERVAL_SECS", "30"))
+    
+    # Enhanced settings for new functionality
+    worker_id: str = os.getenv("WORKER_ID", f"worker_{os.getpid()}")
+    
+    # Media processing settings
+    media_output_dir: str = os.getenv("MEDIA_OUTPUT_DIR", os.path.join(os.getcwd(), "_processed_media"))
+    media_processing_concurrency: int = int(os.getenv("MEDIA_PROCESSING_CONCURRENCY", "5"))
+    
+    # Proxy diagnostics settings
+    proxy_slow_threshold: float = float(os.getenv("PROXY_SLOW_THRESHOLD", "5.0"))
+    proxy_timeout_threshold: float = float(os.getenv("PROXY_TIMEOUT_THRESHOLD", "30.0"))
+    proxy_test_concurrency: int = int(os.getenv("PROXY_TEST_CONCURRENCY", "10"))
+    
+    # Error handling settings
+    error_log_file: Optional[str] = os.getenv("ERROR_LOG_FILE")
+    max_retry_attempts: int = int(os.getenv("MAX_RETRY_ATTEMPTS", "3"))
+    
+    # Account management settings
+    account_batch_size: int = int(os.getenv("ACCOUNT_BATCH_SIZE", "10"))
+    dolphin_profile_concurrency: int = int(os.getenv("DOLPHIN_PROFILE_CONCURRENCY", "5"))
+    
+    # Cookie robot settings
+    cookie_robot_concurrency: int = int(os.getenv("COOKIE_ROBOT_CONCURRENCY", "2"))
+    cookie_robot_delay: float = float(os.getenv("COOKIE_ROBOT_DELAY", "1.0"))
 
 
 settings = Settings() 

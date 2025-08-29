@@ -17,7 +17,7 @@ from .runners.avatar_runner import run_avatar_job
 from .runners.bio_runner import run_bio_job
 from .runners.follow_runner import run_follow_job
 from .runners.proxy_diag_runner import run_proxy_diag_job
-from .runners.media_uniq_runner import run_media_uniq_job
+from .runners.cookie_robot_runner import run_cookie_robot_job
 
 
 @dataclass
@@ -101,10 +101,34 @@ class BulkUploadOrchestrator:
         asyncio.create_task(self._run_proxy_diag(job.job_id, task_id))
         return job.job_id
 
-    async def start_media_uniq_pull(self, task_id: int) -> str:
+    async def start_cookie_robot_pull(self, task_id: int) -> str:
         job = self._new_job(task_id)
-        asyncio.create_task(self._run_media_uniq(job.job_id, task_id))
+        asyncio.create_task(self._run_cookie_robot(job.job_id, task_id))
         return job.job_id
+
+    async def stop_job(self, job_id: str) -> bool:
+        """Stop a running job (placeholder implementation)."""
+        job = self._jobs.get(job_id)
+        if job and job.status == "RUNNING":
+            job.status = "CANCELLED"
+            return True
+        return False
+
+    async def delete_job(self, job_id: str) -> bool:
+        """Delete a job (placeholder implementation)."""
+        if job_id in self._jobs:
+            del self._jobs[job_id]
+            return True
+        return False
+
+    async def get_metrics(self) -> dict:
+        """Get metrics (placeholder implementation)."""
+        return {
+            "total_jobs": len(self._jobs),
+            "running_jobs": len([j for j in self._jobs.values() if j.status == "RUNNING"]),
+            "completed_jobs": len([j for j in self._jobs.values() if j.status == "COMPLETED"]),
+            "failed_jobs": len([j for j in self._jobs.values() if j.status == "FAILED"])
+        }
 
     async def _run_pull(self, job_id: str, task_id: int, ui_base: Optional[str], ui_token: Optional[str], options: Optional[StartOptions]) -> None:
         ui = UiClient(base_url=ui_base, token=ui_token)
@@ -352,6 +376,25 @@ class BulkUploadOrchestrator:
             job.message = str(e)
             try:
                 await ui.update_task_status_generic('media_uniq', task_id, status="FAILED", log=str(e))
+            except Exception:
+                pass
+        finally:
+            await ui.aclose()
+
+    async def _run_cookie_robot(self, job_id: str, task_id: int) -> None:
+        job = self._jobs[job_id]
+        job.status = "RUNNING"
+        ui = UiClient()
+        try:
+            success, fail = await run_cookie_robot_job(ui, task_id, concurrency=settings.concurrency_limit)
+            job.successful_accounts = success
+            job.failed_accounts = fail
+            job.status = "COMPLETED" if fail == 0 else ("FAILED" if success == 0 else "COMPLETED")
+        except Exception as e:
+            job.status = "FAILED"
+            job.message = str(e)
+            try:
+                await ui.update_task_status_generic('cookie_robot', task_id, status="FAILED", log=str(e))
             except Exception:
                 pass
         finally:

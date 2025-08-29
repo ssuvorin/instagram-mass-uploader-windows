@@ -16,8 +16,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'uploader',  # reuse existing UI app
-    'dashboard', # thin layer for API wiring and starts
+    # UI modules for distributed architecture
+    'ui_core',    # New app for core UI functionality (replacing direct uploader dependency)
+    'dashboard',  # API integration and monitoring
 ]
 
 MIDDLEWARE = [
@@ -36,7 +37,9 @@ ROOT_URLCONF = 'remote_ui.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'uploader', 'templates')],
+        'DIRS': [
+            os.path.join(BASE_DIR, 'templates'),  # Local UI module templates
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -71,17 +74,24 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Worker integration
-WORKER_BASE_URL = os.getenv('WORKER_BASE_URL', '')
-WORKER_API_TOKEN = os.getenv('WORKER_API_TOKEN', '')
-# Dispatcher (optional multi-worker routing)
-WORKER_POOL = [h.strip() for h in os.getenv('WORKER_POOL', '').split(',') if h.strip()]
-DISPATCH_BATCH_SIZE = int(os.getenv('DISPATCH_BATCH_SIZE', '5'))
-DISPATCH_CONCURRENCY = int(os.getenv('DISPATCH_CONCURRENCY', '2')) 
+# API Communication Settings
+API_SERVICES = {
+    'management': {
+        'url': os.getenv('MANAGEMENT_API_URL', 'http://localhost:8089'),
+        'token': os.getenv('API_TOKEN_MANAGEMENT', ''),
+    },
+    'worker': {
+        'url': os.getenv('WORKER_API_URL', 'http://localhost:8088'), 
+        'token': os.getenv('API_TOKEN_WORKER', ''),
+    },
+    'monitoring': {
+        'url': os.getenv('MONITORING_API_URL', 'http://localhost:8090'),
+        'token': os.getenv('API_TOKEN_MONITORING', ''),
+    }
+}
 
-# Security: multiple tokens support and IP allowlist for API
-WORKER_API_TOKENS = [t.strip() for t in os.getenv('WORKER_API_TOKENS', '').split(',') if t.strip()]
-WORKER_ALLOWED_IPS = [ip.strip() for ip in os.getenv('WORKER_ALLOWED_IPS', '').split(',') if ip.strip()]
+# Monitoring refresh interval
+MONITORING_REFRESH_INTERVAL = int(os.getenv('MONITORING_REFRESH_INTERVAL', '30'))
 
 # Optional reverse-proxy/HTTPS hints
 if os.getenv('SECURE_PROXY_SSL_HEADER', '0') in ('1','true','yes','on'):

@@ -25487,3 +25487,28 @@ KeyboardInterrupt
 2025-08-20 10:18:51,819 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 28
 2025-08-20 10:18:51,819 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 29
 2025-08-20 10:18:51,819 - dotenv.main - WARNING - Python-dotenv could not parse statement starting at line 30
+2025-08-22 13:00:47,444 - insta.password_reset - INFO - Starting password reset for account: Etkhura_ijoperf.worbibico898
+2025-08-22 13:00:47,446 - insta.password_reset - INFO - Initiating password reset request...
+2025-08-22 13:00:48,721 - insta.password_reset - ERROR - Unexpected error during password reset: HTTPSConnectionPool(host='www.instagram.com', port=443): Read timed out. (read timeout=1)
+2025-08-22 13:07:41,985 - insta.password_reset - INFO - Starting password reset for account: Etkhura_ijoperf.worbibico898
+2025-08-22 13:07:41,987 - insta.password_reset - INFO - Client configured with 30s timeout
+2025-08-22 13:07:41,987 - insta.password_reset - INFO - Initiating password reset request...
+2025-08-22 13:07:43,324 - insta.password_reset - INFO - SUCCESS: Password reset email sent successfully
+2025-08-22 13:07:43,324 - insta.password_reset - INFO - SUCCESS: Check your email for password reset instructions
+2025-08-22 13:40:02,561 - public_request - DEBUG - public_request 201: https://www.instagram.com/etkhura_ijoperf.worbibico898/?__a=1&__d=dis
+2025-08-22 13:40:02,562 - public_request - INFO - [http://ly1fesyrnr-res-country-BY-state-625143-city-625144-hold-session-session-689c53c6100a5:oCNRstPHgMQRA73A@93.190.143.48:9999] [201] GET https://www.instagram.com/etkhura_ijoperf.worbibico898/?__a=1&__d=dis
+2025-08-22 13:40:02,562 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/etkhura_ijoperf.worbibico898/?__a=1&__d=dis) >>> 
+2025-08-22 13:40:08,453 - public_request - DEBUG - public_request 201: https://www.instagram.com/etkhura_ijoperf.worbibico898/?__a=1&__d=dis
+2025-08-22 13:40:08,454 - public_request - INFO - [http://ly1fesyrnr-res-country-BY-state-625143-city-625144-hold-session-session-689c53c6100a5:oCNRstPHgMQRA73A@93.190.143.48:9999] [201] GET https://www.instagram.com/etkhura_ijoperf.worbibico898/?__a=1&__d=dis
+2025-08-22 13:40:08,454 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/etkhura_ijoperf.worbibico898/?__a=1&__d=dis) >>> 
+2025-08-22 13:40:14,273 - public_request - DEBUG - public_request 201: https://www.instagram.com/etkhura_ijoperf.worbibico898/?__a=1&__d=dis
+2025-08-22 13:40:14,273 - public_request - INFO - [http://ly1fesyrnr-res-country-BY-state-625143-city-625144-hold-session-session-689c53c6100a5:oCNRstPHgMQRA73A@93.190.143.48:9999] [201] GET https://www.instagram.com/etkhura_ijoperf.worbibico898/?__a=1&__d=dis
+2025-08-22 13:40:14,273 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/etkhura_ijoperf.worbibico898/?__a=1&__d=dis) >>> 
+2025-08-22 13:40:17,714 - instagrapi - INFO - https://i.instagram.com/api/v1/users/etkhura_ijoperf.worbibico898/usernameinfo/
+2025-08-22 13:40:18,958 - private_request - INFO - None [400] GET https://i.instagram.com/api/v1/users/etkhura_ijoperf.worbibico898/usernameinfo/ (269.0.0.18.75, OnePlus 6T Dev)
+2025-08-22 13:40:19,961 - instagrapi - INFO - https://i.instagram.com/api/v1/challenge/
+2025-08-22 13:40:20,543 - private_request - INFO - None [200] GET https://i.instagram.com/api/v1/challenge/ (269.0.0.18.75, OnePlus 6T Dev)
+2025-08-28 10:45:58,185 - urllib3.connectionpool - WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'RemoteDisconnected('Remote end closed connection without response')': /api/v1/challenge/AShQdaKDviK0JLAcM0WgEInALrst7mgIviYVMkwt9Sw1VrJhImmYHf5iX_eVf7pYlSk2fgc/ASSkvgJUrCHxTnPVB_A9qmJKb_sox-WcoFLPWZCsbxcNk0rt4nRxCYB19X7dWR07IKBjdLCbU7jrDQ/
+2025-08-28 10:46:02,538 - urllib3.connectionpool - WARNING - Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'RemoteDisconnected('Remote end closed connection without response')': /api/v1/challenge/AShQdaKDviK0JLAcM0WgEInALrst7mgIviYVMkwt9Sw1VrJhImmYHf5iX_eVf7pYlSk2fgc/ASSkvgJUrCHxTnPVB_A9qmJKb_sox-WcoFLPWZCsbxcNk0rt4nRxCYB19X7dWR07IKBjdLCbU7jrDQ/
+2025-08-28 10:46:10,872 - urllib3.connectionpool - WARNING - Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'RemoteDisconnected('Remote end closed connection without response')': /api/v1/challenge/AShQdaKDviK0JLAcM0WgEInALrst7mgIviYVMkwt9Sw1VrJhImmYHf5iX_eVf7pYlSk2fgc/ASSkvgJUrCHxTnPVB_A9qmJKb_sox-WcoFLPWZCsbxcNk0rt4nRxCYB19X7dWR07IKBjdLCbU7jrDQ/
+2025-08-28 11:26:14,125 - urllib3.connectionpool - WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'RemoteDisconnected('Remote end closed connection without response')': /api/v1/challenge/ASjBOAjJHJ9DmIhIalJGiP54wVP77H4zzoHPsOS1hGhH5MMS78RQu_jI6HaKDgulNCkBOAw/ASRHF15QIyT9xZx32xjdWigA2clJqnX1nYzQf-OJkDTfBP8J6_RgMsfJSbvzgzhIJXFYIZoLZUOAbQ/

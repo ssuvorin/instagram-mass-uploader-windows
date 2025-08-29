@@ -1,0 +1,599 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Worker Details - {{ worker.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .metric-value {
+        font-size: 2rem;
+        font-weight: bold;
+    }
+    .metric-unit {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    .server-info-card {
+        background: linear-gradient(45deg, #007bff, #0056b3);
+        color: white;
+    }
+    .health-check-item {
+        border-left: 4px solid #28a745;
+        padding-left: 1rem;
+    }
+    .health-check-item.failed {
+        border-left-color: #dc3545;
+    }
+    .metrics-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+    }
+    .status-badge {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+    }
+    .resource-chart {
+        height: 100px;
+        background: linear-gradient(90deg, #e9ecef 0%, #007bff 100%);
+        border-radius: 4px;
+        position: relative;
+        overflow: hidden;
+    }
+    .resource-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #28a745, #20c997);
+        transition: width 0.3s ease;
+    }
+    .json-viewer {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        border-radius: 4px;
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1><i class="fas fa-server text-primary"></i> {{ worker.name|default:"Unknown Worker" }}</h1>
+            <span class="text-muted">{{ server_info.host }}:{{ server_info.port }}</span>
+        </div>
+        <div>
+            <a href="{% url 'monitoring_dashboard' %}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+            <button class="btn btn-outline-info" onclick="refreshWorkerData()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+            <button class="btn btn-outline-warning" onclick="showSSHAccess()">
+                <i class="fas fa-terminal"></i> SSH Access
+            </button>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger">
+        <i class="fas fa-exclamation-circle"></i> {{ error }}
+    </div>
+    {% else %}
+
+    <!-- Server Information -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card server-info-card border-0 shadow">
+                <div class="card-body">
+                    <h5><i class="fas fa-network-wired"></i> Server Information</h5>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <strong>Host:</strong><br>
+                            <code>{{ server_info.host|default:"unknown" }}</code>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Port:</strong><br>
+                            <code>{{ server_info.port|default:"unknown" }}</code>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Protocol:</strong><br>
+                            <code>{{ server_info.protocol|default:"http" }}</code>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Worker URL:</strong><br>
+                            <a href="{{ worker.base_url }}" target="_blank" class="text-white">
+                                <i class="fas fa-external-link-alt"></i> Open
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow">
+                <div class="card-body text-center">
+                    <h5>Overall Status</h5>
+                    {% if metrics.accessible %}
+                    <span class="badge status-badge bg-success">
+                        <i class="fas fa-check-circle"></i> HEALTHY
+                    </span>
+                    {% else %}
+                    <span class="badge status-badge bg-danger">
+                        <i class="fas fa-exclamation-triangle"></i> UNREACHABLE
+                    </span>
+                    {% endif %}
+                    <div class="mt-2">
+                        <small class="text-muted">Last updated: {{ last_updated }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if metrics.accessible %}
+    
+    <!-- Resource Usage -->
+    {% if metrics.status.resource_usage %}
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">CPU Usage</h6>
+                    <div class="metric-value text-warning">
+                        {{ metrics.status.resource_usage.cpu_percent|floatformat:1 }}
+                        <span class="metric-unit">%</span>
+                    </div>
+                    <div class="resource-chart mt-2">
+                        <div class="resource-bar bg-warning" style="width: {{ metrics.status.resource_usage.cpu_percent }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Memory Usage</h6>
+                    <div class="metric-value text-info">
+                        {{ metrics.status.resource_usage.memory_mb|floatformat:0 }}
+                        <span class="metric-unit">MB</span>
+                    </div>
+                    <div class="resource-chart mt-2">
+                        <div class="resource-bar bg-info" style="width: {{ metrics.status.resource_usage.memory_percent }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Active Tasks</h6>
+                    <div class="metric-value text-success">
+                        {{ metrics.status.active_tasks|default:0 }}
+                    </div>
+                    <small class="text-muted">of {{ worker.capacity }} capacity</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Threads</h6>
+                    <div class="metric-value text-secondary">
+                        {{ metrics.status.resource_usage.num_threads|default:0 }}
+                    </div>
+                    <small class="text-muted">active threads</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Health Checks -->
+    {% if metrics.health.checks %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow">
+                <div class="card-header">
+                    <h5><i class="fas fa-heartbeat text-danger"></i> Health Checks</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for check_name, check_data in metrics.health.checks.items %}
+                        <div class="col-md-6 mb-3">
+                            <div class="health-check-item {% if not check_data.ok %}failed{% endif %}">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <strong>{{ check_name|capfirst }}</strong>
+                                    {% if check_data.ok %}
+                                    <span class="badge bg-success"><i class="fas fa-check"></i> OK</span>
+                                    {% else %}
+                                    <span class="badge bg-danger"><i class="fas fa-times"></i> FAILED</span>
+                                    {% endif %}
+                                </div>
+                                {% if check_data.usage_mb %}
+                                <small class="text-muted">Usage: {{ check_data.usage_mb }}MB</small>
+                                {% endif %}
+                                {% if check_data.usage_percent %}
+                                <small class="text-muted">Usage: {{ check_data.usage_percent }}%</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Active Jobs -->
+    {% if metrics.jobs %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow">
+                <div class="card-header d-flex justify-content-between">
+                    <h5><i class="fas fa-tasks text-primary"></i> Active Jobs</h5>
+                    <span class="badge bg-primary">{{ metrics.jobs|length }} jobs</span>
+                </div>
+                <div class="card-body">
+                    {% if metrics.jobs %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Job ID</th>
+                                    <th>Task Type</th>
+                                    <th>Status</th>
+                                    <th>Progress</th>
+                                    <th>Started</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for job in metrics.jobs %}
+                                <tr>
+                                    <td><code>{{ job.job_id|truncatechars:12 }}</code></td>
+                                    <td>{{ job.task_type|default:"Unknown" }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if job.status == 'RUNNING' %}primary{% elif job.status == 'COMPLETED' %}success{% elif job.status == 'FAILED' %}danger{% else %}secondary{% endif %}">
+                                            {{ job.status|default:"UNKNOWN" }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if job.progress_percent %}
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar" style="width: {{ job.progress_percent }}%">
+                                                {{ job.progress_percent }}%
+                                            </div>
+                                        </div>
+                                        {% else %}
+                                        <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><small>{{ job.created_at|default:"Unknown" }}</small></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-clipboard-list fa-3x"></i>
+                        <p class="mt-2">No active jobs</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Task Locks -->
+    {% if metrics.locks %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow">
+                <div class="card-header d-flex justify-content-between">
+                    <h5><i class="fas fa-lock text-warning"></i> Active Locks</h5>
+                    <span class="badge bg-warning">{{ metrics.locks.count|default:0 }} locks</span>
+                </div>
+                <div class="card-body">
+                    {% if metrics.locks.active_locks %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Lock Type</th>
+                                    <th>Task ID</th>
+                                    <th>Acquired</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for lock in metrics.locks.active_locks %}
+                                <tr>
+                                    <td><code>{{ lock }}</code></td>
+                                    <td colspan="3"><small class="text-muted">Details not available</small></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-unlock fa-3x"></i>
+                        <p class="mt-2">No active locks</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Detailed Metrics -->
+    {% if metrics.metrics %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-bar text-success"></i> Performance Metrics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Counters -->
+                        {% if metrics.metrics.counters %}
+                        <div class="col-md-4">
+                            <h6>Counters</h6>
+                            <table class="table table-sm metrics-table">
+                                {% for key, value in metrics.metrics.counters.items %}
+                                <tr>
+                                    <td>{{ key }}</td>
+                                    <td><strong>{{ value }}</strong></td>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Gauges -->
+                        {% if metrics.metrics.gauges %}
+                        <div class="col-md-4">
+                            <h6>Gauges</h6>
+                            <table class="table table-sm metrics-table">
+                                {% for key, value in metrics.metrics.gauges.items %}
+                                <tr>
+                                    <td>{{ key }}</td>
+                                    <td><strong>{{ value }}</strong></td>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Timers -->
+                        {% if metrics.metrics.timers %}
+                        <div class="col-md-4">
+                            <h6>Timers (avg seconds)</h6>
+                            <table class="table table-sm metrics-table">
+                                {% for key, timer_data in metrics.metrics.timers.items %}
+                                <tr>
+                                    <td>{{ key }}</td>
+                                    <td><strong>{{ timer_data.avg_time|floatformat:3 }}s</strong></td>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Raw Data -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow">
+                <div class="card-header">
+                    <h5><i class="fas fa-code text-info"></i> Raw Data</h5>
+                </div>
+                <div class="card-body">
+                    <div class="json-viewer p-3">
+                        <pre><code id="raw-metrics">{{ metrics|pprint }}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Error State -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5><i class="fas fa-exclamation-triangle"></i> Worker Unreachable</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <strong>Error:</strong> {{ metrics.error|default:"Unknown error occurred" }}
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6>Troubleshooting Steps:</h6>
+                        <ol>
+                            <li>SSH to server: <code>ssh user@{{ server_info.host }}</code></li>
+                            <li>Check service status: <code>sudo systemctl status bulk_worker_service</code></li>
+                            <li>View logs: <code>sudo journalctl -u bulk_worker_service -n 50</code></li>
+                            <li>Restart service: <code>sudo systemctl restart bulk_worker_service</code></li>
+                        </ol>
+                    </div>
+                    
+                    <div class="text-center">
+                        <button class="btn btn-primary" onclick="showSSHAccess()">
+                            <i class="fas fa-terminal"></i> Show SSH Commands
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="refreshWorkerData()">
+                            <i class="fas fa-sync-alt"></i> Retry Connection
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% endif %}
+</div>
+
+<!-- SSH Access Modal -->
+<div class="modal fade" id="sshAccessModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">SSH Access - {{ worker.name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <strong>Server:</strong> {{ server_info.host }}<br>
+                    <strong>Worker:</strong> {{ worker.name }}<br>
+                    <button class="btn btn-sm btn-outline-primary mt-2" onclick="copyToClipboard('{{ server_info.host }}')">
+                        <i class="fas fa-copy"></i> Copy Server IP
+                    </button>
+                </div>
+                
+                <div class="accordion" id="sshCommandsAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#basicCommands">
+                                <i class="fas fa-terminal me-2"></i> Basic Commands
+                            </button>
+                        </h2>
+                        <div id="basicCommands" class="accordion-collapse collapse show">
+                            <div class="accordion-body">
+                                <pre><code># SSH Connection
+ssh user@{{ server_info.host }}
+
+# Check worker service
+sudo systemctl status bulk_worker_service
+
+# View logs
+sudo journalctl -u bulk_worker_service -n 50 --no-pager</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#serviceManagement">
+                                <i class="fas fa-cogs me-2"></i> Service Management
+                            </button>
+                        </h2>
+                        <div id="serviceManagement" class="accordion-collapse collapse">
+                            <div class="accordion-body">
+                                <pre><code># Restart worker service
+sudo systemctl restart bulk_worker_service
+
+# Stop service
+sudo systemctl stop bulk_worker_service
+
+# Start service
+sudo systemctl start bulk_worker_service
+
+# Enable auto-start
+sudo systemctl enable bulk_worker_service</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#diagnostics">
+                                <i class="fas fa-stethoscope me-2"></i> Diagnostics
+                            </button>
+                        </h2>
+                        <div id="diagnostics" class="accordion-collapse collapse">
+                            <div class="accordion-body">
+                                <pre><code># System resources
+htop
+free -h
+df -h
+
+# Network test
+curl -I http://localhost:{{ server_info.port }}/api/v1/health
+
+# Process check
+ps aux | grep python
+ps aux | grep uvicorn</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function refreshWorkerData() {
+    const button = event.target;
+    const icon = button.querySelector('i');
+    
+    icon.classList.add('fa-spin');
+    button.disabled = true;
+    
+    // Reload the page to get fresh data
+    setTimeout(() => {
+        window.location.reload();
+    }, 500);
+}
+
+function showSSHAccess() {
+    new bootstrap.Modal(document.getElementById('sshAccessModal')).show();
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('Copied to clipboard: ' + text);
+    });
+}
+
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'position-fixed top-0 end-0 m-3 alert alert-success alert-dismissible';
+    toast.style.zIndex = '9999';
+    toast.innerHTML = `${message}<button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>`;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.remove();
+        }
+    }, 3000);
+}
+
+// Auto-refresh every 30 seconds
+setInterval(() => {
+    // Only refresh if worker is accessible
+    {% if metrics.accessible %}
+    refreshWorkerData();
+    {% endif %}
+}, 30000);
+
+// Format JSON in raw data section
+document.addEventListener('DOMContentLoaded', function() {
+    const rawMetrics = document.getElementById('raw-metrics');
+    if (rawMetrics) {
+        try {
+            const data = JSON.parse('{{ metrics|escapejs }}');
+            rawMetrics.textContent = JSON.stringify(data, null, 2);
+        } catch (e) {
+            // Keep original content if JSON parsing fails
+        }
+    }
+});
+</script>
+{% endblock %}

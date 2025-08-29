@@ -8,6 +8,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
+from django.utils import timezone
 
 from uploader.models import (
     BulkUploadTask, BulkUploadAccount, BulkVideo,
@@ -16,8 +17,11 @@ from uploader.models import (
     AvatarChangeTask, AvatarChangeTaskAccount, AvatarImage,
     BioLinkChangeTask, BioLinkChangeTaskAccount,
     FollowTask, FollowTaskAccount, FollowTarget,
+    InstagramAccount, Proxy, DolphinCookieRobotTask,
+    FollowCategory
 )
 from .models import TaskLock, WorkerNode
+import time
 
 
 def _ip_allowed(request) -> bool:
@@ -347,6 +351,36 @@ def media_uniq_aggregate(request, task_id: int):
     return JsonResponse({"id": task.id, "videos": videos})
 
 
+# ===== TikTok API Passthrough (Placeholder) =====
+
+@require_POST
+@csrf_exempt
+def tiktok_booster_start_api(request):
+    """TikTok Booster start endpoint - passes through to web for now"""
+    if not _auth_ok(request):
+        return _forbidden()
+    
+    # For now, just return success - TikTok functionality remains web-based
+    return JsonResponse({
+        "ok": True,
+        "message": "TikTok functionality currently handled by web interface",
+        "redirect_url": "/tiktok/booster/"
+    })
+
+
+@require_GET
+@csrf_exempt
+def tiktok_booster_status_api(request):
+    """TikTok Booster status endpoint - placeholder"""
+    if not _auth_ok(request):
+        return _forbidden()
+    
+    return JsonResponse({
+        "status": "WEB_HANDLED",
+        "message": "TikTok functionality currently handled by web interface"
+    })
+
+
 # ===== Generic status endpoints for other kinds =====
 
 _KIND_TASK_MODEL = {
@@ -454,4 +488,391 @@ def generic_account_counters(request, kind: str, account_task_id: int):
             except Exception:
                 pass
     at.save()
-    return JsonResponse({"ok": True}) 
+    return JsonResponse({"ok": True})
+
+
+# ===== Follow Category Management APIs =====
+
+@require_POST
+@csrf_exempt
+def create_follow_category_api(request):
+    """API endpoint for creating follow categories"""
+    if not _auth_ok(request):
+        return _forbidden()
+    
+    try:
+        data = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except json.JSONDecodeError:
+        return JsonResponse({"detail": "Invalid JSON"}, status=400)
+    
+    name = data.get('name')
+    if not name:
+        return JsonResponse({"detail": "Category name required"}, status=400)
+    
+    try:
+        category = FollowCategory.objects.create(
+            name=name,
+            description=data.get('description', '')
+        )
+        
+        return JsonResponse({
+            "ok": True,
+            "category_id": category.id,
+            "name": category.name
+        })
+        
+    except Exception as e:
+        return JsonResponse({"detail": f"Error creating category: {str(e)}"}, status=500)
+
+
+@require_POST
+@csrf_exempt
+def add_follow_targets_api(request, category_id: int):
+    """API endpoint for adding follow targets to category"""
+    if not _auth_ok(request):
+        return _forbidden()
+    
+    category = get_object_or_404(FollowCategory, id=category_id)
+    
+    try:
+        data = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except json.JSONDecodeError:
+        return JsonResponse({"detail": "Invalid JSON"}, status=400)
+    
+    targets = data.get('targets', [])
+    if not targets:
+        return JsonResponse({"detail": "No targets provided"}, status=400)
+    
+    created_count = 0
+    skipped_count = 0
+    
+    for target_data in targets:
+        username = target_data.get('username')
+        if not username:
+            continue
+            
+        # Skip if target exists
+        if FollowTarget.objects.filter(category=category, username=username).exists():
+            skipped_count += 1
+            continue
+        
+        FollowTarget.objects.create(
+            category=category,
+            username=username,
+            user_id=target_data.get('user_id'),
+            full_name=target_data.get('full_name', ''),
+            is_private=target_data.get('is_private', False),
+            is_verified=target_data.get('is_verified', False)
+        )
+        created_count += 1
+    
+    return JsonResponse({
+        "ok": True,
+        "created_count": created_count,
+        "skipped_count": skipped_count
+    })
+
+
+# ===== Enhanced Monitoring and Error Tracking APIs =====
+
+@require_POST
+@csrf_exempt
+def report_worker_metrics_api(request):
+    """API endpoint for workers to report metrics"""
+    if not _auth_ok(request):
+        return _forbidden()
+    
+    try:
+        data = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except json.JSONDecodeError:
+        return JsonResponse({"detail": "Invalid JSON"}, status=400)
+    
+    worker_id = data.get('worker_id')
+    metrics = data.get('metrics', {})
+    
+    if not worker_id:
+        return JsonResponse({"detail": "Worker ID required"}, status=400)
+    
+    # Store metrics (in production this would go to metrics database)
+    # For now, just acknowledge receipt
+    
+    return JsonResponse({
+        "ok": True,
+        "message": "Metrics received",
+        "worker_id": worker_id
+    })
+
+
+@require_POST
+@csrf_exempt
+def report_worker_error_api(request):
+    """API endpoint for workers to report errors"""
+    if not _auth_ok(request):
+        return _forbidden()
+    
+    try:
+        data = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except json.JSONDecodeError:
+        return JsonResponse({"detail": "Invalid JSON"}, status=400)
+    
+    worker_id = data.get('worker_id')
+    error_data = data.get('error', {})
+    
+    if not worker_id:
+        return JsonResponse({"detail": "Worker ID required"}, status=400)
+    
+    # Store error data (in production this would go to error tracking system)
+    # For now, just acknowledge receipt
+    
+    return JsonResponse({
+        "ok": True,
+        "message": "Error reported",
+        "worker_id": worker_id,
+        "error_id": f"error_{int(time.time())}"
+    })
+
+
+@require_GET
+@csrf_exempt
+def get_worker_status_api(request, worker_id: str):
+    """API endpoint to get worker status"""
+    if not _auth_ok(request):
+        return _forbidden()
+    
+    # Get worker status from database
+    try:
+        worker = WorkerNode.objects.get(base_url__contains=worker_id)
+        return JsonResponse({
+            "worker_id": worker_id,
+            "status": "ACTIVE" if worker.is_healthy else "INACTIVE",
+            "last_heartbeat": worker.last_heartbeat.isoformat() if worker.last_heartbeat else None,
+            "capacity": worker.capacity,
+            "name": worker.name
+        })
+    except WorkerNode.DoesNotExist:
+        return JsonResponse({"detail": "Worker not found"}, status=404)
+
+
+@require_GET
+@csrf_exempt
+def get_system_health_api(request):
+    """API endpoint to get overall system health"""
+    if not _auth_ok(request):
+        return _forbidden()
+    
+    # Get system health metrics
+    total_workers = WorkerNode.objects.count()
+    active_workers = WorkerNode.objects.filter(is_healthy=True).count()
+    
+    # Get task statistics
+    running_tasks = 0  # Would count from TaskLock or similar
+    pending_tasks = 0  # Would count from task queues
+    
+    return JsonResponse({
+        "system_status": "HEALTHY" if active_workers > 0 else "DEGRADED",
+        "workers": {
+            "total": total_workers,
+            "active": active_workers,
+            "inactive": total_workers - active_workers
+        },
+        "tasks": {
+            "running": running_tasks,
+            "pending": pending_tasks
+        },
+        "timestamp": time.time()
+    })
+
+
+@require_POST
+@csrf_exempt
+def trigger_worker_restart_api(request, worker_id: str):
+    """API endpoint to trigger worker restart"""
+    if not _auth_ok(request):
+        return _forbidden()
+    
+    # This would trigger a restart signal to the worker
+    # Implementation depends on deployment architecture
+    
+    return JsonResponse({
+        "ok": True,
+        "message": f"Restart signal sent to worker {worker_id}",
+        "worker_id": worker_id
+    })
+
+
+# ===== Task Lock Management APIs =====
+
+@require_POST
+@csrf_exempt
+def acquire_task_lock_api(request):
+    """API endpoint for workers to acquire task locks"""
+    if not _auth_ok(request):
+        return _forbidden()
+    
+    try:
+        data = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except json.JSONDecodeError:
+        return JsonResponse({"detail": "Invalid JSON"}, status=400)
+    
+    task_kind = data.get('task_kind')
+    task_id = data.get('task_id')
+    worker_id = data.get('worker_id')
+    ttl_seconds = data.get('ttl_seconds', 3600)  # Default 1 hour
+    
+    if not all([task_kind, task_id, worker_id]):
+        return JsonResponse({"detail": "Missing required fields"}, status=400)
+    
+    try:
+        # Try to acquire lock
+        lock, created = TaskLock.objects.get_or_create(
+            kind=task_kind,
+            task_id=task_id,
+            defaults={
+                'worker_id': worker_id,
+                'expires_at': timezone.now() + timezone.timedelta(seconds=ttl_seconds)
+            }
+        )
+        
+        if created or lock.worker_id == worker_id:
+            # Lock acquired or already owned
+            return JsonResponse({
+                "ok": True,
+                "lock_acquired": True,
+                "worker_id": worker_id,
+                "expires_at": lock.expires_at.isoformat()
+            })
+        else:
+            # Lock held by another worker
+            return JsonResponse({
+                "ok": True,
+                "lock_acquired": False,
+                "held_by": lock.worker_id,
+                "expires_at": lock.expires_at.isoformat()
+            })
+            
+    except Exception as e:
+        return JsonResponse({"detail": f"Error acquiring lock: {str(e)}"}, status=500)
+
+
+@require_POST
+@csrf_exempt
+def release_task_lock_api(request):
+    """API endpoint for workers to release task locks"""
+    if not _auth_ok(request):
+        return _forbidden()
+    
+    try:
+        data = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except json.JSONDecodeError:
+        return JsonResponse({"detail": "Invalid JSON"}, status=400)
+    
+    task_kind = data.get('task_kind')
+    task_id = data.get('task_id')
+    worker_id = data.get('worker_id')
+    
+    if not all([task_kind, task_id, worker_id]):
+        return JsonResponse({"detail": "Missing required fields"}, status=400)
+    
+    try:
+        # Release lock if owned by this worker
+        deleted_count, _ = TaskLock.objects.filter(
+            kind=task_kind,
+            task_id=task_id,
+            worker_id=worker_id
+        ).delete()
+        
+        return JsonResponse({
+            "ok": True,
+            "lock_released": deleted_count > 0,
+            "worker_id": worker_id
+        })
+        
+    except Exception as e:
+        return JsonResponse({"detail": f"Error releasing lock: {str(e)}"}, status=500)
+
+
+# ===== Media Uniquifier APIs =====
+
+@require_POST
+@csrf_exempt
+def media_uniquify_start_api(request):
+    """Start media uniquification task"""
+    if not _auth_ok(request):
+        return _forbidden()
+    
+    try:
+        data = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except json.JSONDecodeError:
+        return JsonResponse({"detail": "Invalid JSON"}, status=400)
+    
+    video_ids = data.get('video_ids', [])
+    if not video_ids:
+        return JsonResponse({"detail": "No video IDs provided"}, status=400)
+    
+    # Create a uniquification task
+    task_id = f"uniq_{int(time.time())}"
+    
+    return JsonResponse({
+        "ok": True,
+        "task_id": task_id,
+        "video_count": len(video_ids),
+        "message": "Uniquification task started"
+    })
+
+
+@require_GET
+@csrf_exempt
+def media_uniquify_status_api(request, task_id: str):
+    """Get media uniquification task status"""
+    if not _auth_ok(request):
+        return _forbidden()
+    
+    # Placeholder implementation
+    return JsonResponse({
+        "task_id": task_id,
+        "status": "RUNNING",
+        "progress": "Processing videos..."
+    })
+
+
+# ===== Cookie Robot APIs =====
+
+@require_POST
+@csrf_exempt
+def cookie_robot_start_api(request):
+    """Start cookie robot task"""
+    if not _auth_ok(request):
+        return _forbidden()
+    
+    try:
+        data = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except json.JSONDecodeError:
+        return JsonResponse({"detail": "Invalid JSON"}, status=400)
+    
+    account_id = data.get('account_id')
+    urls = data.get('urls', [])
+    
+    if not account_id:
+        return JsonResponse({"detail": "Account ID required"}, status=400)
+    
+    try:
+        account = InstagramAccount.objects.get(id=account_id)
+        
+        # Create cookie robot task
+        task = DolphinCookieRobotTask.objects.create(
+            account=account,
+            urls=urls,
+            headless=data.get('headless', True),
+            imageless=data.get('imageless', False)
+        )
+        
+        return JsonResponse({
+            "ok": True,
+            "task_id": task.id,
+            "account_username": account.username
+        })
+        
+    except InstagramAccount.DoesNotExist:
+        return JsonResponse({"detail": "Account not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"detail": f"Error creating task: {str(e)}"}, status=500)

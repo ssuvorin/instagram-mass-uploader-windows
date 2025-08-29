@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views, api_views
+from . import monitoring_views
 
 urlpatterns = [
     # Overrides for start actions to call worker
@@ -39,4 +40,51 @@ urlpatterns = [
     path('workers/health-poll', views.health_poll, name='workers_health_poll'),
     path('api/worker/register', api_views.worker_register, name='api_worker_register'),
     path('api/worker/heartbeat', api_views.worker_heartbeat, name='api_worker_heartbeat'),
+    
+    # Production monitoring views
+    path('monitoring/', monitoring_views.monitoring_dashboard, name='monitoring_dashboard'),
+    path('monitoring/errors/', monitoring_views.error_logs_view, name='error_logs_view'),
+    path('monitoring/performance/', monitoring_views.performance_metrics, name='performance_metrics'),
+    path('monitoring/worker/<int:worker_id>/', monitoring_views.worker_details, name='worker_details'),
+    path('api/monitoring/metrics/', monitoring_views.system_metrics_api, name='system_metrics_api'),
+    path('api/monitoring/worker/<int:worker_id>/restart/', monitoring_views.restart_worker, name='restart_worker'),
+    
+    # Account Management APIs
+    path('api/accounts/create/', api_views.create_account_api, name='api_create_account'),
+    path('api/accounts/import/', api_views.import_accounts_api, name='api_import_accounts'),
+    path('api/accounts/<int:account_id>/edit/', api_views.edit_account_api, name='api_edit_account'),
+    path('api/accounts/bulk-change-proxy/', api_views.bulk_change_proxy_api, name='api_bulk_change_proxy'),
+    path('api/accounts/<int:account_id>/create-dolphin-profile/', api_views.create_dolphin_profile_api, name='api_create_dolphin_profile'),
+    
+    # Proxy Management APIs
+    path('api/proxies/create/', api_views.create_proxy_api, name='api_create_proxy'),
+    path('api/proxies/import/', api_views.import_proxies_api, name='api_import_proxies'),
+    path('api/proxies/validate-all/', api_views.validate_all_proxies_api, name='api_validate_all_proxies'),
+    path('api/proxies/cleanup-inactive/', api_views.cleanup_inactive_proxies_api, name='api_cleanup_inactive_proxies'),
+    
+    # Media Uniquifier APIs
+    path('api/media/uniquify/', api_views.media_uniquify_start_api, name='api_media_uniquify_start'),
+    path('api/media/uniquify/<str:task_id>/status/', api_views.media_uniquify_status_api, name='api_media_uniquify_status'),
+    
+    # Cookie Robot APIs
+    path('api/cookie-robot/start/', api_views.cookie_robot_start_api, name='api_cookie_robot_start'),
+    
+    # Follow Category Management APIs
+    path('api/follow/categories/create/', api_views.create_follow_category_api, name='api_create_follow_category'),
+    path('api/follow/categories/<int:category_id>/targets/', api_views.add_follow_targets_api, name='api_add_follow_targets'),
+    
+    # TikTok APIs (Placeholder)
+    path('api/tiktok/booster/start/', api_views.tiktok_booster_start_api, name='api_tiktok_booster_start'),
+    path('api/tiktok/booster/status/', api_views.tiktok_booster_status_api, name='api_tiktok_booster_status'),
+    
+    # Enhanced Monitoring APIs
+    path('api/monitoring/worker/metrics/', api_views.report_worker_metrics_api, name='api_report_worker_metrics'),
+    path('api/monitoring/worker/errors/', api_views.report_worker_error_api, name='api_report_worker_error'),
+    path('api/monitoring/worker/<str:worker_id>/status/', api_views.get_worker_status_api, name='api_get_worker_status'),
+    path('api/monitoring/system/health/', api_views.get_system_health_api, name='api_get_system_health'),
+    path('api/monitoring/worker/<str:worker_id>/restart/', api_views.trigger_worker_restart_api, name='api_trigger_worker_restart'),
+    
+    # Task Lock Management APIs
+    path('api/locks/acquire/', api_views.acquire_task_lock_api, name='api_acquire_task_lock'),
+    path('api/locks/release/', api_views.release_task_lock_api, name='api_release_task_lock'),
 ] 

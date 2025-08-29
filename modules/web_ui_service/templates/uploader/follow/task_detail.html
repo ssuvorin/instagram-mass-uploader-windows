@@ -1,0 +1,42 @@
+{% extends 'uploader/base.html' %}
+{% block content %}
+<h2>Task #{{ task.id }} — {{ task.name }}</h2>
+<p>Status: <strong>{{ task.status }}</strong></p>
+<p>Category: <strong>{{ task.category.name }}</strong></p>
+<div class="mb-3">
+  {% if task.status != 'RUNNING' %}
+    <a href="{% url 'follow_task_start' task.id %}" class="btn btn-success">Start</a>
+  {% endif %}
+  <a href="{% url 'follow_task_list' %}" class="btn btn-secondary">Back</a>
+</div>
+
+<h4>Accounts</h4>
+<table class="table table-sm">
+  <thead>
+  <tr><th>#</th><th>Account</th><th>Status</th><th>Proxy</th></tr>
+  </thead>
+  <tbody>
+  {% for a in accounts %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td>{{ a.account.username }}</td>
+      <td>{{ a.status }}</td>
+      <td>{% if a.proxy %}{{ a.proxy }}{% else %}—{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<h4>Logs</h4>
+<pre id="task-log" style="max-height: 400px; overflow:auto">{{ task.log }}</pre>
+<script>
+const logEl = document.getElementById('task-log');
+setInterval(async () => {
+  const resp = await fetch('{% url 'follow_task_logs' task.id %}');
+  if (resp.ok) {
+    const data = await resp.json();
+    logEl.textContent = data.log || '';
+  }
+}, 3000);
+</script>
+{% endblock %}

@@ -1,0 +1,142 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}Change Proxy - {{ account.username }} - Instagram Uploader{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="{% url 'account_detail' account_id=account.id %}" class="text-decoration-none">
+            <i class="bi bi-arrow-left"></i> Back to Account
+        </a>
+        <h2 class="mb-0 mt-2">Change Proxy for {{ account.username }}</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-shield-lock"></i> Select New Proxy</h5>
+            </div>
+            <div class="card-body">
+                {% if account.proxy %}
+                <div class="alert alert-info mb-4">
+                    <div class="d-flex">
+                        <div class="me-3">
+                            <i class="bi bi-info-circle-fill fs-3"></i>
+                        </div>
+                        <div>
+                            <h6 class="alert-heading">Current Proxy</h6>
+                            <p class="mb-0">
+                                <strong>{{ account.proxy }}</strong><br>
+                                {% if account.proxy.country %}
+                                <span class="text-muted">Location: {{ account.proxy.country }}{% if account.proxy.city %}, {{ account.proxy.city }}{% endif %}</span><br>
+                                {% endif %}
+                                <span class="text-muted">Status: 
+                                    <span class="badge bg-{% if account.proxy.is_active %}success{% else %}danger{% endif %}">
+                                        {% if account.proxy.is_active %}Active{% else %}Inactive{% endif %}
+                                    </span>
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if account.dolphin_profile_id %}
+                <div class="alert alert-warning mb-4">
+                    <div class="d-flex">
+                        <div class="me-3">
+                            <i class="bi bi-browser-chrome fs-3"></i>
+                        </div>
+                        <div>
+                            <h6 class="alert-heading">Dolphin Anty Profile</h6>
+                            <p class="mb-0">
+                                This account has a Dolphin Anty profile (ID: <code>{{ account.dolphin_profile_id }}</code>).<br>
+                                <strong>The proxy will be automatically updated in the Dolphin profile</strong> when you change it here.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if available_proxies %}
+                <form method="post" class="mt-4">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <label for="proxy_id" class="form-label">Select Proxy</label>
+                        <select name="proxy_id" id="proxy_id" class="form-select">
+                            <option value="">-- Remove proxy assignment --</option>
+                            {% for proxy in available_proxies %}
+                            <option value="{{ proxy.id }}" 
+                                {% if account.proxy and proxy.id == account.proxy.id %}selected{% endif %}
+                                {% if account.proxy and account.proxy.country and proxy.country == account.proxy.country %}data-same-region="true"{% endif %}>
+                                {{ proxy }} 
+                                {% if proxy.country %}
+                                    ({{ proxy.country }}{% if proxy.city %}, {{ proxy.city }}{% endif %})
+                                    {% if account.proxy and account.proxy.country and proxy.country == account.proxy.country %}
+                                        ✓ Same Region
+                                    {% elif account.proxy and account.proxy.country and proxy.country != account.proxy.country %}
+                                        ⚠ Different Region
+                                    {% endif %}
+                                {% endif %}
+                                {% if proxy.assigned_account and proxy.assigned_account != account %} - Currently assigned to {{ proxy.assigned_account.username }}{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">
+                            Choose a new proxy to use with this account, or select "Remove proxy assignment" to unassign the current proxy.
+                            {% if account.proxy and account.proxy.country %}
+                            <br><strong>Note:</strong> Proxies from the same region ({{ account.proxy.country }}) are shown first and marked with ✓.
+                            Different region proxies are marked with ⚠ and may affect account behavior.
+                            {% endif %}
+                            {% if account.dolphin_profile_id %}
+                            <br><strong>Dolphin Profile:</strong> Proxy will be updated automatically in profile {{ account.dolphin_profile_id }}.
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-shield-check"></i> Update Proxy
+                        </button>
+                        <a href="{% url 'account_detail' account_id=account.id %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+                {% else %}
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    No available proxies found. <a href="{% url 'create_proxy' %}" class="alert-link">Add a new proxy</a> first.
+                </div>
+                <div class="d-grid mt-3">
+                    <a href="{% url 'account_detail' account_id=account.id %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to Account
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Highlight same region proxies */
+#proxy_id option[data-same-region="true"] {
+    background-color: #d1f2eb !important;
+    font-weight: bold;
+}
+
+/* Style different region proxies */
+#proxy_id option:not([data-same-region="true"]):not([value=""]) {
+    color: #856404;
+}
+
+/* Current proxy styling */
+#proxy_id option:checked {
+    background-color: #e7f3ff !important;
+}
+</style>
+{% endblock %} 

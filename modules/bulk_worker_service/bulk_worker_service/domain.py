@@ -184,4 +184,137 @@ class MediaUniqVideo(BaseModel):
 
 class MediaUniqAggregate(BaseModel):
     id: int
-    videos: List[MediaUniqVideo] 
+    videos: List[MediaUniqVideo]
+
+
+class CookieRobotAccountTask(BaseModel):
+    account_task_id: int
+    account: AccountDetails
+
+
+class CookieRobotUrls(BaseModel):
+    urls: List[str]
+    headless: bool = True
+    imageless: bool = False
+
+
+class CookieRobotAggregate(BaseModel):
+    id: int
+    accounts: List[CookieRobotAccountTask]
+    config: CookieRobotUrls
+
+
+# ===== Account Management Domain Models =====
+
+class AccountCreationRequest(BaseModel):
+    username: str
+    password: str
+    email_username: Optional[str] = None
+    email_password: Optional[str] = None
+    tfa_secret: Optional[str] = None
+    phone_number: Optional[str] = None
+    proxy_id: Optional[int] = None
+    notes: Optional[str] = None
+
+
+class AccountImportRequest(BaseModel):
+    accounts: List[AccountCreationRequest]
+
+
+class BulkProxyChangeRequest(BaseModel):
+    account_ids: List[int]
+    proxy_id: Optional[int] = None
+
+
+class DolphinProfileCreationRequest(BaseModel):
+    account_id: int
+    profile_config: Optional[dict] = None
+
+
+# ===== Proxy Management Domain Models =====
+
+class ProxyCreationRequest(BaseModel):
+    host: str
+    port: int
+    username: Optional[str] = None
+    password: Optional[str] = None
+    proxy_type: Literal["HTTP", "HTTPS", "SOCKS5"] = "HTTP"
+    country: Optional[str] = None
+    city: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class ProxyImportRequest(BaseModel):
+    proxies: List[ProxyCreationRequest]
+
+
+# ===== TikTok Domain Models (Placeholder) =====
+
+class TikTokBoosterRequest(BaseModel):
+    account_ids: List[int]
+    boost_config: Optional[dict] = None
+
+
+class TikTokBoosterAggregate(BaseModel):
+    id: int
+    accounts: List[dict]  # Placeholder for TikTok accounts
+    config: dict  # Placeholder for TikTok configuration
+
+
+# ===== Worker Management Domain Models =====
+
+class WorkerRegistrationRequest(BaseModel):
+    worker_id: str
+    base_url: str
+    name: Optional[str] = None
+    capacity: int = 1
+    capabilities: Optional[List[str]] = None
+
+
+class WorkerHeartbeatRequest(BaseModel):
+    worker_id: str
+    base_url: str
+    status: Literal["ACTIVE", "BUSY", "MAINTENANCE"] = "ACTIVE"
+    current_jobs: int = 0
+    metrics: Optional[dict] = None
+
+
+# ===== Task Processing Domain Models =====
+
+class TaskExecutionMetrics(BaseModel):
+    task_id: int
+    worker_id: str
+    start_time: float
+    end_time: Optional[float] = None
+    success_count: int = 0
+    failure_count: int = 0
+    processing_time: Optional[float] = None
+    error_messages: Optional[List[str]] = None
+
+
+class WorkerCapabilities(BaseModel):
+    supports_bulk_upload: bool = True
+    supports_media_uniquification: bool = True
+    supports_proxy_diagnostics: bool = True
+    supports_cookie_robot: bool = True
+    supports_account_management: bool = True
+    supports_tiktok: bool = False  # TikTok still handled by web
+    max_concurrent_tasks: int = 2
+
+
+# ===== Error Handling Domain Models =====
+
+class ErrorDetails(BaseModel):
+    error_type: str
+    error_message: str
+    stack_trace: Optional[str] = None
+    context: Optional[dict] = None
+    timestamp: float
+    worker_id: str
+
+
+class RetryableError(BaseModel):
+    original_error: ErrorDetails
+    retry_count: int
+    max_retries: int
+    next_retry_at: Optional[float] = None 

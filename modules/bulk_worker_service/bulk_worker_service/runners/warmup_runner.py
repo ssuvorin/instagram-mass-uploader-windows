@@ -26,12 +26,13 @@ async def run_warmup_job(ui: UiClient, task_id: int, concurrency: int = 2) -> Tu
         async with sem:
             try:
                 await ui.update_account_status_generic('warmup', at.account_task_id, status="RUNNING", log_append=f"warmup: start {at.account.username}\n")
+                log_func = lambda m: asyncio.create_task(ui.update_account_status_generic('warmup', at.account_task_id, log_append=m + "\n"))
                 # Build provider
                 providers = []
                 if at.account.tfa_secret:
                     providers.append(TOTPProvider(at.account.tfa_secret))
                 if at.account.email_username and at.account.email_password:
-                    providers.append(AutoIMAPEmailProvider(at.account.email_username, at.account.email_password))
+                    providers.append(AutoIMAPEmailProvider(at.account.email_username, at.account.email_password, on_log=log_func))
                 provider = CompositeProvider(providers) if providers else None
                 auth = IGAuthService(provider)
                 service = WarmupService(auth_service=auth)
@@ -57,7 +58,7 @@ async def run_warmup_job(ui: UiClient, task_id: int, concurrency: int = 2) -> Tu
                         "follow_max_count": agg.actions.follow_max_count,
                     },
                     follow_usernames=None,
-                    on_log=lambda m: asyncio.create_task(ui.update_account_status_generic('warmup', at.account_task_id, log_append=m + "\n")),
+                    on_log=log_func,
                 )
                 if ok:
                     success += 1

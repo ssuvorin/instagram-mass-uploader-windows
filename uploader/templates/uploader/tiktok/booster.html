@@ -384,7 +384,7 @@
                         <label for="api-server-select" class="form-label text-white mb-0 small">API Server:</label>
                         <select class="form-select form-select-sm" id="api-server-select" style="min-width: 200px;">
                             {% for server in available_servers %}
-                            <option value="{{ server.url }}" {% if server.url == selected_server.url %}selected{% endif %}>
+                            <option value="{{ server.url }}" data-desc="{{ server.description }}" {% if server.url == selected_server.url %}selected{% endif %}>
                                 {{ server.name }}
                             </option>
                             {% endfor %}
@@ -434,218 +434,44 @@
         </div>
     </div>
 
-    <!-- Upload Module -->
+    <!-- Booster Wizard -->
     <div class="tiktok-card">
         <div class="card-header">
-            <h5><i class="bi bi-cloud-upload"></i>Upload Module</h5>
-            <button class="collapse-btn" type="button" data-bs-toggle="collapse" data-bs-target="#upload-collapse">
-                <i class="bi bi-chevron-down"></i>
-            </button>
+            <h5><i class="bi bi-lightning"></i>TikTok Booster Wizard</h5>
         </div>
-        <div class="collapse show" id="upload-collapse">
-            <div class="card-body">
-                <!-- Prepare Accounts -->
-                <div class="form-section">
-                    <form id="prepare-accounts-form">
-                        <div class="mb-3">
-                            <label for="count" class="form-label">Number of Accounts</label>
-                            <div class="row g-3 align-items-end">
-                                <div class="col-sm-6 col-md-4">
-                                    <input type="number" class="form-control" id="count" name="count" value="20" min="1" max="100" required>
-                                </div>
-                                <div class="col-auto">
-                                    <button type="submit" class="btn btn-tiktok">
-                                        <i class="bi bi-people me-2"></i>Prepare Accounts
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                    <div id="prepare-accounts-response" class="response-container d-none"></div>
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="p-3 border rounded-3 h-100">
+                        <h6 class="mb-1">Step 1</h6>
+                        <h4 class="mt-0">Upload Accounts</h4>
+                        <p class="text-muted">Загрузите файл аккаунтов в формате username:password:email_username:email_password.</p>
+                        <a href="{% url 'tiktok_booster_upload_accounts' %}" class="btn btn-tiktok"><i class="bi bi-upload me-2"></i>Go to Step 1</a>
+                    </div>
                 </div>
-
-                <!-- Upload Videos -->
-                <div class="form-section">
-                    <form id="upload-videos-form">
-                        <div class="mb-3">
-                            <label class="form-label">Upload Videos</label>
-                            <input type="file" class="form-control form-control-lg" id="videos" name="files" multiple required accept="video/*">
-                            <div class="form-text text-muted">Select multiple video files to upload</div>
-                        </div>
-                        <div class="row g-3 align-items-end mt-3">
-                            <div class="col-auto">
-                                <button type="submit" class="btn btn-tiktok">
-                                    <i class="bi bi-cloud-upload me-2"></i>Upload Videos
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                    <div id="upload-videos-response" class="response-container d-none"></div>
+                <div class="col-md-6">
+                    <div class="p-3 border rounded-3 h-100">
+                        <h6 class="mb-1">Step 2</h6>
+                        <h4 class="mt-0">Upload Proxies</h4>
+                        <p class="text-muted">Загрузите файл прокси в формате host:port@username:password.</p>
+                        <a href="{% url 'tiktok_booster_upload_proxies' %}" class="btn btn-tiktok"><i class="bi bi-upload me-2"></i>Go to Step 2</a>
+                    </div>
                 </div>
-
-                <!-- Upload Titles -->
-                <div class="form-section">
-                    <form id="upload-titles-form">
-                        <div class="mb-3">
-                            <label class="form-label">Upload Titles File</label>
-                            <input type="file" class="form-control form-control-lg" id="titles" name="file" required accept=".txt">
-                            <div class="form-text text-muted">Upload a text file with titles (one per line)</div>
-                        </div>
-                        <div class="mb-3 bg-light p-3 rounded border">
-                            <h6 class="fw-bold"><i class="bi bi-card-text"></i> Format:</h6>
-                            <pre class="bg-white p-3 rounded border mb-0" style="font-size: 0.9rem;">This is title for video 1 #trending #viral
-This is title for video 2 with some hashtags #instagram
-Another caption for video 3
-And so on...</pre>
-                        </div>
-                        <div class="row g-3 align-items-end mt-3">
-                            <div class="col-auto">
-                                <button type="submit" class="btn btn-tiktok">
-                                    <i class="bi bi-cloud-upload me-2"></i>Upload Titles
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                    <div id="upload-titles-response" class="response-container d-none"></div>
+                <div class="col-md-6">
+                    <div class="p-3 border rounded-3 h-100">
+                        <h6 class="mb-1">Step 3</h6>
+                        <h4 class="mt-0">Prepare Booster Accounts</h4>
+                        <p class="text-muted">Подготовьте аккаунты к бусту на выбранном API сервере.</p>
+                        <a href="{% url 'tiktok_booster_prepare' %}" class="btn btn-tiktok"><i class="bi bi-people me-2"></i>Go to Step 3</a>
+                    </div>
                 </div>
-
-                <!-- Prepare Config -->
-                <div class="form-section">
-                    <form id="prepare-config-form">
-                        <div class="mb-3">
-                            <label class="form-label">Upload Configuration</label>
-                            <div class="row g-3">
-                                <div class="col-sm-6 col-md-4">
-                                    <label for="music_name" class="form-label">Music Name</label>
-                                    <input type="text" class="form-control" id="music_name" name="music_name" placeholder="e.g., Trending Song">
-                                </div>
-                                <div class="col-sm-6 col-md-4">
-                                    <label for="location" class="form-label">Location</label>
-                                    <input type="text" class="form-control" id="location" name="location" placeholder="e.g., Moscow, Russia">
-                                </div>
-                                <div class="col-12 col-md-8">
-                                    <label for="mentions" class="form-label">Mentions (comma-separated)</label>
-                                    <input type="text" class="form-control" id="mentions" name="mentions" placeholder="user1,user2,user3">
-                                </div>
-                                <div class="col-sm-6 col-md-4">
-                                    <label for="upload_cycles" class="form-label">Upload Cycles</label>
-                                    <input type="number" class="form-control" id="upload_cycles" name="upload_cycles" value="5" min="1" max="50" required>
-                                    <div class="form-text">Number of upload cycles per account</div>
-                                </div>
-                                <div class="col-12">
-                                    <button type="submit" class="btn btn-tiktok">
-                                        <i class="bi bi-gear me-2"></i>Prepare Config
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                    <div id="prepare-config-response" class="response-container d-none"></div>
-                </div>
-
-                <!-- Start Upload -->
-                <div class="form-section">
-                    <form id="start-upload-form">
-                        <div class="mb-3">
-                            <button type="submit" class="btn btn-tiktok" id="start-upload-btn">
-                                <i class="bi bi-play-fill me-2"></i>Start Upload
-                            </button>
-                        </div>
-                        <div class="progress-container d-none" id="upload-progress-container">
-                            <div class="progress">
-                                <div class="progress-bar" role="progressbar" style="width: 0%" id="upload-progress-bar"></div>
-                            </div>
-                            <small class="text-muted" id="upload-progress-text">0% complete</small>
-                        </div>
-                    </form>
-                    <div id="start-upload-response" class="response-container d-none"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Booster Module -->
-    <div class="tiktok-card">
-        <div class="card-header">
-            <h5><i class="bi bi-lightning"></i>Booster Module (Account Warming)</h5>
-            <button class="collapse-btn" type="button" data-bs-toggle="collapse" data-bs-target="#booster-collapse">
-                <i class="bi bi-chevron-down"></i>
-            </button>
-        </div>
-        <div class="collapse show" id="booster-collapse">
-            <div class="card-body">
-                <!-- Upload Accounts -->
-                <div class="form-section">
-                    <form id="upload-accounts-form">
-                        <div class="mb-3">
-                            <label class="form-label">Upload Accounts File</label>
-                            <input type="file" class="form-control form-control-lg" id="accounts-file" name="file" required accept=".txt">
-                            <div class="form-text text-muted">Format: username:password:email_username:email_password (one per line)</div>
-                        </div>
-                        <div class="row g-3 align-items-end mt-3">
-                            <div class="col-auto">
-                                <button type="submit" class="btn btn-tiktok">
-                                    <i class="bi bi-file-earmark-arrow-up me-2"></i>Upload Accounts
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                    <div id="upload-accounts-response" class="response-container d-none"></div>
-                </div>
-
-                <!-- Upload Proxies -->
-                <div class="form-section">
-                    <form id="upload-proxies-form">
-                        <div class="mb-3">
-                            <label class="form-label">Upload Proxies File</label>
-                            <input type="file" class="form-control form-control-lg" id="proxies-file" name="file" required accept=".txt">
-                            <div class="form-text text-muted">Upload a text file with proxies (one per line)</div>
-                        </div>
-                        <div class="mb-3 bg-light p-3 rounded border">
-                            <h6 class="fw-bold"><i class="bi bi-card-text"></i> Format:</h6>
-                            <pre class="bg-white p-3 rounded border mb-0" style="font-size: 0.9rem;">host:port@username:password
-proxy.example.com:8080@user123:pass456
-another.proxy.net:3128@proxyuser:secret</pre>
-                        </div>
-                        <div class="row g-3 align-items-end mt-3">
-                            <div class="col-auto">
-                                <button type="submit" class="btn btn-tiktok">
-                                    <i class="bi bi-file-earmark-arrow-up me-2"></i>Upload Proxies
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                    <div id="upload-proxies-response" class="response-container d-none"></div>
-                </div>
-
-                <!-- Prepare Booster Accounts -->
-                <div class="form-section">
-                    <form id="prepare-booster-accounts-form">
-                        <div class="mb-3">
-                            <button type="submit" class="btn btn-tiktok">
-                                <i class="bi bi-people-fill me-2"></i>Prepare Booster Accounts
-                            </button>
-                        </div>
-                    </form>
-                    <div id="prepare-booster-accounts-response" class="response-container d-none"></div>
-                </div>
-
-                <!-- Start Booster -->
-                <div class="form-section">
-                    <form id="start-booster-form">
-                        <div class="mb-3">
-                            <button type="submit" class="btn btn-tiktok" id="start-booster-btn">
-                                <i class="bi bi-play-fill me-2"></i>Start Booster
-                            </button>
-                        </div>
-                        <div class="progress-container d-none" id="booster-progress-container">
-                            <div class="progress">
-                                <div class="progress-bar" role="progressbar" style="width: 0%" id="booster-progress-bar"></div>
-                            </div>
-                            <small class="text-muted" id="booster-progress-text">0% complete</small>
-                        </div>
-                    </form>
-                    <div id="start-booster-response" class="response-container d-none"></div>
+                <div class="col-md-6">
+                    <div class="p-3 border rounded-3 h-100">
+                        <h6 class="mb-1">Step 4</h6>
+                        <h4 class="mt-0">Start Booster</h4>
+                        <p class="text-muted">Запустите процесс буста и следите за прогрессом.</p>
+                        <a href="{% url 'tiktok_booster_start' %}" class="btn btn-tiktok"><i class="bi bi-play-fill me-2"></i>Go to Step 4</a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -686,16 +512,7 @@ another.proxy.net:3128@proxyuser:secret</pre>
     // Global API_BASE variable - will be updated dynamically
     let API_BASE = '{{ api_base|default:"http://94.141.161.231:8000" }}';
 
-    // Make available servers data accessible to JavaScript
-    window.availableServers = [
-        {% for server in available_servers %}
-        {
-            name: "{{ server.name }}",
-            url: "{{ server.url }}",
-            description: "{{ server.description }}"
-        }{% if not forloop.last %},{% endif %}
-        {% endfor %}
-    ];
+    // available servers are read from <select> options data attributes
 
     // Server selection handler
     document.getElementById('api-server-select').addEventListener('change', function(e) {
@@ -714,9 +531,8 @@ another.proxy.net:3128@proxyuser:secret</pre>
         const statusContainer = e.target.closest('.api-status');
         const descElement = statusContainer.querySelector('small:last-child');
         if (descElement) {
-            // Find server description from available servers
-            const selectedServer = window.availableServers ? window.availableServers.find(s => s.url === selectedUrl) : null;
-            descElement.textContent = selectedServer ? selectedServer.description : 'Custom server';
+            const desc = selectedOption ? (selectedOption.dataset.desc || 'Custom server') : 'Custom server';
+            descElement.textContent = desc;
         }
 
         // Re-check API status with new server
@@ -962,155 +778,7 @@ another.proxy.net:3128@proxyuser:secret</pre>
         }
     }
 
-    // Upload Module Event Listeners
-    document.getElementById('prepare-accounts-form').addEventListener('submit', (e) => handleFormSubmit(e, `${API_BASE}/upload/prepare_accounts`));
-    document.getElementById('upload-videos-form').addEventListener('submit', (e) => handleFormSubmit(e, `${API_BASE}/upload/upload_videos/`, 'POST', true));
-    document.getElementById('upload-titles-form').addEventListener('submit', (e) => handleFormSubmit(e, `${API_BASE}/upload/upload_titles`, 'POST', true));
-    
-    document.getElementById('prepare-config-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const form = e.target;
-        const formData = new FormData(form);
-        const responseElement = document.getElementById('prepare-config-response');
-
-        const mentions = formData.get('mentions')
-            ? formData.get('mentions').split(',').map(m => m.trim()).filter(m => m)
-            : [];
-
-        const body = JSON.stringify({
-            music_name: formData.get('music_name') || '',
-            location: formData.get('location') || '',
-            mentions: mentions,
-            upload_cycles: parseInt(formData.get('upload_cycles') || 5)
-        });
-
-        try {
-            addLog('Preparing configuration...', 'info');
-            
-            const res = await fetch(`${API_BASE}/upload/prepare_config`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: body
-            });
-
-            if (!res.ok) {
-                const error = await res.json();
-                throw new Error(error.detail || `HTTP error ${res.status}`);
-            }
-
-            const data = await res.json();
-            responseElement.innerHTML = `<pre class="text-success">${JSON.stringify(data, null, 2)}</pre>`;
-            responseElement.classList.remove('d-none');
-            addLog('Configuration prepared successfully', 'info');
-        } catch (error) {
-            responseElement.innerHTML = `<pre class="text-danger">${error.message}</pre>`;
-            responseElement.classList.remove('d-none');
-            addLog(`Failed to prepare configuration: ${error.message}`, 'error');
-        }
-    });
-
-    document.getElementById('start-upload-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (isUploading) return;
-        
-        isUploading = true;
-        const btn = document.getElementById('start-upload-btn');
-        const progressContainer = document.getElementById('upload-progress-container');
-        const progressBar = document.getElementById('upload-progress-bar');
-        const progressText = document.getElementById('upload-progress-text');
-        
-        btn.disabled = true;
-        btn.innerHTML = '<i class="bi bi-pause-fill me-2"></i>Uploading...';
-        progressContainer.classList.remove('d-none');
-        
-        try {
-            addLog('Starting video upload process...', 'info');
-            
-            const res = await fetch(`${API_BASE}/upload/start_upload`, {
-                method: 'POST'
-            });
-            
-            if (!res.ok) {
-                const error = await res.json();
-                throw new Error(error.detail || `HTTP error ${res.status}`);
-            }
-            
-            // Simulate progress updates (in real implementation, this would come from WebSocket or polling)
-            let progress = 0;
-            const progressInterval = setInterval(() => {
-                progress += Math.random() * 10;
-                if (progress >= 100) {
-                    progress = 100;
-                    clearInterval(progressInterval);
-                    addLog('Upload process completed', 'info');
-                }
-                progressBar.style.width = `${progress}%`;
-                progressText.textContent = `${Math.round(progress)}% complete`;
-            }, 1000);
-            
-        } catch (error) {
-            addLog(`Upload failed: ${error.message}`, 'error');
-            progressContainer.classList.add('d-none');
-        } finally {
-            isUploading = false;
-            btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-play-fill me-2"></i>Start Upload';
-        }
-    });
-
-    // Booster Module Event Listeners
-    document.getElementById('upload-accounts-form').addEventListener('submit', (e) => handleFormSubmit(e, `${API_BASE}/booster/upload_accounts`, 'POST', true));
-    document.getElementById('upload-proxies-form').addEventListener('submit', (e) => handleFormSubmit(e, `${API_BASE}/booster/upload_proxies`, 'POST', true));
-    document.getElementById('prepare-booster-accounts-form').addEventListener('submit', (e) => handleFormSubmit(e, `${API_BASE}/booster/prepare_accounts`));
-    
-    document.getElementById('start-booster-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (isBoosting) return;
-        
-        isBoosting = true;
-        const btn = document.getElementById('start-booster-btn');
-        const progressContainer = document.getElementById('booster-progress-container');
-        const progressBar = document.getElementById('booster-progress-bar');
-        const progressText = document.getElementById('booster-progress-text');
-        
-        btn.disabled = true;
-        btn.innerHTML = '<i class="bi bi-pause-fill me-2"></i>Boosting...';
-        progressContainer.classList.remove('d-none');
-        
-        try {
-            addLog('Starting account boosting process...', 'info');
-            
-            const res = await fetch(`${API_BASE}/booster/start_booster`, {
-                method: 'POST'
-            });
-            
-            if (!res.ok) {
-                const error = await res.json();
-                throw new Error(error.detail || `HTTP error ${res.status}`);
-            }
-            
-            // Simulate progress updates
-            let progress = 0;
-            const progressInterval = setInterval(() => {
-                progress += Math.random() * 15;
-                if (progress >= 100) {
-                    progress = 100;
-                    clearInterval(progressInterval);
-                    addLog('Boosting process completed', 'info');
-                }
-                progressBar.style.width = `${progress}%`;
-                progressText.textContent = `${Math.round(progress)}% complete`;
-            }, 1000);
-            
-        } catch (error) {
-            addLog(`Boosting failed: ${error.message}`, 'error');
-            progressContainer.classList.add('d-none');
-        } finally {
-            isBoosting = false;
-            btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-play-fill me-2"></i>Start Booster';
-        }
-    });
+    // Removed old inline forms. Wizard uses dedicated pages per step.
 </script>
 {% endblock %}
 

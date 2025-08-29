@@ -1,0 +1,114 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}Delete Account - {{ account.username }} - Instagram Uploader{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="{% url 'account_detail' account_id=account.id %}" class="text-decoration-none">
+            <i class="bi bi-arrow-left"></i> Back to Account
+        </a>
+        <h2 class="mb-0 mt-2">Delete Account: {{ account.username }}</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle-fill"></i> Delete Account Confirmation</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger mb-4">
+                    <div class="d-flex">
+                        <div class="me-3">
+                            <i class="bi bi-exclamation-octagon-fill fs-3"></i>
+                        </div>
+                        <div>
+                            <h6 class="alert-heading">Warning: This action cannot be undone!</h6>
+                            <p class="mb-0">
+                                You are about to permanently delete the Instagram account <strong>{{ account.username }}</strong>.
+                                This will also:
+                            </p>
+                            <ul class="mt-2">
+                                {% if account.dolphin_profile_id %}
+                                <li>Delete the associated Dolphin Anty profile (ID: {{ account.dolphin_profile_id }})</li>
+                                {% endif %}
+                                {% if account.proxy %}
+                                <li>Release the associated proxy ({{ account.proxy }})</li>
+                                {% endif %}
+                                <li>Remove all account data from the database</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <h6>Account Details</h6>
+                    <table class="table table-sm">
+                        <tr>
+                            <th style="width: 150px;">Username:</th>
+                            <td>{{ account.username }}</td>
+                        </tr>
+                        {% if account.email_username %}
+                        <tr>
+                            <th>Email:</th>
+                            <td>{{ account.email_username }}</td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <th>Status:</th>
+                            <td>
+                                {% if account.status == 'ACTIVE' %}
+                                <span class="badge badge-active">Active</span>
+                                {% elif account.status == 'BLOCKED' %}
+                                <span class="badge badge-blocked">Blocked</span>
+                                {% elif account.status == 'LIMITED' %}
+                                <span class="badge badge-limited">Limited</span>
+                                {% elif account.status == 'INACTIVE' %}
+                                <span class="badge badge-inactive">Inactive</span>
+                                {% elif account.status == 'PHONE_VERIFICATION_REQUIRED' %}
+                                <span class="badge badge-phone-verification-required">📱 Phone Verification Required</span>
+                                {% elif account.status == 'HUMAN_VERIFICATION_REQUIRED' %}
+                                <span class="badge badge-human-verification-required">🤖 Human Verification Required</span>
+                                {% elif account.status == 'SUSPENDED' %}
+                                <span class="badge badge-suspended">🚫 Suspended</span>
+                                {% else %}
+                                <span class="badge badge-inactive">Unknown</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Last Used:</th>
+                            <td>
+                                {% if account.last_used %}
+                                {{ account.last_used }}
+                                {% else %}
+                                <span class="text-muted">Never</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Created:</th>
+                            <td>{{ account.created_at }}</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <form method="post" class="mt-4">
+                    {% csrf_token %}
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash"></i> Permanently Delete Account
+                        </button>
+                        <a href="{% url 'account_detail' account_id=account.id %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

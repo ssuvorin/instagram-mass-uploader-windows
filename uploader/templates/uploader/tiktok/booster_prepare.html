@@ -1,0 +1,87 @@
+{% extends 'uploader/base.html' %}
+{% load static %}
+
+{% block title %}TikTok Booster · Step 3: Prepare Accounts{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="tiktok-header mb-4">
+        <div class="content">
+            <h2 class="mb-1">TikTok Booster</h2>
+            <p class="mb-0 text-white-50">Step 3 of 4 — Prepare Booster Accounts</p>
+        </div>
+    </div>
+
+    <div class="mb-3 d-flex justify-content-between">
+        <a href="{% url 'tiktok_booster_upload_proxies' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+        <a href="{% url 'tiktok_booster' %}" class="btn btn-outline-secondary"><i class="bi bi-grid"></i> Booster Dashboard</a>
+    </div>
+
+    <div class="tiktok-card">
+        <div class="card-header">
+            <h5><i class="bi bi-people-fill"></i>Prepare Booster Accounts</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <form id="prepare-booster-accounts-form">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-people"></i> Prepare</button>
+                    </form>
+                    <div id="prepare-booster-accounts-response" class="alert mt-3 d-none"></div>
+                </div>
+                <div class="col-md-4">
+                    <div class="api-status p-3 bg-light rounded border">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="me-2">API Server:</span>
+                            <a id="current-server-link" href="{{ api_base }}/docs" target="_blank">{{ api_base }}</a>
+                        </div>
+                        <select id="api-server-select" class="form-select">
+                            {% for s in available_servers %}
+                            <option value="{{ s.url }}" {% if s.url == api_base %}selected{% endif %}>{{ s.name }} — {{ s.url }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between">
+        <a href="{% url 'tiktok_booster_upload_proxies' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Step 2</a>
+        <a href="{% url 'tiktok_booster_start' %}" class="btn btn-success"><i class="bi bi-arrow-right"></i> Continue to Step 4</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let API_BASE = '{{ api_base|default:"http://94.141.161.231:8000" }}';
+
+document.getElementById('api-server-select').addEventListener('change', function(e){
+  API_BASE = e.target.value;
+  const link = document.getElementById('current-server-link');
+  link.href = `${API_BASE}/docs`;
+  link.textContent = API_BASE;
+});
+
+async function handlePrepare(e){
+  e.preventDefault();
+  const respBox = document.getElementById('prepare-booster-accounts-response');
+  respBox.className = 'alert mt-3 d-none';
+  try{
+    const res = await fetch(`${API_BASE}/booster/prepare_accounts`, { method:'POST' });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok){ throw new Error(data.detail || 'Prepare failed'); }
+    respBox.className = 'alert alert-success mt-3';
+    respBox.textContent = data.message || 'Prepared';
+  }catch(err){
+    respBox.className = 'alert alert-danger mt-3';
+    respBox.textContent = err.message;
+  }
+}
+
+document.getElementById('prepare-booster-accounts-form').addEventListener('submit', handlePrepare);
+</script>
+{% endblock %}
+
+

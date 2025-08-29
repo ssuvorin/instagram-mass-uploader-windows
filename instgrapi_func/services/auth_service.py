@@ -16,6 +16,13 @@ class IGAuthService:
         log.debug("Ensure logged in for %s", username)
         if on_log:
             on_log(f"auth: ensure session for {username}")
+        # Set challenge handler early so library can prompt our provider instead of input()
+        try:
+            def _prelogin_handler(_username, _choice):
+                return self.provider.get_challenge_code(username, method="email") or ""
+            cl.challenge_code_handler = _prelogin_handler
+        except Exception:
+            pass
         try:
             cl.user_id_from_username(username)
             log.debug("Already authenticated as %s", username)
@@ -62,17 +69,55 @@ class IGAuthService:
             if on_log:
                 on_log("auth: challenge required (email)")
             try:
-                code = self.provider.get_challenge_code(username, method="email") or ""
-                log.debug("Challenge code obtained: %s", "yes" if code else "no")
-                if not code:
-                    if on_log:
-                        on_log("auth: no email code available")
-                    return False
-                cl.challenge_resolve(code)
-                log.debug("Challenge resolved for %s", username)
+                # Provide code handler; let library resolver drive the flow
+                def _handler(_username, _choice):
+                    return self.provider.get_challenge_code(username, method="email") or ""
+                try:
+                    cl.challenge_code_handler = _handler
+                except Exception:
+                    pass
+
+                # Resolve strictly via library's native resolver using the current last_json
+                resolver = getattr(cl, 'challenge_resolve', None)
+                if callable(resolver):
+                    ok = resolver(getattr(cl, 'last_json', {}) or {})
+                    if ok:
+                        if on_log:
+                            on_log("auth: challenge ok (native)")
+                        try:
+                            cl.login(username, password, relogin=True)
+                            if on_log:
+                                on_log("auth: login ok (post-challenge)")
+                            return True
+                        except Exception as relog_err:
+                            log.debug("Post-challenge login failed for %s: %s", username, relog_err)
+                            if on_log:
+                                on_log(f"auth: post-challenge login failed: {relog_err}")
+                            return False
+
+                # If native resolver not available or failed early: try simple resolver using api_path
+                cur = getattr(cl, 'last_json', {}) or {}
+                api_path = (cur.get('challenge') or {}).get('api_path') or cur.get('challenge_url') or ''
+                if isinstance(api_path, str) and api_path.startswith('/challenge/'):
+                    simple = getattr(cl, 'challenge_resolve_simple', None)
+                    if callable(simple):
+                        simple(api_path)
+                        if on_log:
+                            on_log("auth: challenge ok (simple)")
+                        try:
+                            cl.login(username, password, relogin=True)
+                            if on_log:
+                                on_log("auth: login ok (post-challenge)")
+                            return True
+                        except Exception as relog2_err:
+                            log.debug("Post-challenge login failed for %s: %s", username, relog2_err)
+                            if on_log:
+                                on_log(f"auth: post-challenge login failed: {relog2_err}")
+                            return False
+
                 if on_log:
-                    on_log("auth: challenge ok")
-                return True
+                    on_log("auth: challenge not resolved")
+                return False
             except Exception as e:
                 log.debug("Challenge resolve failed for %s: %s", username, e)
                 if on_log:

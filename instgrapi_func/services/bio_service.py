@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Dict, Optional, Tuple, Callable
 import logging
 
-from instagrapi.exceptions import ChallengeRequired  # type: ignore
+from instagrapi.exceptions import ChallengeRequired, PleaseWaitFewMinutes, LoginRequired  # type: ignore
 
 from .client_factory import IGClientFactory
 from .proxy import build_proxy_url

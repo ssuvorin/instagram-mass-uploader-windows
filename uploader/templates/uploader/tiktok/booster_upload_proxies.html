@@ -1,0 +1,96 @@
+{% extends 'uploader/base.html' %}
+{% load static %}
+
+{% block title %}TikTok Booster · Step 2: Upload Proxies{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="tiktok-header mb-4">
+        <div class="content">
+            <h2 class="mb-1">TikTok Booster</h2>
+            <p class="mb-0 text-white-50">Step 2 of 4 — Upload Proxies</p>
+        </div>
+    </div>
+
+    <div class="mb-3 d-flex justify-content-between">
+        <a href="{% url 'tiktok_booster_upload_accounts' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+        <a href="{% url 'tiktok_booster' %}" class="btn btn-outline-secondary"><i class="bi bi-grid"></i> Booster Dashboard</a>
+    </div>
+
+    <div class="tiktok-card">
+        <div class="card-header">
+            <h5><i class="bi bi-hdd-network"></i>Upload Proxies File</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <form id="upload-proxies-form">
+                        <div class="mb-3">
+                            <label class="form-label">Proxies .txt</label>
+                            <input type="file" class="form-control" id="proxies-file" name="file" accept=".txt" required>
+                            <div class="form-text">Format: host:port@username:password (one per line)</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-upload"></i> Upload</button>
+                    </form>
+                    <div id="upload-proxies-response" class="alert mt-3 d-none"></div>
+                </div>
+                <div class="col-md-4">
+                    <div class="api-status p-3 bg-light rounded border">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="me-2">API Server:</span>
+                            <a id="current-server-link" href="{{ api_base }}/docs" target="_blank">{{ api_base }}</a>
+                        </div>
+                        <select id="api-server-select" class="form-select">
+                            {% for s in available_servers %}
+                            <option value="{{ s.url }}" {% if s.url == api_base %}selected{% endif %}>{{ s.name }} — {{ s.url }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between">
+        <a href="{% url 'tiktok_booster_upload_accounts' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Step 1</a>
+        <a href="{% url 'tiktok_booster_prepare' %}" class="btn btn-success"><i class="bi bi-arrow-right"></i> Continue to Step 3</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let API_BASE = '{{ api_base|default:"http://94.141.161.231:8000" }}';
+
+document.getElementById('api-server-select').addEventListener('change', function(e){
+  API_BASE = e.target.value;
+  const link = document.getElementById('current-server-link');
+  link.href = `${API_BASE}/docs`;
+  link.textContent = API_BASE;
+});
+
+async function handleUpload(e){
+  e.preventDefault();
+  const fileInput = document.getElementById('proxies-file');
+  const respBox = document.getElementById('upload-proxies-response');
+  respBox.className = 'alert mt-3 d-none';
+  if(!fileInput.files.length){ return; }
+  const fd = new FormData();
+  fd.append('file', fileInput.files[0]);
+  try{
+    const res = await fetch(`${API_BASE}/booster/upload_proxies`, { method:'POST', body: fd });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok){ throw new Error(data.detail || 'Upload failed'); }
+    respBox.className = 'alert alert-success mt-3';
+    respBox.textContent = data.message || 'Proxies uploaded';
+  }catch(err){
+    respBox.className = 'alert alert-danger mt-3';
+    respBox.textContent = err.message;
+  }
+}
+
+document.getElementById('upload-proxies-form').addEventListener('submit', handleUpload);
+</script>
+{% endblock %}
+
+
