@@ -267,10 +267,10 @@
         </div>
     </div>
 
-    <!-- Unified Upload Form (Videos + Titles + Config) -->
+    <!-- Step 1: Upload Videos -->
     <div class="tiktok-card">
         <div class="card-header">
-            <h5 class="mb-0"><i class="bi bi-upload me-2"></i>Single-Step Upload</h5>
+            <h5 class="mb-0"><i class="bi bi-upload me-2"></i>Step 1 — Upload Videos</h5>
         </div>
         <div class="card-body">
             <form id="video-upload-form" enctype="multipart/form-data">
@@ -282,36 +282,10 @@
                     <input type="file" class="form-control form-control-lg" id="video-files" name="files" multiple accept="video/*" required>
                     <div class="form-text">Select one or more video files. Supported formats: MP4, AVI, MOV, etc.</div>
                 </div>
-
-                <div class="mb-3">
-                    <label for="titles-file" class="form-label">Titles File (required, .txt one per line):</label>
-                    <input type="file" class="form-control" id="titles-file" name="titles" accept=".txt" required>
-                </div>
-
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Music Name (required)</label>
-                        <input type="text" class="form-control" name="music_name" required>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Location (required)</label>
-                        <input type="text" class="form-control" name="location" required>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Upload Cycles (required)</label>
-                        <input type="number" class="form-control" name="upload_cycles" value="5" min="1" max="50" required>
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label">Mentions (comma-separated)</label>
-                        <input type="text" class="form-control" name="mentions" placeholder="user1,user2,user3">
-                    </div>
-                </div>
-
-                <div class="mt-3">
-                    <button type="submit" class="btn btn-tiktok" id="upload-btn">
-                        <i class="bi bi-send-fill me-2"></i>Start Unified Upload
-                    </button>
-                </div>
+                <button type="submit" class="btn btn-tiktok me-2" id="upload-btn">
+                    <i class="bi bi-cloud-upload me-2"></i>Upload Videos
+                </button>
+                <a href="{% url 'tiktok_videos_titles' %}" class="btn btn-outline-secondary">Next: Upload Titles →</a>
             </form>
 
             <!-- Upload Progress -->
@@ -351,7 +325,7 @@ document.getElementById('api-server-select').addEventListener('change', function
     });
 });
 
-// Handle form submission (unified pipeline)
+// Handle form submission (step 1 - only videos)
 document.getElementById('video-upload-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     
@@ -370,7 +344,7 @@ document.getElementById('video-upload-form').addEventListener('submit', async fu
     resultsDiv.innerHTML = '';
     
     try {
-        const response = await fetch('{% url "api_tiktok_videos_pipeline" %}', {
+        const response = await fetch('{% url "api_tiktok_videos_upload" %}', {
             method: 'POST',
             body: formData
         });
@@ -382,7 +356,7 @@ document.getElementById('video-upload-form').addEventListener('submit', async fu
             progressText.textContent = 'Upload completed successfully!';
             progressBar.className = 'progress-bar bg-success';
             
-            resultsDiv.innerHTML = '<div class="alert alert-success"><h6><i class="bi bi-check-circle me-2"></i>Pipeline Completed</h6><p class="mb-0">All steps finished on server: ' + API_BASE + '</p></div>';
+            resultsDiv.innerHTML = '<div class="alert alert-success"><h6><i class="bi bi-check-circle me-2"></i>Videos Uploaded</h6><p class="mb-0">Proceed to the next step: Upload Titles</p></div>';
         } else {
             throw new Error(result.detail || `HTTP ${response.status}`);
         }

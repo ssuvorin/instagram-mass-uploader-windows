@@ -274,7 +274,16 @@
                 <div class="card-body">
                     <p class="text-muted mb-3">Upload multiple video files to your TikTok account management system.</p>
                     <a href="{% url 'tiktok_videos_upload' %}" class="btn btn-tiktok me-2">
-                        <i class="bi bi-cloud-upload me-2"></i>Open Unified Upload
+                        <i class="bi bi-cloud-upload me-2"></i>Upload Videos
+                    </a>
+                    <a href="{% url 'tiktok_videos_titles' %}" class="btn btn-tiktok me-2">
+                        <i class="bi bi-card-text me-2"></i>Upload Titles
+                    </a>
+                    <a href="{% url 'tiktok_videos_prepare' %}" class="btn btn-tiktok me-2">
+                        <i class="bi bi-gear me-2"></i>Prepare Config
+                    </a>
+                    <a href="{% url 'tiktok_videos_start' %}" class="btn btn-tiktok">
+                        <i class="bi bi-play-fill me-2"></i>Start Upload
                     </a>
                 </div>
             </div>
