@@ -2,6 +2,7 @@
 from .common import *
 from django.conf import settings
 from django.views.decorators.clickjacking import xframe_options_exempt
+
 from django.views.decorators.csrf import csrf_exempt
 import threading
 import re
@@ -1663,9 +1664,34 @@ def tiktok_booster_start(request):
 
 # ====== Server-side proxy for TikTok Booster API ======
 
-def _get_tiktok_api_base() -> str:
-    ctx = _tiktok_api_context()
-    return ctx.get('api_base')
+def _get_tiktok_api_base(request=None) -> str:
+    """Resolve TikTok API base with precedence: request.POST.server_url -> session -> env/default."""
+    try:
+        # 1) From current request (form submit)
+        if request is not None:
+            server_url = None
+            if getattr(request, 'method', '').upper() == 'POST':
+                server_url = (request.POST.get('server_url') or '').strip()
+            if server_url:
+                # Persist in session for subsequent requests
+                try:
+                    request.session['selected_tiktok_api_base'] = server_url
+                except Exception:
+                    pass
+                return server_url
+            # 2) From session
+            try:
+                session_url = request.session.get('selected_tiktok_api_base')
+                if session_url:
+                    return session_url
+            except Exception:
+                pass
+        # 3) Fallback to env/defaults
+        ctx = _tiktok_api_context()
+        return ctx.get('api_base')
+    except Exception:
+        ctx = _tiktok_api_context()
+        return ctx.get('api_base')
 
 
 def _json_response(data: dict, status: int = 200):
@@ -1680,7 +1706,7 @@ def tiktok_booster_proxy_upload_accounts(request):
     import requests
     if request.method != 'POST':
         return _json_response({'detail': 'Method not allowed'}, status=405)
-    api_base = _get_tiktok_api_base()
+    api_base = _get_tiktok_api_base(request)
     try:
         file = request.FILES.get('file')
         if not file:
@@ -1705,7 +1731,7 @@ def tiktok_booster_proxy_upload_proxies(request):
     import requests
     if request.method != 'POST':
         return _json_response({'detail': 'Method not allowed'}, status=405)
-    api_base = _get_tiktok_api_base()
+    api_base = _get_tiktok_api_base(request)
     try:
         file = request.FILES.get('file')
         if not file:
@@ -1730,7 +1756,7 @@ def tiktok_booster_proxy_prepare_accounts(request):
     import requests
     if request.method != 'POST':
         return _json_response({'detail': 'Method not allowed'}, status=405)
-    api_base = _get_tiktok_api_base()
+    api_base = _get_tiktok_api_base(request)
     try:
         resp = requests.post(f"{api_base}/booster/prepare_accounts", timeout=30)
         try:
@@ -1751,7 +1777,24 @@ def tiktok_booster_proxy_start(request):
     import requests
     if request.method != 'POST':
         return _json_response({'detail': 'Method not allowed'}, status=405)
-    api_base = _get_tiktok_api_base()
+    api_base = _get_tiktok_api_base(request)
+
+
+@csrf_exempt
+@login_required
+def tiktok_set_active_server(request):
+    """Set selected TikTok API server URL in the user's session."""
+    from django.http import JsonResponse
+    if request.method != 'POST':
+        return JsonResponse({'detail': 'Method not allowed'}, status=405)
+    server_url = (request.POST.get('server_url') or '').strip()
+    if not server_url:
+        return JsonResponse({'detail': 'server_url required'}, status=400)
+    try:
+        request.session['selected_tiktok_api_base'] = server_url
+    except Exception:
+        pass
+    return JsonResponse({'ok': True, 'server_url': server_url})
     try:
         resp = requests.post(f"{api_base}/booster/start_booster", timeout=60)
         try:

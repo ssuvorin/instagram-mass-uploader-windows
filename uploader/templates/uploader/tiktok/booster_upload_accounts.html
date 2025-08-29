@@ -29,6 +29,7 @@
                             <input type="file" class="form-control" id="accounts-file" name="file" accept=".txt" required>
                             <div class="form-text">Format: username:password:email_username:email_password (one per line)</div>
                         </div>
+                        <input type="hidden" name="server_url" id="server-url-input" value="{{ api_base }}">
                         <button type="submit" class="btn btn-primary"><i class="bi bi-upload"></i> Upload</button>
                     </form>
                     <div id="upload-accounts-response" class="alert mt-3 d-none"></div>
@@ -60,11 +61,13 @@
 {% block extra_js %}
 <script>
 // Basic UI update for server selection (no client-side fetch; uses Django proxy)
-document.getElementById('api-server-select').addEventListener('change', function(e){
+document.getElementById('api-server-select').addEventListener('change', async function(e){
   const base = e.target.value;
   const link = document.getElementById('current-server-link');
   link.href = `${base}/docs`;
   link.textContent = base;
+  document.getElementById('server-url-input').value = base;
+  try { await fetch('{% url "api_tiktok_set_active_server" %}', { method: 'POST', headers: {'X-Requested-With':'fetch'}, body: new URLSearchParams({server_url: base}) }); } catch (err) {}
 });
 </script>
 {% endblock %}

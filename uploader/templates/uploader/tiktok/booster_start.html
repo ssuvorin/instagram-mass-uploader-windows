@@ -25,6 +25,7 @@
             <div class="row">
                 <div class="col-md-8">
                     <form id="start-booster-form" action="{% url 'api_tiktok_booster_start' %}" method="post">
+                        <input type="hidden" name="server_url" id="server-url-input" value="{{ api_base }}">
                         <button type="submit" class="btn btn-success" id="start-booster-btn"><i class="bi bi-play"></i> Start</button>
                         <div class="progress-container d-none mt-3" id="booster-progress-container">
                             <div class="progress">
@@ -61,11 +62,13 @@
 
 {% block extra_js %}
 <script>
-document.getElementById('api-server-select').addEventListener('change', function(e){
+document.getElementById('api-server-select').addEventListener('change', async function(e){
   const base = e.target.value;
   const link = document.getElementById('current-server-link');
   link.href = `${base}/docs`;
   link.textContent = base;
+  document.getElementById('server-url-input').value = base;
+  try { await fetch('{% url "api_tiktok_set_active_server" %}', { method: 'POST', headers: {'X-Requested-With':'fetch'}, body: new URLSearchParams({server_url: base}) }); } catch (err) {}
 });
 </script>
 {% endblock %}
