@@ -1979,6 +1979,10 @@ def clear_captcha_notification(request, task_id):
 
 
 
+
+
+# ====== TikTok Video Management (Separate Module) ======
+
 @login_required
 def tiktok_videos(request):
     """TikTok Video Management - main page"""
@@ -2002,14 +2006,14 @@ def tiktok_videos_proxy_upload(request):
         return _json_response({'detail': 'Method not allowed'}, status=405)
     api_base = _get_tiktok_api_base(request)
     try:
-        files = request.FILES.getlist('video_files')
+        files = request.FILES.getlist('files')
         if not files:
             return _json_response({'detail': 'No video files provided'}, status=400)
         
         # Prepare files for upload
         upload_files = []
         for file in files:
-            upload_files.append(('video_files', (file.name, file.read())))
+            upload_files.append(('files', (file.name, file.read())))
         
         resp = requests.post(f"{api_base}/videos/upload", files=upload_files, timeout=60)
         try:
