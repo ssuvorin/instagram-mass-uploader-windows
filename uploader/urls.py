@@ -106,6 +106,7 @@ urlpatterns = [
     path('api/tiktok/videos/upload-titles/', misc.tiktok_videos_proxy_upload_titles, name='api_tiktok_videos_upload_titles'),
     path('api/tiktok/videos/prepare-config/', misc.tiktok_videos_proxy_prepare_config, name='api_tiktok_videos_prepare_config'),
     path('api/tiktok/videos/start-upload/', misc.tiktok_videos_proxy_start_upload, name='api_tiktok_videos_start_upload'),
+    path('api/tiktok/videos/pipeline/', misc.tiktok_videos_proxy_pipeline, name='api_tiktok_videos_pipeline'),
 
     # Hashtag Analyzer
     path('tools/hashtag/', hashtag.hashtag_analyzer, name='hashtag_analyzer'),

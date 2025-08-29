@@ -2080,3 +2080,90 @@ def tiktok_videos_proxy_start_upload(request):
         return _json_response(data, status=resp.status_code)
     except requests.exceptions.RequestException as e:
         return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_videos_proxy_pipeline(request):
+    """Single-call pipeline: upload videos, upload titles, prepare config, then start upload."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    api_base = _get_tiktok_api_base(request)
+    try:
+        # 1) Upload videos (multipart with many files under key 'files')
+        videos = request.FILES.getlist('files')
+        if not videos:
+            return _json_response({'detail': 'Video files are required'}, status=400)
+        video_files = [('files', (f.name, f.read())) for f in videos]
+        resp_v = requests.post(f"{api_base}/upload/upload_videos", files=video_files, timeout=180)
+        try:
+            data_v = resp_v.json()
+        except Exception:
+            data_v = {'detail': resp_v.text}
+        if not resp_v.ok:
+            return _json_response({'step': 'upload_videos', 'detail': data_v.get('detail') or data_v}, status=resp_v.status_code)
+
+        # 2) Upload titles (single file field name 'titles')
+        titles_file = request.FILES.get('titles')
+        if not titles_file:
+            return _json_response({'detail': 'Titles file is required'}, status=400)
+        files_t = {'file': (titles_file.name, titles_file.read())}
+        resp_t = requests.post(f"{api_base}/upload/upload_titles", files=files_t, timeout=60)
+        try:
+            data_t = resp_t.json()
+        except Exception:
+            data_t = {'detail': resp_t.text}
+        if not resp_t.ok:
+            return _json_response({'step': 'upload_titles', 'detail': data_t.get('detail') or data_t}, status=resp_t.status_code)
+
+        # 3) Prepare config (json from form fields)
+        music_name = (request.POST.get('music_name') or '').strip()
+        location = (request.POST.get('location') or '').strip()
+        mentions_raw = (request.POST.get('mentions') or '').strip()
+        upload_cycles = request.POST.get('upload_cycles') or '5'
+        try:
+            upload_cycles = int(upload_cycles)
+        except Exception:
+            upload_cycles = 5
+        mentions = [m.strip() for m in mentions_raw.split(',') if m.strip()]
+        # All fields required per request
+        if not music_name or not location or upload_cycles < 1:
+            return _json_response({'detail': 'music_name, location, upload_cycles are required'}, status=400)
+        resp_c = requests.post(
+            f"{api_base}/upload/prepare_config",
+            json={
+                'music_name': music_name,
+                'location': location,
+                'mentions': mentions,
+                'upload_cycles': upload_cycles,
+            },
+            timeout=60,
+        )
+        try:
+            data_c = resp_c.json()
+        except Exception:
+            data_c = {'detail': resp_c.text}
+        if not resp_c.ok:
+            return _json_response({'step': 'prepare_config', 'detail': data_c.get('detail') or data_c}, status=resp_c.status_code)
+
+        # 4) Start upload
+        resp_s = requests.post(f"{api_base}/upload/start_upload", timeout=180)
+        try:
+            data_s = resp_s.json()
+        except Exception:
+            data_s = {'detail': resp_s.text}
+        if not resp_s.ok:
+            return _json_response({'step': 'start_upload', 'detail': data_s.get('detail') or data_s}, status=resp_s.status_code)
+
+        return _json_response({
+            'ok': True,
+            'results': {
+                'upload_videos': data_v,
+                'upload_titles': data_t,
+                'prepare_config': data_c,
+                'start_upload': data_s,
+            }
+        })
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
