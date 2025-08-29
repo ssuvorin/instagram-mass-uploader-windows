@@ -1640,24 +1640,35 @@ def _tiktok_api_context() -> dict:
 
 @login_required
 def tiktok_booster_upload_accounts(request):
+    """Step 1: Upload TikTok accounts for booster"""
     context = _tiktok_api_context()
     return render(request, 'uploader/tiktok/booster_upload_accounts.html', context)
 
 
 @login_required
+def tiktok_booster_upload_videos(request):
+    """Step 2: Upload videos for booster"""
+    context = _tiktok_api_context()
+    return render(request, 'uploader/tiktok/booster_upload_videos.html', context)
+
+
+@login_required
 def tiktok_booster_upload_proxies(request):
+    """Step 3: Upload proxies for booster"""
     context = _tiktok_api_context()
     return render(request, 'uploader/tiktok/booster_upload_proxies.html', context)
 
 
 @login_required
 def tiktok_booster_prepare(request):
+    """Step 4: Prepare booster accounts"""
     context = _tiktok_api_context()
     return render(request, 'uploader/tiktok/booster_prepare.html', context)
 
 
 @login_required
 def tiktok_booster_start(request):
+    """Step 5: Start booster process"""
     context = _tiktok_api_context()
     return render(request, 'uploader/tiktok/booster_start.html', context)
 
@@ -1713,6 +1724,36 @@ def tiktok_booster_proxy_upload_accounts(request):
             return _json_response({'detail': 'No file provided'}, status=400)
         files = {'file': (file.name, file.read())}
         resp = requests.post(f"{api_base}/booster/upload_accounts", files=files, timeout=30)
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        if resp.ok:
+            return _json_response(data, status=resp.status_code)
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_booster_proxy_upload_videos(request):
+    """Proxy: upload videos files to external TikTok API from server side."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    api_base = _get_tiktok_api_base(request)
+    try:
+        files = request.FILES.getlist('video_files')
+        if not files:
+            return _json_response({'detail': 'No video files provided'}, status=400)
+        
+        # Prepare files for upload
+        upload_files = []
+        for file in files:
+            upload_files.append(('video_files', (file.name, file.read())))
+        
+        resp = requests.post(f"{api_base}/booster/upload_videos", files=upload_files, timeout=60)
         try:
             data = resp.json()
         except Exception:
