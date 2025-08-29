@@ -1,252 +1,163 @@
 {% extends 'uploader/base.html' %}
 {% load static %}
 
-{% block title %}Upload Videos - TikTok Booster{% endblock %}
+{% block title %}TikTok Booster - Upload Videos{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-    <!-- Header -->
-    <div class="tiktok-header">
-        <div class="content">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <h1 class="mb-2">Upload Videos</h1>
-                    <p class="mb-0 text-white-50">Step 2: Upload video files for TikTok Booster accounts</p>
-                </div>
-                <div class="col-md-4 text-end">
-                    <a href="{% url 'tiktok_booster' %}" class="btn btn-outline-light">
-                        <i class="bi bi-arrow-left me-2"></i>Back to Booster
-                    </a>
-                </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-film text-danger me-2"></i>TikTok Booster - Upload Videos</h2>
+                <a href="{% url 'tiktok_booster' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+                </a>
             </div>
-        </div>
-    </div>
 
-    <!-- API Server Selection -->
-    <div class="tiktok-card">
-        <div class="card-header">
-            <h5><i class="bi bi-server"></i>Select TikTok API Server</h5>
-        </div>
-        <div class="card-body">
-            <div class="row align-items-center">
-                <div class="col-md-6">
-                    <label for="api-server-select" class="form-label">API Server:</label>
-                    <select class="form-select" id="api-server-select">
-                        {% for server in available_servers %}
-                        <option value="{{ server.url }}" {% if server.url == api_base %}selected{% endif %} 
-                                data-description="{{ server.description|default:'' }}">
-                            {{ server.name|default:server.url }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                    <small class="text-muted" id="server-description">{{ selected_server.description|default:'' }}</small>
+            <!-- API Server Selection -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-server me-2"></i>Select TikTok API Server</h5>
                 </div>
-                <div class="col-md-6">
-                    <div class="api-status">
-                        <span class="status-indicator status-error" id="status-indicator"></span>
-                        <span class="text-white ms-2" id="status-text">Checking...</span>
-                        <br>
-                        <small class="text-white-50">Server: <a href="#" id="current-server-link" class="text-white">{{ api_base }}</a></small>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="api-server-select" class="form-label">API Server:</label>
+                            <select class="form-select" id="api-server-select">
+                                {% for server in api_servers %}
+                                <option value="{{ server.url }}" {% if server.url == api_base %}selected{% endif %}>
+                                    {{ server.name }} - {{ server.url }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Current Server:</label>
+                            <div class="form-control-plaintext" id="current-server-display">{{ api_base }}</div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Video Upload Form -->
-    <div class="tiktok-card">
-        <div class="card-header">
-            <h5><i class="bi bi-film"></i>Upload Videos</h5>
-        </div>
-        <div class="card-body">
-            <form method="post" enctype="multipart/form-data" id="video-upload-form">
-                {% csrf_token %}
-                <input type="hidden" name="server_url" id="server-url-input" value="{{ api_base }}">
-                
-                <div class="mb-4">
-                    <label for="video_files" class="form-label fw-bold">Select Video Files</label>
-                    <input type="file" name="video_files" class="form-control form-control-lg" id="video_files" multiple accept="video/*" required>
-                    <div class="form-text text-muted">Select one or more video files. Supported formats: MP4, MOV, AVI, etc.</div>
+            <!-- Video Upload Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-upload me-2"></i>Upload Video Files</h5>
                 </div>
-                
-                <div class="alert alert-info d-flex align-items-center">
-                    <i class="bi bi-info-circle-fill me-2 fs-4"></i>
-                    <div>Videos will be used for boosting all selected TikTok accounts.</div>
-                </div>
-                
-                <div class="text-center mt-4">
-                    <button type="submit" class="btn btn-tiktok btn-lg px-5" id="upload-btn">
-                        <i class="bi bi-upload me-2"></i>Upload Videos
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+                <div class="card-body">
+                    <form id="video-upload-form" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <input type="hidden" name="server_url" id="server-url-input" value="{{ api_base }}">
+                        
+                        <div class="mb-3">
+                            <label for="video-files" class="form-label">Select Video Files:</label>
+                            <input type="file" class="form-control" id="video-files" name="video_files" multiple accept="video/*" required>
+                            <div class="form-text">Select one or more video files. Supported formats: MP4, AVI, MOV, etc.</div>
+                        </div>
 
-    <!-- Upload Progress -->
-    <div class="tiktok-card" id="progress-card" style="display: none;">
-        <div class="card-header">
-            <h5><i class="bi bi-arrow-clockwise"></i>Upload Progress</h5>
-        </div>
-        <div class="card-body">
-            <div class="progress mb-3">
-                <div class="progress-bar" role="progressbar" style="width: 0%" id="upload-progress"></div>
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-tiktok" id="upload-btn">
+                                <i class="bi bi-upload me-2"></i>Upload Videos
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Upload Progress -->
+                    <div id="upload-progress" class="mt-3" style="display: none;">
+                        <div class="progress mb-2">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <small class="text-muted" id="progress-text">Preparing upload...</small>
+                    </div>
+
+                    <!-- Results -->
+                    <div id="upload-results" class="mt-3"></div>
+                </div>
             </div>
-            <div class="text-center">
-                <span id="progress-text">Preparing upload...</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Response Display -->
-    <div class="tiktok-card" id="response-card" style="display: none;">
-        <div class="card-header">
-            <h5><i class="bi bi-check-circle"></i>Upload Result</h5>
-        </div>
-        <div class="card-body">
-            <div id="response-content"></div>
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
 <script>
-    // Global API_BASE variable - will be updated dynamically
-    let API_BASE = '{{ api_base|default:"http://94.141.161.231:8000" }}';
+let API_BASE = '{{ api_base }}';
 
-    // Server selection handler
-    document.getElementById('api-server-select').addEventListener('change', function(e) {
-        const selectedUrl = e.target.value;
-        const selectedOption = e.target.options[e.target.selectedIndex];
-        
-        // Update global API_BASE
-        API_BASE = selectedUrl;
-        
-        // Update hidden input
-        document.getElementById('server-url-input').value = selectedUrl;
-        
-        // Update server description
-        const description = selectedOption.getAttribute('data-description');
-        document.getElementById('server-description').textContent = description || '';
-        
-        // Update current server link
-        const linkElement = document.getElementById('current-server-link');
-        linkElement.href = `${API_BASE}/docs`;
-        linkElement.textContent = API_BASE;
-        
-        // Check server status
-        checkServerStatus();
+// Update server selection
+document.getElementById('api-server-select').addEventListener('change', function() {
+    const selectedServer = this.value;
+    API_BASE = selectedServer;
+    document.getElementById('current-server-display').textContent = selectedServer;
+    document.getElementById('server-url-input').value = selectedServer;
+    
+    // Update session via AJAX
+    fetch('{% url "api_tiktok_set_active_server" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: `server_url=${encodeURIComponent(selectedServer)}`
     });
+});
 
-    // Check server connectivity
-    async function checkServerStatus() {
-        const statusIndicator = document.getElementById('status-indicator');
-        const statusText = document.getElementById('status-text');
+// Handle form submission
+document.getElementById('video-upload-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const uploadBtn = document.getElementById('upload-btn');
+    const progressDiv = document.getElementById('upload-progress');
+    const progressBar = progressDiv.querySelector('.progress-bar');
+    const progressText = document.getElementById('progress-text');
+    const resultsDiv = document.getElementById('upload-results');
+    
+    // Disable form and show progress
+    uploadBtn.disabled = true;
+    progressDiv.style.display = 'block';
+    progressBar.style.width = '0%';
+    progressText.textContent = 'Starting upload...';
+    resultsDiv.innerHTML = '';
+    
+    try {
+        const response = await fetch('{% url "api_tiktok_booster_upload_videos" %}', {
+            method: 'POST',
+            body: formData
+        });
         
-        statusIndicator.className = 'status-indicator status-warning';
-        statusText.textContent = 'Checking...';
+        const result = await response.json();
         
-        try {
-            // Check server connectivity via Django backend (server-side check)
-            const response = await fetch(`{% url 'api_tiktok_api_ping' %}`, { method: 'POST' });
-            const data = await response.json();
-            if (response.ok && data.ok) {
-                statusIndicator.className = 'status-indicator status-success';
-                statusText.textContent = 'Connected';
-            } else {
-                throw new Error(data && data.detail ? data.detail : `HTTP ${response.status}`);
-            }
-        } catch (error) {
-            statusIndicator.className = 'status-indicator status-error';
-            statusText.textContent = 'Disconnected';
-            console.error('API connection error:', error);
-        }
-    }
-
-    // Form submission handler
-    document.getElementById('video-upload-form').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(this);
-        const uploadBtn = document.getElementById('upload-btn');
-        const progressCard = document.getElementById('progress-card');
-        const responseCard = document.getElementById('response-card');
-        
-        // Show progress
-        uploadBtn.disabled = true;
-        uploadBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Uploading...';
-        progressCard.style.display = 'block';
-        responseCard.style.display = 'none';
-        
-        try {
-            const response = await fetch(`{% url 'api_tiktok_booster_upload_videos' %}`, {
-                method: 'POST',
-                body: formData
-            });
+        if (response.ok) {
+            progressBar.style.width = '100%';
+            progressText.textContent = 'Upload completed successfully!';
+            progressBar.className = 'progress-bar bg-success';
             
-            const result = await response.json();
-            
-            // Hide progress
-            progressCard.style.display = 'none';
-            
-            // Show response
-            responseCard.style.display = 'block';
-            const responseContent = document.getElementById('response-content');
-            
-            if (response.ok && result.ok) {
-                responseContent.innerHTML = `
-                    <div class="alert alert-success">
-                        <i class="bi bi-check-circle-fill me-2"></i>
-                        <strong>Success!</strong> ${result.message || 'Videos uploaded successfully'}
-                    </div>
-                    <div class="text-center mt-3">
-                        <a href="{% url 'tiktok_booster_upload_proxies' %}" class="btn btn-tiktok">
-                            <i class="bi bi-arrow-right me-2"></i>Continue to Step 3: Upload Proxies
-                        </a>
-                    </div>
-                `;
-            } else {
-                responseContent.innerHTML = `
-                    <div class="alert alert-danger">
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                        <strong>Error!</strong> ${result.message || 'Failed to upload videos'}
-                    </div>
-                    <div class="text-center mt-3">
-                        <button type="button" class="btn btn-secondary" onclick="location.reload()">
-                            <i class="bi bi-arrow-clockwise me-2"></i>Try Again
-                        </button>
-                    </div>
-                `;
-            }
-            
-        } catch (error) {
-            console.error('Upload error:', error);
-            
-            // Hide progress
-            progressCard.style.display = 'none';
-            
-            // Show error
-            responseCard.style.display = 'block';
-            document.getElementById('response-content').innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                    <strong>Network Error!</strong> Failed to connect to server
-                </div>
-                <div class="text-center mt-3">
-                    <button type="button" class="btn btn-secondary" onclick="location.reload()">
-                        <i class="bi bi-arrow-clockwise me-2"></i>Try Again
-                    </button>
+            resultsDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <h6><i class="bi bi-check-circle me-2"></i>Upload Successful</h6>
+                    <p class="mb-0">Videos uploaded to server: ${API_BASE}</p>
+                    ${result.detail ? `<small class="text-muted">${result.detail}</small>` : ''}
                 </div>
             `;
-        } finally {
-            // Reset button
-            uploadBtn.disabled = false;
-            uploadBtn.innerHTML = '<i class="bi bi-upload me-2"></i>Upload Videos';
+        } else {
+            throw new Error(result.detail || `HTTP ${response.status}`);
         }
-    });
-
-    // Check initial server status
-    checkServerStatus();
+    } catch (error) {
+        progressBar.style.width = '100%';
+        progressText.textContent = 'Upload failed!';
+        progressBar.className = 'progress-bar bg-danger';
+        
+        resultsDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <h6><i class="bi bi-exclamation-triangle me-2"></i>Upload Failed</h6>
+                <p class="mb-0">${error.message}</p>
+            </div>
+        `;
+    } finally {
+        uploadBtn.disabled = false;
+        setTimeout(() => {
+            progressDiv.style.display = 'none';
+            progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated';
+        }, 3000);
+    }
+});
 </script>
 {% endblock %}
