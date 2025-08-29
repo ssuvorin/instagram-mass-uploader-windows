@@ -434,6 +434,7 @@
         </div>
     </div>
 
+    
     <!-- Booster Wizard -->
     <div class="tiktok-card">
         <div class="card-header">
@@ -570,20 +571,13 @@
         const statusText = document.getElementById('api-status-text');
         
         try {
-            // Check if TikTok API is accessible by trying to access /docs endpoint
-            const response = await fetch(`${API_BASE}/docs`, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                },
-                // Add timeout to avoid hanging
-                signal: AbortSignal.timeout(5000)
-            });
-
-            if (response.ok) {
+            // Check server connectivity via Django backend (server-side check)
+            const response = await fetch(`{% url 'api_tiktok_api_ping' %}`, { method: 'POST' });
+            const data = await response.json();
+            if (response.ok && data.ok) {
                 statusIndicator.className = 'status-indicator status-success';
                 statusText.textContent = 'Connected';
-                addLog(`Successfully connected to API server: ${API_BASE}`, 'info');
+                addLog(`Successfully connected to API server (server-side): ${data.server_url}`, 'info');
 
                 // Get basic system info
                 updateSystemStatus({
@@ -593,13 +587,13 @@
                     proxies_count: 'N/A'
                 });
             } else {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                throw new Error(data && data.detail ? data.detail : `HTTP ${response.status}`);
             }
         } catch (error) {
             statusIndicator.className = 'status-indicator status-error';
             statusText.textContent = 'Disconnected';
             console.error('API connection error:', error);
-            addLog(`Failed to connect to API server ${API_BASE}: ${error.message}`, 'error');
+            addLog(`Failed to connect to API server (server-side) ${API_BASE}: ${error.message}`, 'error');
         }
     }
 

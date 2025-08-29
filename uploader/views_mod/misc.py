@@ -1795,6 +1795,24 @@ def tiktok_set_active_server(request):
     except Exception:
         pass
     return JsonResponse({'ok': True, 'server_url': server_url})
+
+
+@csrf_exempt
+@login_required
+def tiktok_api_ping(request):
+    """Server-side connectivity check to selected TikTok API server."""
+    import requests
+    from django.http import JsonResponse
+    # Allow GET or POST; prefer POST so we can accept server_url
+    base = _get_tiktok_api_base(request)
+    try:
+        # Use /docs as simple reachable endpoint; could be /health if available
+        resp = requests.get(f"{base}/docs", timeout=5, headers={"Accept": "text/html"})
+        if resp.ok:
+            return JsonResponse({"ok": True, "server_url": base, "status_code": resp.status_code})
+        return JsonResponse({"ok": False, "server_url": base, "status_code": resp.status_code, "detail": resp.text[:200]}, status=502)
+    except requests.exceptions.RequestException as e:
+        return JsonResponse({"ok": False, "server_url": base, "detail": str(e)}, status=502)
     try:
         resp = requests.post(f"{api_base}/booster/start_booster", timeout=60)
         try:

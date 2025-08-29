@@ -92,6 +92,7 @@ urlpatterns = [
     path('api/tiktok/booster/prepare/', misc.tiktok_booster_proxy_prepare_accounts, name='api_tiktok_booster_prepare_accounts'),
     path('api/tiktok/booster/start/', misc.tiktok_booster_proxy_start, name='api_tiktok_booster_start'),
     path('api/tiktok/set-active-server/', misc.tiktok_set_active_server, name='api_tiktok_set_active_server'),
+    path('api/tiktok/ping/', misc.tiktok_api_ping, name='api_tiktok_api_ping'),
 
     # Hashtag Analyzer
     path('tools/hashtag/', hashtag.hashtag_analyzer, name='hashtag_analyzer'),
