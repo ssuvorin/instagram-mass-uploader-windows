@@ -380,6 +380,7 @@
                     <p class="mb-0 opacity-75">Manage TikTok accounts, upload videos, and boost engagement</p>
                 </div>
                 <div class="api-status">
+                    {% csrf_token %}
                     <div class="d-flex align-items-center gap-2 mb-2">
                         <label for="api-server-select" class="form-label text-white mb-0 small">API Server:</label>
                         <select class="form-select form-select-sm" id="api-server-select" style="min-width: 200px;">
@@ -445,7 +446,7 @@
                 {% csrf_token %}
                 <label class="form-label">Step 1 — Proxies file (.txt)</label>
                 <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <input type="file" name="proxies" class="form-control form-control-lg" accept=".txt" required>
+                    <input type="file" name="file" class="form-control form-control-lg" accept=".txt" required>
                     <button type="submit" class="btn btn-tiktok"><i class="bi bi-upload me-2"></i>Upload Proxies</button>
                 </div>
             </form>
@@ -454,7 +455,7 @@
                 {% csrf_token %}
                 <label class="form-label">Step 2 — Accounts file (.txt)</label>
                 <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <input type="file" name="accounts" class="form-control form-control-lg" accept=".txt" required>
+                    <input type="file" name="file" class="form-control form-control-lg" accept=".txt" required>
                     <button type="submit" class="btn btn-tiktok"><i class="bi bi-upload me-2"></i>Upload Accounts</button>
                 </div>
             </form>
@@ -526,6 +527,16 @@
             const desc = selectedOption ? (selectedOption.dataset.desc || 'Custom server') : 'Custom server';
             descElement.textContent = desc;
         }
+
+        // Persist selected server in session (backend uses this)
+        fetch('{% url "api_tiktok_set_active_server" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: `server_url=${encodeURIComponent(selectedUrl)}`
+        });
 
         // Re-check API status with new server
         checkApiStatus();
