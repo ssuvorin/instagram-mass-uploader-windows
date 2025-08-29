@@ -435,46 +435,32 @@
     </div>
 
     
-    <!-- Booster Wizard -->
+    <!-- Booster Single-Button Pipeline -->
     <div class="tiktok-card">
         <div class="card-header">
-            <h5><i class="bi bi-lightning"></i>TikTok Booster Wizard</h5>
+            <h5><i class="bi bi-lightning"></i>Booster Pipeline</h5>
         </div>
         <div class="card-body">
-            <div class="row g-4">
-                <div class="col-md-6">
-                    <div class="p-3 border rounded-3 h-100">
-                        <h6 class="mb-1">Step 1</h6>
-                        <h4 class="mt-0">Upload Accounts</h4>
-                        <p class="text-muted">Загрузите файл аккаунтов в формате username:password:email_username:email_password.</p>
-                        <a href="{% url 'tiktok_booster_upload_accounts' %}" class="btn btn-tiktok"><i class="bi bi-upload me-2"></i>Go to Step 1</a>
+            <form id="booster-pipeline-form" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-6">
+                        <label class="form-label">Accounts file (.txt)</label>
+                        <input type="file" name="accounts" class="form-control form-control-lg" accept=".txt" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Proxies file (.txt)</label>
+                        <input type="file" name="proxies" class="form-control form-control-lg" accept=".txt" required>
+                    </div>
+                    <div class="col-12 mt-2">
+                        <button type="submit" class="btn btn-tiktok me-2">
+                            <i class="bi bi-play-fill me-2"></i>Start Booster Pipeline
+                        </button>
+                        <small class="text-muted">Последовательно: загрузка аккаунтов → прокси → подготовка → старт</small>
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <div class="p-3 border rounded-3 h-100">
-                        <h6 class="mb-1">Step 2</h6>
-                        <h4 class="mt-0">Upload Proxies</h4>
-                        <p class="text-muted">Загрузите файл прокси в формате host:port@username:password.</p>
-                        <a href="{% url 'tiktok_booster_upload_proxies' %}" class="btn btn-tiktok"><i class="bi bi-upload me-2"></i>Go to Step 2</a>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="p-3 border rounded-3 h-100">
-                        <h6 class="mb-1">Step 3</h6>
-                        <h4 class="mt-0">Prepare Booster Accounts</h4>
-                        <p class="text-muted">Подготовьте аккаунты к бусту на выбранном API сервере.</p>
-                        <a href="{% url 'tiktok_booster_prepare' %}" class="btn btn-tiktok"><i class="bi bi-people me-2"></i>Go to Step 3</a>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="p-3 border rounded-3 h-100">
-                        <h6 class="mb-1">Step 4</h6>
-                        <h4 class="mt-0">Start Booster</h4>
-                        <p class="text-muted">Запустите процесс буста и следите за прогрессом.</p>
-                        <a href="{% url 'tiktok_booster_start' %}" class="btn btn-tiktok"><i class="bi bi-play-fill me-2"></i>Go to Step 4</a>
-                    </div>
-                </div>
-            </div>
+            </form>
+            <div id="booster-pipeline-response" class="response-container d-none mt-3"></div>
         </div>
     </div>
 
@@ -772,7 +758,37 @@
         }
     }
 
-    // Removed old inline forms. Wizard uses dedicated pages per step.
+    // Booster pipeline submit
+    document.getElementById('booster-pipeline-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const responseElement = document.getElementById('booster-pipeline-response');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Processing...';
+        try {
+            const body = new FormData(form);
+            const res = await fetch('{% url "api_tiktok_booster_pipeline" %}', { method: 'POST', body });
+            const data = await res.json();
+            if (res.ok) {
+                responseElement.innerHTML = `<pre class="text-success">${JSON.stringify(data, null, 2)}</pre>`;
+                responseElement.classList.remove('d-none');
+                addLog('Booster pipeline completed successfully', 'info');
+            } else {
+                responseElement.innerHTML = `<pre class="text-danger">${JSON.stringify(data, null, 2)}</pre>`;
+                responseElement.classList.remove('d-none');
+                addLog('Booster pipeline error', 'error');
+            }
+        } catch (err) {
+            responseElement.innerHTML = `<pre class="text-danger">${err.message}</pre>`;
+            responseElement.classList.remove('d-none');
+            addLog('Booster pipeline exception: ' + err.message, 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    });
 </script>
 {% endblock %}
 

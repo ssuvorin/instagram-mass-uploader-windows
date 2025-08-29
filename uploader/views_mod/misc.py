@@ -1788,6 +1788,72 @@ def tiktok_api_ping(request):
         return JsonResponse({"ok": False, "server_url": base, "detail": str(e)}, status=502)
 
 
+@csrf_exempt
+@login_required
+def tiktok_booster_proxy_pipeline(request):
+    """Single-call pipeline for Booster: upload accounts, upload proxies, prepare, start."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    api_base = _get_tiktok_api_base(request)
+    try:
+        # 1) Upload accounts file
+        accounts_file = request.FILES.get('accounts') or request.FILES.get('accounts_file') or request.FILES.get('file_accounts')
+        if not accounts_file:
+            return _json_response({'detail': 'Accounts file is required'}, status=400)
+        files_acc = {'file': (accounts_file.name, accounts_file.read())}
+        resp_acc = requests.post(f"{api_base}/booster/upload_accounts", files=files_acc, timeout=120)
+        try:
+            data_acc = resp_acc.json()
+        except Exception:
+            data_acc = {'detail': resp_acc.text}
+        if not resp_acc.ok:
+            return _json_response({'step': 'upload_accounts', 'detail': data_acc.get('detail') or data_acc}, status=resp_acc.status_code)
+
+        # 2) Upload proxies file
+        proxies_file = request.FILES.get('proxies') or request.FILES.get('proxies_file') or request.FILES.get('file_proxies')
+        if not proxies_file:
+            return _json_response({'detail': 'Proxies file is required'}, status=400)
+        files_prx = {'file': (proxies_file.name, proxies_file.read())}
+        resp_prx = requests.post(f"{api_base}/booster/upload_proxies", files=files_prx, timeout=120)
+        try:
+            data_prx = resp_prx.json()
+        except Exception:
+            data_prx = {'detail': resp_prx.text}
+        if not resp_prx.ok:
+            return _json_response({'step': 'upload_proxies', 'detail': data_prx.get('detail') or data_prx}, status=resp_prx.status_code)
+
+        # 3) Prepare accounts
+        resp_prep = requests.post(f"{api_base}/booster/prepare_accounts", timeout=60)
+        try:
+            data_prep = resp_prep.json()
+        except Exception:
+            data_prep = {'detail': resp_prep.text}
+        if not resp_prep.ok:
+            return _json_response({'step': 'prepare_accounts', 'detail': data_prep.get('detail') or data_prep}, status=resp_prep.status_code)
+
+        # 4) Start booster
+        resp_start = requests.post(f"{api_base}/booster/start_booster", timeout=180)
+        try:
+            data_start = resp_start.json()
+        except Exception:
+            data_start = {'detail': resp_start.text}
+        if not resp_start.ok:
+            return _json_response({'step': 'start_booster', 'detail': data_start.get('detail') or data_start}, status=resp_start.status_code)
+
+        return _json_response({
+            'ok': True,
+            'results': {
+                'upload_accounts': data_acc,
+                'upload_proxies': data_prx,
+                'prepare_accounts': data_prep,
+                'start_booster': data_start,
+            }
+        })
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
 @login_required
 def get_api_server_logs(request):
     """AJAX endpoint to fetch logs from the selected API server."""
@@ -1837,27 +1903,6 @@ def get_api_server_logs(request):
             'status': 'error',
             'message': f'Unexpected error: {str(e)}'
         })
-
-
-# tiktok_get_logs - Removed, API calls go directly to external server
-
-
-# tiktok_clear_logs - Removed, API calls go directly to external server
-
-
-# tiktok_prepare_accounts - Removed, API calls go directly to external server
-
-
-# tiktok_prepare_config - Removed, API calls go directly to external server
-
-
-# tiktok_start_upload - Removed, API calls go directly to external server
-
-
-# tiktok_prepare_booster_accounts - Removed, API calls go directly to external server
-
-
-# tiktok_start_booster - Removed, API calls go directly to external server
 
 
 def bulk_upload_logs(request, task_id):
