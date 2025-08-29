@@ -1557,9 +1557,33 @@ def _tiktok_api_context(request=None) -> dict:
                 }
             ]
 
+    # Sanitize and normalize server list to avoid NoneType subscripting
+    try:
+        if not isinstance(servers, list):
+            servers = []
+        normalized_servers = []
+        for idx, srv in enumerate(servers):
+            if isinstance(srv, dict):
+                url_val = srv.get('url') or srv.get('base') or srv.get('host')
+                if isinstance(url_val, str) and url_val.strip():
+                    # Ensure minimal required keys
+                    normalized_servers.append({
+                        'name': srv.get('name') or f'Server {idx+1}',
+                        'url': url_val.strip(),
+                        'description': srv.get('description') or ''
+                    })
+                else:
+                    logger.debug(f"Skipping server entry without valid url at index {idx}: {srv}")
+            else:
+                logger.debug(f"Skipping non-dict server entry at index {idx}: {srv}")
+        servers = normalized_servers
+    except Exception as norm_err:
+        logger.warning(f"Failed to normalize TIKTOK_API_SERVERS: {norm_err}. Using empty list and fallback base.")
+        servers = []
+
     # Determine selected API base with precedence: session -> env -> first server
     selected_api_base = None
-    
+
     # 1) Try to get from session if request is provided
     if request is not None:
         try:
@@ -1568,7 +1592,7 @@ def _tiktok_api_context(request=None) -> dict:
                 selected_api_base = session_url
         except Exception:
             pass
-    
+
     # 2) Fallback to environment variable TIKTOK_API_BASE
     if not selected_api_base:
         selected_api_base = os.environ.get('TIKTOK_API_BASE', servers[0]['url'] if servers else 'http://94.141.161.231:8000')
@@ -1576,10 +1600,13 @@ def _tiktok_api_context(request=None) -> dict:
     # Find the selected server object
     selected_server = None
     for server in servers:
-        if server['url'] == selected_api_base:
-            selected_server = server
-            break
-    
+        try:
+            if isinstance(server, dict) and server.get('url') == selected_api_base:
+                selected_server = server
+                break
+        except Exception:
+            continue
+
     # If selected server not found in list, create a custom entry
     if not selected_server:
         selected_server = {
@@ -1588,7 +1615,7 @@ def _tiktok_api_context(request=None) -> dict:
             'description': 'Пользовательский сервер'
         }
         # Add to servers list if not already there
-        if not any(s['url'] == selected_api_base for s in servers):
+        if not any((isinstance(s, dict) and s.get('url') == selected_api_base) for s in servers):
             servers.append(selected_server)
 
     return {
