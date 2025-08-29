@@ -1797,20 +1797,7 @@ def tiktok_booster_proxy_pipeline(request):
         return _json_response({'detail': 'Method not allowed'}, status=405)
     api_base = _get_tiktok_api_base(request)
     try:
-        # 1) Upload accounts file
-        accounts_file = request.FILES.get('accounts') or request.FILES.get('accounts_file') or request.FILES.get('file_accounts')
-        if not accounts_file:
-            return _json_response({'detail': 'Accounts file is required'}, status=400)
-        files_acc = {'file': (accounts_file.name, accounts_file.read())}
-        resp_acc = requests.post(f"{api_base}/booster/upload_accounts", files=files_acc, timeout=120)
-        try:
-            data_acc = resp_acc.json()
-        except Exception:
-            data_acc = {'detail': resp_acc.text}
-        if not resp_acc.ok:
-            return _json_response({'step': 'upload_accounts', 'detail': data_acc.get('detail') or data_acc}, status=resp_acc.status_code)
-
-        # 2) Upload proxies file
+        # 1) Upload proxies file
         proxies_file = request.FILES.get('proxies') or request.FILES.get('proxies_file') or request.FILES.get('file_proxies')
         if not proxies_file:
             return _json_response({'detail': 'Proxies file is required'}, status=400)
@@ -1822,6 +1809,19 @@ def tiktok_booster_proxy_pipeline(request):
             data_prx = {'detail': resp_prx.text}
         if not resp_prx.ok:
             return _json_response({'step': 'upload_proxies', 'detail': data_prx.get('detail') or data_prx}, status=resp_prx.status_code)
+
+        # 2) Upload accounts file
+        accounts_file = request.FILES.get('accounts') or request.FILES.get('accounts_file') or request.FILES.get('file_accounts')
+        if not accounts_file:
+            return _json_response({'detail': 'Accounts file is required'}, status=400)
+        files_acc = {'file': (accounts_file.name, accounts_file.read())}
+        resp_acc = requests.post(f"{api_base}/booster/upload_accounts", files=files_acc, timeout=120)
+        try:
+            data_acc = resp_acc.json()
+        except Exception:
+            data_acc = {'detail': resp_acc.text}
+        if not resp_acc.ok:
+            return _json_response({'step': 'upload_accounts', 'detail': data_acc.get('detail') or data_acc}, status=resp_acc.status_code)
 
         # 3) Prepare accounts
         resp_prep = requests.post(f"{api_base}/booster/prepare_accounts", timeout=60)
@@ -1844,8 +1844,8 @@ def tiktok_booster_proxy_pipeline(request):
         return _json_response({
             'ok': True,
             'results': {
-                'upload_accounts': data_acc,
                 'upload_proxies': data_prx,
+                'upload_accounts': data_acc,
                 'prepare_accounts': data_prep,
                 'start_booster': data_start,
             }

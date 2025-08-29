@@ -435,31 +435,36 @@
     </div>
 
     
-    <!-- Booster Single-Button Pipeline -->
+    <!-- Booster Pipeline: Step 1 Proxies, Step 2 Accounts, then auto Prepare+Start -->
     <div class="tiktok-card">
         <div class="card-header">
-            <h5><i class="bi bi-lightning"></i>Booster Pipeline</h5>
+            <h5 class="mb-0"><i class="bi bi-lightning"></i>Booster Pipeline</h5>
         </div>
         <div class="card-body">
-            <form id="booster-pipeline-form" enctype="multipart/form-data">
+            <form id="booster-proxies-form" enctype="multipart/form-data" class="mb-3">
                 {% csrf_token %}
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-6">
-                        <label class="form-label">Accounts file (.txt)</label>
-                        <input type="file" name="accounts" class="form-control form-control-lg" accept=".txt" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Proxies file (.txt)</label>
-                        <input type="file" name="proxies" class="form-control form-control-lg" accept=".txt" required>
-                    </div>
-                    <div class="col-12 mt-2">
-                        <button type="submit" class="btn btn-tiktok me-2">
-                            <i class="bi bi-play-fill me-2"></i>Start Booster Pipeline
-                        </button>
-                        <small class="text-muted">Последовательно: загрузка аккаунтов → прокси → подготовка → старт</small>
-                    </div>
+                <label class="form-label">Step 1 — Proxies file (.txt)</label>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <input type="file" name="proxies" class="form-control form-control-lg" accept=".txt" required>
+                    <button type="submit" class="btn btn-tiktok"><i class="bi bi-upload me-2"></i>Upload Proxies</button>
                 </div>
             </form>
+
+            <form id="booster-accounts-form" enctype="multipart/form-data" class="mb-3" style="opacity:.6;pointer-events:none;">
+                {% csrf_token %}
+                <label class="form-label">Step 2 — Accounts file (.txt)</label>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <input type="file" name="accounts" class="form-control form-control-lg" accept=".txt" required>
+                    <button type="submit" class="btn btn-tiktok"><i class="bi bi-upload me-2"></i>Upload Accounts</button>
+                </div>
+            </form>
+
+            <div class="mt-2">
+                <button id="booster-run-prepare-start" class="btn btn-tiktok" disabled>
+                    <i class="bi bi-play-fill me-2"></i>Prepare + Start
+                </button>
+            </div>
+
             <div id="booster-pipeline-response" class="response-container d-none mt-3"></div>
         </div>
     </div>
@@ -758,35 +763,76 @@
         }
     }
 
-    // Booster pipeline submit
-    document.getElementById('booster-pipeline-form')?.addEventListener('submit', async (e) => {
+    const proxiesForm = document.getElementById('booster-proxies-form');
+    const accountsForm = document.getElementById('booster-accounts-form');
+    const runBtn = document.getElementById('booster-run-prepare-start');
+    const respBox = document.getElementById('booster-pipeline-response');
+
+    proxiesForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const form = e.target;
-        const responseElement = document.getElementById('booster-pipeline-response');
-        const submitBtn = form.querySelector('button[type="submit"]');
-        const originalText = submitBtn.innerHTML;
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Processing...';
+        respBox.classList.add('d-none');
+        const btn = proxiesForm.querySelector('button[type="submit"]');
+        const original = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Uploading...';
         try {
-            const body = new FormData(form);
-            const res = await fetch('{% url "api_tiktok_booster_pipeline" %}', { method: 'POST', body });
+            const fd = new FormData(proxiesForm);
+            const res = await fetch('{% url "api_tiktok_booster_upload_proxies" %}', { method: 'POST', body: fd });
             const data = await res.json();
-            if (res.ok) {
-                responseElement.innerHTML = `<pre class="text-success">${JSON.stringify(data, null, 2)}</pre>`;
-                responseElement.classList.remove('d-none');
-                addLog('Booster pipeline completed successfully', 'info');
-            } else {
-                responseElement.innerHTML = `<pre class="text-danger">${JSON.stringify(data, null, 2)}</pre>`;
-                responseElement.classList.remove('d-none');
-                addLog('Booster pipeline error', 'error');
-            }
+            if (!res.ok) throw new Error(data.detail || 'Failed to upload proxies');
+            addLog('Proxies uploaded', 'info');
+            accountsForm.style.opacity = '1';
+            accountsForm.style.pointerEvents = 'auto';
         } catch (err) {
-            responseElement.innerHTML = `<pre class="text-danger">${err.message}</pre>`;
-            responseElement.classList.remove('d-none');
-            addLog('Booster pipeline exception: ' + err.message, 'error');
+            respBox.innerHTML = `<pre class="text-danger">${err.message}</pre>`;
+            respBox.classList.remove('d-none');
+            addLog('Upload proxies failed: ' + err.message, 'error');
         } finally {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalText;
+            btn.disabled = false; btn.innerHTML = original;
+        }
+    });
+
+    accountsForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        respBox.classList.add('d-none');
+        const btn = accountsForm.querySelector('button[type="submit"]');
+        const original = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Uploading...';
+        try {
+            const fd = new FormData(accountsForm);
+            const res = await fetch('{% url "api_tiktok_booster_upload_accounts" %}', { method: 'POST', body: fd });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'Failed to upload accounts');
+            addLog('Accounts uploaded', 'info');
+            runBtn.disabled = false;
+        } catch (err) {
+            respBox.innerHTML = `<pre class="text-danger">${err.message}</pre>`;
+            respBox.classList.remove('d-none');
+            addLog('Upload accounts failed: ' + err.message, 'error');
+        } finally {
+            btn.disabled = false; btn.innerHTML = original;
+        }
+    });
+
+    runBtn.addEventListener('click', async () => {
+        respBox.classList.add('d-none');
+        runBtn.disabled = true; const original = runBtn.innerHTML; runBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Running...';
+        try {
+            // Prepare
+            let res = await fetch('{% url "api_tiktok_booster_prepare_accounts" %}', { method: 'POST' });
+            let data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'Prepare failed');
+            addLog('Prepare accounts: OK', 'info');
+            // Start
+            res = await fetch('{% url "api_tiktok_booster_start" %}', { method: 'POST' });
+            data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'Start failed');
+            addLog('Start booster: OK', 'info');
+            respBox.innerHTML = `<pre class="text-success">${JSON.stringify({prepare:data}, null, 2)}</pre>`;
+            respBox.classList.remove('d-none');
+        } catch (err) {
+            respBox.innerHTML = `<pre class="text-danger">${err.message}</pre>`;
+            respBox.classList.remove('d-none');
+            addLog('Pipeline run failed: ' + err.message, 'error');
+        } finally {
+            runBtn.disabled = false; runBtn.innerHTML = original;
         }
     });
 </script>
