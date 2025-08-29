@@ -1978,10 +1978,25 @@ def clear_captcha_notification(request, task_id):
         return JsonResponse({ 'status': 'error', 'message': str(e) }, status=400)
 
 
+
+@login_required
+def tiktok_videos(request):
+    """TikTok Video Management - main page"""
+    context = _tiktok_api_context()
+    return render(request, 'uploader/tiktok/videos.html', context)
+
+
+@login_required
+def tiktok_videos_upload(request):
+    """TikTok Video Upload page"""
+    context = _tiktok_api_context()
+    return render(request, 'uploader/tiktok/videos_upload.html', context)
+
+
 @csrf_exempt
 @login_required
-def tiktok_booster_proxy_upload_videos(request):
-    """Proxy: upload videos files to external TikTok API from server side."""
+def tiktok_videos_proxy_upload(request):
+    """Proxy: upload videos to external TikTok API from server side."""
     import requests
     if request.method != 'POST':
         return _json_response({'detail': 'Method not allowed'}, status=405)
@@ -1996,7 +2011,7 @@ def tiktok_booster_proxy_upload_videos(request):
         for file in files:
             upload_files.append(('video_files', (file.name, file.read())))
         
-        resp = requests.post(f"{api_base}/booster/upload_videos", files=upload_files, timeout=60)
+        resp = requests.post(f"{api_base}/videos/upload", files=upload_files, timeout=60)
         try:
             data = resp.json()
         except Exception:

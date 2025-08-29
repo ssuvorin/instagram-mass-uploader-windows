@@ -79,22 +79,29 @@ urlpatterns = [
     path('api/captcha-status/<int:task_id>/', views.get_captcha_status, name='get_captcha_status'),
     path('api/captcha-clear/<int:task_id>/', views.clear_captcha_notification, name='clear_captcha_notification'),
     
-    # TikTok Booster UI
+    # TikTok Booster URLs
     path('tiktok/booster/', misc.tiktok_booster, name='tiktok_booster'),
     path('tiktok/booster/upload-accounts/', misc.tiktok_booster_upload_accounts, name='tiktok_booster_upload_accounts'),
     path('tiktok/booster/upload-proxies/', misc.tiktok_booster_upload_proxies, name='tiktok_booster_upload_proxies'),
     path('tiktok/booster/prepare/', misc.tiktok_booster_prepare, name='tiktok_booster_prepare'),
     path('tiktok/booster/start/', misc.tiktok_booster_start, name='tiktok_booster_start'),
     path('tiktok/booster/logs/', misc.get_api_server_logs, name='get_api_server_logs'),
-    # Server-side proxy endpoints
+
+    # TikTok Video Upload (separate module)
+    path('tiktok/videos/', misc.tiktok_videos, name='tiktok_videos'),
+    path('tiktok/videos/upload/', misc.tiktok_videos_upload, name='tiktok_videos_upload'),
+
+    # TikTok Booster API endpoints (server-side proxy)
     path('api/tiktok/booster/upload-accounts/', misc.tiktok_booster_proxy_upload_accounts, name='api_tiktok_booster_upload_accounts'),
-    path('api/tiktok/booster/upload-videos/', misc.tiktok_booster_proxy_upload_videos, name='api_tiktok_booster_upload_videos'),
     path('api/tiktok/booster/upload-proxies/', misc.tiktok_booster_proxy_upload_proxies, name='api_tiktok_booster_upload_proxies'),
     path('api/tiktok/booster/prepare/', misc.tiktok_booster_proxy_prepare_accounts, name='api_tiktok_booster_prepare_accounts'),
-    path('api/tiktok/booster/start/', misc.tiktok_booster_proxy_start, name='api_tiktok_booster_start'),
+    path('api/tiktok/booster/start/', misc.tiktok_booster_proxy_start, name='api_tiktok_booster_proxy_start'),
     path('api/tiktok/set-active-server/', misc.tiktok_set_active_server, name='api_tiktok_set_active_server'),
     path('api/tiktok/ping/', misc.tiktok_api_ping, name='api_tiktok_api_ping'),
 
+    # TikTok Video Upload API endpoints
+    path('api/tiktok/videos/upload/', misc.tiktok_videos_proxy_upload, name='api_tiktok_videos_upload'),
+    
     # Hashtag Analyzer
     path('tools/hashtag/', hashtag.hashtag_analyzer, name='hashtag_analyzer'),
     

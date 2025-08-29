@@ -446,40 +446,32 @@
                     <div class="p-3 border rounded-3 h-100">
                         <h6 class="mb-1">Step 1</h6>
                         <h4 class="mt-0">Upload Accounts</h4>
-                        <p class="text-muted">Загрузите файл аккаунтов в формате username:password:email_username:email_password.</p>
-                        <a href="{% url 'tiktok_booster_upload_accounts' %}" class="btn btn-tiktok"><i class="bi bi-upload me-2"></i>Go to Step 1</a>
+                        <p class="text-muted">Загрузите файл с аккаунтами TikTok в формате username:password.</p>
+                        <a href="{% url 'tiktok_booster_upload_accounts' %}" class="btn btn-tiktok"><i class="bi bi-people me-2"></i>Go to Step 1</a>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="p-3 border rounded-3 h-100">
                         <h6 class="mb-1">Step 2</h6>
-                        <h4 class="mt-0">Upload Videos</h4>
-                        <p class="text-muted">Загрузите видео файлы для буста аккаунтов.</p>
-                        <a href="{% url 'tiktok_booster_upload_videos' %}" class="btn btn-tiktok"><i class="bi bi-film me-2"></i>Go to Step 2</a>
+                        <h4 class="mt-0">Upload Proxies</h4>
+                        <p class="text-muted">Загрузите файл прокси в формате host:port@username:password.</p>
+                        <a href="{% url 'tiktok_booster_upload_proxies' %}" class="btn btn-tiktok"><i class="bi bi-upload me-2"></i>Go to Step 2</a>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="p-3 border rounded-3 h-100">
                         <h6 class="mb-1">Step 3</h6>
-                        <h4 class="mt-0">Upload Proxies</h4>
-                        <p class="text-muted">Загрузите файл прокси в формате host:port@username:password.</p>
-                        <a href="{% url 'tiktok_booster_upload_proxies' %}" class="btn btn-tiktok"><i class="bi bi-upload me-2"></i>Go to Step 3</a>
+                        <h4 class="mt-0">Prepare Booster Accounts</h4>
+                        <p class="text-muted">Подготовьте аккаунты к бусту на выбранном API сервере.</p>
+                        <a href="{% url 'tiktok_booster_prepare' %}" class="btn btn-tiktok"><i class="bi bi-people me-2"></i>Go to Step 3</a>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="p-3 border rounded-3 h-100">
                         <h6 class="mb-1">Step 4</h6>
-                        <h4 class="mt-0">Prepare Booster Accounts</h4>
-                        <p class="text-muted">Подготовьте аккаунты к бусту на выбранном API сервере.</p>
-                        <a href="{% url 'tiktok_booster_prepare' %}" class="btn btn-tiktok"><i class="bi bi-people me-2"></i>Go to Step 4</a>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="p-3 border rounded-3 h-100">
-                        <h6 class="mb-1">Step 5</h6>
                         <h4 class="mt-0">Start Booster</h4>
                         <p class="text-muted">Запустите процесс буста и следите за прогрессом.</p>
-                        <a href="{% url 'tiktok_booster_start' %}" class="btn btn-tiktok"><i class="bi bi-play-fill me-2"></i>Go to Step 5</a>
+                        <a href="{% url 'tiktok_booster_start' %}" class="btn btn-tiktok"><i class="bi bi-play-fill me-2"></i>Go to Step 4</a>
                     </div>
                 </div>
             </div>

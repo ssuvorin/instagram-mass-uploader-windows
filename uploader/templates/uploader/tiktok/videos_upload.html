@@ -8,10 +8,10 @@
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2><i class="bi bi-film text-danger me-2"></i>TikTok Booster - Upload Videos</h2>
-                <a href="{% url 'tiktok_booster' %}" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
-                </a>
+                <h2><i class="bi bi-film text-danger me-2"></i>TikTok Video Upload</h2>
+                                        <a href="{% url 'tiktok_videos' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Back to Video Management
+                        </a>
             </div>
 
             <!-- API Server Selection -->
@@ -118,7 +118,7 @@ document.getElementById('video-upload-form').addEventListener('submit', async fu
     resultsDiv.innerHTML = '';
     
     try {
-        const response = await fetch('{% url "api_tiktok_booster_upload_videos" %}', {
+        const response = await fetch('{% url "api_tiktok_videos_upload" %}', {
             method: 'POST',
             body: formData
         });
