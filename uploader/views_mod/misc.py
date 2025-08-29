@@ -2156,6 +2156,43 @@ def tiktok_videos_proxy_start_upload(request):
 
 @csrf_exempt
 @login_required
+def tiktok_videos_proxy_prepare_accounts(request):
+    """Proxy: prepare accounts for upload on upstream server.
+
+    Expects JSON body: {"count": <int>} or form field 'count'.
+    """
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    api_base = _get_tiktok_api_base(request)
+    try:
+        # Parse payload from JSON body or form
+        try:
+            payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+        except Exception:
+            payload = {}
+        count_val = payload.get('count') or request.POST.get('count') or 0
+        try:
+            count_val = int(count_val)
+        except Exception:
+            count_val = 0
+        resp = requests.post(
+            f"{api_base}/upload/prepare_accounts",
+            json={'count': count_val},
+            timeout=60
+        )
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        if resp.ok:
+            return _json_response(data, status=resp.status_code)
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+@csrf_exempt
+@login_required
 def tiktok_videos_proxy_pipeline(request):
     """Single-call pipeline: upload videos, upload titles, prepare config, then start upload."""
     import requests

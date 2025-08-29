@@ -104,6 +104,7 @@ urlpatterns = [
     
     # TikTok Video Upload proxy endpoints (separate module)
     path('api/tiktok/videos/upload/', misc.tiktok_videos_proxy_upload, name='api_tiktok_videos_upload'),
+    path('api/tiktok/videos/prepare-accounts/', misc.tiktok_videos_proxy_prepare_accounts, name='api_tiktok_videos_prepare_accounts'),
     path('api/tiktok/videos/upload-titles/', misc.tiktok_videos_proxy_upload_titles, name='api_tiktok_videos_upload_titles'),
     path('api/tiktok/videos/prepare-config/', misc.tiktok_videos_proxy_prepare_config, name='api_tiktok_videos_prepare_config'),
     path('api/tiktok/videos/start-upload/', misc.tiktok_videos_proxy_start_upload, name='api_tiktok_videos_start_upload'),

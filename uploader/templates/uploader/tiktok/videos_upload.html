@@ -282,6 +282,31 @@
         </div>
     </div>
 
+    <!-- Step 0: Prepare Accounts -->
+    <div class="tiktok-card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-people me-2"></i>Step 0 — Prepare Accounts</h5>
+        </div>
+        <div class="card-body">
+            <form id="prepare-accounts-form">
+                {% csrf_token %}
+                <input type="hidden" name="server_url" value="{{ api_base }}">
+                <div class="row g-3 align-items-end">
+                    <div class="col-sm-6 col-md-4">
+                        <label for="count" class="form-label">Number of Accounts</label>
+                        <input type="number" class="form-control" id="count" name="count" value="20" min="1" max="500" required>
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-tiktok">
+                            <i class="bi bi-people-fill me-2"></i>Prepare Accounts
+                        </button>
+                    </div>
+                </div>
+            </form>
+            <div id="prepare-accounts-result" class="response-container d-none"></div>
+        </div>
+    </div>
+
     <!-- Step 1: Upload Videos -->
     <div class="tiktok-card">
         <div class="card-header">
@@ -422,6 +447,42 @@ document.getElementById('video-upload-form').addEventListener('submit', async fu
             progressDiv.style.display = 'none';
             progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated';
         }, 3000);
+    }
+});
+
+// Prepare accounts submit
+document.getElementById('prepare-accounts-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const resultBox = document.getElementById('prepare-accounts-result');
+    const formData = new FormData(this);
+    const count = formData.get('count') || 0;
+    const btn = this.querySelector('button[type="submit"]');
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Preparing...';
+    resultBox.classList.add('d-none');
+    try {
+        const response = await fetch('{% url "api_tiktok_videos_prepare_accounts" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({ count: parseInt(count || 0) })
+        });
+        const data = await response.json();
+        if (response.ok) {
+            resultBox.innerHTML = `<pre class="text-success">${JSON.stringify(data, null, 2)}</pre>`;
+        } else {
+            resultBox.innerHTML = `<pre class="text-danger">${JSON.stringify(data, null, 2)}</pre>`;
+        }
+        resultBox.classList.remove('d-none');
+    } catch (err) {
+        resultBox.innerHTML = `<pre class="text-danger">${err.message}</pre>`;
+        resultBox.classList.remove('d-none');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = original;
     }
 });
 </script>
