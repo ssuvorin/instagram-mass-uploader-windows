@@ -216,6 +216,25 @@
         border-color: #718096;
         color: #e2e8f0;
     }
+    /* API status indicator (copied style from booster) */
+    .api-status {
+        padding: 0.75rem 1rem;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        backdrop-filter: blur(10px);
+        min-width: 300px;
+    }
+    .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        box-shadow: 0 0 8px currentColor;
+    }
+    .status-success { background-color: #28a745; color: #28a745; }
+    .status-error { background-color: #dc3545; color: #dc3545; }
+    .status-warning { background-color: #ffc107; color: #ffc107; }
+    .status-info { background-color: #17a2b8; color: #17a2b8; }
 </style>
 {% endblock %}
 
@@ -236,32 +255,28 @@
                     <a href="{% url 'tiktok_videos' %}" class="btn btn-outline-light">
                         <i class="bi bi-arrow-left me-2"></i>Back to Manager
                     </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- API Server Selection -->
-    <div class="tiktok-card">
-        <div class="card-header">
-            <h5 class="mb-0"><i class="bi bi-server me-2"></i>Select TikTok API Server</h5>
-        </div>
-        <div class="card-body">
-            {% csrf_token %}
-            <div class="row">
-                <div class="col-md-6">
-                    <label for="api-server-select" class="form-label">API Server:</label>
-                    <select class="form-select" id="api-server-select">
-                        {% for server in available_servers %}
-                        <option value="{{ server.url }}" {% if server.url == api_base %}selected{% endif %}>
-                            {{ server.name }} - {{ server.url }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Current Server:</label>
-                    <div class="form-control-plaintext" id="current-server-display">{{ api_base }}</div>
+                    <div class="api-status">
+                        {% csrf_token %}
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <label for="api-server-select" class="form-label text-white mb-0 small">API Server:</label>
+                            <select class="form-select form-select-sm" id="api-server-select" style="min-width: 200px;">
+                                {% for server in available_servers %}
+                                <option value="{{ server.url }}" data-desc="{{ server.description }}" {% if server.url == api_base %}selected{% endif %}>
+                                    {{ server.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="status-indicator" id="api-status"></span>
+                            <span id="api-status-text" class="small">Checking...</span>
+                            <small class="text-white-50">|</small>
+                            <a href="{{ api_base }}/docs" target="_blank" class="text-white-50 small text-decoration-none" id="current-server-link" title="Open API docs">
+                                <i class="bi bi-box-arrow-up-right me-1"></i>{{ api_base }}
+                            </a>
+                        </div>
+                        <small class="text-white-50 d-block mt-1" id="api-server-desc">{% for s in available_servers %}{% if s.url == api_base %}{{ s.description }}{% endif %}{% endfor %}</small>
+                    </div>
                 </div>
             </div>
         </div>
@@ -308,21 +323,51 @@
 let API_BASE = '{{ api_base }}';
 
 // Update server selection
-document.getElementById('api-server-select').addEventListener('change', function() {
-    const selectedServer = this.value;
-    API_BASE = selectedServer;
-    document.getElementById('current-server-display').textContent = selectedServer;
-    document.getElementById('server-url-input').value = selectedServer;
-    
-    // Update session via AJAX
+document.getElementById('api-server-select').addEventListener('change', function(e) {
+    const selectedUrl = e.target.value;
+    API_BASE = selectedUrl;
+    document.getElementById('server-url-input').value = selectedUrl;
+    const linkElement = document.getElementById('current-server-link');
+    linkElement.href = `${API_BASE}/docs`;
+    linkElement.lastChild.textContent = API_BASE;
+    const descEl = document.getElementById('api-server-desc');
+    const option = e.target.options[e.target.selectedIndex];
+    if (option && option.dataset.desc) descEl.textContent = option.dataset.desc;
+    // Persist in session
     fetch('{% url "api_tiktok_set_active_server" %}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
             'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
         },
-        body: `server_url=${encodeURIComponent(selectedServer)}`
+        body: `server_url=${encodeURIComponent(selectedUrl)}`
     });
+    // Re-check status
+    checkApiStatus();
+});
+
+// API Status Check via backend
+async function checkApiStatus() {
+    const statusIndicator = document.getElementById('api-status');
+    const statusText = document.getElementById('api-status-text');
+    try {
+        const response = await fetch('{% url "api_tiktok_api_ping" %}', { method: 'POST' });
+        const data = await response.json();
+        if (response.ok && data.ok) {
+            statusIndicator.className = 'status-indicator status-success';
+            statusText.textContent = 'Connected';
+        } else {
+            throw new Error(data && data.detail ? data.detail : `HTTP ${response.status}`);
+        }
+    } catch (error) {
+        statusIndicator.className = 'status-indicator status-error';
+        statusText.textContent = 'Disconnected';
+        console.error('API connection error:', error);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    checkApiStatus();
 });
 
 // Handle form submission (step 1 - only videos)
