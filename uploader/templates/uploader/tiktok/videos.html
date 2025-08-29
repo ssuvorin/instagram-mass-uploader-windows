@@ -210,10 +210,11 @@
                     <p class="mb-0 opacity-75">Upload, manage, and organize TikTok videos</p>
                 </div>
                 <div class="api-status">
+                    {% csrf_token %}
                     <div class="d-flex align-items-center gap-2 mb-2">
                         <label for="api-server-select" class="form-label text-white mb-0 small">API Server:</label>
                         <select class="form-select form-select-sm" id="api-server-select" style="min-width: 200px;">
-                            {% for server in api_servers %}
+                            {% for server in available_servers %}
                             <option value="{{ server.url }}" {% if server.url == api_base %}selected{% endif %}>
                                 {{ server.name }}
                             </option>
@@ -362,6 +363,16 @@
         const linkElement = document.getElementById('current-server-link');
         linkElement.href = `${API_BASE}/docs`;
         linkElement.lastChild.textContent = API_BASE;
+
+        // Update session via AJAX
+        fetch('{% url "api_tiktok_set_active_server" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: `server_url=${encodeURIComponent(selectedUrl)}`
+        });
 
         // Re-check API status with new server
         checkApiStatus();

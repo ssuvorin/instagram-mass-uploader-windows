@@ -11,9 +11,13 @@ import time
 import random
 import os
 import json
+import logging
 
 # Global top sites list (~500). Consider moving to JSON config if you want to customize without code edits.
 _TOP_SITES_CACHE: list | None = None
+
+# Logger for this module
+logger = logging.getLogger(__name__)
 
 def _load_top_sites_from_json() -> list:
     """Load top sites list from JSON. Path can be overridden via COOKIE_ROBOT_TOP_SITES_JSON env var."""
@@ -1518,89 +1522,24 @@ def tiktok_booster(request):
     Default servers can be configured via TIKTOK_API_SERVERS as JSON.
     Selected server can be overridden via TIKTOK_API_BASE.
     """
-    import json
-
-    # Default servers configuration
-    default_servers = [
-        {
-            'name': 'Primary Server',
-            'url': 'http://94.141.161.231:8000',
-            'description': 'Основной сервер для TikTok API'
-        },
-        {
-            'name': 'Local Development',
-            'url': 'http://localhost:8000',
-            'description': 'Локальный сервер для разработки'
-        }
-    ]
-
-    # Try to load servers from environment variable
-    servers_config = os.environ.get('TIKTOK_API_SERVERS', '')
-    if servers_config:
-        try:
-            # Handle both quoted and unquoted JSON strings
-            if servers_config.strip().startswith("'") and servers_config.strip().endswith("'"):
-                # Remove surrounding quotes and parse
-                servers_config = servers_config.strip("'\"")
-            elif servers_config.strip().startswith('"') and servers_config.strip().endswith('"'):
-                # Remove surrounding quotes and parse
-                servers_config = servers_config.strip("'\"")
-
-            servers = json.loads(servers_config)
-        except json.JSONDecodeError as e:
-            logger.warning(f"Failed to parse TIKTOK_API_SERVERS JSON: {e}. Using default servers.")
-            servers = default_servers
-    else:
-        servers = default_servers
-
-    # Get currently selected API base
-    selected_api_base = os.environ.get('TIKTOK_API_BASE', servers[0]['url'] if servers else 'http://94.141.161.231:8000')
-
-    # Find selected server info
-    selected_server = None
-    for server in servers:
-        if server['url'] == selected_api_base:
-            selected_server = server
-            break
-
-    # If no match found, create a custom server entry
-    if not selected_server:
-        selected_server = {
-            'name': 'Custom Server',
-            'url': selected_api_base,
-            'description': 'Пользовательский сервер'
-        }
-        servers.append(selected_server)
-
-    context = {
-        'active_tab': 'tiktok',
-        'api_base': selected_api_base,
-        'available_servers': servers,
-        'selected_server': selected_server,
-        'server_count': len(servers),
-    }
+    context = _tiktok_api_context(request)
     return render(request, 'uploader/tiktok/booster.html', context)
 
 
-def _tiktok_api_context() -> dict:
+def _tiktok_api_context(request=None) -> dict:
     """Build context with API servers from environment for TikTok booster pages."""
-    # Default servers configuration
-    default_servers = [
-        {
-            'name': 'Primary Server',
-            'url': 'http://94.141.161.231:8000',
-            'description': 'Основной сервер для TikTok API'
-        },
-        {
-            'name': 'Local Development',
-            'url': 'http://localhost:8000',
-            'description': 'Локальный сервер для разработки'
-        }
-    ]
-
-    # Try to load servers from environment variable
+    # Load servers from environment variable TIKTOK_API_SERVERS
     servers_config = os.environ.get('TIKTOK_API_SERVERS', '')
-    if servers_config:
+    if not servers_config:
+        # Fallback to default if env var is not set
+        servers = [
+            {
+                'name': 'Primary Server',
+                'url': 'http://94.141.161.231:8000',
+                'description': 'Основной сервер для TikTok API'
+            }
+        ]
+    else:
         try:
             # Handle both quoted and unquoted JSON strings
             if servers_config.strip().startswith("'") and servers_config.strip().endswith("'"):
@@ -1609,25 +1548,48 @@ def _tiktok_api_context() -> dict:
                 servers_config = servers_config.strip('\'"')
             servers = json.loads(servers_config)
         except Exception as e:
-            logger.warning(f"Failed to parse TIKTOK_API_SERVERS JSON: {e}. Using default servers.")
-            servers = default_servers
-    else:
-        servers = default_servers
+            logger.warning(f"Failed to parse TIKTOK_API_SERVERS JSON: {e}. Using fallback server.")
+            servers = [
+                {
+                    'name': 'Primary Server',
+                    'url': 'http://94.141.161.231:8000',
+                    'description': 'Основной сервер для TikTok API'
+                }
+            ]
 
-    selected_api_base = os.environ.get('TIKTOK_API_BASE', servers[0]['url'] if servers else 'http://94.141.161.231:8000')
+    # Determine selected API base with precedence: session -> env -> first server
+    selected_api_base = None
+    
+    # 1) Try to get from session if request is provided
+    if request is not None:
+        try:
+            session_url = request.session.get('selected_tiktok_api_base')
+            if session_url:
+                selected_api_base = session_url
+        except Exception:
+            pass
+    
+    # 2) Fallback to environment variable TIKTOK_API_BASE
+    if not selected_api_base:
+        selected_api_base = os.environ.get('TIKTOK_API_BASE', servers[0]['url'] if servers else 'http://94.141.161.231:8000')
 
+    # Find the selected server object
     selected_server = None
     for server in servers:
         if server['url'] == selected_api_base:
             selected_server = server
             break
+    
+    # If selected server not found in list, create a custom entry
     if not selected_server:
         selected_server = {
             'name': 'Custom Server',
             'url': selected_api_base,
             'description': 'Пользовательский сервер'
         }
-        servers.append(selected_server)
+        # Add to servers list if not already there
+        if not any(s['url'] == selected_api_base for s in servers):
+            servers.append(selected_server)
 
     return {
         'active_tab': 'tiktok',
@@ -1640,25 +1602,25 @@ def _tiktok_api_context() -> dict:
 
 @login_required
 def tiktok_booster_upload_accounts(request):
-    context = _tiktok_api_context()
+    context = _tiktok_api_context(request)
     return render(request, 'uploader/tiktok/booster_upload_accounts.html', context)
 
 
 @login_required
 def tiktok_booster_upload_proxies(request):
-    context = _tiktok_api_context()
+    context = _tiktok_api_context(request)
     return render(request, 'uploader/tiktok/booster_upload_proxies.html', context)
 
 
 @login_required
 def tiktok_booster_prepare(request):
-    context = _tiktok_api_context()
+    context = _tiktok_api_context(request)
     return render(request, 'uploader/tiktok/booster_prepare.html', context)
 
 
 @login_required
 def tiktok_booster_start(request):
-    context = _tiktok_api_context()
+    context = _tiktok_api_context(request)
     return render(request, 'uploader/tiktok/booster_start.html', context)
 
 
@@ -1687,10 +1649,10 @@ def _get_tiktok_api_base(request=None) -> str:
             except Exception:
                 pass
         # 3) Fallback to env/defaults
-        ctx = _tiktok_api_context()
+        ctx = _tiktok_api_context(request)
         return ctx.get('api_base')
     except Exception:
-        ctx = _tiktok_api_context()
+        ctx = _tiktok_api_context(request)
         return ctx.get('api_base')
 
 
@@ -1986,14 +1948,14 @@ def clear_captcha_notification(request, task_id):
 @login_required
 def tiktok_videos(request):
     """TikTok Video Management - main page"""
-    context = _tiktok_api_context()
+    context = _tiktok_api_context(request)
     return render(request, 'uploader/tiktok/videos.html', context)
 
 
 @login_required
 def tiktok_videos_upload(request):
     """TikTok Video Upload page"""
-    context = _tiktok_api_context()
+    context = _tiktok_api_context(request)
     return render(request, 'uploader/tiktok/videos_upload.html', context)
 
 
