@@ -24,7 +24,7 @@
         <div class="card-body">
             <div class="row">
                 <div class="col-md-8">
-                    <form id="start-booster-form">
+                    <form id="start-booster-form" action="{% url 'api_tiktok_booster_start' %}" method="post">
                         <button type="submit" class="btn btn-success" id="start-booster-btn"><i class="bi bi-play"></i> Start</button>
                         <div class="progress-container d-none mt-3" id="booster-progress-container">
                             <div class="progress">
@@ -61,45 +61,11 @@
 
 {% block extra_js %}
 <script>
-let API_BASE = '{{ api_base|default:"http://94.141.161.231:8000" }}';
-let isBoosting = false;
-
 document.getElementById('api-server-select').addEventListener('change', function(e){
-  API_BASE = e.target.value;
+  const base = e.target.value;
   const link = document.getElementById('current-server-link');
-  link.href = `${API_BASE}/docs`;
-  link.textContent = API_BASE;
-});
-
-document.getElementById('start-booster-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  if (isBoosting) return;
-  isBoosting = true;
-  const btn = document.getElementById('start-booster-btn');
-  const progressContainer = document.getElementById('booster-progress-container');
-  const progressBar = document.getElementById('booster-progress-bar');
-  const progressText = document.getElementById('booster-progress-text');
-  const respBox = document.getElementById('start-booster-response');
-  respBox.className = 'alert mt-3 d-none';
-  btn.disabled = true;
-  btn.innerHTML = '<i class="bi bi-pause-fill me-2"></i>Boosting...';
-  progressContainer.classList.remove('d-none');
-  try{
-    const res = await fetch(`${API_BASE}/booster/start_booster`, { method:'POST' });
-    const data = await res.json().catch(()=>({}));
-    if(!res.ok){ throw new Error(data.detail || 'Start failed'); }
-    respBox.className = 'alert alert-success mt-3';
-    respBox.textContent = data.message || 'Started';
-    progressBar.style.width = '100%';
-    progressText.textContent = 'Started';
-  }catch(err){
-    respBox.className = 'alert alert-danger mt-3';
-    respBox.textContent = err.message;
-  }finally{
-    isBoosting = false;
-    btn.disabled = false;
-    btn.innerHTML = '<i class="bi bi-play-fill me-2"></i>Start';
-  }
+  link.href = `${base}/docs`;
+  link.textContent = base;
 });
 </script>
 {% endblock %}

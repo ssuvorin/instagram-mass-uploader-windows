@@ -24,7 +24,7 @@
         <div class="card-body">
             <div class="row">
                 <div class="col-md-8">
-                    <form id="prepare-booster-accounts-form">
+                    <form id="prepare-booster-accounts-form" action="{% url 'api_tiktok_booster_prepare_accounts' %}" method="post">
                         <button type="submit" class="btn btn-primary"><i class="bi bi-people"></i> Prepare</button>
                     </form>
                     <div id="prepare-booster-accounts-response" class="alert mt-3 d-none"></div>
@@ -55,32 +55,12 @@
 
 {% block extra_js %}
 <script>
-let API_BASE = '{{ api_base|default:"http://94.141.161.231:8000" }}';
-
 document.getElementById('api-server-select').addEventListener('change', function(e){
-  API_BASE = e.target.value;
+  const base = e.target.value;
   const link = document.getElementById('current-server-link');
-  link.href = `${API_BASE}/docs`;
-  link.textContent = API_BASE;
+  link.href = `${base}/docs`;
+  link.textContent = base;
 });
-
-async function handlePrepare(e){
-  e.preventDefault();
-  const respBox = document.getElementById('prepare-booster-accounts-response');
-  respBox.className = 'alert mt-3 d-none';
-  try{
-    const res = await fetch(`${API_BASE}/booster/prepare_accounts`, { method:'POST' });
-    const data = await res.json().catch(()=>({}));
-    if(!res.ok){ throw new Error(data.detail || 'Prepare failed'); }
-    respBox.className = 'alert alert-success mt-3';
-    respBox.textContent = data.message || 'Prepared';
-  }catch(err){
-    respBox.className = 'alert alert-danger mt-3';
-    respBox.textContent = err.message;
-  }
-}
-
-document.getElementById('prepare-booster-accounts-form').addEventListener('submit', handlePrepare);
 </script>
 {% endblock %}
 

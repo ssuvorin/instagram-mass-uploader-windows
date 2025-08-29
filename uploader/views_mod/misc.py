@@ -2,6 +2,7 @@
 from .common import *
 from django.conf import settings
 from django.views.decorators.clickjacking import xframe_options_exempt
+from django.views.decorators.csrf import csrf_exempt
 import threading
 import re
 import ast
@@ -1658,6 +1659,110 @@ def tiktok_booster_prepare(request):
 def tiktok_booster_start(request):
     context = _tiktok_api_context()
     return render(request, 'uploader/tiktok/booster_start.html', context)
+
+
+# ====== Server-side proxy for TikTok Booster API ======
+
+def _get_tiktok_api_base() -> str:
+    ctx = _tiktok_api_context()
+    return ctx.get('api_base')
+
+
+def _json_response(data: dict, status: int = 200):
+    from django.http import JsonResponse
+    return JsonResponse(data, status=status)
+
+
+@csrf_exempt
+@login_required
+def tiktok_booster_proxy_upload_accounts(request):
+    """Proxy: upload accounts file to external TikTok API from server side."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    api_base = _get_tiktok_api_base()
+    try:
+        file = request.FILES.get('file')
+        if not file:
+            return _json_response({'detail': 'No file provided'}, status=400)
+        files = {'file': (file.name, file.read())}
+        resp = requests.post(f"{api_base}/booster/upload_accounts", files=files, timeout=30)
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        if resp.ok:
+            return _json_response(data, status=resp.status_code)
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_booster_proxy_upload_proxies(request):
+    """Proxy: upload proxies file to external TikTok API from server side."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    api_base = _get_tiktok_api_base()
+    try:
+        file = request.FILES.get('file')
+        if not file:
+            return _json_response({'detail': 'No file provided'}, status=400)
+        files = {'file': (file.name, file.read())}
+        resp = requests.post(f"{api_base}/booster/upload_proxies", files=files, timeout=30)
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        if resp.ok:
+            return _json_response(data, status=resp.status_code)
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_booster_proxy_prepare_accounts(request):
+    """Proxy: prepare booster accounts."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    api_base = _get_tiktok_api_base()
+    try:
+        resp = requests.post(f"{api_base}/booster/prepare_accounts", timeout=30)
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        if resp.ok:
+            return _json_response(data, status=resp.status_code)
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_booster_proxy_start(request):
+    """Proxy: start booster."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    api_base = _get_tiktok_api_base()
+    try:
+        resp = requests.post(f"{api_base}/booster/start_booster", timeout=60)
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        if resp.ok:
+            return _json_response(data, status=resp.status_code)
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
 
 
 @login_required

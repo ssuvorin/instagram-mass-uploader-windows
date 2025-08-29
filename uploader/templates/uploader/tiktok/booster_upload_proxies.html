@@ -24,7 +24,7 @@
         <div class="card-body">
             <div class="row">
                 <div class="col-md-8">
-                    <form id="upload-proxies-form">
+                    <form id="upload-proxies-form" action="{% url 'api_tiktok_booster_upload_proxies' %}" method="post" enctype="multipart/form-data">
                         <div class="mb-3">
                             <label class="form-label">Proxies .txt</label>
                             <input type="file" class="form-control" id="proxies-file" name="file" accept=".txt" required>
@@ -60,36 +60,12 @@
 
 {% block extra_js %}
 <script>
-let API_BASE = '{{ api_base|default:"http://94.141.161.231:8000" }}';
-
 document.getElementById('api-server-select').addEventListener('change', function(e){
-  API_BASE = e.target.value;
+  const base = e.target.value;
   const link = document.getElementById('current-server-link');
-  link.href = `${API_BASE}/docs`;
-  link.textContent = API_BASE;
+  link.href = `${base}/docs`;
+  link.textContent = base;
 });
-
-async function handleUpload(e){
-  e.preventDefault();
-  const fileInput = document.getElementById('proxies-file');
-  const respBox = document.getElementById('upload-proxies-response');
-  respBox.className = 'alert mt-3 d-none';
-  if(!fileInput.files.length){ return; }
-  const fd = new FormData();
-  fd.append('file', fileInput.files[0]);
-  try{
-    const res = await fetch(`${API_BASE}/booster/upload_proxies`, { method:'POST', body: fd });
-    const data = await res.json().catch(()=>({}));
-    if(!res.ok){ throw new Error(data.detail || 'Upload failed'); }
-    respBox.className = 'alert alert-success mt-3';
-    respBox.textContent = data.message || 'Proxies uploaded';
-  }catch(err){
-    respBox.className = 'alert alert-danger mt-3';
-    respBox.textContent = err.message;
-  }
-}
-
-document.getElementById('upload-proxies-form').addEventListener('submit', handleUpload);
 </script>
 {% endblock %}
 

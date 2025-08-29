@@ -86,6 +86,11 @@ urlpatterns = [
     path('tiktok/booster/prepare/', misc.tiktok_booster_prepare, name='tiktok_booster_prepare'),
     path('tiktok/booster/start/', misc.tiktok_booster_start, name='tiktok_booster_start'),
     path('tiktok/booster/logs/', misc.get_api_server_logs, name='get_api_server_logs'),
+    # Server-side proxy endpoints
+    path('api/tiktok/booster/upload-accounts/', misc.tiktok_booster_proxy_upload_accounts, name='api_tiktok_booster_upload_accounts'),
+    path('api/tiktok/booster/upload-proxies/', misc.tiktok_booster_proxy_upload_proxies, name='api_tiktok_booster_upload_proxies'),
+    path('api/tiktok/booster/prepare/', misc.tiktok_booster_proxy_prepare_accounts, name='api_tiktok_booster_prepare_accounts'),
+    path('api/tiktok/booster/start/', misc.tiktok_booster_proxy_start, name='api_tiktok_booster_start'),
 
     # Hashtag Analyzer
     path('tools/hashtag/', hashtag.hashtag_analyzer, name='hashtag_analyzer'),

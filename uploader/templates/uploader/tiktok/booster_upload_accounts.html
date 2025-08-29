@@ -23,7 +23,7 @@
         <div class="card-body">
             <div class="row">
                 <div class="col-md-8">
-                    <form id="upload-accounts-form">
+                    <form id="upload-accounts-form" action="{% url 'api_tiktok_booster_upload_accounts' %}" method="post" enctype="multipart/form-data">
                         <div class="mb-3">
                             <label class="form-label">Accounts .txt</label>
                             <input type="file" class="form-control" id="accounts-file" name="file" accept=".txt" required>
@@ -59,37 +59,13 @@
 
 {% block extra_js %}
 <script>
-let API_BASE = '{{ api_base|default:"http://94.141.161.231:8000" }}';
-
+// Basic UI update for server selection (no client-side fetch; uses Django proxy)
 document.getElementById('api-server-select').addEventListener('change', function(e){
-  API_BASE = e.target.value;
+  const base = e.target.value;
   const link = document.getElementById('current-server-link');
-  link.href = `${API_BASE}/docs`;
-  link.textContent = API_BASE;
+  link.href = `${base}/docs`;
+  link.textContent = base;
 });
-
-async function handleUpload(e){
-  e.preventDefault();
-  const form = e.target;
-  const fileInput = document.getElementById('accounts-file');
-  const respBox = document.getElementById('upload-accounts-response');
-  respBox.className = 'alert mt-3 d-none';
-  if(!fileInput.files.length){ return; }
-  const fd = new FormData();
-  fd.append('file', fileInput.files[0]);
-  try{
-    const res = await fetch(`${API_BASE}/booster/upload_accounts`, { method:'POST', body: fd });
-    const data = await res.json().catch(()=>({}));
-    if(!res.ok){ throw new Error(data.detail || 'Upload failed'); }
-    respBox.className = 'alert alert-success mt-3';
-    respBox.textContent = data.message || 'Accounts uploaded';
-  }catch(err){
-    respBox.className = 'alert alert-danger mt-3';
-    respBox.textContent = err.message;
-  }
-}
-
-document.getElementById('upload-accounts-form').addEventListener('submit', handleUpload);
 </script>
 {% endblock %}
 
