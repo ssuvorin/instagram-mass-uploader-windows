@@ -2,7 +2,6 @@ from django.urls import path
 from . import views
 from . import views_avatar
 from . import views_follow
-from . import views_password_reset
 from .views_mod import views_bio
 from .views_mod import misc
 from .views_mod import hashtag
@@ -91,10 +90,7 @@ urlpatterns = [
     # Hashtag Analyzer
     path('tools/hashtag/', hashtag.hashtag_analyzer, name='hashtag_analyzer'),
     
-    # Password Reset Tools
-    path('tools/password-reset/', views_password_reset.password_reset_tool, name='password_reset_tool'),
-    path('tools/bulk-password-reset/', views_password_reset.bulk_password_reset, name='bulk_password_reset'),
-    path('api/password-reset/', views_password_reset.password_reset_api, name='password_reset_api'),
+    # Password Reset Tools (temporarily disabled - views module not present)
 ]
 
 urlpatterns += [
