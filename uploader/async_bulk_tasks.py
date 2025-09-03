@@ -28,6 +28,20 @@ from django.utils import timezone
 import signal
 import threading
 
+# SSL Configuration - Fix SSL errors with proxies
+try:
+    import ssl_fix  # Apply SSL fixes immediately
+except ImportError:
+    # Fallback SSL configuration
+    try:
+        import ssl
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        ssl._create_default_https_context = ssl._create_unverified_context
+        print("[SSL] Fallback SSL configuration applied")
+    except Exception as e:
+        print(f"[SSL] Warning: Could not configure SSL settings: {e}")
+
 # Windows-specific fixes
 try:
     from .windows_fixes import apply_windows_async_context_fix, log_windows_environment, is_windows

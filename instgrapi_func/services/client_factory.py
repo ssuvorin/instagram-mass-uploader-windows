@@ -3,6 +3,12 @@ from instagrapi import Client
 from instagrapi.exceptions import ChallengeRequired, TwoFactorRequired  # type: ignore
 from .geo import resolve_geo
 
+# Apply SSL fixes for proxy compatibility
+try:
+    import ssl_fix
+except ImportError:
+    pass
+
 
 class IGClientFactory:
     @staticmethod
@@ -27,10 +33,33 @@ class IGClientFactory:
     ) -> Client:
         cl = Client()
 
+        # SSL Configuration - disable SSL verification for problematic proxies
+        try:
+            import ssl
+            import urllib3
+            # Disable SSL warnings
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            # Set SSL context to not verify certificates
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            # Apply to client's session
+            if hasattr(cl, 'private') and hasattr(cl.private, 'session'):
+                cl.private.session.verify = False
+        except Exception:
+            pass
+
         # Proxy
         if proxy_url:
             try:
                 cl.set_proxy(proxy_url)
+                # Additional proxy SSL settings
+                if hasattr(cl, 'private') and hasattr(cl.private, 'session'):
+                    cl.private.session.verify = False
+                    cl.private.session.proxies = {
+                        'http': proxy_url,
+                        'https': proxy_url
+                    }
             except Exception:
                 pass
 

@@ -3,6 +3,12 @@
 import os
 import sys
 
+# Apply SSL fixes for proxy compatibility
+try:
+    import ssl_fix
+except ImportError:
+    pass
+
 
 def main():
     """Run administrative tasks."""
