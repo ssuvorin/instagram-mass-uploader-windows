@@ -1046,7 +1046,20 @@
         const resultElement = document.getElementById('proxies-validation-result');
         const submitBtn = document.getElementById('booster-proxies-form').querySelector('button[type="submit"]');
         
+        // Always clear previous validation results
+        resultElement.style.display = 'none';
+        resultElement.innerHTML = '';
+        
         if (file) {
+            // Show loading state
+            resultElement.innerHTML = `
+                <div class="alert alert-info">
+                    <i class="bi bi-hourglass-split me-2"></i>
+                    Validating file...
+                </div>
+            `;
+            resultElement.style.display = 'block';
+            
             try {
                 const result = await validateProxyFile(file);
                 displayValidationResult('proxies-validation-result', result, 'proxy');
@@ -1064,9 +1077,6 @@
                 submitBtn.classList.add('btn-secondary');
             }
         } else {
-            // Clear validation result when no file is selected
-            resultElement.style.display = 'none';
-            resultElement.innerHTML = '';
             // Disable button when no file
             submitBtn.disabled = true;
             submitBtn.classList.remove('btn-tiktok');
@@ -1079,7 +1089,20 @@
         const resultElement = document.getElementById('accounts-validation-result');
         const submitBtn = document.getElementById('booster-accounts-form').querySelector('button[type="submit"]');
         
+        // Always clear previous validation results
+        resultElement.style.display = 'none';
+        resultElement.innerHTML = '';
+        
         if (file) {
+            // Show loading state
+            resultElement.innerHTML = `
+                <div class="alert alert-info">
+                    <i class="bi bi-hourglass-split me-2"></i>
+                    Validating file...
+                </div>
+            `;
+            resultElement.style.display = 'block';
+            
             try {
                 const result = await validateAccountFile(file);
                 displayValidationResult('accounts-validation-result', result, 'account');
@@ -1097,9 +1120,6 @@
                 submitBtn.classList.add('btn-secondary');
             }
         } else {
-            // Clear validation result when no file is selected
-            resultElement.style.display = 'none';
-            resultElement.innerHTML = '';
             // Disable button when no file
             submitBtn.disabled = true;
             submitBtn.classList.remove('btn-tiktok');
@@ -1120,6 +1140,14 @@
             addLog('Proxies uploaded', 'info');
             accountsForm.style.opacity = '1';
             accountsForm.style.pointerEvents = 'auto';
+            
+            // Clear file input and validation after successful upload
+            document.getElementById('proxies-file-input').value = '';
+            document.getElementById('proxies-validation-result').style.display = 'none';
+            document.getElementById('proxies-validation-result').innerHTML = '';
+            btn.disabled = true;
+            btn.classList.remove('btn-tiktok');
+            btn.classList.add('btn-secondary');
         } catch (err) {
             respBox.innerHTML = `<pre class="text-danger">${err.message}</pre>`;
             respBox.classList.remove('d-none');
@@ -1145,6 +1173,14 @@
             cookieSection.style.opacity = '1';
             cookieSection.style.pointerEvents = 'auto';
             runBtn.disabled = false;
+            
+            // Clear file input and validation after successful upload
+            document.getElementById('accounts-file-input').value = '';
+            document.getElementById('accounts-validation-result').style.display = 'none';
+            document.getElementById('accounts-validation-result').innerHTML = '';
+            btn.disabled = true;
+            btn.classList.remove('btn-tiktok');
+            btn.classList.add('btn-secondary');
         } catch (err) {
             respBox.innerHTML = `<pre class="text-danger">${err.message}</pre>`;
             respBox.classList.remove('d-none');
