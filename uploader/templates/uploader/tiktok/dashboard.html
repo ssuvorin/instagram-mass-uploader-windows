@@ -349,6 +349,7 @@
                         <div class="tiktok-stat-card">
                             <div class="tiktok-stat-value" id="server-status">-</div>
                             <div class="tiktok-stat-label">Server Status</div>
+                            <div id="servers-status-list" class="mt-2" style="font-size: 0.8rem; display: none;"></div>
                         </div>
                     </div>
                 </div>
@@ -437,12 +438,14 @@ document.getElementById('api-server-select').addEventListener('change', function
 
     // Re-check API status with new server
     checkApiStatus();
+    checkAllServersStatus();
 });
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
     checkApiStatus();
     updateSystemStatus();
+    checkAllServersStatus();
 });
 
 // API Status Check
@@ -475,18 +478,76 @@ async function updateSystemStatus() {
             document.getElementById('profiles-count').textContent = j.profiles_count ?? 'N/A';
             document.getElementById('accounts-count').textContent = j.accounts_count ?? 'N/A';
             document.getElementById('videos-count').textContent = j.remaining_videos ?? 'N/A';
-            document.getElementById('server-status').textContent = j.is_alive ? 'Online' : 'Offline';
+            
+            // Update server status with detailed info
+            updateServerStatusDisplay(j.is_alive);
         } else {
             document.getElementById('profiles-count').textContent = 'N/A';
             document.getElementById('accounts-count').textContent = 'N/A';
             document.getElementById('videos-count').textContent = 'N/A';
             document.getElementById('server-status').textContent = 'Unknown';
+            document.getElementById('servers-status-list').style.display = 'none';
         }
     } catch (err) {
         document.getElementById('profiles-count').textContent = 'N/A';
         document.getElementById('accounts-count').textContent = 'N/A';
         document.getElementById('videos-count').textContent = 'N/A';
         document.getElementById('server-status').textContent = 'Error';
+        document.getElementById('servers-status-list').style.display = 'none';
+    }
+}
+
+// Check status of all servers
+async function checkAllServersStatus() {
+    const serversList = document.getElementById('servers-status-list');
+    const serverSelect = document.getElementById('api-server-select');
+    const servers = Array.from(serverSelect.options).map(option => ({
+        name: option.textContent,
+        url: option.value,
+        description: option.dataset.desc || ''
+    }));
+    
+    let onlineCount = 0;
+    let statusHtml = '';
+    
+    for (const server of servers) {
+        try {
+            const response = await fetch(`{% url 'api_tiktok_api_ping' %}`, { 
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: `server_url=${encodeURIComponent(server.url)}`
+            });
+            const data = await response.json();
+            
+            if (response.ok && data.ok) {
+                onlineCount++;
+                statusHtml += `<div class="text-success">✅ ${server.name}</div>`;
+            } else {
+                statusHtml += `<div class="text-danger">❌ ${server.name}</div>`;
+            }
+        } catch (error) {
+            statusHtml += `<div class="text-danger">❌ ${server.name}</div>`;
+        }
+    }
+    
+    serversList.innerHTML = statusHtml;
+    serversList.style.display = 'block';
+    
+    // Update main status display
+    document.getElementById('server-status').textContent = `${onlineCount}/${servers.length}`;
+}
+
+// Update server status display
+function updateServerStatusDisplay(isAlive) {
+    if (isAlive) {
+        document.getElementById('server-status').textContent = 'Online';
+        document.getElementById('server-status').className = 'tiktok-stat-value text-success';
+    } else {
+        document.getElementById('server-status').textContent = 'Offline';
+        document.getElementById('server-status').className = 'tiktok-stat-value text-danger';
     }
 }
 </script>
