@@ -936,56 +936,29 @@
                     // Check if line contains cookies (JSON format)
                     if (trimmed.includes('[') && trimmed.includes(']')) {
                         hasCookies++;
-                        // Check for two formats:
-                        // Format 1: username:password:email:2fa@cookies_json
-                        // Format 2: username:password:cookies_json (no @)
+                        // Format: username:password:cookies_json
+                        // @ is just a character in password, not a separator
                         
-                        if (trimmed.includes('@')) {
-                            // Format 1: username:password:email:2fa@cookies_json
-                            const parts = trimmed.split('@');
-                            if (parts.length >= 2) {
-                                const accountPart = parts[0];
-                                const cookiePart = parts[1];
-                                
-                                // Check account part: username:password:email:2fa
-                                const accountFormat = /^[^:]+:[^:]+:[^:]+:[^:]+$/;
-                                if (accountFormat.test(accountPart)) {
-                                    // Check if cookie part is valid JSON
-                                    try {
-                                        JSON.parse(cookiePart);
-                                        isValid = true;
-                                    } catch {
-                                        errors.push(`Line ${index + 1}: Invalid JSON cookies`);
-                                    }
-                                } else {
-                                    errors.push(`Line ${index + 1}: Invalid account format`);
+                        const parts = trimmed.split(':');
+                        if (parts.length >= 3) {
+                            const username = parts[0];
+                            const password = parts[1];
+                            const cookiesPart = parts.slice(2).join(':'); // Join remaining parts in case password contains ':'
+                            
+                            // Check if username and password are not empty
+                            if (username && password) {
+                                // Check if cookies part is valid JSON
+                                try {
+                                    JSON.parse(cookiesPart);
+                                    isValid = true;
+                                } catch {
+                                    errors.push(`Line ${index + 1}: Invalid JSON cookies`);
                                 }
                             } else {
-                                errors.push(`Line ${index + 1}: Missing @ separator`);
+                                errors.push(`Line ${index + 1}: Empty username or password`);
                             }
                         } else {
-                            // Format 2: username:password:cookies_json
-                            const parts = trimmed.split(':');
-                            if (parts.length >= 3) {
-                                const username = parts[0];
-                                const password = parts[1];
-                                const cookiesPart = parts.slice(2).join(':'); // Join remaining parts in case password contains ':'
-                                
-                                // Check if username and password are not empty
-                                if (username && password) {
-                                    // Check if cookies part is valid JSON
-                                    try {
-                                        JSON.parse(cookiesPart);
-                                        isValid = true;
-                                    } catch {
-                                        errors.push(`Line ${index + 1}: Invalid JSON cookies`);
-                                    }
-                                } else {
-                                    errors.push(`Line ${index + 1}: Empty username or password`);
-                                }
-                            } else {
-                                errors.push(`Line ${index + 1}: Invalid format - need username:password:cookies`);
-                            }
+                            errors.push(`Line ${index + 1}: Invalid format - need username:password:cookies`);
                         }
                     } else {
                         hasEmailPass++;
