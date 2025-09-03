@@ -18,6 +18,9 @@
             <button class="btn btn-primary" id="start-btn">
                 <i class="bi bi-play-fill me-2"></i>Start Upload
             </button>
+            <button class="btn btn-outline-secondary ms-2" id="release-btn">
+                <i class="bi bi-box-arrow-in-left me-2"></i>Release Accounts
+            </button>
 
             <div class="progress mt-3" style="height: 8px; display: none;" id="progress-wrap">
                 <div class="progress-bar" role="progressbar" style="width: 0%" id="progress-bar"></div>
@@ -61,6 +64,26 @@ document.getElementById('start-btn').addEventListener('click', async () => {
             bar.className = 'progress-bar';
             bar.style.width = '0%';
         }, 2500);
+    }
+});
+
+document.getElementById('release-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('release-btn');
+    const resEl = document.getElementById('result');
+    btn.disabled = true;
+    resEl.innerHTML = '';
+    try {
+        const res = await fetch('{% url "api_tiktok_videos_release_accounts" %}', { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+            resEl.innerHTML = '<div class="alert alert-success">Release request sent</div>';
+        } else {
+            resEl.innerHTML = `<div class=\"alert alert-danger\">${data.detail || 'Failed to release accounts'}</div>`;
+        }
+    } catch (err) {
+        resEl.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+    } finally {
+        setTimeout(() => { btn.disabled = false; }, 1200);
     }
 });
 </script>

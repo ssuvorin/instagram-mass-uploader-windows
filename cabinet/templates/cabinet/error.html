@@ -1,0 +1,11 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}Cabinet — Error{% endblock %}
+
+{% block content %}
+<div class="alert alert-danger">
+  {{ message|default:"An error occurred." }}
+  </div>
+{% endblock %}
+
+

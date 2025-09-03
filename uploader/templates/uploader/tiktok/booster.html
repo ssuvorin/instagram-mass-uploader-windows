@@ -460,6 +460,16 @@
                 </div>
             </form>
 
+            <div class="mb-3" style="opacity:.6;pointer-events:none;" id="cookie-robot-section">
+                <label class="form-label">Step 3 — Cookie Robot Options</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="1" id="use-cookie-robot" name="use_cookie_robot">
+                    <label class="form-check-label" for="use-cookie-robot">
+                        Enable Cookie Robot while preparing (set proxies, import cookies)
+                    </label>
+                </div>
+            </div>
+
             <div class="mt-2">
                 <button id="booster-run-prepare-start" class="btn btn-tiktok" disabled>
                     <i class="bi bi-play-fill me-2"></i>Prepare + Start
@@ -496,6 +506,22 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Maintenance and Account Actions -->
+    <div class="tiktok-card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-tools"></i>Maintenance</h5>
+        </div>
+        <div class="card-body d-flex flex-wrap gap-2">
+            <button class="btn btn-tiktok-secondary" onclick="maintenanceAction('delete_proxies')"><i class="bi bi-ethernet me-2"></i>Delete Proxies</button>
+            <button class="btn btn-tiktok-secondary" onclick="maintenanceAction('delete_accounts')"><i class="bi bi-person-dash me-2"></i>Delete Accounts</button>
+            <button class="btn btn-tiktok-secondary" onclick="maintenanceAction('clear_db')"><i class="bi bi-database-x me-2"></i>Clear DB</button>
+            <button class="btn btn-tiktok-secondary" onclick="maintenanceAction('clear_all')"><i class="bi bi-trash3 me-2"></i>Clear All</button>
+            <div class="ms-auto"></div>
+            <button class="btn btn-tiktok" onclick="releaseBoosterAccounts()"><i class="bi bi-box-arrow-in-left me-2"></i>Release warmed accounts</button>
+        </div>
+        <div class="response-container d-none" id="maintenance-response"></div>
     </div>
 </div>
 {% endblock %}
@@ -603,13 +629,23 @@
     async function updateSystemStatus(data = null) {
         try {
             if (!data) {
-                // For now, we don't have a status endpoint, so we'll show placeholder data
-                data = {
-                    profiles_count: 'N/A',
-                    accounts_count: 'N/A',
-                    videos_count: 'N/A',
-                    proxies_count: 'N/A'
-                };
+                // Try to fetch stats from backend proxy
+                try {
+                    const res = await fetch('{% url "api_tiktok_stats" %}', { method: 'POST' });
+                    const j = await res.json();
+                    if (res.ok && j.ok) {
+                        data = {
+                            profiles_count: j.profiles_count ?? 'N/A',
+                            accounts_count: j.accounts_count ?? 'N/A',
+                            videos_count: j.remaining_videos ?? 'N/A',
+                            proxies_count: 'N/A'
+                        };
+                    } else {
+                        data = { profiles_count: 'N/A', accounts_count: 'N/A', videos_count: 'N/A', proxies_count: 'N/A' };
+                    }
+                } catch (err) {
+                    data = { profiles_count: 'N/A', accounts_count: 'N/A', videos_count: 'N/A', proxies_count: 'N/A' };
+                }
             }
             
             document.getElementById('profiles-count').textContent = data.profiles_count || 'N/A';
@@ -725,6 +761,41 @@
         }
     }
 
+    // Maintenance actions
+    async function maintenanceAction(action) {
+        try {
+            const box = document.getElementById('maintenance-response');
+            box.classList.add('d-none');
+            const res = await fetch('{% url "api_tiktok_maintenance" %}', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: `action=${encodeURIComponent(action)}` });
+            const data = await res.json();
+            if (res.ok) {
+                box.innerHTML = `<pre class="text-success">${JSON.stringify(data, null, 2)}</pre>`;
+                addLog(`Maintenance ${action}: OK`, 'info');
+            } else {
+                box.innerHTML = `<pre class="text-danger">${JSON.stringify(data, null, 2)}</pre>`;
+                addLog(`Maintenance ${action}: failed`, 'error');
+            }
+            box.classList.remove('d-none');
+            updateSystemStatus();
+        } catch (err) {
+            addLog(`Maintenance ${action}: ${err.message}`, 'error');
+        }
+    }
+
+    async function releaseBoosterAccounts() {
+        try {
+            const res = await fetch('{% url "api_tiktok_booster_release_accounts" %}', { method: 'POST' });
+            const data = await res.json();
+            if (res.ok) {
+                addLog('Release warmed accounts: OK', 'info');
+            } else {
+                addLog('Release warmed accounts failed: ' + (data.detail || 'Unknown'), 'error');
+            }
+        } catch (err) {
+            addLog('Release warmed accounts exception: ' + err.message, 'error');
+        }
+    }
+
     // Form Submission Handler
     async function handleFormSubmit(event, endpoint, method = 'POST', isFormData = false) {
         event.preventDefault();
@@ -812,6 +883,10 @@
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || 'Failed to upload accounts');
             addLog('Accounts uploaded', 'info');
+            // Activate cookie robot section
+            const cookieSection = document.getElementById('cookie-robot-section');
+            cookieSection.style.opacity = '1';
+            cookieSection.style.pointerEvents = 'auto';
             runBtn.disabled = false;
         } catch (err) {
             respBox.innerHTML = `<pre class="text-danger">${err.message}</pre>`;
@@ -826,8 +901,10 @@
         respBox.classList.add('d-none');
         runBtn.disabled = true; const original = runBtn.innerHTML; runBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Running...';
         try {
+            // Get cookie robot checkbox value
+            const useCookieRobot = document.getElementById('use-cookie-robot').checked;
             // Prepare
-            let res = await fetch('{% url "api_tiktok_booster_prepare_accounts" %}', { method: 'POST' });
+            let res = await fetch('{% url "api_tiktok_booster_prepare_accounts" %}', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ use_cookie_robot: useCookieRobot }) });
             let data = await res.json();
             if (!res.ok) throw new Error(data.detail || 'Prepare failed');
             addLog('Prepare accounts: OK', 'info');

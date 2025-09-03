@@ -1526,6 +1526,13 @@ def tiktok_booster(request):
     return render(request, 'uploader/tiktok/booster.html', context)
 
 
+@login_required
+def tiktok_dashboard(request):
+    """Main TikTok dashboard similar to Instagram dashboard."""
+    context = _tiktok_api_context(request)
+    return render(request, 'uploader/tiktok/dashboard.html', context)
+
+
 def _tiktok_api_context(request=None) -> dict:
     """Build context with API servers from environment for TikTok booster pages."""
     # Load servers from environment variable TIKTOK_API_SERVERS
@@ -1747,7 +1754,25 @@ def tiktok_booster_proxy_prepare_accounts(request):
         return _json_response({'detail': 'Method not allowed'}, status=405)
     api_base = _get_tiktok_api_base(request)
     try:
-        resp = requests.post(f"{api_base}/booster/prepare_accounts", timeout=30)
+        # Allow optional flags (e.g., cookie robot) from client
+        payload = {}
+        try:
+            if request.body:
+                body_json = json.loads(request.body.decode('utf-8'))
+                if isinstance(body_json, dict):
+                    payload.update(body_json)
+        except Exception:
+            pass
+        # Also accept form param
+        use_cookie_robot = request.POST.get('use_cookie_robot')
+        if use_cookie_robot is not None:
+            payload['use_cookie_robot'] = True if str(use_cookie_robot).lower() in ('1','true','on','yes') else False
+
+        # Upstream may ignore unknown keys; we still pass json if any provided
+        if payload:
+            resp = requests.post(f"{api_base}/booster/prepare_accounts", json=payload, timeout=30)
+        else:
+            resp = requests.post(f"{api_base}/booster/prepare_accounts", timeout=30)
         try:
             data = resp.json()
         except Exception:
@@ -2114,7 +2139,8 @@ def tiktok_videos_proxy_prepare_config(request):
                 'music_name': payload.get('music_name') or '',
                 'location': payload.get('location') or '',
                 'mentions': payload.get('mentions') or [],
-                'upload_cycles': int(payload.get('upload_cycles') or 5)
+                'upload_cycles': int(payload.get('upload_cycles') or 5),
+                'cycle_timeout_minutes': int(payload.get('cycle_timeout_minutes') or 0)
             },
             timeout=60
         )
@@ -2152,6 +2178,119 @@ def tiktok_videos_proxy_start_upload(request):
         return _json_response(data, status=resp.status_code)
     except requests.exceptions.RequestException as e:
         return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_videos_proxy_release_accounts(request):
+    """Proxy: release accounts from upload module back to DB on upstream server (if supported)."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    api_base = _get_tiktok_api_base(request)
+    try:
+        resp = requests.post(f"{api_base}/upload/release_accounts", timeout=60)
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        if resp.ok:
+            return _json_response(data, status=resp.status_code)
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_booster_proxy_release_accounts(request):
+    """Proxy: add warmed accounts to DB on upstream server (if supported)."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    api_base = _get_tiktok_api_base(request)
+    try:
+        resp = requests.post(f"{api_base}/booster/release_accounts", timeout=60)
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        if resp.ok:
+            return _json_response(data, status=resp.status_code)
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_stats_proxy(request):
+    """Aggregate stats from upstream: dolphin profiles, accounts in DB, remaining videos, and server liveness."""
+    import requests
+    api_base = _get_tiktok_api_base(request)
+    result = {
+        'profiles_count': None,
+        'accounts_count': None,
+        'remaining_videos': None,
+        'is_alive': False,
+    }
+    try:
+        # Health
+        try:
+            r = requests.get(f"{api_base}/health/is_alive", timeout=5)
+            result['is_alive'] = bool(r.ok)
+        except Exception:
+            result['is_alive'] = False
+        # Profiles
+        try:
+            r = requests.get(f"{api_base}/stats/profiles_count", timeout=5)
+            if r.ok:
+                result['profiles_count'] = (r.json() or {}).get('count')
+        except Exception:
+            pass
+        # Accounts
+        try:
+            r = requests.get(f"{api_base}/stats/accounts_count", timeout=5)
+            if r.ok:
+                result['accounts_count'] = (r.json() or {}).get('count')
+        except Exception:
+            pass
+        # Remaining videos
+        try:
+            r = requests.get(f"{api_base}/stats/remaining_videos", timeout=5)
+            if r.ok:
+                result['remaining_videos'] = (r.json() or {}).get('count')
+        except Exception:
+            pass
+        return _json_response({'ok': True, **result})
+    except requests.exceptions.RequestException as e:
+        return _json_response({'ok': False, 'detail': str(e), **result}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_maintenance_proxy(request):
+    """Maintenance actions on upstream: delete_proxies, delete_accounts, clear_db, clear_all."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    api_base = _get_tiktok_api_base(request)
+    action = (request.POST.get('action') or '').strip() or ((json.loads(request.body.decode('utf-8')) or {}).get('action') if request.body else '')
+    if action not in ('delete_proxies','delete_accounts','clear_db','clear_all'):
+        return _json_response({'detail': 'Invalid action'}, status=400)
+    try:
+        resp = requests.post(f"{api_base}/maintenance/{action}", timeout=60)
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        if resp.ok:
+            return _json_response(data, status=resp.status_code)
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
 
 
 @csrf_exempt

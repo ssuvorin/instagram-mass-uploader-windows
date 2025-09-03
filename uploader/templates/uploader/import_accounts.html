@@ -141,6 +141,17 @@
 					</div>
 
 					<div class="mb-4">
+						<label for="client_id" class="form-label">Assign to Client (optional)</label>
+						<select class="form-select" id="client_id" name="client_id">
+							<option value="">— Without client —</option>
+							{% for c in clients %}
+								<option value="{{ c.id }}">{{ c.name }} {% if c.agency %}(Agency: {{ c.agency.name }}){% endif %}</option>
+							{% endfor %}
+						</select>
+						<div class="form-text">Выберите клиента, к которому будут привязаны импортируемые аккаунты.</div>
+					</div>
+
+					<div class="mb-4">
 						<label for="profile_locale" class="form-label">Dolphin Profile Locale</label>
 						<select class="form-select" id="profile_locale" name="profile_locale">
 							<option value="ru_BY" selected>ru_BY (Русский интерфейс, регион BY)</option>

@@ -26,6 +26,12 @@
                 <div class="col-md-8">
                     <form id="prepare-booster-accounts-form" action="{% url 'api_tiktok_booster_prepare_accounts' %}" method="post">
                         <input type="hidden" name="server_url" id="server-url-input" value="{{ api_base }}">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" value="1" id="use-cookie-robot" name="use_cookie_robot">
+                            <label class="form-check-label" for="use-cookie-robot">
+                                Enable Cookie Robot while preparing (set proxies, import cookies)
+                            </label>
+                        </div>
                         <button type="submit" class="btn btn-primary"><i class="bi bi-people"></i> Prepare</button>
                     </form>
                     <div id="prepare-booster-accounts-response" class="alert mt-3 d-none"></div>

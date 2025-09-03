@@ -1,0 +1,44 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}Cabinet — Manage Agencies{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">Manage Agencies</h2>
+  <a class="btn btn-outline-secondary" href="{% url 'cabinet_admin_dashboard' %}">Back to Dashboard</a>
+  </div>
+
+<div class="row">
+  <div class="col-md-5">
+    <div class="card mb-3">
+      <div class="card-header"><h5 class="mb-0">Create agency</h5></div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          {{ form.as_p }}
+          <button type="submit" class="btn btn-primary">Create</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-7">
+    <div class="card">
+      <div class="card-header"><h5 class="mb-0">Existing agencies</h5></div>
+      <ul class="list-group list-group-flush">
+        {% for a in agencies %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <div class="fw-semibold">{{ a.name }}</div>
+            <div class="text-muted small">Owner: {{ a.owner }}</div>
+          </div>
+        </li>
+        {% empty %}
+        <li class="list-group-item text-muted">No agencies</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+

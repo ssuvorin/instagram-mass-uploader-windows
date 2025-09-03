@@ -30,6 +30,10 @@
                         <label class="form-label">Upload Cycles</label>
                         <input type="number" class="form-control" name="upload_cycles" value="5" min="1" max="50">
                     </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Cycle Timeout (minutes)</label>
+                        <input type="number" class="form-control" name="cycle_timeout_minutes" value="0" min="0" max="180" placeholder="0 = no delay">
+                    </div>
                     <div class="col-12">
                         <label class="form-label">Mentions (comma-separated)</label>
                         <input type="text" class="form-control" name="mentions" placeholder="user1,user2,user3">
@@ -57,6 +61,7 @@ document.getElementById('prepare-config-form').addEventListener('submit', async 
         music_name: formData.get('music_name') || '',
         location: formData.get('location') || '',
         upload_cycles: parseInt(formData.get('upload_cycles') || '5'),
+        cycle_timeout_minutes: parseInt(formData.get('cycle_timeout_minutes') || '0'),
         mentions: (formData.get('mentions') || '').split(',').map(s => s.trim()).filter(Boolean)
     };
     try {

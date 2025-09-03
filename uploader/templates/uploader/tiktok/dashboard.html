@@ -1,0 +1,493 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}TikTok Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Modern TikTok dashboard design */
+    .tiktok-dashboard-header {
+        background: linear-gradient(135deg, #ff0050 0%, #ff4081 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 16px;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .tiktok-dashboard-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        transform: rotate(45deg);
+        z-index: 1;
+    }
+    
+    .tiktok-dashboard-header .content {
+        position: relative;
+        z-index: 2;
+    }
+    
+    .tiktok-modern-card {
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        border: 1px solid #e9ecef;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        height: 100%;
+    }
+    
+    .tiktok-modern-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+    }
+    
+    .tiktok-modern-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #ff0050, #ff4081);
+        z-index: 1;
+    }
+    
+    .tiktok-quick-action-item {
+        text-decoration: none;
+        color: inherit;
+        display: block;
+        transition: all 0.3s ease;
+    }
+    
+    .tiktok-quick-action-content {
+        text-align: center;
+        padding: 2rem 1rem;
+        background: #f8f9fa;
+        border-radius: 12px;
+        border: 1px solid #e9ecef;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .tiktok-quick-action-item:hover .tiktok-quick-action-content {
+        background: white;
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+        border-color: #ff0050;
+    }
+    
+    .tiktok-quick-action-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        color: #ff0050;
+        transition: all 0.3s ease;
+    }
+    
+    .tiktok-quick-action-item:hover .tiktok-quick-action-icon {
+        color: #ff4081;
+        transform: scale(1.1);
+    }
+    
+    .tiktok-quick-action-label {
+        font-weight: 600;
+        color: #2c3e50;
+        margin: 0;
+    }
+    
+    .tiktok-stat-card {
+        text-align: center;
+        padding: 2rem 1rem;
+        background: #f8f9fa;
+        border-radius: 12px;
+        border: 1px solid #e9ecef;
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    
+    .tiktok-stat-card:hover {
+        background: white;
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+    }
+    
+    .tiktok-stat-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #ff0050;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    
+    .tiktok-stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .tiktok-btn-modern {
+        padding: 0.6rem 1.5rem;
+        border-radius: 25px;
+        border: none;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        background: linear-gradient(135deg, #ff0050 0%, #ff4081 100%);
+        color: white;
+    }
+    
+    .tiktok-btn-modern::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: left 0.5s;
+    }
+    
+    .tiktok-btn-modern:hover::before {
+        left: 100%;
+    }
+    
+    .tiktok-btn-modern:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(255,0,80,0.3);
+        color: white;
+    }
+    
+    .tiktok-status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        box-shadow: 0 0 8px currentColor;
+    }
+    
+    .tiktok-status-success { 
+        background-color: #28a745; 
+        color: #28a745;
+    }
+    
+    .tiktok-status-error { 
+        background-color: #dc3545; 
+        color: #dc3545;
+    }
+    
+    .tiktok-status-warning { 
+        background-color: #ffc107; 
+        color: #ffc107;
+    }
+    
+    .tiktok-status-info { 
+        background-color: #17a2b8; 
+        color: #17a2b8;
+    }
+    
+    .tiktok-api-status {
+        padding: 0.75rem 1rem;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        backdrop-filter: blur(10px);
+        min-width: 300px;
+    }
+    
+    /* Dark theme support */
+    .dark-theme .tiktok-modern-card {
+        background: #2d3748;
+        border-color: #4a5568;
+    }
+    
+    .dark-theme .tiktok-quick-action-content {
+        background: #4a5568;
+        border-color: #718096;
+    }
+    
+    .dark-theme .tiktok-quick-action-item:hover .tiktok-quick-action-content {
+        background: #2d3748;
+    }
+    
+    .dark-theme .tiktok-quick-action-label {
+        color: #e2e8f0;
+    }
+    
+    .dark-theme .tiktok-stat-card {
+        background: #4a5568;
+        border-color: #718096;
+    }
+    
+    .dark-theme .tiktok-stat-card:hover {
+        background: #2d3748;
+    }
+    
+    .dark-theme .tiktok-stat-label {
+        color: #a0aec0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- TikTok Dashboard Header -->
+<div class="tiktok-dashboard-header">
+    <div class="content">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2 fw-bold">
+                    <i class="bi bi-music-note-beamed me-2"></i>
+                    TikTok Automation Dashboard
+                </h2>
+                <p class="mb-0 opacity-75">Manage and monitor your TikTok automation tasks</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="tiktok-api-status">
+                    {% csrf_token %}
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <label for="api-server-select" class="form-label text-white mb-0 small">API Server:</label>
+                        <select class="form-select form-select-sm" id="api-server-select" style="min-width: 200px;">
+                            {% for server in available_servers %}
+                            <option value="{{ server.url }}" data-desc="{{ server.description }}" {% if server.url == selected_server.url %}selected{% endif %}>
+                                {{ server.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="tiktok-status-indicator" id="api-status"></span>
+                        <span id="api-status-text" class="small">Checking...</span>
+                        <small class="text-white-50">|</small>
+                        <a href="{{ selected_server.url }}/docs" target="_blank" class="text-white-50 small text-decoration-none" id="current-server-link" title="Open API docs">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>{{ selected_server.url }}
+                        </a>
+                    </div>
+                    <small class="text-white-50 d-block mt-1">{{ selected_server.description }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="tiktok-modern-card">
+            <div class="card-body p-4">
+                <h5 class="card-title mb-4 fw-bold text-center">Quick Actions</h5>
+                <div class="row g-4">
+                    <div class="col-md-3 col-6">
+                        <a href="{% url 'tiktok_booster' %}" class="tiktok-quick-action-item">
+                            <div class="tiktok-quick-action-content">
+                                <i class="bi bi-lightning tiktok-quick-action-icon"></i>
+                                <div class="tiktok-quick-action-label">Booster</div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <a href="{% url 'tiktok_videos' %}" class="tiktok-quick-action-item">
+                            <div class="tiktok-quick-action-content">
+                                <i class="bi bi-film tiktok-quick-action-icon"></i>
+                                <div class="tiktok-quick-action-label">Video Manager</div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <a href="{% url 'tiktok_videos_upload' %}" class="tiktok-quick-action-item">
+                            <div class="tiktok-quick-action-content">
+                                <i class="bi bi-cloud-upload tiktok-quick-action-icon"></i>
+                                <div class="tiktok-quick-action-label">Upload Videos</div>
+                            </div>
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Overview -->
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="tiktok-modern-card">
+            <div class="card-body p-4">
+                <h5 class="card-title mb-4 fw-bold text-center">System Overview</h5>
+                <div class="row g-4">
+                    <div class="col-md-3 col-6">
+                        <div class="tiktok-stat-card">
+                            <div class="tiktok-stat-value" id="profiles-count">-</div>
+                            <div class="tiktok-stat-label">Dolphin Profiles</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="tiktok-stat-card">
+                            <div class="tiktok-stat-value" id="accounts-count">-</div>
+                            <div class="tiktok-stat-label">Accounts</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="tiktok-stat-card">
+                            <div class="tiktok-stat-value" id="videos-count">-</div>
+                            <div class="tiktok-stat-label">Videos</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="tiktok-stat-card">
+                            <div class="tiktok-stat-value" id="server-status">-</div>
+                            <div class="tiktok-stat-label">Server Status</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="tiktok-modern-card">
+            <div class="card-header bg-transparent border-0 pb-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold">Booster Pipeline</h6>
+                    <a href="{% url 'tiktok_booster' %}" class="btn btn-sm btn-outline-primary tiktok-btn-modern">Manage</a>
+                </div>
+            </div>
+            <div class="card-body pt-3">
+                <p class="text-muted mb-3">Upload accounts and proxies, then prepare and start the booster process.</p>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{% url 'tiktok_booster_upload_accounts' %}" class="btn btn-sm btn-outline-primary">Upload Accounts</a>
+                    <a href="{% url 'tiktok_booster_upload_proxies' %}" class="btn btn-sm btn-outline-primary">Upload Proxies</a>
+                    <a href="{% url 'tiktok_booster_prepare' %}" class="btn btn-sm btn-outline-primary">Prepare</a>
+                    <a href="{% url 'tiktok_booster_start' %}" class="btn btn-sm btn-outline-primary">Start</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6 mb-4">
+        <div class="tiktok-modern-card">
+            <div class="card-header bg-transparent border-0 pb-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold">Video Upload</h6>
+                    <a href="{% url 'tiktok_videos' %}" class="btn btn-sm btn-outline-primary tiktok-btn-modern">Manage</a>
+                </div>
+            </div>
+            <div class="card-body pt-3">
+                <p class="text-muted mb-3">Upload videos and titles, prepare configuration, then start the upload process.</p>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{% url 'tiktok_videos_upload' %}" class="btn btn-sm btn-outline-primary">Upload Videos</a>
+                    <a href="{% url 'tiktok_videos_titles' %}" class="btn btn-sm btn-outline-primary">Upload Titles</a>
+                    <a href="{% url 'tiktok_videos_prepare' %}" class="btn btn-sm btn-outline-primary">Prepare Config</a>
+                    <a href="{% url 'tiktok_videos_start' %}" class="btn btn-sm btn-outline-primary">Start Upload</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global API_BASE variable - will be updated dynamically
+let API_BASE = '{{ api_base|default:"http://94.141.161.231:8000" }}';
+
+// Server selection handler
+document.getElementById('api-server-select').addEventListener('change', function(e) {
+    const selectedUrl = e.target.value;
+    const selectedOption = e.target.options[e.target.selectedIndex];
+
+    // Update global API_BASE
+    API_BASE = selectedUrl;
+
+    // Update current server display and link
+    const linkElement = document.getElementById('current-server-link');
+    linkElement.href = `${API_BASE}/docs`;
+    linkElement.lastChild.textContent = API_BASE;
+
+    // Update description
+    const statusContainer = e.target.closest('.tiktok-api-status');
+    const descElement = statusContainer.querySelector('small:last-child');
+    if (descElement) {
+        const desc = selectedOption ? (selectedOption.dataset.desc || 'Custom server') : 'Custom server';
+        descElement.textContent = desc;
+    }
+
+    // Persist selected server in session
+    fetch('{% url "api_tiktok_set_active_server" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: `server_url=${encodeURIComponent(selectedUrl)}`
+    });
+
+    // Re-check API status with new server
+    checkApiStatus();
+});
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    checkApiStatus();
+    updateSystemStatus();
+});
+
+// API Status Check
+async function checkApiStatus() {
+    const statusIndicator = document.getElementById('api-status');
+    const statusText = document.getElementById('api-status-text');
+    
+    try {
+        const response = await fetch(`{% url 'api_tiktok_api_ping' %}`, { method: 'POST' });
+        const data = await response.json();
+        if (response.ok && data.ok) {
+            statusIndicator.className = 'tiktok-status-indicator tiktok-status-success';
+            statusText.textContent = 'Connected';
+        } else {
+            throw new Error(data && data.detail ? data.detail : `HTTP ${response.status}`);
+        }
+    } catch (error) {
+        statusIndicator.className = 'tiktok-status-indicator tiktok-status-error';
+        statusText.textContent = 'Disconnected';
+        console.error('API connection error:', error);
+    }
+}
+
+// System Status Update
+async function updateSystemStatus() {
+    try {
+        const res = await fetch('{% url "api_tiktok_stats" %}', { method: 'POST' });
+        const j = await res.json();
+        if (res.ok && j.ok) {
+            document.getElementById('profiles-count').textContent = j.profiles_count ?? 'N/A';
+            document.getElementById('accounts-count').textContent = j.accounts_count ?? 'N/A';
+            document.getElementById('videos-count').textContent = j.remaining_videos ?? 'N/A';
+            document.getElementById('server-status').textContent = j.is_alive ? 'Online' : 'Offline';
+        } else {
+            document.getElementById('profiles-count').textContent = 'N/A';
+            document.getElementById('accounts-count').textContent = 'N/A';
+            document.getElementById('videos-count').textContent = 'N/A';
+            document.getElementById('server-status').textContent = 'Unknown';
+        }
+    } catch (err) {
+        document.getElementById('profiles-count').textContent = 'N/A';
+        document.getElementById('accounts-count').textContent = 'N/A';
+        document.getElementById('videos-count').textContent = 'N/A';
+        document.getElementById('server-status').textContent = 'Error';
+    }
+}
+</script>
+{% endblock %}

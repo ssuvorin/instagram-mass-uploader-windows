@@ -1,6 +1,7 @@
 """Views module: accounts (split from monolith)."""
 from .common import *
 from django.db import models
+from cabinet.models import Client as CabinetClient
 
 
 def account_list(request):
@@ -362,6 +363,14 @@ def import_accounts(request):
     """
     if request.method == 'POST' and request.FILES.get('accounts_file'):
         accounts_file = request.FILES['accounts_file']
+        # Optional client selection
+        selected_client = None
+        try:
+            client_id_str = request.POST.get('client_id')
+            if client_id_str:
+                selected_client = CabinetClient.objects.filter(id=int(client_id_str)).first()
+        except Exception:
+            selected_client = None
         
         # Helpers for cookie classification and extraction
         def _detect_mobile_cookies(cookies_str: str, device_info: str | None) -> bool:
@@ -701,6 +710,8 @@ def import_accounts(request):
                 }
                 if assigned_proxy and (not existing_map.get(username) or not (existing_map[username].proxy or existing_map[username].current_proxy)):
                     defaults['proxy'] = assigned_proxy
+                if selected_client is not None:
+                    defaults['client'] = selected_client
  
                 account, created = InstagramAccount.objects.update_or_create(
                     username=username,
@@ -890,8 +901,10 @@ def import_accounts(request):
          
         return redirect('account_list')
      
+    clients = CabinetClient.objects.select_related('agency').all()
     context = {
-        'active_tab': 'import_accounts'
+        'active_tab': 'import_accounts',
+        'clients': clients,
     }
     return render(request, 'uploader/import_accounts.html', context)
 
@@ -1289,6 +1302,15 @@ def import_accounts_ua_cookies(request):
 				}
 				if assigned_proxy and (not existing_map.get(username) or not (existing_map[username].proxy or existing_map[username].current_proxy)):
 					defaults['proxy'] = assigned_proxy
+				# Optional client assignment
+				try:
+					client_id_str = request.POST.get('client_id')
+					if client_id_str:
+						sel_client = CabinetClient.objects.filter(id=int(client_id_str)).first()
+						if sel_client:
+							defaults['client'] = sel_client
+				except Exception:
+					pass
 				account, created = InstagramAccount.objects.update_or_create(
 					username=username,
 					defaults=defaults
@@ -1429,8 +1451,10 @@ def import_accounts_ua_cookies(request):
 		return redirect('account_list')
 
 	# GET: render page
+	clients = CabinetClient.objects.select_related('agency').all()
 	context = {
-		'active_tab': 'accounts'
+		'active_tab': 'accounts',
+		'clients': clients,
 	}
 	return render(request, 'uploader/import_accounts_ua_cookies.html', context)
 
@@ -1682,6 +1706,15 @@ def import_accounts_bundle(request):
 					'status': 'ACTIVE',
 					'notes': (f"UA: {ua_string[:200]}" if ua_string else ""),
 				}
+				# Optional client assignment
+				try:
+					client_id_str = request.POST.get('client_id')
+					if client_id_str:
+						sel_client = CabinetClient.objects.filter(id=int(client_id_str)).first()
+						if sel_client:
+							defaults['client'] = sel_client
+				except Exception:
+					pass
 				account, created = InstagramAccount.objects.update_or_create(
 					username=username,
 					defaults=defaults
@@ -1775,7 +1808,9 @@ def import_accounts_bundle(request):
 		return redirect('account_list')
 
 	# GET: render page
+	clients = CabinetClient.objects.select_related('agency').all()
 	context = {
-		'active_tab': 'accounts'
+		'active_tab': 'accounts',
+		'clients': clients,
 	}
 	return render(request, 'uploader/import_accounts_bundle.html', context)

@@ -1,0 +1,51 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}Cabinet — Client Dashboard{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Client: {{ client.name }}</h2>
+
+<div class="row">
+  <div class="col-md-6">
+    <div class="card mb-3">
+      <div class="card-header"><h5 class="mb-0">Assigned hashtags</h5></div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for h in hashtags %}
+          <li class="list-group-item">#{{ h.hashtag }}</li>
+          {% empty %}
+          <li class="list-group-item text-muted">No hashtags yet</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card mb-3">
+      <div class="card-header"><h5 class="mb-0">Latest analytics</h5></div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead><tr>
+              <th>#</th><th>Total views</th><th>Average views</th>
+            </tr></thead>
+            <tbody>
+              {% for s in summaries %}
+              <tr>
+                <td><code>#{{ s.hashtag }}</code></td>
+                <td>{{ s.total_views }}</td>
+                <td>{{ s.average_views|floatformat:0 }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="3" class="text-center text-muted">No analytics yet</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+

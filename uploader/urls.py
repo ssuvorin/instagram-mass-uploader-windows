@@ -79,6 +79,9 @@ urlpatterns = [
     path('api/captcha-status/<int:task_id>/', views.get_captcha_status, name='get_captcha_status'),
     path('api/captcha-clear/<int:task_id>/', views.clear_captcha_notification, name='clear_captcha_notification'),
     
+    # TikTok Dashboard
+    path('tiktok/', misc.tiktok_dashboard, name='tiktok_dashboard'),
+    
     # TikTok Booster UI
     path('tiktok/booster/', misc.tiktok_booster, name='tiktok_booster'),
     path('tiktok/booster/upload-accounts/', misc.tiktok_booster_upload_accounts, name='tiktok_booster_upload_accounts'),
@@ -109,6 +112,11 @@ urlpatterns = [
     path('api/tiktok/videos/prepare-config/', misc.tiktok_videos_proxy_prepare_config, name='api_tiktok_videos_prepare_config'),
     path('api/tiktok/videos/start-upload/', misc.tiktok_videos_proxy_start_upload, name='api_tiktok_videos_start_upload'),
     path('api/tiktok/videos/pipeline/', misc.tiktok_videos_proxy_pipeline, name='api_tiktok_videos_pipeline'),
+    path('api/tiktok/videos/release-accounts/', misc.tiktok_videos_proxy_release_accounts, name='api_tiktok_videos_release_accounts'),
+    path('api/tiktok/booster/release-accounts/', misc.tiktok_booster_proxy_release_accounts, name='api_tiktok_booster_release_accounts'),
+    path('api/tiktok/stats/', misc.tiktok_stats_proxy, name='api_tiktok_stats'),
+    path('api/tiktok/maintenance/', misc.tiktok_maintenance_proxy, name='api_tiktok_maintenance'),
+
 
     # Hashtag Analyzer
     path('tools/hashtag/', hashtag.hashtag_analyzer, name='hashtag_analyzer'),

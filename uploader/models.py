@@ -85,6 +85,8 @@ class InstagramAccount(models.Model):
     notes = models.TextField(blank=True, default="")
     # New: phone number used for mobile device profile and account verification
     phone_number = models.CharField(max_length=32, null=True, blank=True)
+    # Link to client from integrated cabinet
+    client = models.ForeignKey('cabinet.Client', on_delete=models.SET_NULL, null=True, blank=True, related_name='accounts')
 
 class DolphinProfileSnapshot(models.Model):
     """Full snapshot of Dolphin profile payload/response to be able to recreate 1:1."""
