@@ -931,6 +931,8 @@
                     const trimmed = line.trim();
                     if (!trimmed) return;
                     
+                    let isValid = false;
+                    
                     // Check if line contains cookies (JSON format)
                     if (trimmed.includes('[') && trimmed.includes(']')) {
                         hasCookies++;
@@ -946,17 +948,14 @@
                                 // Check if cookie part is valid JSON
                                 try {
                                     JSON.parse(cookiePart);
-                                    validCount++;
+                                    isValid = true;
                                 } catch {
-                                    invalidCount++;
                                     errors.push(`Line ${index + 1}: Invalid JSON cookies`);
                                 }
                             } else {
-                                invalidCount++;
                                 errors.push(`Line ${index + 1}: Invalid account format`);
                             }
                         } else {
-                            invalidCount++;
                             errors.push(`Line ${index + 1}: Missing @ separator`);
                         }
                     } else {
@@ -964,11 +963,16 @@
                         // Format: username:password:email:2fa
                         const format = /^[^:]+:[^:]+:[^:]+:[^:]+$/;
                         if (format.test(trimmed)) {
-                            validCount++;
+                            isValid = true;
                         } else {
-                            invalidCount++;
                             errors.push(`Line ${index + 1}: Invalid format`);
                         }
+                    }
+                    
+                    if (isValid) {
+                        validCount++;
+                    } else {
+                        invalidCount++;
                     }
                 });
                 
@@ -993,22 +997,25 @@
             element.innerHTML = `
                 <div class="alert alert-success">
                     <i class="bi bi-check-circle me-2"></i>
-                    <strong>Valid ${fileType} file!</strong><br>
-                    Total: ${result.total} entries<br>
+                    <strong>✅ Valid ${fileType} file!</strong><br>
+                    📊 Total: ${result.total} entries<br>
                     ${fileType === 'proxy' ? 
-                        `Valid proxies: ${result.valid}` : 
-                        `Valid accounts: ${result.valid}${result.hasCookies > 0 ? ` (${result.hasCookies} with cookies, ${result.hasEmailPass} with email/password)` : ''}`
+                        `✅ Valid proxies: ${result.valid}` : 
+                        `✅ Valid accounts: ${result.valid}${result.hasCookies > 0 ? ` (🍪 ${result.hasCookies} with cookies, 📧 ${result.hasEmailPass} with email/password)` : ''}`
                     }
                 </div>
             `;
         } else {
+            const errorText = result.errors.length > 0 ? 
+                `❌ Errors: ${result.errors.join(', ')}${result.errors.length === 5 ? '...' : ''}` : '';
+            
             element.innerHTML = `
                 <div class="alert alert-warning">
                     <i class="bi bi-exclamation-triangle me-2"></i>
-                    <strong>${fileType === 'proxy' ? 'Proxy' : 'Account'} file validation:</strong><br>
-                    Total: ${result.total} entries<br>
-                    Valid: ${result.valid} | Invalid: ${result.invalid}<br>
-                    ${result.errors.length > 0 ? `Errors: ${result.errors.join(', ')}${result.errors.length === 5 ? '...' : ''}` : ''}
+                    <strong>⚠️ ${fileType === 'proxy' ? 'Proxy' : 'Account'} file validation:</strong><br>
+                    📊 Total: ${result.total} entries<br>
+                    ✅ Valid: ${result.valid} | ❌ Invalid: ${result.invalid}<br>
+                    ${errorText}
                 </div>
             `;
         }
@@ -1022,41 +1029,49 @@
     // File input validation handlers
     document.getElementById('proxies-file-input').addEventListener('change', async function(e) {
         const file = e.target.files[0];
+        const resultElement = document.getElementById('proxies-validation-result');
+        
         if (file) {
             try {
                 const result = await validateProxyFile(file);
                 displayValidationResult('proxies-validation-result', result, 'proxy');
             } catch (error) {
-                document.getElementById('proxies-validation-result').innerHTML = `
+                resultElement.innerHTML = `
                     <div class="alert alert-danger">
                         <i class="bi bi-x-circle me-2"></i>
                         Error reading file: ${error.message}
                     </div>
                 `;
-                document.getElementById('proxies-validation-result').style.display = 'block';
+                resultElement.style.display = 'block';
             }
         } else {
-            document.getElementById('proxies-validation-result').style.display = 'none';
+            // Clear validation result when no file is selected
+            resultElement.style.display = 'none';
+            resultElement.innerHTML = '';
         }
     });
     
     document.getElementById('accounts-file-input').addEventListener('change', async function(e) {
         const file = e.target.files[0];
+        const resultElement = document.getElementById('accounts-validation-result');
+        
         if (file) {
             try {
                 const result = await validateAccountFile(file);
                 displayValidationResult('accounts-validation-result', result, 'account');
             } catch (error) {
-                document.getElementById('accounts-validation-result').innerHTML = `
+                resultElement.innerHTML = `
                     <div class="alert alert-danger">
                         <i class="bi bi-x-circle me-2"></i>
                         Error reading file: ${error.message}
                     </div>
                 `;
-                document.getElementById('accounts-validation-result').style.display = 'block';
+                resultElement.style.display = 'block';
             }
         } else {
-            document.getElementById('accounts-validation-result').style.display = 'none';
+            // Clear validation result when no file is selected
+            resultElement.style.display = 'none';
+            resultElement.innerHTML = '';
         }
     });
 

@@ -444,6 +444,39 @@ class DolphinAnty:
             ]
             lat, lon = random.choice(by_cities)
             geo_payload = {"mode": "manual", "latitude": lat, "longitude": lon}
+        elif normalized_locale in {"es_CL", "es-CL"}:
+            # Chile
+            tz_payload = {"mode": "manual", "value": "America/Santiago"}
+            cl_cities = [
+                (-33.4489, -70.6693),  # Santiago
+                (-33.0472, -71.6127),  # Valparaíso
+                (-36.8269, -73.0498),  # Concepción
+                (-41.4689, -72.9411),  # Puerto Montt
+                (-27.1127, -109.3497), # Hanga Roa (Easter Island) - rare
+            ]
+            lat, lon = random.choice(cl_cities)
+            geo_payload = {"mode": "manual", "latitude": lat, "longitude": lon}
+        elif normalized_locale in {"es_MX", "es-MX"}:
+            # Mexico
+            mx_timezones = [
+                "America/Mexico_City",  # central
+                "America/Monterrey",
+                "America/Guadalajara",
+                "America/Tijuana",      # pacific
+                "America/Cancun",       # eastern-like (Quintana Roo)
+            ]
+            tz_payload = {"mode": "manual", "value": random.choice(mx_timezones)}
+            mx_cities = [
+                (19.4326, -99.1332),  # Mexico City
+                (25.6866, -100.3161), # Monterrey
+                (20.6597, -103.3496), # Guadalajara
+                (32.5149, -117.0382), # Tijuana
+                (21.1619, -86.8515),  # Cancun
+                (20.9674, -89.5926),  # Mérida
+                (19.4978, -96.8460),  # Veracruz
+            ]
+            lat, lon = random.choice(mx_cities)
+            geo_payload = {"mode": "manual", "latitude": lat, "longitude": lon}
         else:
             # Default: Russia (original behavior)
             ru_timezones = [

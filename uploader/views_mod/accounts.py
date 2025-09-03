@@ -296,9 +296,9 @@ def create_account(request):
                         proxy_data = assigned_proxy.to_dict()
                         logger.info(f"[CREATE ACCOUNT] Using proxy for profile: {proxy_data.get('host')}:{proxy_data.get('port')}")
 
-                        # Using updated create_profile with locale (ru_BY only)
+                        # Using updated create_profile with multiple locales
                         selected_locale = request.POST.get('profile_locale', 'ru_BY')
-                        if selected_locale != 'ru_BY':
+                        if selected_locale not in ['ru_BY', 'en_IN', 'es_CL', 'es_MX']:
                             selected_locale = 'ru_BY'
                         response = dolphin.create_profile(
                             name=profile_name,
@@ -433,12 +433,27 @@ def import_accounts(request):
         # UI params
         proxy_selection = request.POST.get('proxy_selection', 'locale_only')
         proxy_locale_strict = request.POST.get('proxy_locale_strict') == '1'
-        # Locale: support ru_BY and en_IN
+        # Locale: support ru_BY, en_IN, es_CL, es_MX
         selected_locale = request.POST.get('profile_locale', 'ru_BY')
-        if selected_locale not in ['ru_BY', 'en_IN']:
+        allowed_locales = ['ru_BY', 'en_IN', 'es_CL', 'es_MX']
+        if selected_locale not in allowed_locales:
             selected_locale = 'ru_BY'
         # Derive target country from locale
-        locale_country = 'BY' if selected_locale == 'ru_BY' else 'IN'
+        if selected_locale == 'ru_BY':
+            locale_country = 'BY'
+            country_text = 'Belarus'
+        elif selected_locale == 'en_IN':
+            locale_country = 'IN'
+            country_text = 'India'
+        elif selected_locale == 'es_CL':
+            locale_country = 'CL'
+            country_text = 'Chile'
+        elif selected_locale == 'es_MX':
+            locale_country = 'MX'
+            country_text = 'Mexico'
+        else:
+            locale_country = 'BY'
+            country_text = 'Belarus'
         
         # Counters for status messages
         created_count = 0
@@ -505,9 +520,8 @@ def import_accounts(request):
  
         available_proxies = Proxy.objects.filter(is_active=True, assigned_account__isnull=True)
         if proxy_selection == 'locale_only':
-            by_text = 'Belarus' if locale_country == 'BY' else 'India'
             country_filtered = available_proxies.filter(
-                Q(country__iexact=locale_country) | Q(country__icontains=by_text) | Q(city__icontains=by_text)
+                Q(country__iexact=locale_country) | Q(country__icontains=country_text) | Q(city__icontains=country_text)
             )
             if proxy_locale_strict:
                 available_proxies = country_filtered
@@ -680,7 +694,6 @@ def import_accounts(request):
                         # Get an unused active proxy from filtered set
                         available_proxies = Proxy.objects.filter(is_active=True, assigned_account__isnull=True)
                         if proxy_selection == 'locale_only':
-                            country_text = 'Belarus' if locale_country == 'BY' else 'India'
                             country_proxies = available_proxies.filter(
                                 Q(country__iexact=locale_country) | Q(country__icontains=country_text) | Q(city__icontains=country_text)
                             )
@@ -1118,9 +1131,10 @@ def import_accounts_ua_cookies(request):
 		proxy_selection = request.POST.get('proxy_selection', 'locale_only')
 		proxy_locale_strict = request.POST.get('proxy_locale_strict') == '1'
 		selected_locale = request.POST.get('profile_locale', 'ru_BY')
-		if selected_locale not in ['ru_BY', 'en_IN']:
+		allowed_locales = ['ru_BY', 'en_IN', 'es_CL', 'es_MX']
+		if selected_locale not in allowed_locales:
 			selected_locale = 'ru_BY'
-		locale_country = 'BY' if selected_locale == 'ru_BY' else 'IN'
+		locale_country = 'BY' if selected_locale == 'ru_BY' else ('IN' if selected_locale == 'en_IN' else ('CL' if selected_locale == 'es_CL' else 'MX'))
 
 		created_count = 0
 		updated_count = 0

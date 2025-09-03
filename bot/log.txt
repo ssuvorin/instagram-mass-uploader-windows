@@ -25512,3 +25512,39 @@ KeyboardInterrupt
 2025-08-28 10:46:02,538 - urllib3.connectionpool - WARNING - Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'RemoteDisconnected('Remote end closed connection without response')': /api/v1/challenge/AShQdaKDviK0JLAcM0WgEInALrst7mgIviYVMkwt9Sw1VrJhImmYHf5iX_eVf7pYlSk2fgc/ASSkvgJUrCHxTnPVB_A9qmJKb_sox-WcoFLPWZCsbxcNk0rt4nRxCYB19X7dWR07IKBjdLCbU7jrDQ/
 2025-08-28 10:46:10,872 - urllib3.connectionpool - WARNING - Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'RemoteDisconnected('Remote end closed connection without response')': /api/v1/challenge/AShQdaKDviK0JLAcM0WgEInALrst7mgIviYVMkwt9Sw1VrJhImmYHf5iX_eVf7pYlSk2fgc/ASSkvgJUrCHxTnPVB_A9qmJKb_sox-WcoFLPWZCsbxcNk0rt4nRxCYB19X7dWR07IKBjdLCbU7jrDQ/
 2025-08-28 11:26:14,125 - urllib3.connectionpool - WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'RemoteDisconnected('Remote end closed connection without response')': /api/v1/challenge/ASjBOAjJHJ9DmIhIalJGiP54wVP77H4zzoHPsOS1hGhH5MMS78RQu_jI6HaKDgulNCkBOAw/ASRHF15QIyT9xZx32xjdWigA2clJqnX1nYzQf-OJkDTfBP8J6_RgMsfJSbvzgzhIJXFYIZoLZUOAbQ/
+2025-09-03 19:51:29,261 - urllib3.connectionpool - WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'SSLError(1, '[SSL] record layer failure (_ssl.c:1010)')': /pavelmartynov857/?__a=1&__d=dis
+2025-09-03 19:51:33,716 - urllib3.connectionpool - WARNING - Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'SSLError(1, '[SSL] record layer failure (_ssl.c:1010)')': /pavelmartynov857/?__a=1&__d=dis
+2025-09-03 19:51:42,150 - urllib3.connectionpool - WARNING - Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'SSLError(1, '[SSL] record layer failure (_ssl.c:1010)')': /pavelmartynov857/?__a=1&__d=dis
+2025-09-03 19:51:47,505 - urllib3.connectionpool - WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'SSLError(1, '[SSL] record layer failure (_ssl.c:1010)')': /pavelmartynov857/?__a=1&__d=dis
+2025-09-03 19:51:51,957 - urllib3.connectionpool - WARNING - Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'SSLError(1, '[SSL] record layer failure (_ssl.c:1010)')': /pavelmartynov857/?__a=1&__d=dis
+2025-09-03 19:54:33,468 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-03 19:54:33,469 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-03 19:54:33,469 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-03 19:54:39,031 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-03 19:54:39,032 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-03 19:54:39,043 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-03 19:54:44,271 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-03 19:54:44,271 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-03 19:54:44,272 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-03 19:54:47,019 - instagrapi - INFO - https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/
+2025-09-03 19:54:48,745 - private_request - INFO - None [200] GET https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-03 19:54:52,030 - public_request - DEBUG - public_request 201: https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-03 19:54:52,030 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [201] GET https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-03 19:54:52,030 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/mellstroy/?__a=1&__d=dis) >>> 
+2025-09-03 19:54:58,288 - public_request - DEBUG - public_request 201: https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-03 19:54:58,289 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [201] GET https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-03 19:54:58,290 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/mellstroy/?__a=1&__d=dis) >>> 
+2025-09-03 19:55:03,492 - public_request - DEBUG - public_request 201: https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-03 19:55:03,492 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [201] GET https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-03 19:55:03,492 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/mellstroy/?__a=1&__d=dis) >>> 
+2025-09-03 19:55:07,299 - instagrapi - INFO - https://i.instagram.com/api/v1/users/mellstroy/usernameinfo/
+2025-09-03 19:55:08,302 - private_request - INFO - None [200] GET https://i.instagram.com/api/v1/users/mellstroy/usernameinfo/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-03 19:55:16,661 - private_request - INFO - None [200] GET https://i.instagram.com/rupload_igvideo/1756929309933_0_8769218315 (269.0.0.18.75, samsung SM-G973F)
+2025-09-03 19:55:20,746 - private_request - INFO - None [200] POST https://i.instagram.com/rupload_igvideo/1756929309933_0_8769218315 (269.0.0.18.75, samsung SM-G973F)
+2025-09-03 19:55:32,380 - private_request - INFO - None [200] POST https://i.instagram.com/rupload_igphoto/1756929309933_0_4528429522 (269.0.0.18.75, samsung SM-G973F)
+2025-09-03 19:55:34,538 - instagrapi - INFO - https://i.instagram.com/api/v1/location_search/
+2025-09-03 19:55:35,624 - private_request - INFO - None [200] GET https://i.instagram.com/api/v1/location_search/?latitude=55.7558&longitude=37.6173 (269.0.0.18.75, samsung SM-G973F)
+2025-09-03 19:55:38,808 - instagrapi - INFO - https://i.instagram.com/api/v1/media/configure_to_clips/?video=1
+2025-09-03 19:55:46,821 - private_request - INFO - None [200] POST https://i.instagram.com/api/v1/media/configure_to_clips/?video=1 (269.0.0.18.75, samsung SM-G973F)
+2025-09-03 19:55:49,089 - instagrapi - INFO - https://i.instagram.com/api/v1/qe/expose/
+2025-09-03 19:55:49,837 - private_request - INFO - None [200] POST https://i.instagram.com/api/v1/qe/expose/ (269.0.0.18.75, samsung SM-G973F)
