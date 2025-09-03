@@ -997,6 +997,7 @@
         const formId = fileType === 'proxy' ? 'booster-proxies-form' : 'booster-accounts-form';
         const form = document.getElementById(formId);
         const submitBtn = form.querySelector('button[type="submit"]');
+        const fileInput = form.querySelector('input[type="file"]');
         
         if (result.invalid === 0) {
             element.innerHTML = `
@@ -1025,10 +1026,11 @@
                     📊 Total: ${result.total} entries<br>
                     ✅ Valid: ${result.valid} | ❌ Invalid: ${result.invalid}<br>
                     ${errorText}<br>
-                    <small class="text-muted">Please fix the errors before uploading.</small>
+                    <small class="text-muted">Please select a valid file to upload.</small>
                 </div>
             `;
-            // Disable upload button
+            // Clear file input and disable upload button
+            fileInput.value = '';
             submitBtn.disabled = true;
             submitBtn.classList.remove('btn-tiktok');
             submitBtn.classList.add('btn-secondary');
@@ -1045,10 +1047,6 @@
         const file = e.target.files[0];
         const resultElement = document.getElementById('proxies-validation-result');
         const submitBtn = document.getElementById('booster-proxies-form').querySelector('button[type="submit"]');
-        
-        // Always clear previous validation results
-        resultElement.style.display = 'none';
-        resultElement.innerHTML = '';
         
         if (file) {
             // Show loading state
@@ -1071,12 +1069,15 @@
                     </div>
                 `;
                 resultElement.style.display = 'block';
-                // Disable button on error
+                // Clear file input and disable button on error
+                e.target.value = '';
                 submitBtn.disabled = true;
                 submitBtn.classList.remove('btn-tiktok');
                 submitBtn.classList.add('btn-secondary');
             }
         } else {
+            // Hide validation result when no file
+            resultElement.style.display = 'none';
             // Disable button when no file
             submitBtn.disabled = true;
             submitBtn.classList.remove('btn-tiktok');
@@ -1088,10 +1089,6 @@
         const file = e.target.files[0];
         const resultElement = document.getElementById('accounts-validation-result');
         const submitBtn = document.getElementById('booster-accounts-form').querySelector('button[type="submit"]');
-        
-        // Always clear previous validation results
-        resultElement.style.display = 'none';
-        resultElement.innerHTML = '';
         
         if (file) {
             // Show loading state
@@ -1114,12 +1111,15 @@
                     </div>
                 `;
                 resultElement.style.display = 'block';
-                // Disable button on error
+                // Clear file input and disable button on error
+                e.target.value = '';
                 submitBtn.disabled = true;
                 submitBtn.classList.remove('btn-tiktok');
                 submitBtn.classList.add('btn-secondary');
             }
         } else {
+            // Hide validation result when no file
+            resultElement.style.display = 'none';
             // Disable button when no file
             submitBtn.disabled = true;
             submitBtn.classList.remove('btn-tiktok');
