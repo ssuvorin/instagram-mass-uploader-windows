@@ -446,18 +446,20 @@
                 {% csrf_token %}
                 <label class="form-label">Step 1 — Proxies file (.txt)</label>
                 <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <input type="file" name="file" class="form-control form-control-lg" accept=".txt" required>
+                    <input type="file" name="file" class="form-control form-control-lg" accept=".txt" required id="proxies-file-input">
                     <button type="submit" class="btn btn-tiktok"><i class="bi bi-upload me-2"></i>Upload Proxies</button>
                 </div>
+                <div id="proxies-validation-result" class="mt-2" style="display: none;"></div>
             </form>
 
             <form id="booster-accounts-form" enctype="multipart/form-data" class="mb-3" style="opacity:.6;pointer-events:none;">
                 {% csrf_token %}
                 <label class="form-label">Step 2 — Accounts file (.txt)</label>
                 <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <input type="file" name="file" class="form-control form-control-lg" accept=".txt" required>
+                    <input type="file" name="file" class="form-control form-control-lg" accept=".txt" required id="accounts-file-input">
                     <button type="submit" class="btn btn-tiktok"><i class="bi bi-upload me-2"></i>Upload Accounts</button>
                 </div>
+                <div id="accounts-validation-result" class="mt-2" style="display: none;"></div>
             </form>
 
             <div class="mb-3" style="opacity:.6;pointer-events:none;" id="cookie-robot-section">
@@ -763,6 +765,29 @@
 
     // Maintenance actions
     async function maintenanceAction(action) {
+        // Confirmation dialogs for dangerous actions
+        let confirmMessage = '';
+        switch (action) {
+            case 'delete_proxies':
+                confirmMessage = 'Are you sure you want to DELETE ALL PROXIES? This action cannot be undone!';
+                break;
+            case 'delete_accounts':
+                confirmMessage = 'Are you sure you want to DELETE ALL ACCOUNTS? This action cannot be undone!';
+                break;
+            case 'clear_db':
+                confirmMessage = 'Are you sure you want to CLEAR THE DATABASE? This will remove all data and cannot be undone!';
+                break;
+            case 'clear_all':
+                confirmMessage = 'Are you sure you want to CLEAR EVERYTHING? This will delete all proxies, accounts, and database data. This action cannot be undone!';
+                break;
+            default:
+                confirmMessage = `Are you sure you want to perform maintenance action: ${action}?`;
+        }
+        
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+        
         try {
             const box = document.getElementById('maintenance-response');
             box.classList.add('d-none');
@@ -783,6 +808,11 @@
     }
 
     async function releaseBoosterAccounts() {
+        // Confirmation dialog
+        if (!confirm('Are you sure you want to release warmed accounts to the database? This will add them to the main account pool.')) {
+            return;
+        }
+        
         try {
             const res = await fetch('{% url "api_tiktok_booster_release_accounts" %}', { method: 'POST' });
             const data = await res.json();
@@ -845,10 +875,190 @@
         }
     }
 
+    // File validation functions
+    function validateProxyFile(file) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                const lines = content.split('\n').filter(line => line.trim());
+                
+                let validCount = 0;
+                let invalidCount = 0;
+                let errors = [];
+                
+                lines.forEach((line, index) => {
+                    const trimmed = line.trim();
+                    if (!trimmed) return;
+                    
+                    // Check format: host:port:user:pass or host:port@user:pass
+                    const format1 = /^[^:]+:\d+:[^:]+:[^:]+$/; // host:port:user:pass
+                    const format2 = /^[^:]+:\d+@[^:]+:[^:]+$/; // host:port@user:pass
+                    
+                    if (!format1.test(trimmed) && !format2.test(trimmed)) {
+                        invalidCount++;
+                        errors.push(`Line ${index + 1}: Invalid format`);
+                    } else {
+                        validCount++;
+                    }
+                });
+                
+                resolve({
+                    total: lines.length,
+                    valid: validCount,
+                    invalid: invalidCount,
+                    errors: errors.slice(0, 5) // Show only first 5 errors
+                });
+            };
+            reader.readAsText(file);
+        });
+    }
+    
+    function validateAccountFile(file) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                const lines = content.split('\n').filter(line => line.trim());
+                
+                let validCount = 0;
+                let invalidCount = 0;
+                let errors = [];
+                let hasCookies = 0;
+                let hasEmailPass = 0;
+                
+                lines.forEach((line, index) => {
+                    const trimmed = line.trim();
+                    if (!trimmed) return;
+                    
+                    // Check if line contains cookies (JSON format)
+                    if (trimmed.includes('[') && trimmed.includes(']')) {
+                        hasCookies++;
+                        // Format: username:password:email:2fa@cookies_json
+                        const parts = trimmed.split('@');
+                        if (parts.length >= 2) {
+                            const accountPart = parts[0];
+                            const cookiePart = parts[1];
+                            
+                            // Check account part: username:password:email:2fa
+                            const accountFormat = /^[^:]+:[^:]+:[^:]+:[^:]+$/;
+                            if (accountFormat.test(accountPart)) {
+                                // Check if cookie part is valid JSON
+                                try {
+                                    JSON.parse(cookiePart);
+                                    validCount++;
+                                } catch {
+                                    invalidCount++;
+                                    errors.push(`Line ${index + 1}: Invalid JSON cookies`);
+                                }
+                            } else {
+                                invalidCount++;
+                                errors.push(`Line ${index + 1}: Invalid account format`);
+                            }
+                        } else {
+                            invalidCount++;
+                            errors.push(`Line ${index + 1}: Missing @ separator`);
+                        }
+                    } else {
+                        hasEmailPass++;
+                        // Format: username:password:email:2fa
+                        const format = /^[^:]+:[^:]+:[^:]+:[^:]+$/;
+                        if (format.test(trimmed)) {
+                            validCount++;
+                        } else {
+                            invalidCount++;
+                            errors.push(`Line ${index + 1}: Invalid format`);
+                        }
+                    }
+                });
+                
+                resolve({
+                    total: lines.length,
+                    valid: validCount,
+                    invalid: invalidCount,
+                    errors: errors.slice(0, 5), // Show only first 5 errors
+                    hasCookies: hasCookies,
+                    hasEmailPass: hasEmailPass
+                });
+            };
+            reader.readAsText(file);
+        });
+    }
+    
+    function displayValidationResult(elementId, result, fileType) {
+        const element = document.getElementById(elementId);
+        element.style.display = 'block';
+        
+        if (result.invalid === 0) {
+            element.innerHTML = `
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle me-2"></i>
+                    <strong>Valid ${fileType} file!</strong><br>
+                    Total: ${result.total} entries<br>
+                    ${fileType === 'proxy' ? 
+                        `Valid proxies: ${result.valid}` : 
+                        `Valid accounts: ${result.valid}${result.hasCookies > 0 ? ` (${result.hasCookies} with cookies, ${result.hasEmailPass} with email/password)` : ''}`
+                    }
+                </div>
+            `;
+        } else {
+            element.innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>${fileType === 'proxy' ? 'Proxy' : 'Account'} file validation:</strong><br>
+                    Total: ${result.total} entries<br>
+                    Valid: ${result.valid} | Invalid: ${result.invalid}<br>
+                    ${result.errors.length > 0 ? `Errors: ${result.errors.join(', ')}${result.errors.length === 5 ? '...' : ''}` : ''}
+                </div>
+            `;
+        }
+    }
+
     const proxiesForm = document.getElementById('booster-proxies-form');
     const accountsForm = document.getElementById('booster-accounts-form');
     const runBtn = document.getElementById('booster-run-prepare-start');
     const respBox = document.getElementById('booster-pipeline-response');
+    
+    // File input validation handlers
+    document.getElementById('proxies-file-input').addEventListener('change', async function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            try {
+                const result = await validateProxyFile(file);
+                displayValidationResult('proxies-validation-result', result, 'proxy');
+            } catch (error) {
+                document.getElementById('proxies-validation-result').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-x-circle me-2"></i>
+                        Error reading file: ${error.message}
+                    </div>
+                `;
+                document.getElementById('proxies-validation-result').style.display = 'block';
+            }
+        } else {
+            document.getElementById('proxies-validation-result').style.display = 'none';
+        }
+    });
+    
+    document.getElementById('accounts-file-input').addEventListener('change', async function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            try {
+                const result = await validateAccountFile(file);
+                displayValidationResult('accounts-validation-result', result, 'account');
+            } catch (error) {
+                document.getElementById('accounts-validation-result').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-x-circle me-2"></i>
+                        Error reading file: ${error.message}
+                    </div>
+                `;
+                document.getElementById('accounts-validation-result').style.display = 'block';
+            }
+        } else {
+            document.getElementById('accounts-validation-result').style.display = 'none';
+        }
+    });
 
     proxiesForm.addEventListener('submit', async (e) => {
         e.preventDefault();
