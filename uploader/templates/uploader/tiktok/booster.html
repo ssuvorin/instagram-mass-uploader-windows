@@ -405,31 +405,37 @@
         </div>
     </div>
 
-    <!-- Status Overview -->
-    <div class="status-overview">
-        <div class="row">
-            <div class="col-md-3">
-                <div class="status-item">
-                    <h5 id="profiles-count">-</h5>
-                    <small>Dolphin Profiles</small>
+    <!-- System Overview -->
+    <div class="tiktok-card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>System Overview</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-md-3 col-6">
+                    <div class="text-center">
+                        <h5 class="mb-1" id="profiles-count">N/A</h5>
+                        <small class="text-muted">Dolphin Profiles</small>
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-3">
-                <div class="status-item">
-                    <h5 id="accounts-count">-</h5>
-                    <small>Accounts</small>
+                <div class="col-md-3 col-6">
+                    <div class="text-center">
+                        <h5 class="mb-1" id="accounts-count">N/A</h5>
+                        <small class="text-muted">Accounts</small>
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-3">
-                <div class="status-item">
-                    <h5 id="videos-count">-</h5>
-                    <small>Videos</small>
+                <div class="col-md-3 col-6">
+                    <div class="text-center">
+                        <h5 class="mb-1" id="videos-count">N/A</h5>
+                        <small class="text-muted">Videos</small>
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-3">
-                <div class="status-item">
-                    <h5 id="proxies-count">-</h5>
-                    <small>Proxies</small>
+                <div class="col-md-3 col-6">
+                    <div class="text-center">
+                        <h5 class="mb-1" id="server-status">N/A</h5>
+                        <small class="text-muted">Server Status</small>
+                        <div id="servers-status-list" class="mt-2" style="font-size: 0.8rem;"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -579,6 +585,7 @@
 
         // Re-check API status with new server
         checkApiStatus();
+        checkAllServersStatus();
 
         // Fetch logs from the new server immediately
         fetchApiServerLogs();
@@ -599,6 +606,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         checkApiStatus();
         updateSystemStatus();
+        checkAllServersStatus();
         setupFileUploadAreas();
         setupLogPolling();
 
@@ -729,6 +737,48 @@
         // This would call actual API to get logs
         // For now, just updating display
         updateLogDisplay();
+    }
+
+    // Check status of all servers
+    async function checkAllServersStatus() {
+        const serversList = document.getElementById('servers-status-list');
+        const serverSelect = document.getElementById('api-server-select');
+        const servers = Array.from(serverSelect.options).map(option => ({
+            name: option.textContent,
+            url: option.value,
+            description: option.dataset.desc || ''
+        }));
+        
+        let onlineCount = 0;
+        let statusHtml = '';
+        
+        for (const server of servers) {
+            try {
+                const response = await fetch(`{% url 'api_tiktok_api_ping' %}`, { 
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: `server_url=${encodeURIComponent(server.url)}`
+                });
+                const data = await response.json();
+                
+                if (response.ok && data.ok) {
+                    onlineCount++;
+                    statusHtml += `<div class="text-success">✅ ${server.name}</div>`;
+                } else {
+                    statusHtml += `<div class="text-danger">❌ ${server.name}</div>`;
+                }
+            } catch (error) {
+                statusHtml += `<div class="text-danger">❌ ${server.name}</div>`;
+            }
+        }
+        
+        serversList.innerHTML = statusHtml;
+        
+        // Update main status display with count format
+        document.getElementById('server-status').textContent = `${onlineCount}/${servers.length}`;
     }
 
     // API Server Logs

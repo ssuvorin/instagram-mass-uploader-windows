@@ -329,27 +329,27 @@
                 <div class="row g-4">
                     <div class="col-md-3 col-6">
                         <div class="tiktok-stat-card">
-                            <div class="tiktok-stat-value" id="profiles-count">-</div>
+                            <div class="tiktok-stat-value" id="profiles-count">N/A</div>
                             <div class="tiktok-stat-label">Dolphin Profiles</div>
                         </div>
                     </div>
                     <div class="col-md-3 col-6">
                         <div class="tiktok-stat-card">
-                            <div class="tiktok-stat-value" id="accounts-count">-</div>
+                            <div class="tiktok-stat-value" id="accounts-count">N/A</div>
                             <div class="tiktok-stat-label">Accounts</div>
                         </div>
                     </div>
                     <div class="col-md-3 col-6">
                         <div class="tiktok-stat-card">
-                            <div class="tiktok-stat-value" id="videos-count">-</div>
+                            <div class="tiktok-stat-value" id="videos-count">N/A</div>
                             <div class="tiktok-stat-label">Videos</div>
                         </div>
                     </div>
                     <div class="col-md-3 col-6">
                         <div class="tiktok-stat-card">
-                            <div class="tiktok-stat-value" id="server-status">-</div>
+                            <div class="tiktok-stat-value" id="server-status">N/A</div>
                             <div class="tiktok-stat-label">Server Status</div>
-                            <div id="servers-status-list" class="mt-2" style="font-size: 0.8rem; display: none;"></div>
+                            <div id="servers-status-list" class="mt-2" style="font-size: 0.8rem;"></div>
                         </div>
                     </div>
                 </div>
@@ -534,9 +534,8 @@ async function checkAllServersStatus() {
     }
     
     serversList.innerHTML = statusHtml;
-    serversList.style.display = 'block';
     
-    // Update main status display
+    // Update main status display with count format
     document.getElementById('server-status').textContent = `${onlineCount}/${servers.length}`;
 }
 
