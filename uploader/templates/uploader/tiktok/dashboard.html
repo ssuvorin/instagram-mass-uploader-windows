@@ -472,7 +472,7 @@ async function checkApiStatus() {
 // System Status Update
 async function updateSystemStatus() {
     try {
-        const resAll = await fetch('{% url "api_tiktok_stats_all" %}', { method: 'POST' });
+        const resAll = await fetch('{% url "api_tiktok_stats_all" %}', { method: 'GET' });
         const all = await resAll.json();
         if (resAll.ok && all.ok) {
             // Totals
