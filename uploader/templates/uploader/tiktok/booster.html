@@ -651,7 +651,7 @@
         try {
             if (!data) {
                 // Fetch aggregated stats from backend proxy (per-server + totals)
-                const resAll = await fetch('{% url "api_tiktok_stats_all" %}', { method: 'GET' });
+                const resAll = await fetch('{% url "api_tiktok_stats_all" %}', { method: 'POST', headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value } });
                 const all = await resAll.json();
                 if (resAll.ok && all.ok) {
                     data = {
