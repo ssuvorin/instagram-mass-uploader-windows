@@ -442,6 +442,17 @@
             <h5 class="mb-0"><i class="bi bi-lightning"></i>Booster Pipeline</h5>
         </div>
         <div class="card-body">
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <label class="form-label">Client</label>
+                    <select id="client-select" class="form-select">
+                        <option value="">-- Not selected --</option>
+                        {% for c in clients %}
+                        <option value="{{ c.id }}">{{ c.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
             <form id="booster-proxies-form" enctype="multipart/form-data" class="mb-3">
                 {% csrf_token %}
                 <label class="form-label">Step 1 — Proxies file (.txt)</label>
@@ -1198,8 +1209,10 @@
         try {
             // Get cookie robot checkbox value
             const useCookieRobot = document.getElementById('use-cookie-robot').checked;
+            // Get client selection
+            const clientId = document.getElementById('client-select').value || '';
             // Prepare
-            let res = await fetch('{% url "api_tiktok_booster_prepare_accounts" %}', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ use_cookie_robot: useCookieRobot }) });
+            let res = await fetch('{% url "api_tiktok_booster_prepare_accounts" %}', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ use_cookie_robot: useCookieRobot, client_id: clientId }) });
             let data = await res.json();
             if (!res.ok) throw new Error(data.detail || 'Prepare failed');
             addLog('Prepare accounts: OK', 'info');

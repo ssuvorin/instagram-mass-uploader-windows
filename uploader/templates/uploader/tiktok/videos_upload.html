@@ -296,6 +296,23 @@
                         <label for="count" class="form-label">Number of Accounts</label>
                         <input type="number" class="form-control" id="count" name="count" value="20" min="1" max="500" required>
                     </div>
+                    <div class="col-sm-6 col-md-4">
+                        <label for="client_id" class="form-label">Client</label>
+                        <select class="form-select" id="client_id" name="client_id">
+                            <option value="">-- Not selected --</option>
+                            {% for c in clients %}
+                            <option value="{{ c.id }}">{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-sm-6 col-md-4">
+                        <label for="order" class="form-label">Order</label>
+                        <select class="form-select" id="order" name="order">
+                            <option value="newest" selected>Newest</option>
+                            <option value="random">Random</option>
+                            <option value="oldest">Oldest</option>
+                        </select>
+                    </div>
                     <div class="col-auto">
                         <button type="submit" class="btn btn-tiktok">
                             <i class="bi bi-people-fill me-2"></i>Prepare Accounts
@@ -468,7 +485,11 @@ document.getElementById('prepare-accounts-form').addEventListener('submit', asyn
                 'Content-Type': 'application/json',
                 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
             },
-            body: JSON.stringify({ count: parseInt(count || 0) })
+            body: JSON.stringify({
+                count: parseInt(count || 0),
+                client_id: document.getElementById('client_id').value || undefined,
+                order: document.getElementById('order').value || 'newest'
+            })
         });
         const data = await response.json();
         if (response.ok) {

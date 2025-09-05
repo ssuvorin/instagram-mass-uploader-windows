@@ -1625,12 +1625,22 @@ def _tiktok_api_context(request=None) -> dict:
         if not any((isinstance(s, dict) and s.get('url') == selected_api_base) for s in servers):
             servers.append(selected_server)
 
+    # Optional: include clients for selection in UI
+    clients_list = []
+    try:
+        from cabinet.models import Client as CabinetClient  # local import to avoid circulars at module import time
+        # Limit fields to reduce memory footprint
+        clients_list = list(CabinetClient.objects.all().values('id', 'name'))
+    except Exception:
+        clients_list = []
+
     return {
         'active_tab': 'tiktok',
         'api_base': selected_api_base,
         'available_servers': servers,
         'selected_server': selected_server,
         'server_count': len(servers),
+        'clients': clients_list,
     }
 
 
@@ -1754,8 +1764,9 @@ def tiktok_booster_proxy_prepare_accounts(request):
         return _json_response({'detail': 'Method not allowed'}, status=405)
     api_base = _get_tiktok_api_base(request)
     try:
-        # Allow optional flags (e.g., cookie robot) from client
+        # Build payload for upstream booster.prepare_accounts
         payload = {}
+        # JSON body has priority
         try:
             if request.body:
                 body_json = json.loads(request.body.decode('utf-8'))
@@ -1763,16 +1774,33 @@ def tiktok_booster_proxy_prepare_accounts(request):
                     payload.update(body_json)
         except Exception:
             pass
-        # Also accept form param
+        # Accept form fields as fallbacks
         use_cookie_robot = request.POST.get('use_cookie_robot')
-        if use_cookie_robot is not None:
-            payload['use_cookie_robot'] = True if str(use_cookie_robot).lower() in ('1','true','on','yes') else False
+        if use_cookie_robot is not None and 'cookie_robot' not in payload:
+            payload['cookie_robot'] = True if str(use_cookie_robot).lower() in ('1','true','on','yes') else False
+        # Client selection: accept client_id or client_name; transform to name string for upstream
+        client_name = None
+        try:
+            client_name = (payload.get('client') or '').strip() if isinstance(payload.get('client'), str) else None
+        except Exception:
+            client_name = None
+        if not client_name:
+            client_id = request.POST.get('client_id') or (payload.get('client_id') if isinstance(payload.get('client_id'), (str,int)) else None)
+            if client_id:
+                try:
+                    from cabinet.models import Client as CabinetClient
+                    obj = CabinetClient.objects.filter(id=int(client_id)).first()
+                    if obj:
+                        client_name = obj.name
+                except Exception:
+                    client_name = None
+        if client_name:
+            payload['client'] = client_name
+        # Ensure required keys exist
+        if 'cookie_robot' not in payload:
+            payload['cookie_robot'] = False
 
-        # Upstream may ignore unknown keys; we still pass json if any provided
-        if payload:
-            resp = requests.post(f"{api_base}/booster/prepare_accounts", json=payload, timeout=30)
-        else:
-            resp = requests.post(f"{api_base}/booster/prepare_accounts", timeout=30)
+        resp = requests.post(f"{api_base}/booster/prepare_accounts", json=payload, timeout=60)
         try:
             data = resp.json()
         except Exception:
@@ -2189,7 +2217,8 @@ def tiktok_videos_proxy_release_accounts(request):
         return _json_response({'detail': 'Method not allowed'}, status=405)
     api_base = _get_tiktok_api_base(request)
     try:
-        resp = requests.post(f"{api_base}/upload/release_accounts", timeout=60)
+        # Upstream utils endpoint path (no prefix)
+        resp = requests.post(f"{api_base}/release_accounts", timeout=60)
         try:
             data = resp.json()
         except Exception:
@@ -2210,7 +2239,8 @@ def tiktok_booster_proxy_release_accounts(request):
         return _json_response({'detail': 'Method not allowed'}, status=405)
     api_base = _get_tiktok_api_base(request)
     try:
-        resp = requests.post(f"{api_base}/booster/release_accounts", timeout=60)
+        # Upstream utils endpoint to add warmed accounts back to central DB
+        resp = requests.post(f"{api_base}/add_accounts", timeout=60)
         try:
             data = resp.json()
         except Exception:
@@ -2235,29 +2265,33 @@ def tiktok_stats_proxy(request):
         'is_alive': False,
     }
     try:
-        # Health
+        # Health (use /logs or /docs as probe)
         try:
-            r = requests.get(f"{api_base}/health/is_alive", timeout=5)
+            r = requests.get(f"{api_base}/logs", timeout=5)
             result['is_alive'] = bool(r.ok)
         except Exception:
-            result['is_alive'] = False
-        # Profiles
+            try:
+                r = requests.get(f"{api_base}/docs", timeout=5, headers={"Accept": "text/html"})
+                result['is_alive'] = bool(r.ok)
+            except Exception:
+                result['is_alive'] = False
+        # Profiles count
         try:
-            r = requests.get(f"{api_base}/stats/profiles_count", timeout=5)
+            r = requests.get(f"{api_base}/get_dolphin_profiles", timeout=5)
             if r.ok:
                 result['profiles_count'] = (r.json() or {}).get('count')
         except Exception:
             pass
-        # Accounts
+        # Accounts in local DB
         try:
-            r = requests.get(f"{api_base}/stats/accounts_count", timeout=5)
+            r = requests.get(f"{api_base}/get_accounts_from_db", timeout=5)
             if r.ok:
                 result['accounts_count'] = (r.json() or {}).get('count')
         except Exception:
             pass
-        # Remaining videos
+        # Remaining videos on server
         try:
-            r = requests.get(f"{api_base}/stats/remaining_videos", timeout=5)
+            r = requests.get(f"{api_base}/get_videos", timeout=5)
             if r.ok:
                 result['remaining_videos'] = (r.json() or {}).get('count')
         except Exception:
@@ -2305,19 +2339,38 @@ def tiktok_videos_proxy_prepare_accounts(request):
         return _json_response({'detail': 'Method not allowed'}, status=405)
     api_base = _get_tiktok_api_base(request)
     try:
-        # Parse payload from JSON body or form
+        # Parse payload from JSON body or form and forward to upstream with client/order
         try:
-            payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+            payload_in = json.loads(request.body.decode('utf-8')) if request.body else {}
         except Exception:
-            payload = {}
-        count_val = payload.get('count') or request.POST.get('count') or 0
+            payload_in = {}
+        count_val = payload_in.get('count') or request.POST.get('count') or 0
+        order_val = (payload_in.get('order') or request.POST.get('order') or '').strip() or 'newest'
+        # Resolve client name
+        client_name = None
+        # Prefer explicit client string from payload
+        if isinstance(payload_in.get('client'), str) and payload_in.get('client').strip():
+            client_name = payload_in.get('client').strip()
+        else:
+            client_id = payload_in.get('client_id') or request.POST.get('client_id')
+            if client_id:
+                try:
+                    from cabinet.models import Client as CabinetClient
+                    obj = CabinetClient.objects.filter(id=int(client_id)).first()
+                    if obj:
+                        client_name = obj.name
+                except Exception:
+                    client_name = None
         try:
             count_val = int(count_val)
         except Exception:
             count_val = 0
+        upstream_payload = {'count': count_val, 'order': order_val}
+        if client_name:
+            upstream_payload['client'] = client_name
         resp = requests.post(
             f"{api_base}/upload/prepare_accounts",
-            json={'count': count_val},
+            json=upstream_payload,
             timeout=60
         )
         try:

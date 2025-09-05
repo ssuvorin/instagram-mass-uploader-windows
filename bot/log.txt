@@ -25548,3 +25548,525 @@ KeyboardInterrupt
 2025-09-03 19:55:46,821 - private_request - INFO - None [200] POST https://i.instagram.com/api/v1/media/configure_to_clips/?video=1 (269.0.0.18.75, samsung SM-G973F)
 2025-09-03 19:55:49,089 - instagrapi - INFO - https://i.instagram.com/api/v1/qe/expose/
 2025-09-03 19:55:49,837 - private_request - INFO - None [200] POST https://i.instagram.com/api/v1/qe/expose/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-04 17:32:00,137 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 613439816...
+2025-09-04 17:32:00,137 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 612899146...
+2025-09-04 17:32:00,137 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 612899146...
+2025-09-04 17:32:00,137 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 613439816...
+2025-09-04 17:32:00,138 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-04 17:32:00,138 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-04 17:32:00,138 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-04 17:32:00,138 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-04 17:32:00,380 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 613461347...
+2025-09-04 17:32:00,380 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 613461347...
+2025-09-04 17:32:00,380 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-04 17:32:00,380 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-04 17:32:00,975 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-04 17:32:00,975 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-04 17:32:00,976 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-04 17:32:00,976 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-04 17:32:00,976 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 612899146 (headless=False)
+2025-09-04 17:32:00,976 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 612899146 (headless=False)
+2025-09-04 17:32:00,976 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:00,976 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:01,010 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-04 17:32:01,010 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-04 17:32:01,011 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-04 17:32:01,011 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-04 17:32:01,011 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613439816 (headless=False)
+2025-09-04 17:32:01,011 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613439816 (headless=False)
+2025-09-04 17:32:01,011 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:01,011 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:01,013 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-04 17:32:01,013 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-04 17:32:01,014 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-04 17:32:01,014 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-04 17:32:01,014 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613461347 (headless=False)
+2025-09-04 17:32:01,014 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613461347 (headless=False)
+2025-09-04 17:32:01,014 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:01,014 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:01,581 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:01,581 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:01,581 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 612899146
+2025-09-04 17:32:01,581 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 612899146
+2025-09-04 17:32:01,582 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:01,582 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:01,583 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613461347
+2025-09-04 17:32:01,583 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613461347
+2025-09-04 17:32:01,595 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:01,595 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:01,595 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613439816
+2025-09-04 17:32:01,595 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613439816
+2025-09-04 17:32:02,166 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:02,166 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:02,167 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-04 17:32:02,167 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-04 17:32:02,290 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:02,290 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:02,290 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-04 17:32:02,290 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-04 17:32:03,170 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613439816 (headless=False)
+2025-09-04 17:32:03,170 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613439816 (headless=False)
+2025-09-04 17:32:03,172 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:03,172 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:03,292 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613461347 (headless=False)
+2025-09-04 17:32:03,292 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613461347 (headless=False)
+2025-09-04 17:32:03,292 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:03,292 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:03,773 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:03,773 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:03,773 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613439816
+2025-09-04 17:32:03,773 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613439816
+2025-09-04 17:32:03,967 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:03,967 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:03,967 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-04 17:32:03,967 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-04 17:32:03,969 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:03,969 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:03,969 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613461347
+2025-09-04 17:32:03,969 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613461347
+2025-09-04 17:32:04,277 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:04,277 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:04,278 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-04 17:32:04,278 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-04 17:32:05,969 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613439816 (headless=False)
+2025-09-04 17:32:05,969 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613439816 (headless=False)
+2025-09-04 17:32:05,969 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:05,969 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:06,279 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613461347 (headless=False)
+2025-09-04 17:32:06,279 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613461347 (headless=False)
+2025-09-04 17:32:06,279 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:06,279 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:06,949 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:06,949 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:06,949 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613461347
+2025-09-04 17:32:06,949 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613461347
+2025-09-04 17:32:07,001 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] [Step 3/3] Profile 612899146 started successfully
+2025-09-04 17:32:07,001 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] [Step 3/3] Profile 612899146 started successfully
+2025-09-04 17:32:07,001 - bot.src.instagram_uploader.dolphin_anty - INFO - [LINK] Connection details: port=57330, wsEndpoint=/devtools/browser/cd0efd81-6697-4380-85ca-319ad27857b9
+2025-09-04 17:32:07,001 - bot.src.instagram_uploader.dolphin_anty - INFO - [LINK] Connection details: port=57330, wsEndpoint=/devtools/browser/cd0efd81-6697-4380-85ca-319ad27857b9
+2025-09-04 17:32:07,001 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: True, Data: {'port': 57330, 'wsEndpoint': '/devtools/browser/cd0efd81-6697-4380-85ca-319ad27857b9'}
+2025-09-04 17:32:07,001 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: True, Data: {'port': 57330, 'wsEndpoint': '/devtools/browser/cd0efd81-6697-4380-85ca-319ad27857b9'}
+2025-09-04 17:32:07,002 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Profile 612899146 started successfully
+2025-09-04 17:32:07,002 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Profile 612899146 started successfully
+2025-09-04 17:32:07,002 - bot.src.instagram_uploader.dolphin_anty - INFO - [LINK] Automation data: {'port': 57330, 'wsEndpoint': '/devtools/browser/cd0efd81-6697-4380-85ca-319ad27857b9'}
+2025-09-04 17:32:07,002 - bot.src.instagram_uploader.dolphin_anty - INFO - [LINK] Automation data: {'port': 57330, 'wsEndpoint': '/devtools/browser/cd0efd81-6697-4380-85ca-319ad27857b9'}
+2025-09-04 17:32:07,002 - bot.src.instagram_uploader.dolphin_anty - INFO - [WEB] Connecting to browser via: ws://127.0.0.1:57330/devtools/browser/cd0efd81-6697-4380-85ca-319ad27857b9
+2025-09-04 17:32:07,002 - bot.src.instagram_uploader.dolphin_anty - INFO - [WEB] Connecting to browser via: ws://127.0.0.1:57330/devtools/browser/cd0efd81-6697-4380-85ca-319ad27857b9
+2025-09-04 17:32:07,146 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:07,146 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:07,146 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-04 17:32:07,146 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-04 17:32:07,396 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:07,396 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:07,397 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613439816
+2025-09-04 17:32:07,397 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613439816
+2025-09-04 17:32:07,618 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:07,618 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:07,618 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-04 17:32:07,618 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-04 17:32:10,148 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 613461347 or get automation data
+2025-09-04 17:32:10,148 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 613461347 or get automation data
+2025-09-04 17:32:10,620 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 613439816 or get automation data
+2025-09-04 17:32:10,620 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 613439816 or get automation data
+2025-09-04 17:32:13,025 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 613461347...
+2025-09-04 17:32:13,025 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 613461347...
+2025-09-04 17:32:13,025 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-04 17:32:13,025 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-04 17:32:13,094 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Successfully connected to Dolphin browser
+2025-09-04 17:32:13,094 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Successfully connected to Dolphin browser
+2025-09-04 17:32:13,094 - bot.src.instagram_uploader.dolphin_anty - INFO - [FILE] Using existing browser context
+2025-09-04 17:32:13,094 - bot.src.instagram_uploader.dolphin_anty - INFO - [FILE] Using existing browser context
+2025-09-04 17:32:13,158 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 613439816...
+2025-09-04 17:32:13,158 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 613439816...
+2025-09-04 17:32:13,158 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-04 17:32:13,158 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-04 17:32:13,608 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-04 17:32:13,608 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-04 17:32:13,609 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-04 17:32:13,609 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-04 17:32:13,609 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613461347 (headless=False)
+2025-09-04 17:32:13,609 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613461347 (headless=False)
+2025-09-04 17:32:13,609 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:13,609 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:13,748 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-04 17:32:13,748 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-04 17:32:13,749 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-04 17:32:13,749 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-04 17:32:13,749 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613439816 (headless=False)
+2025-09-04 17:32:13,749 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613439816 (headless=False)
+2025-09-04 17:32:13,750 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:13,750 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:14,224 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:14,224 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:14,225 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613461347
+2025-09-04 17:32:14,225 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613461347
+2025-09-04 17:32:14,350 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:14,350 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:14,351 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613439816
+2025-09-04 17:32:14,351 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613439816
+2025-09-04 17:32:14,454 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:14,454 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:14,456 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-04 17:32:14,456 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-04 17:32:14,551 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:14,551 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:14,552 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-04 17:32:14,552 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-04 17:32:15,457 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613461347 (headless=False)
+2025-09-04 17:32:15,457 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613461347 (headless=False)
+2025-09-04 17:32:15,458 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:15,458 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:15,553 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613439816 (headless=False)
+2025-09-04 17:32:15,553 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613439816 (headless=False)
+2025-09-04 17:32:15,553 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:15,553 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:16,078 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:16,078 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:16,078 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613461347
+2025-09-04 17:32:16,078 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613461347
+2025-09-04 17:32:16,313 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:16,313 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:16,315 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-04 17:32:16,315 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-04 17:32:16,716 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:16,716 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:16,717 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613439816
+2025-09-04 17:32:16,717 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613439816
+2025-09-04 17:32:16,928 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:16,928 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:16,929 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-04 17:32:16,929 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-04 17:32:17,837 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.7 seconds
+2025-09-04 17:32:17,837 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.7 seconds
+2025-09-04 17:32:18,317 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613461347 (headless=False)
+2025-09-04 17:32:18,317 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613461347 (headless=False)
+2025-09-04 17:32:18,317 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:18,317 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:18,903 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:18,903 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:18,903 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613461347
+2025-09-04 17:32:18,903 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613461347
+2025-09-04 17:32:18,930 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613439816 (headless=False)
+2025-09-04 17:32:18,930 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613439816 (headless=False)
+2025-09-04 17:32:18,931 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:18,931 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:19,102 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:19,102 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:19,102 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-04 17:32:19,102 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-04 17:32:19,529 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:19,529 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:19,529 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613439816
+2025-09-04 17:32:19,529 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613439816
+2025-09-04 17:32:19,725 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:19,725 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:19,725 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-04 17:32:19,725 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-04 17:32:22,104 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 613461347 or get automation data
+2025-09-04 17:32:22,104 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 613461347 or get automation data
+2025-09-04 17:32:22,726 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 613439816 or get automation data
+2025-09-04 17:32:22,726 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 613439816 or get automation data
+2025-09-04 17:32:26,951 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 9.1s
+2025-09-04 17:32:26,951 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 9.1s
+2025-09-04 17:32:26,952 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, random_click: 1
+2025-09-04 17:32:26,952 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, random_click: 1
+2025-09-04 17:32:27,682 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 613461347...
+2025-09-04 17:32:27,682 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 613461347...
+2025-09-04 17:32:27,682 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-04 17:32:27,682 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-04 17:32:28,298 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-04 17:32:28,298 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-04 17:32:28,298 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-04 17:32:28,298 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-04 17:32:28,298 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613461347 (headless=False)
+2025-09-04 17:32:28,298 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613461347 (headless=False)
+2025-09-04 17:32:28,298 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:28,298 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:28,303 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 613439816...
+2025-09-04 17:32:28,303 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 613439816...
+2025-09-04 17:32:28,303 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-04 17:32:28,303 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-04 17:32:29,030 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:29,030 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:29,030 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613461347
+2025-09-04 17:32:29,030 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613461347
+2025-09-04 17:32:29,271 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:29,271 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:29,272 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-04 17:32:29,272 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-04 17:32:29,591 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-04 17:32:29,591 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-04 17:32:29,591 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-04 17:32:29,591 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-04 17:32:29,592 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613439816 (headless=False)
+2025-09-04 17:32:29,592 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613439816 (headless=False)
+2025-09-04 17:32:29,592 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:29,592 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:30,195 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:30,195 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:30,195 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613439816
+2025-09-04 17:32:30,195 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613439816
+2025-09-04 17:32:30,272 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613461347 (headless=False)
+2025-09-04 17:32:30,272 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613461347 (headless=False)
+2025-09-04 17:32:30,273 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:30,273 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:30,393 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:30,393 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:30,394 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-04 17:32:30,394 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-04 17:32:30,870 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 9.3 seconds
+2025-09-04 17:32:30,870 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 9.3 seconds
+2025-09-04 17:32:31,302 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:31,302 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:31,302 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613461347
+2025-09-04 17:32:31,302 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613461347
+2025-09-04 17:32:31,395 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613439816 (headless=False)
+2025-09-04 17:32:31,395 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613439816 (headless=False)
+2025-09-04 17:32:31,396 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:31,396 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:31,506 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:31,506 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:31,506 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-04 17:32:31,506 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-04 17:32:32,402 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:32,402 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:32,402 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613439816
+2025-09-04 17:32:32,402 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613439816
+2025-09-04 17:32:32,616 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:32,616 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:32,616 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-04 17:32:32,616 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-04 17:32:33,508 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613461347 (headless=False)
+2025-09-04 17:32:33,508 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613461347 (headless=False)
+2025-09-04 17:32:33,508 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:33,508 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:34,349 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:34,349 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:34,349 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613461347
+2025-09-04 17:32:34,349 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613461347
+2025-09-04 17:32:34,618 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613439816 (headless=False)
+2025-09-04 17:32:34,618 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 613439816 (headless=False)
+2025-09-04 17:32:34,618 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:34,618 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-04 17:32:35,047 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:35,047 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:35,047 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-04 17:32:35,047 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-04 17:32:35,332 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page was closed during sleep, stopping
+2025-09-04 17:32:35,332 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page was closed during sleep, stopping
+2025-09-04 17:32:35,333 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 0 actions in 4.5s
+2025-09-04 17:32:35,333 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 0 actions in 4.5s
+2025-09-04 17:32:35,333 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,333 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,337 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,337 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,338 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,338 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,343 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,343 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,344 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,344 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,346 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,346 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,346 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,346 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,349 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,349 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,349 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,349 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,351 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,351 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,351 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,351 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,352 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,352 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,352 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,352 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,352 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,352 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,352 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,352 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,353 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,353 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,353 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,353 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,354 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,354 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,355 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,355 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,356 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,356 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,357 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,357 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,357 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,357 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,357 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,357 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,358 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,358 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,358 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,358 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,359 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,359 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,359 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,359 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,360 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,360 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,360 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,360 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,360 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,360 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,361 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,361 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,361 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,361 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,361 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,361 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,362 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,362 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,362 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,362 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,364 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,364 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,364 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,364 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,365 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,365 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,365 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,365 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,366 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,366 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,366 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,366 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,366 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,366 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,366 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,366 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,367 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,367 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,367 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,367 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,368 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,368 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,368 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,368 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,369 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,369 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,369 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,369 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,369 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,369 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,369 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,369 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,370 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,370 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,370 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,370 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,372 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,372 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,372 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,372 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,373 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,373 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,373 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,373 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,374 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,374 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,374 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,374 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,374 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,374 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,374 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,374 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,375 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,375 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,375 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,375 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-04 17:32:35,376 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:35,376 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Critical error ensuring page availability: BrowserContext.new_page: Target page, context or browser has been closed
+2025-09-04 17:32:37,416 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:37,416 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-04 17:32:37,416 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613439816
+2025-09-04 17:32:37,416 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 613439816
+2025-09-04 17:32:37,979 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:37,979 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"error":"basic browser profile not found","errorObject":{"message":"Request failed with status code 404","name":"AxiosError","stack":"AxiosError: Request failed with status code 404\n    at Dj (/User
+2025-09-04 17:32:37,980 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-04 17:32:37,980 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-04 17:32:38,049 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 613461347 or get automation data
+2025-09-04 17:32:38,049 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 613461347 or get automation data
+2025-09-04 17:32:40,981 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 613439816 or get automation data
+2025-09-04 17:32:40,981 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 613439816 or get automation data
+2025-09-04 17:32:41,814 - bot.src.instagram_uploader.dolphin_anty - INFO - [EXPORT_COOKIES] Success! Got 720 cookies for profile 612899146
+2025-09-04 17:32:41,814 - bot.src.instagram_uploader.dolphin_anty - INFO - [EXPORT_COOKIES] Success! Got 720 cookies for profile 612899146
+2025-09-04 17:32:41,815 - bot.src.instagram_uploader.dolphin_anty - INFO - [GET_COOKIES] Success! Got 720 cookies for profile 612899146
+2025-09-04 17:32:41,815 - bot.src.instagram_uploader.dolphin_anty - INFO - [GET_COOKIES] Success! Got 720 cookies for profile 612899146
+2025-09-04 17:32:41,815 - bot.src.instagram_uploader.dolphin_anty - INFO - [COOKIES] [ASYNC_COOKIE_ROBOT] Exported 720 cookies for profile 612899146
+2025-09-04 17:32:41,815 - bot.src.instagram_uploader.dolphin_anty - INFO - [COOKIES] [ASYNC_COOKIE_ROBOT] Exported 720 cookies for profile 612899146
+2025-09-04 17:32:41,815 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping browser profile 612899146
+2025-09-04 17:32:41,815 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping browser profile 612899146
+2025-09-04 17:32:41,815 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping Dolphin profile: 612899146
+2025-09-04 17:32:41,815 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping Dolphin profile: 612899146
+2025-09-04 17:32:41,825 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Successfully stopped profile: 612899146
+2025-09-04 17:32:41,825 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Successfully stopped profile: 612899146
+2025-09-04 18:22:43,310 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-04 18:22:43,311 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-04 18:22:43,312 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-04 18:22:48,576 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-04 18:22:48,576 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-04 18:22:48,577 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-04 18:22:54,524 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-04 18:22:54,525 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-04 18:22:54,525 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-04 18:22:57,216 - instagrapi - INFO - https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/
+2025-09-04 18:22:58,833 - private_request - INFO - None [200] GET https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-04 18:23:03,002 - public_request - DEBUG - public_request 201: https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-04 18:23:03,002 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [201] GET https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-04 18:23:03,003 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/mellstroy/?__a=1&__d=dis) >>> 
+2025-09-04 18:23:08,604 - public_request - DEBUG - public_request 201: https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-04 18:23:08,604 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [201] GET https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-04 18:23:08,605 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/mellstroy/?__a=1&__d=dis) >>> 
+2025-09-04 18:23:13,865 - public_request - DEBUG - public_request 201: https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-04 18:23:13,865 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [201] GET https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-04 18:23:13,866 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/mellstroy/?__a=1&__d=dis) >>> 
+2025-09-04 18:23:16,395 - instagrapi - INFO - https://i.instagram.com/api/v1/users/mellstroy/usernameinfo/
+2025-09-04 18:23:17,391 - private_request - INFO - None [200] GET https://i.instagram.com/api/v1/users/mellstroy/usernameinfo/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-04 18:23:23,021 - private_request - INFO - None [200] GET https://i.instagram.com/rupload_igvideo/1757010201255_0_5380729324 (269.0.0.18.75, samsung SM-G973F)
+2025-09-04 18:23:26,011 - private_request - INFO - None [200] POST https://i.instagram.com/rupload_igvideo/1757010201255_0_5380729324 (269.0.0.18.75, samsung SM-G973F)
+2025-09-04 18:23:37,506 - private_request - INFO - None [200] POST https://i.instagram.com/rupload_igphoto/1757010201255_0_5493428178 (269.0.0.18.75, samsung SM-G973F)
+2025-09-04 18:23:40,237 - instagrapi - INFO - https://i.instagram.com/api/v1/location_search/
+2025-09-04 18:23:41,025 - private_request - INFO - None [200] GET https://i.instagram.com/api/v1/location_search/?latitude=55.7558&longitude=37.6173 (269.0.0.18.75, samsung SM-G973F)
+2025-09-04 18:23:44,934 - instagrapi - INFO - https://i.instagram.com/api/v1/media/configure_to_clips/?video=1
+2025-09-04 18:23:50,866 - private_request - INFO - None [200] POST https://i.instagram.com/api/v1/media/configure_to_clips/?video=1 (269.0.0.18.75, samsung SM-G973F)
+2025-09-04 18:23:54,125 - instagrapi - INFO - https://i.instagram.com/api/v1/qe/expose/
+2025-09-04 18:23:54,897 - private_request - INFO - None [200] POST https://i.instagram.com/api/v1/qe/expose/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-05 09:13:33,742 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-05 09:13:33,744 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-05 09:13:33,745 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-05 09:13:38,385 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-05 09:13:38,385 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-05 09:13:38,385 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-05 09:13:44,038 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-05 09:13:44,039 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-05 09:13:44,039 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-05 09:13:47,060 - instagrapi - INFO - https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/
+2025-09-05 09:13:48,415 - private_request - INFO - None [200] GET https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-05 09:13:52,852 - public_request - DEBUG - public_request 201: https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-05 09:13:52,852 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [201] GET https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-05 09:13:52,852 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/mellstroy/?__a=1&__d=dis) >>> 
+2025-09-05 09:13:57,643 - public_request - DEBUG - public_request 201: https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-05 09:13:57,643 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [201] GET https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-05 09:13:57,644 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/mellstroy/?__a=1&__d=dis) >>> 
+2025-09-05 09:14:02,783 - public_request - DEBUG - public_request 201: https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-05 09:14:02,783 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [201] GET https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-05 09:14:02,784 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/mellstroy/?__a=1&__d=dis) >>> 
+2025-09-05 09:14:05,361 - instagrapi - INFO - https://i.instagram.com/api/v1/users/mellstroy/usernameinfo/
+2025-09-05 09:14:06,264 - private_request - INFO - None [200] GET https://i.instagram.com/api/v1/users/mellstroy/usernameinfo/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-05 09:14:10,538 - private_request - INFO - None [200] GET https://i.instagram.com/rupload_igvideo/1757063649503_0_6661100348 (269.0.0.18.75, samsung SM-G973F)
+2025-09-05 09:14:13,478 - private_request - INFO - None [200] POST https://i.instagram.com/rupload_igvideo/1757063649503_0_6661100348 (269.0.0.18.75, samsung SM-G973F)
+2025-09-05 09:14:24,832 - private_request - INFO - None [200] POST https://i.instagram.com/rupload_igphoto/1757063649503_0_3872572356 (269.0.0.18.75, samsung SM-G973F)
+2025-09-05 09:14:28,263 - instagrapi - INFO - https://i.instagram.com/api/v1/location_search/
+2025-09-05 09:14:29,028 - private_request - INFO - None [200] GET https://i.instagram.com/api/v1/location_search/?latitude=55.7558&longitude=37.6173 (269.0.0.18.75, samsung SM-G973F)
+2025-09-05 09:14:31,629 - instagrapi - INFO - https://i.instagram.com/api/v1/media/configure_to_clips/?video=1
+2025-09-05 09:14:37,229 - private_request - INFO - None [200] POST https://i.instagram.com/api/v1/media/configure_to_clips/?video=1 (269.0.0.18.75, samsung SM-G973F)
+2025-09-05 09:14:40,616 - instagrapi - INFO - https://i.instagram.com/api/v1/qe/expose/
+2025-09-05 09:14:41,445 - private_request - INFO - None [200] POST https://i.instagram.com/api/v1/qe/expose/ (269.0.0.18.75, samsung SM-G973F)
