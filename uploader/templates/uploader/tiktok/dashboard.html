@@ -472,22 +472,15 @@ async function checkApiStatus() {
 // System Status Update
 async function updateSystemStatus() {
     try {
-        const resAll = await fetch('{% url "api_tiktok_stats_all" %}', { method: 'POST', headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value } });
-        const all = await resAll.json();
-        if (resAll.ok && all.ok) {
-            // Totals
-            document.getElementById('profiles-count').textContent = all.totals?.profiles ?? 'N/A';
-            document.getElementById('accounts-count').textContent = all.totals?.accounts ?? 'N/A';
-            document.getElementById('videos-count').textContent = all.totals?.videos ?? 'N/A';
-
-            // Server status count
-            document.getElementById('server-status').textContent = `${all.totals?.online_servers ?? 0}/${all.totals?.total_servers ?? 0}`;
-
-            // Per-server list with icons
-            const serversList = document.getElementById('servers-status-list');
-            if (serversList && Array.isArray(all.servers)) {
-                serversList.innerHTML = all.servers.map(s => `${s.online ? '✅' : '❌'} ${s.name} — P:${s.profiles ?? 'N/A'} A:${s.accounts ?? 'N/A'} V:${s.videos ?? 'N/A'}`).join('<br>');
-            }
+        const res = await fetch('{% url "api_tiktok_stats" %}', { method: 'POST' });
+        const j = await res.json();
+        if (res.ok && j.ok) {
+            document.getElementById('profiles-count').textContent = j.profiles_count ?? 'N/A';
+            document.getElementById('accounts-count').textContent = j.accounts_count ?? 'N/A';
+            document.getElementById('videos-count').textContent = j.remaining_videos ?? 'N/A';
+            
+            // Update server status with detailed info
+            updateServerStatusDisplay(j.is_alive);
         } else {
             document.getElementById('profiles-count').textContent = 'N/A';
             document.getElementById('accounts-count').textContent = 'N/A';

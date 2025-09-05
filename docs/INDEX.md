@@ -16,22 +16,16 @@
 
 #### Bulk Upload
 - **[ASYNC_BULK_UPLOAD.md](ASYNC_BULK_UPLOAD.md)** - Асинхронная массовая загрузка
-- **[ASYNC_BULK_UPLOAD_FIXES.md](ASYNC_BULK_UPLOAD_FIXES.md)** - Исправления в bulk upload
 - **[ASYNC_BULK_UPLOAD_SUMMARY.md](ASYNC_BULK_UPLOAD_SUMMARY.md)** - Краткое описание bulk upload
 
 #### Cookie Robot
-- **[COOKIE_ROBOT_OPTIMIZATION.md](COOKIE_ROBOT_OPTIMIZATION.md)** - Оптимизация Cookie Robot
-- **[COOKIE_ROBOT_JSON_FIX.md](COOKIE_ROBOT_JSON_FIX.md)** - Исправление JSON парсинга
-- **[COOKIE_ROBOT_TIMEOUT_FIX.md](COOKIE_ROBOT_TIMEOUT_FIX.md)** - Исправление таймаута
-- **[COOKIE_ROBOT_LOGGING_IMPROVEMENTS.md](COOKIE_ROBOT_LOGGING_IMPROVEMENTS.md)** - Улучшения логирования
+- COOKIE_ROBOT_* документы были объединены в общий раздел TROUBLESHOOTING и DEVELOPMENT
 
 #### Proxy Management
-- **[PROXY_SYNC_FIX.md](PROXY_SYNC_FIX.md)** - Синхронизация полей прокси
+- Управление и синхронизация прокси описаны в DEVELOPMENT и TROUBLESHOOTING
 
 ### 🔧 Технические исправления
-- **[COOKIE_ROBOT_JSON_FIX.md](COOKIE_ROBOT_JSON_FIX.md)** - Исправление ошибок JSON парсинга в Cookie Robot
-- **[COOKIE_ROBOT_TIMEOUT_FIX.md](COOKIE_ROBOT_TIMEOUT_FIX.md)** - Исправление проблем с таймаутом в Cookie Robot
-- **[COOKIE_ROBOT_LOGGING_IMPROVEMENTS.md](COOKIE_ROBOT_LOGGING_IMPROVEMENTS.md)** - Улучшения логирования и мониторинга
+- Раздел сведён: детали исправлений см. в TROUBLESHOOTING и DEVELOPMENT
 
 ## 📖 Быстрый старт
 
@@ -42,15 +36,9 @@
 ## 🛠️ Решение проблем
 
 - **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Общие проблемы
-- **[COOKIE_ROBOT_JSON_FIX.md](COOKIE_ROBOT_JSON_FIX.md)** - Ошибки JSON в Cookie Robot
-- **[COOKIE_ROBOT_TIMEOUT_FIX.md](COOKIE_ROBOT_TIMEOUT_FIX.md)** - Таймауты в Cookie Robot
-- **[COOKIE_ROBOT_LOGGING_IMPROVEMENTS.md](COOKIE_ROBOT_LOGGING_IMPROVEMENTS.md)** - Улучшения логирования
-- **[PROXY_SYNC_FIX.md](PROXY_SYNC_FIX.md)** - Проблемы с прокси
+- Разделы по Cookie Robot и Proxy перенесены в этот файл и DEVELOPMENT
 
 ## 📝 Последние изменения
 
-- **Cookie Robot Logging Improvements** - Улучшено логирование и мониторинг прогресса
-- **Cookie Robot Timeout Fix** - Исправлена проблема с зависанием subprocess
-- **Cookie Robot JSON Fix** - Исправлена ошибка парсинга JSON в subprocess
-- **Cookie Robot Optimization** - Убраны правые клики и оптимизированы вкладки
-- **Proxy Sync Fix** - Синхронизация полей прокси в аккаунтах 
+- Консолидация документации Cookie Robot (оптимизация, таймауты, JSON, логирование) в TROUBLESHOOTING/DEVELOPMENT
+- Уточнение разделов по управлению прокси в DEVELOPMENT/TROUBLESHOOTING

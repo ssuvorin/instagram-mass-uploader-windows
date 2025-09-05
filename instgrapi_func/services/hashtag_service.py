@@ -12,6 +12,7 @@ from .proxy import build_proxy_url
 from .auth_service import IGAuthService
 from .code_providers import TwoFactorProvider
 from .device_service import ensure_persistent_device
+from .session_store import DjangoDeviceSessionStore
 
 
 log = logging.getLogger("insta.hashtag")
@@ -127,13 +128,19 @@ class HashtagAnalysisService:
         if on_log:
             on_log(f"hashtag: start analysis for #{hashtag}")
 
-        device_cfg, user_agent = ensure_persistent_device(account_username)
+        # Load persisted session and ensure persistent device like async API flow
+        session_store = DjangoDeviceSessionStore()
+        persisted_settings = session_store.load(account_username) or None
+
+        device_cfg, user_agent = ensure_persistent_device(account_username, persisted_settings)
         proxy_url = build_proxy_url(proxy) if proxy else None
 
         cl: Client = IGClientFactory.create_client(
             device_config=device_cfg,
             proxy_url=proxy_url,
+            session_settings=persisted_settings,
             user_agent=user_agent,
+            proxy_dict=proxy or {},
         )
 
         # No session restore here: ensure_persistent_device returns (device, user_agent)
@@ -144,7 +151,15 @@ class HashtagAnalysisService:
         if on_log:
             on_log(f"hashtag: authenticated as {account_username}")
 
-        # Save session to DB for reuse by other methods
+        # Save refreshed session to store and DB after auth
+        try:
+            settings = cl.get_settings()  # type: ignore[attr-defined]
+            session_store.save(account_username, settings)
+            if on_log:
+                on_log("hashtag: session saved to store")
+        except Exception:
+            pass
+        # Keep legacy DB save for compatibility
         self._save_session_db(account_username, cl, on_log)
 
         # Hashtag info

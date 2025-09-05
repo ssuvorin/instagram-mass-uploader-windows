@@ -190,14 +190,16 @@ SECRET_KEY=your-super-secret-key-change-this
 RUCAPTCHA_API_KEY=your-rucaptcha-api-key
 ```
 
-#### 3. Развертывание с Docker
+#### 3. Развертывание
 
-```bash
-# Сборка и запуск сервисов
-docker-compose -f docker-compose.windows.yml up -d
+```powershell
+# Вариант A: через подготовленный скрипт (рекомендуется на Windows)
+./deploy_windows.ps1 -ServerIP YOUR_SERVER_IP -DolphinToken YOUR_DOLPHIN_TOKEN
 
-# Просмотр логов
-docker-compose -f docker-compose.windows.yml logs -f
+# Вариант B: вручную (если у вас собственные compose-файлы)
+# Проверьте наличие docker-compose.yml или docker-compose.windows.yml в корне
+docker-compose up -d
+docker-compose logs -f
 ```
 
 #### 4. Доступ к панели управления
@@ -666,17 +668,14 @@ class InstagramAccountTest(TestCase):
 
 ### Развертывание
 
-#### Docker развертывание
+#### Развертывание
 
-```bash
-# Сборка образа
-docker build -f Dockerfile.windows -t instagram-uploader .
+```powershell
+# Windows: используйте automation-скрипт
+./deploy_windows.ps1 -Production
 
-# Запуск контейнера
-docker run -d -p 8000:8000 --name instagram-app instagram-uploader
-
-# Просмотр логов
-docker logs instagram-app
+# Linux/macOS: используйте свой docker-compose.yml, если он у вас есть
+docker-compose up -d
 ```
 
 #### PowerShell автоматизация
@@ -711,8 +710,8 @@ docker logs instagram-app
 
 ---
 
-**Версия документации**: 2.0  
-**Последнее обновление**: 2024  
+**Версия документации**: 2.1  
+**Последнее обновление**: 2025-09  
 **Автор**: Instagram Mass Uploader Team 
 
 ## 🎬 Уникализация видео и параметры кодирования

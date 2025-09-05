@@ -298,7 +298,7 @@ def create_account(request):
 
                         # Using updated create_profile with multiple locales
                         selected_locale = request.POST.get('profile_locale', 'ru_BY')
-                        if selected_locale not in ['ru_BY', 'en_IN', 'es_CL', 'es_MX']:
+                        if selected_locale not in ['ru_BY', 'en_IN', 'es_CL', 'es_MX', 'pt_BR']:
                             selected_locale = 'ru_BY'
                         response = dolphin.create_profile(
                             name=profile_name,
@@ -433,9 +433,9 @@ def import_accounts(request):
         # UI params
         proxy_selection = request.POST.get('proxy_selection', 'locale_only')
         proxy_locale_strict = request.POST.get('proxy_locale_strict') == '1'
-        # Locale: support ru_BY, en_IN, es_CL, es_MX
+        # Locale: support ru_BY, en_IN, es_CL, es_MX, pt_BR
         selected_locale = request.POST.get('profile_locale', 'ru_BY')
-        allowed_locales = ['ru_BY', 'en_IN', 'es_CL', 'es_MX']
+        allowed_locales = ['ru_BY', 'en_IN', 'es_CL', 'es_MX', 'pt_BR']
         if selected_locale not in allowed_locales:
             selected_locale = 'ru_BY'
         # Derive target country from locale
@@ -451,6 +451,9 @@ def import_accounts(request):
         elif selected_locale == 'es_MX':
             locale_country = 'MX'
             country_text = 'Mexico'
+        elif selected_locale == 'pt_BR':
+            locale_country = 'BR'
+            country_text = 'Brazil'
         else:
             locale_country = 'BY'
             country_text = 'Belarus'
@@ -1131,10 +1134,18 @@ def import_accounts_ua_cookies(request):
 		proxy_selection = request.POST.get('proxy_selection', 'locale_only')
 		proxy_locale_strict = request.POST.get('proxy_locale_strict') == '1'
 		selected_locale = request.POST.get('profile_locale', 'ru_BY')
-		allowed_locales = ['ru_BY', 'en_IN', 'es_CL', 'es_MX']
+		allowed_locales = ['ru_BY', 'en_IN', 'es_CL', 'es_MX', 'pt_BR']
 		if selected_locale not in allowed_locales:
 			selected_locale = 'ru_BY'
-		locale_country = 'BY' if selected_locale == 'ru_BY' else ('IN' if selected_locale == 'en_IN' else ('CL' if selected_locale == 'es_CL' else 'MX'))
+		locale_country = (
+			'BY' if selected_locale == 'ru_BY' else (
+				'IN' if selected_locale == 'en_IN' else (
+					'CL' if selected_locale == 'es_CL' else (
+						'MX' if selected_locale == 'es_MX' else 'BR'
+					)
+				)
+			)
+		)
 
 		created_count = 0
 		updated_count = 0

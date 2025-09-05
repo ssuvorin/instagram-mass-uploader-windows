@@ -477,6 +477,22 @@ class DolphinAnty:
             ]
             lat, lon = random.choice(mx_cities)
             geo_payload = {"mode": "manual", "latitude": lat, "longitude": lon}
+        elif normalized_locale in {"pt_BR", "pt-BR"}:
+            # Brazil (Português, Brasil)
+            tz_payload = {"mode": "manual", "value": "America/Sao_Paulo"}
+            br_cities = [
+                (-23.5505, -46.6333),  # São Paulo
+                (-22.9068, -43.1729),  # Rio de Janeiro
+                (-15.8267, -47.9218),  # Brasília
+                (-19.9167, -43.9345),  # Belo Horizonte
+                (-12.9777, -38.5016),  # Salvador
+                (-8.0476,  -34.8770),  # Recife
+                (-3.1190,  -60.0217),  # Manaus
+                (-30.0346, -51.2177),  # Porto Alegre
+                (-25.4284, -49.2733),  # Curitiba
+            ]
+            lat, lon = random.choice(br_cities)
+            geo_payload = {"mode": "manual", "latitude": lat, "longitude": lon}
         else:
             # Default: Russia (original behavior)
             ru_timezones = [
@@ -2250,6 +2266,8 @@ class DolphinAnty:
                 return 'en-IN,en;q=0.9'
             if lv.startswith('en-us') or lv.startswith('en'):
                 return 'en-US,en;q=0.9'
+            if lv.startswith('pt-br') or lv.startswith('pt'):
+                return 'pt-BR,pt;q=0.9,en-US;q=0.7,en;q=0.6'
             # Generic fallback using the detected locale
             base = norm if norm else 'ru-BY'
             primary = (base.split('-')[0] if '-' in base else base) or 'ru'
@@ -2271,6 +2289,8 @@ class DolphinAnty:
             mapping = {
                 'ru_by': 'BY', 'ru-by': 'BY', 'ru_ru': 'RU', 'ru-ru': 'RU',
                 'en_us': 'US', 'en-us': 'US', 'en_in': 'IN', 'en-in': 'IN',
+                'es_cl': 'CL', 'es-cl': 'CL', 'es_mx': 'MX', 'es-mx': 'MX',
+                'pt_br': 'BR', 'pt-br': 'BR',
             }
             key = norm.lower()
             return mapping.get(key)
