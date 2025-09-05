@@ -1533,6 +1533,62 @@ def tiktok_dashboard(request):
     return render(request, 'uploader/tiktok/dashboard.html', context)
 
 
+@login_required
+def tiktok_api_get_stats(request):
+    """Proxy endpoint to get TikTok server statistics"""
+    import requests
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    try:
+        server_url = request.POST.get('server_url')
+        if not server_url:
+            return JsonResponse({'error': 'Server URL required'}, status=400)
+        
+        # Get stats from TikTok helper API
+        stats_data = {}
+        
+        # Get videos count
+        try:
+            response = requests.get(f"{server_url}/get_videos", timeout=10)
+            if response.status_code == 200:
+                stats_data['videos'] = response.json()
+            else:
+                stats_data['videos'] = {'count': 0, 'videos': []}
+        except Exception as e:
+            stats_data['videos'] = {'count': 0, 'videos': [], 'error': str(e)}
+        
+        # Get dolphin profiles count
+        try:
+            response = requests.get(f"{server_url}/get_dolphin_profiles", timeout=10)
+            if response.status_code == 200:
+                stats_data['profiles'] = response.json()
+            else:
+                stats_data['profiles'] = {'count': 0}
+        except Exception as e:
+            stats_data['profiles'] = {'count': 0, 'error': str(e)}
+        
+        # Get accounts count
+        try:
+            response = requests.get(f"{server_url}/get_accounts_from_db", timeout=10)
+            if response.status_code == 200:
+                stats_data['accounts'] = response.json()
+            else:
+                stats_data['accounts'] = {'count': 0, 'accounts': []}
+        except Exception as e:
+            stats_data['accounts'] = {'count': 0, 'accounts': [], 'error': str(e)}
+        
+        return JsonResponse({
+            'success': True,
+            'stats': stats_data,
+            'server_url': server_url
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': f'Failed to get stats: {str(e)}'}, status=500)
+
+
 def _tiktok_api_context(request=None) -> dict:
     """Build context with API servers from environment for TikTok booster pages."""
     # Load servers from environment variable TIKTOK_API_SERVERS
