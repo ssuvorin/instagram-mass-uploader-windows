@@ -1690,6 +1690,57 @@ def _tiktok_api_context(request=None) -> dict:
     except Exception:
         clients_list = []
 
+    # Fetch stats from all servers
+    import requests
+    server_stats = {}
+    total_profiles = 0
+    total_accounts = 0
+    total_videos = 0
+    online_servers = 0
+    
+    for server in servers:
+        try:
+            # Get videos count
+            videos_response = requests.get(f"{server['url']}/get_videos", timeout=5)
+            videos_count = videos_response.json().get('count', 0) if videos_response.status_code == 200 else 0
+            
+            # Get dolphin profiles count
+            profiles_response = requests.get(f"{server['url']}/get_dolphin_profiles", timeout=5)
+            profiles_count = profiles_response.json().get('count', 0) if profiles_response.status_code == 200 else 0
+            
+            # Get accounts count
+            accounts_response = requests.get(f"{server['url']}/get_accounts_from_db", timeout=5)
+            accounts_count = accounts_response.json().get('count', 0) if accounts_response.status_code == 200 else 0
+            
+            # Check if server is online (any successful response)
+            is_online = any([
+                videos_response.status_code == 200,
+                profiles_response.status_code == 200,
+                accounts_response.status_code == 200
+            ])
+            
+            if is_online:
+                online_servers += 1
+                total_profiles += profiles_count
+                total_accounts += accounts_count
+                total_videos += videos_count
+            
+            server_stats[server['name']] = {
+                'profiles': profiles_count,
+                'accounts': accounts_count,
+                'videos': videos_count,
+                'online': is_online
+            }
+            
+        except Exception as e:
+            server_stats[server['name']] = {
+                'profiles': 0,
+                'accounts': 0,
+                'videos': 0,
+                'online': False,
+                'error': str(e)
+            }
+
     return {
         'active_tab': 'tiktok',
         'api_base': selected_api_base,
@@ -1697,6 +1748,14 @@ def _tiktok_api_context(request=None) -> dict:
         'selected_server': selected_server,
         'server_count': len(servers),
         'clients': clients_list,
+        'server_stats': server_stats,
+        'total_stats': {
+            'profiles': total_profiles,
+            'accounts': total_accounts,
+            'videos': total_videos,
+            'online_servers': online_servers,
+            'total_servers': len(servers)
+        }
     }
 
 
