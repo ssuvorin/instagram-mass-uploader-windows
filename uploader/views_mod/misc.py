@@ -1690,57 +1690,6 @@ def _tiktok_api_context(request=None) -> dict:
     except Exception:
         clients_list = []
 
-    # Fetch stats from all servers
-    import requests
-    server_stats = {}
-    total_profiles = 0
-    total_accounts = 0
-    total_videos = 0
-    online_servers = 0
-    
-    for server in servers:
-        try:
-            # Get videos count
-            videos_response = requests.get(f"{server['url']}/get_videos", timeout=5)
-            videos_count = videos_response.json().get('count', 0) if videos_response.status_code == 200 else 0
-            
-            # Get dolphin profiles count
-            profiles_response = requests.get(f"{server['url']}/get_dolphin_profiles", timeout=5)
-            profiles_count = profiles_response.json().get('count', 0) if profiles_response.status_code == 200 else 0
-            
-            # Get accounts count
-            accounts_response = requests.get(f"{server['url']}/get_accounts_from_db", timeout=5)
-            accounts_count = accounts_response.json().get('count', 0) if accounts_response.status_code == 200 else 0
-            
-            # Check if server is online (any successful response)
-            is_online = any([
-                videos_response.status_code == 200,
-                profiles_response.status_code == 200,
-                accounts_response.status_code == 200
-            ])
-            
-            if is_online:
-                online_servers += 1
-                total_profiles += profiles_count
-                total_accounts += accounts_count
-                total_videos += videos_count
-            
-            server_stats[server['name']] = {
-                'profiles': profiles_count,
-                'accounts': accounts_count,
-                'videos': videos_count,
-                'online': is_online
-            }
-            
-        except Exception as e:
-            server_stats[server['name']] = {
-                'profiles': 0,
-                'accounts': 0,
-                'videos': 0,
-                'online': False,
-                'error': str(e)
-            }
-
     return {
         'active_tab': 'tiktok',
         'api_base': selected_api_base,
@@ -1748,14 +1697,6 @@ def _tiktok_api_context(request=None) -> dict:
         'selected_server': selected_server,
         'server_count': len(servers),
         'clients': clients_list,
-        'server_stats': server_stats,
-        'total_stats': {
-            'profiles': total_profiles,
-            'accounts': total_accounts,
-            'videos': total_videos,
-            'online_servers': online_servers,
-            'total_servers': len(servers)
-        }
     }
 
 
@@ -2415,6 +2356,78 @@ def tiktok_stats_proxy(request):
     except requests.exceptions.RequestException as e:
         return _json_response({'ok': False, 'detail': str(e), **result}, status=502)
 
+
+@login_required
+def tiktok_stats_all_proxy(request):
+    """Aggregate per-server stats for all configured TikTok helper servers.
+
+    Returns, for each server: profiles, accounts, videos counts and online flag,
+    plus totals across servers. All calls are made from backend to helper API.
+    """
+    import requests
+    ctx = _tiktok_api_context(request)
+    servers = ctx.get('available_servers') or []
+    per_server = []
+    totals = {
+        'profiles': 0,
+        'accounts': 0,
+        'videos': 0,
+        'online_servers': 0,
+        'total_servers': len(servers),
+    }
+    for server in servers:
+        name = (server or {}).get('name') or 'Server'
+        url = (server or {}).get('url') or ''
+        server_result = {
+            'name': name,
+            'url': url,
+            'profiles': None,
+            'accounts': None,
+            'videos': None,
+            'online': False,
+        }
+        if not url:
+            per_server.append(server_result)
+            continue
+        try:
+            v = p = a = None
+            # videos
+            try:
+                r = requests.get(f"{url}/get_videos", timeout=5)
+                if r.ok:
+                    v = (r.json() or {}).get('count')
+            except Exception:
+                pass
+            # dolphin profiles
+            try:
+                r = requests.get(f"{url}/get_dolphin_profiles", timeout=5)
+                if r.ok:
+                    p = (r.json() or {}).get('count')
+            except Exception:
+                pass
+            # accounts
+            try:
+                r = requests.get(f"{url}/get_accounts_from_db", timeout=5)
+                if r.ok:
+                    a = (r.json() or {}).get('count')
+            except Exception:
+                pass
+
+            server_result['videos'] = v
+            server_result['profiles'] = p
+            server_result['accounts'] = a
+            server_result['online'] = any(x is not None for x in (v, p, a))
+
+            if server_result['online']:
+                totals['online_servers'] += 1
+                totals['videos'] += (v or 0)
+                totals['profiles'] += (p or 0)
+                totals['accounts'] += (a or 0)
+        except requests.exceptions.RequestException:
+            pass
+        per_server.append(server_result)
+
+    return _json_response({'ok': True, 'servers': per_server, 'totals': totals})
 
 @csrf_exempt
 @login_required

@@ -414,25 +414,25 @@
             <div class="row g-4">
                 <div class="col-md-3 col-6">
                     <div class="text-center">
-                        <h5 class="mb-1">{{ total_stats.profiles|default:"0" }}</h5>
+                        <h5 class="mb-1" id="profiles-count">N/A</h5>
                         <small class="text-muted">Dolphin Profiles</small>
                     </div>
                 </div>
                 <div class="col-md-3 col-6">
                     <div class="text-center">
-                        <h5 class="mb-1">{{ total_stats.accounts|default:"0" }}</h5>
+                        <h5 class="mb-1" id="accounts-count">N/A</h5>
                         <small class="text-muted">Accounts</small>
                     </div>
                 </div>
                 <div class="col-md-3 col-6">
                     <div class="text-center">
-                        <h5 class="mb-1">{{ total_stats.videos|default:"0" }}</h5>
+                        <h5 class="mb-1" id="videos-count">N/A</h5>
                         <small class="text-muted">Videos</small>
                     </div>
                 </div>
                 <div class="col-md-3 col-6">
                     <div class="text-center">
-                        <h5 class="mb-1">{{ total_stats.online_servers|default:"0" }}/{{ total_stats.total_servers|default:"0" }}</h5>
+                        <h5 class="mb-1" id="server-status">N/A</h5>
                         <small class="text-muted">Server Status</small>
                         <div id="servers-status-list" class="mt-2" style="font-size: 0.8rem;"></div>
                     </div>
@@ -605,6 +605,7 @@
     // Initialize page
     document.addEventListener('DOMContentLoaded', function() {
         checkApiStatus();
+        updateSystemStatus();
         checkAllServersStatus();
         setupFileUploadAreas();
         setupLogPolling();
@@ -649,22 +650,19 @@
     async function updateSystemStatus(data = null) {
         try {
             if (!data) {
-                // Try to fetch stats from backend proxy
-                try {
-                    const res = await fetch('{% url "api_tiktok_stats" %}', { method: 'POST' });
-                    const j = await res.json();
-                    if (res.ok && j.ok) {
-                        data = {
-                            profiles_count: j.profiles_count ?? 'N/A',
-                            accounts_count: j.accounts_count ?? 'N/A',
-                            videos_count: j.remaining_videos ?? 'N/A',
-                            proxies_count: 'N/A'
-                        };
-                    } else {
-                        data = { profiles_count: 'N/A', accounts_count: 'N/A', videos_count: 'N/A', proxies_count: 'N/A' };
-                    }
-                } catch (err) {
-                    data = { profiles_count: 'N/A', accounts_count: 'N/A', videos_count: 'N/A', proxies_count: 'N/A' };
+                // Fetch aggregated stats from backend proxy (per-server + totals)
+                const resAll = await fetch('{% url "api_tiktok_stats_all" %}', { method: 'POST' });
+                const all = await resAll.json();
+                if (resAll.ok && all.ok) {
+                    data = {
+                        profiles_count: all.totals?.profiles ?? 'N/A',
+                        accounts_count: all.totals?.accounts ?? 'N/A',
+                        videos_count: all.totals?.videos ?? 'N/A',
+                        proxies_count: 'N/A',
+                        servers: all.servers || []
+                    };
+                } else {
+                    data = { profiles_count: 'N/A', accounts_count: 'N/A', videos_count: 'N/A', proxies_count: 'N/A', servers: [] };
                 }
             }
             
@@ -672,6 +670,15 @@
             document.getElementById('accounts-count').textContent = data.accounts_count || 'N/A';
             document.getElementById('videos-count').textContent = data.videos_count || 'N/A';
             document.getElementById('proxies-count').textContent = data.proxies_count || 'N/A';
+
+            // Render per-server rows with counts and status
+            const serversList = document.getElementById('servers-status-list');
+            if (serversList && Array.isArray(data.servers)) {
+                serversList.innerHTML = data.servers.map(s => `${s.online ? '✅' : '❌'} ${s.name} — P:${s.profiles ?? 'N/A'} A:${s.accounts ?? 'N/A'} V:${s.videos ?? 'N/A'}`).join('<br>');
+                // Also set main status as count
+                const online = data.servers.filter(s => s.online).length;
+                document.getElementById('server-status').textContent = `${online}/${data.servers.length}`;
+            }
         } catch (error) {
             console.error('Failed to update system status:', error);
             // Show placeholder data
@@ -739,22 +746,45 @@
     }
 
     // Check status of all servers
-    function checkAllServersStatus() {
+    async function checkAllServersStatus() {
         const serversList = document.getElementById('servers-status-list');
+        const serverSelect = document.getElementById('api-server-select');
+        const servers = Array.from(serverSelect.options).map(option => ({
+            name: option.textContent,
+            url: option.value,
+            description: option.dataset.desc || ''
+        }));
+        
+        let onlineCount = 0;
         let statusHtml = '';
         
-        // Use server stats from backend context
-        const serverStats = {{ server_stats|safe }};
-        
-        for (const [serverName, stats] of Object.entries(serverStats)) {
-            if (stats.online) {
-                statusHtml += `<div class="text-success">✅ ${serverName}</div>`;
-            } else {
-                statusHtml += `<div class="text-danger">❌ ${serverName}</div>`;
+        for (const server of servers) {
+            try {
+                const response = await fetch(`{% url 'api_tiktok_api_ping' %}`, { 
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: `server_url=${encodeURIComponent(server.url)}`
+                });
+                const data = await response.json();
+                
+                if (response.ok && data.ok) {
+                    onlineCount++;
+                    statusHtml += `<div class="text-success">✅ ${server.name}</div>`;
+                } else {
+                    statusHtml += `<div class="text-danger">❌ ${server.name}</div>`;
+                }
+            } catch (error) {
+                statusHtml += `<div class="text-danger">❌ ${server.name}</div>`;
             }
         }
         
         serversList.innerHTML = statusHtml;
+        
+        // Update main status display with count format
+        document.getElementById('server-status').textContent = `${onlineCount}/${servers.length}`;
     }
 
     // API Server Logs

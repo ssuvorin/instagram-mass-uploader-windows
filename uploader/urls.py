@@ -115,6 +115,7 @@ urlpatterns = [
     path('api/tiktok/videos/release-accounts/', misc.tiktok_videos_proxy_release_accounts, name='api_tiktok_videos_release_accounts'),
     path('api/tiktok/booster/release-accounts/', misc.tiktok_booster_proxy_release_accounts, name='api_tiktok_booster_release_accounts'),
     path('api/tiktok/stats/', misc.tiktok_stats_proxy, name='api_tiktok_stats'),
+    path('api/tiktok/stats/all/', misc.tiktok_stats_all_proxy, name='api_tiktok_stats_all'),
     path('api/tiktok/maintenance/', misc.tiktok_maintenance_proxy, name='api_tiktok_maintenance'),
 
 
