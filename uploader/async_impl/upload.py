@@ -126,14 +126,7 @@ async def navigate_to_upload_with_human_behavior_async(page, account_details=Non
                 
                 # Also check for semantic file input selectors (ПОЛНАЯ КОПИЯ из sync)
                 semantic_file_inputs = []
-                semantic_selectors = [
-                    'input[accept*="video"]',
-                    'input[accept*="image"]', 
-                    'input[multiple]',
-                    'button:has-text("Выбрать на компьютере")',
-                    'button:has-text("Select from computer")',
-                    'button:has-text("Select from device")',
-                ]
+                semantic_selectors = SelectorConfig.FILE_INPUT
                 
                 for selector in semantic_selectors:
                     try:
@@ -363,50 +356,8 @@ async def try_broader_upload_detection_async(page) -> bool:
         log_info(f"[ASYNC_UPLOAD] [WAIT] Waiting {broader_wait:.1f}s before broader detection...")
         await asyncio.sleep(broader_wait)
         
-        # Enhanced upload indicators with more comprehensive selectors
-        upload_indicators = [
-            # High-priority: anchor/button parents for the New Post icon/text (RU/EN)
-            'a[role="link"]:has(svg[aria-label*="Новая публикация"])',
-            'a[role="link"]:has(svg[aria-label*="New post"])',
-            'a[role="link"]:has(span:has-text("Создать"))',
-            'a[role="link"]:has(span:has-text("Create"))',
-            'button:has(svg[aria-label*="Новая публикация"])',
-            'button:has(svg[aria-label*="New post"])',
-            'div[role="button"]:has(svg[aria-label*="Новая публикация"])',
-            'div[role="button"]:has(svg[aria-label*="New post"])',
-            
-            # Direct svg/title fallbacks
-            'svg[aria-label*="Новая публикация"]',
-            'svg[aria-label*="New post"]',
-            'svg:has(title:has-text("Новая публикация"))',
-            'svg:has(title:has-text("New post"))',
-            
-            # Text fallbacks (RU/EN)
-            'div:has-text("Создать")',
-            'div:has-text("Create")',
-            'div:has-text("Публикация")',
-            'div:has-text("Post")',
-            'div:has-text("Выбрать")',
-            'div:has-text("Select")',
-            'button:has-text("Выбрать на компьютере")',
-            'button:has-text("Select from computer")',
-            'button:has-text("Выбрать файлы")',
-            'button:has-text("Select files")',
-            'div[role="button"]:has-text("Создать")',
-            'div[role="button"]:has-text("Create")',
-            'div[role="button"]:has-text("Публикация")',
-            'div[role="button"]:has-text("Post")',
-            
-            # File input hints
-            'input[type="file"]',
-            'input[accept*="video"]',
-            'input[accept*="image"]',
-            'input[accept*="mp4"]',
-            'input[accept*="quicktime"]',
-            'input[multiple]',
-            'form[enctype="multipart/form-data"] input[type="file"]',
-            'form[method="POST"] input[type="file"]',
-        ]
+        # Enhanced upload indicators with more comprehensive selectors (centralized)
+        upload_indicators = SelectorConfig.UPLOAD_BROAD_INDICATORS
         
         for indicator in upload_indicators:
             try:
@@ -442,18 +393,7 @@ async def try_broader_upload_detection_async(page) -> bool:
         # ENHANCED: Check page content with more comprehensive keywords
         try:
             page_text = await page.inner_text('body') or ""
-            upload_keywords = [
-                'выбрать на компьютере', 'select from computer', 
-                'перетащите', 'drag',
-                'выбрать файлы', 'select files',
-                'загрузить файл', 'upload file',
-                'создать публикацию', 'create post',
-                'добавить публикацию', 'add post',
-                'добавить фото', 'add photo',
-                'добавить видео', 'add video',
-                'перетащите сюда', 'drag here',
-                'нажмите для выбора', 'click to select'
-            ]
+            upload_keywords = SelectorConfig.UPLOAD_KEYWORDS
             
             for keyword in upload_keywords:
                 if keyword in page_text.lower():
@@ -671,17 +611,8 @@ async def click_next_button_async(page, step_number):
         # Human-like delay before clicking (ПОЛНАЯ КОПИЯ из sync)
         await asyncio.sleep(random.uniform(3, 5))
         
-        # Look for next button with comprehensive selectors (ПОЛНАЯ КОПИЯ из sync)
-        next_button_selectors = [
-            'button:has-text("Далее")',
-            'button:has-text("Next")',
-            'button:has-text("Продолжить")',
-            'button:has-text("Continue")',
-            'div[role="button"]:has-text("Далее")',
-            'div[role="button"]:has-text("Next")',
-            '//button[contains(text(), "Далее")]',
-            '//button[contains(text(), "Next")]',
-        ]
+        # Look for next button with comprehensive selectors (RU/EN/ES/PT)
+        next_button_selectors = SelectorConfig.NEXT_BUTTON
         
         next_button = None
         for selector in next_button_selectors:
@@ -694,7 +625,7 @@ async def click_next_button_async(page, step_number):
                 if next_button and await next_button.is_visible():
                     # Verify this is actually a next button
                     button_text = await next_button.text_content() or ""
-                    if any(keyword in button_text.lower() for keyword in ['далее', 'next', 'продолжить', 'continue']):
+                    if any(keyword in button_text.lower() for keyword in SelectorConfig.NEXT_BUTTON_KEYWORDS):
                         log_info(f"[ASYNC_UPLOAD] [TARGET] Found next button: '{button_text.strip()}'")
                         break
                             
@@ -753,19 +684,8 @@ async def add_video_caption_async(page, caption_text):
         # Wait a bit before caption
         await asyncio.sleep(random.uniform(1.0, 2.0))
         
-        # Find caption field with comprehensive selectors (like sync version)
-        caption_field_selectors = [
-            'textarea[aria-label*="Напишите подпись" i]',
-            'textarea[aria-label*="Write a caption" i]',
-            'div[contenteditable="true"]',
-            'textarea[placeholder*="подпись" i]',
-            'textarea[placeholder*="caption" i]',
-            'textarea[placeholder*="Напишите подпись" i]',
-            'textarea[placeholder*="Write a caption" i]',
-            '//textarea[@aria-label="Напишите подпись..."]',
-            '//textarea[@aria-label="Write a caption..."]',
-            '//div[@contenteditable="true"]',
-        ]
+        # Find caption field with comprehensive selectors (centralized)
+        caption_field_selectors = SelectorConfig.CAPTION_TEXTAREA
         
         caption_field = None
         for selector in caption_field_selectors:
@@ -946,43 +866,7 @@ async def handle_reels_dialog_async(page):
         await asyncio.sleep(random.uniform(1, 2))
         
         # Надежные селекторы для диалога Reels (без динамических классов)
-        reels_dialog_selectors = [
-            # Селекторы по содержимому заголовка
-            'div:has(h2:has-text("Теперь видеопубликациями можно делиться как видео Reels"))',
-            'div:has(h2:has-text("Now video publications can be shared as Reels videos"))',
-            'div:has(h2:has-text("видео Reels"))',
-            'div:has(h2:has-text("Reels videos"))',
-            'div:has(h2:has-text("Reels"))',
-            
-            # Селекторы по содержимому текста
-            'div:has(span:has-text("видео Reels"))',
-            'div:has(span:has-text("Reels videos"))',
-            'div:has(span:has-text("Reels"))',
-            'div:has(span:has-text("Теперь видеопубликациями"))',
-            'div:has(span:has-text("Now video publications"))',
-            'div:has(span:has-text("общедоступный аккаунт"))',
-            'div:has(span:has-text("public account"))',
-            'div:has(span:has-text("создать видео Reels"))',
-            'div:has(span:has-text("create Reels videos"))',
-            'div:has(span:has-text("аудиодорожкой"))',
-            'div:has(span:has-text("audio track"))',
-            'div:has(span:has-text("сделать ремикс"))',
-            'div:has(span:has-text("make remix"))',
-            
-            # Селекторы по иконке Reels
-            'div:has(img[src*="reels_nux_icon.png"])',
-            'div:has(img[alt*="reels"])',
-            'div:has(img[src*="reels"])',
-            
-            # Селекторы по структуре диалога
-            'div[role="dialog"]:has-text("Reels")',
-            'div[role="dialog"]:has-text("видео")',
-            'div[role="dialog"]:has-text("Теперь")',
-            'div[role="dialog"]:has-text("Now")',
-            
-            # Более широкие селекторы диалогов
-            'div[role="dialog"]',
-        ]
+        reels_dialog_selectors = SelectorConfig.REELS_DIALOG_SELECTORS
         
         # Ищем диалог
         dialog_found = False
@@ -1008,16 +892,8 @@ async def handle_reels_dialog_async(page):
         
         # Ищем кнопку OK в диалоге
         ok_button_selectors = [
-            # Точные селекторы кнопки OK
-            'button:has-text("OK")',
-            'button:has-text("ОК")',
-            'div[role="button"]:has-text("OK")',
-            'div[role="button"]:has-text("ОК")',
-            
-            # Селекторы внутри диалога
+            *SelectorConfig.OK_ACCEPT_BUTTONS,
             'div[role="dialog"] button',
-            
-            # Более широкие селекторы
             'button[type="button"]',
             'div[role="button"]',
         ]

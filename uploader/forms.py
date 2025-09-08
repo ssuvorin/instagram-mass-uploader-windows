@@ -76,21 +76,24 @@ class InstagramAccountForm(forms.ModelForm):
     class Meta:
         model = InstagramAccount
         fields = ['username', 'password', 'email_username', 'email_password', 
-                  'tfa_secret', 'proxy', 'status', 'notes', 'dolphin_profile_id', 'phone_number']
+                  'tfa_secret', 'proxy', 'status', 'notes', 'dolphin_profile_id', 'phone_number', 'locale']
         widgets = {
             'password': forms.PasswordInput(render_value=True),
             'email_password': forms.PasswordInput(render_value=True),
             'notes': forms.Textarea(attrs={'rows': 3}),
             'dolphin_profile_id': forms.TextInput(attrs={'readonly': 'readonly', 'class': 'form-control'}),
+            'locale': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ru_BY | en_IN | es_CL | es_MX | pt_BR'}),
         }
         help_texts = {
             'dolphin_profile_id': 'ID профиля Dolphin Anty. Заполняется автоматически при запуске теста аккаунта.',
             'proxy': 'Прокси-сервер для использования с этим аккаунтом. Будет автоматически добавлен в профиль Dolphin.',
             'phone_number': 'Номер телефона для закрепления мобильного устройства и верификаций (E.164 формат)',
+            'locale': 'Dolphin-style locale. Used for Playwright Accept-Language and UI i18n.',
         }
         labels = {
             'dolphin_profile_id': 'Dolphin Anty Profile ID',
             'phone_number': 'Phone Number',
+            'locale': 'Locale',
         }
     
     def clean_tfa_secret(self):

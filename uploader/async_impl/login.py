@@ -541,8 +541,12 @@ async def perform_instagram_login_optimized_async(page, account_details):
             'button[type="submit"]',
             'button:has-text("Войти")',
             'button:has-text("Log in")',
+            'button:has-text("Iniciar sesión")',
+            'button:has-text("Entrar")',
             'div[role="button"]:has-text("Войти")',
             'div[role="button"]:has-text("Log in")',
+            'div[role="button"]:has-text("Iniciar sesión")',
+            'div[role="button"]:has-text("Entrar")',
         ]
         
         login_button = None
@@ -682,8 +686,12 @@ async def perform_enhanced_instagram_login_async(page, account_details):
             'button:has-text("Войти")',
             'button:has-text("Log in")',
             'button:has-text("Log In")',
+            'button:has-text("Iniciar sesión")',
+            'button:has-text("Entrar")',
             'div[role="button"]:has-text("Войти")',
             'div[role="button"]:has-text("Log in")',
+            'div[role="button"]:has-text("Iniciar sesión")',
+            'div[role="button"]:has-text("Entrar")',
             'input[type="submit"]',
         ]
         
@@ -1178,11 +1186,15 @@ async def handle_email_verification_async(page, account_details):
             submit_selectors = [
                 'div[role="button"]:has-text("Продолжить")',
                 'div[role="button"]:has-text("Continue")',
+                'div[role="button"]:has-text("Continuar")',
+                'div[role="button"]:has-text("Continuar")',
                 'button:has-text("Продолжить")',
                 'button:has-text("Continue")', 
+                'button:has-text("Continuar")',
                 'button[type="submit"]',
                 '[role="button"]:has(span:has-text("Продолжить"))',
                 '[role="button"]:has(span:has-text("Continue"))',
+                '[role="button"]:has(span:has-text("Continuar"))',
             ]
 
             submit_button = None

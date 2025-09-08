@@ -132,6 +132,33 @@ async def run_dolphin_browser_async(account_details: Dict, videos: List, video_f
             return ("BROWSER_ERROR", 0, 1)
         
         log_info("[OK] [ASYNC_DOLPHIN_BROWSER] Successfully connected to profile: " + str(dolphin_profile_id))
+
+        # Align Accept-Language with account locale at context level, overriding Dolphin defaults if needed
+        try:
+            acc_locale = (account_details.get('locale') or 'ru_BY') if isinstance(account_details, dict) else 'ru_BY'
+            # Map to Accept-Language string
+            def _al_for_locale(locale_str: str) -> str:
+                s = (locale_str or '').strip().replace('_','-')
+                if not s:
+                    return 'ru-BY,ru;q=0.9,en-US;q=0.8,en;q=0.7'
+                lang = s.split('-')[0].lower()
+                if lang == 'ru':
+                    return 'ru-BY,ru;q=0.9,en-US;q=0.8,en;q=0.7'
+                if lang == 'en':
+                    return f'{s},en;q=0.9'
+                if lang == 'es':
+                    return f'{s},es;q=0.9,en;q=0.8,ru;q=0.7'
+                if lang == 'pt':
+                    return f'{s},pt;q=0.9,en;q=0.8,ru;q=0.7'
+                return 'ru-BY,ru;q=0.9,en-US;q=0.8,en;q=0.7'
+            al = _al_for_locale(acc_locale)
+            try:
+                await page.context.set_extra_http_headers({"Accept-Language": al})
+                log_info(f"[HEADERS] [ASYNC_DOLPHIN_BROWSER] Set Accept-Language: {al}")
+            except Exception:
+                pass
+        except Exception as _al_err:
+            log_warning(f"[HEADERS] [ASYNC_DOLPHIN_BROWSER] Failed to set Accept-Language: {_al_err}")
         
         # Perform Instagram operations
         log_debug(f"[SEARCH] [ASYNC_INSTAGRAM_PREP] Preparing Instagram operations for {len(videos)} videos")

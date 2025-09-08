@@ -28,6 +28,20 @@ def get_account_details(account, proxy=None):
                 'pass': proxy_details['password']
             }
     
+    # Locale and language mapping
+    try:
+        loc = getattr(account, 'locale', None) or 'ru_BY'
+    except Exception:
+        loc = 'ru_BY'
+    details['locale'] = loc
+    try:
+        lang = (loc.split('_', 1)[0] or 'ru').lower()
+        if lang not in ('en','ru','es','pt'):
+            lang = 'ru'
+    except Exception:
+        lang = 'ru'
+    details['language'] = lang
+
     return details
 
 

@@ -405,7 +405,7 @@
         </div>
     </div>
 
-    <!-- System Overview -->
+    <!-- System Overview (match dashboard style) -->
     <div class="tiktok-card">
         <div class="card-header">
             <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>System Overview</h5>
@@ -413,31 +413,41 @@
         <div class="card-body">
             <div class="row g-4">
                 <div class="col-md-3 col-6">
-                    <div class="text-center">
-                        <h5 class="mb-1" id="profiles-count">N/A</h5>
-                        <small class="text-muted">Dolphin Profiles</small>
-                    </div>ол
-                </div>
-                <div class="col-md-3 col-6">
-                    <div class="text-center">
-                        <h5 class="mb-1" id="accounts-count">N/A</h5>
-                        <small class="text-muted">Accounts</small>
+                    <div class="stat-card text-center">
+                        <div class="stat-value">{{ tasks_count }}</div>
+                        <div class="stat-label">Total Tasks</div>
                     </div>
                 </div>
                 <div class="col-md-3 col-6">
-                    <div class="text-center">
-                        <h5 class="mb-1" id="videos-count">N/A</h5>
-                        <small class="text-muted">Videos</small>
+                    <div class="stat-card text-center">
+                        <div class="stat-value" id="accounts-count">{{ accounts_count }}</div>
+                        <div class="stat-label">Accounts</div>
                     </div>
                 </div>
                 <div class="col-md-3 col-6">
-                    <div class="text-center">
-                        <h5 class="mb-1" id="server-status">N/A</h5>
-                        <small class="text-muted">Server Status</small>
-                        <div id="servers-status-list" class="mt-2" style="font-size: 0.8rem;"></div>
+                    <div class="stat-card text-center">
+                        <div class="stat-value" id="proxies-count">{{ active_proxies_count }}</div>
+                        <div class="stat-label">Active Proxies</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="stat-card text-center">
+                        <div class="stat-value">{{ completed_tasks_count }}</div>
+                        <div class="stat-label">Completed</div>
                     </div>
                 </div>
             </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="text-center small text-muted">
+                        <span id="server-status">N/A</span>
+                    </div>
+                    <div id="servers-status-list" class="mt-2 text-center" style="font-size: 0.8rem;"></div>
+                </div>
+            </div>
+            <!-- Hidden placeholders for optional JS-driven values to avoid errors -->
+            <span id="profiles-count" style="display:none"></span>
+            <span id="videos-count" style="display:none"></span>
         </div>
     </div>
 
@@ -489,9 +499,12 @@
                 </div>
             </div>
 
-            <div class="mt-2">
-                <button id="booster-run-prepare-start" class="btn btn-tiktok" disabled>
-                    <i class="bi bi-play-fill me-2"></i>Prepare + Start
+            <div class="mt-2 d-flex gap-2 flex-wrap">
+                <button id="booster-run-prepare" class="btn btn-tiktok" disabled>
+                    <i class="bi bi-gear-fill me-2"></i>Prepare
+                </button>
+                <button id="booster-run-start" class="btn btn-success" disabled>
+                    <i class="bi bi-play-fill me-2"></i>Start
                 </button>
             </div>
 
@@ -1102,7 +1115,8 @@
 
     const proxiesForm = document.getElementById('booster-proxies-form');
     const accountsForm = document.getElementById('booster-accounts-form');
-    const runBtn = document.getElementById('booster-run-prepare-start');
+    const prepareBtn = document.getElementById('booster-run-prepare');
+    const startBtn = document.getElementById('booster-run-start');
     const respBox = document.getElementById('booster-pipeline-response');
     
     // File input validation handlers
@@ -1231,11 +1245,12 @@
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || 'Failed to upload accounts');
             addLog('Accounts uploaded', 'info');
-            // Activate cookie robot section
+            // Activate cookie robot section and enable action buttons
             const cookieSection = document.getElementById('cookie-robot-section');
             cookieSection.style.opacity = '1';
             cookieSection.style.pointerEvents = 'auto';
-            runBtn.disabled = false;
+            prepareBtn.disabled = false;
+            startBtn.disabled = false;
             
             // Clear file input and validation after successful upload
             document.getElementById('accounts-file-input').value = '';
@@ -1253,32 +1268,43 @@
         }
     });
 
-    runBtn.addEventListener('click', async () => {
+    prepareBtn.addEventListener('click', async () => {
         respBox.classList.add('d-none');
-        runBtn.disabled = true; const original = runBtn.innerHTML; runBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Running...';
+        prepareBtn.disabled = true; const original = prepareBtn.innerHTML; prepareBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Preparing...';
         try {
-            // Get cookie robot checkbox value
             const useCookieRobot = document.getElementById('use-cookie-robot').checked;
-            // Get client selection
             const clientId = document.getElementById('client-select').value || '';
-            // Prepare
-            let res = await fetch('{% url "api_tiktok_booster_prepare_accounts" %}', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ use_cookie_robot: useCookieRobot, client_id: clientId }) });
-            let data = await res.json();
+            const res = await fetch('{% url "api_tiktok_booster_prepare_accounts" %}', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ use_cookie_robot: useCookieRobot, client_id: clientId }) });
+            const data = await res.json();
             if (!res.ok) throw new Error(data.detail || 'Prepare failed');
             addLog('Prepare accounts: OK', 'info');
-            // Start
-            res = await fetch('{% url "api_tiktok_booster_start" %}', { method: 'POST' });
-            data = await res.json();
-            if (!res.ok) throw new Error(data.detail || 'Start failed');
-            addLog('Start booster: OK', 'info');
-            respBox.innerHTML = `<pre class="text-success">${JSON.stringify({prepare:data}, null, 2)}</pre>`;
+            respBox.innerHTML = `<pre class="text-success">${JSON.stringify(data, null, 2)}</pre>`;
             respBox.classList.remove('d-none');
         } catch (err) {
             respBox.innerHTML = `<pre class="text-danger">${err.message}</pre>`;
             respBox.classList.remove('d-none');
-            addLog('Pipeline run failed: ' + err.message, 'error');
+            addLog('Prepare failed: ' + err.message, 'error');
         } finally {
-            runBtn.disabled = false; runBtn.innerHTML = original;
+            prepareBtn.disabled = false; prepareBtn.innerHTML = original;
+        }
+    });
+
+    startBtn.addEventListener('click', async () => {
+        respBox.classList.add('d-none');
+        startBtn.disabled = true; const original = startBtn.innerHTML; startBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Starting...';
+        try {
+            const res = await fetch('{% url "api_tiktok_booster_start" %}', { method: 'POST' });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'Start failed');
+            addLog('Start booster: OK', 'info');
+            respBox.innerHTML = `<pre class="text-success">${JSON.stringify(data, null, 2)}</pre>`;
+            respBox.classList.remove('d-none');
+        } catch (err) {
+            respBox.innerHTML = `<pre class="text-danger">${err.message}</pre>`;
+            respBox.classList.remove('d-none');
+            addLog('Start failed: ' + err.message, 'error');
+        } finally {
+            startBtn.disabled = false; startBtn.innerHTML = original;
         }
     });
 </script>

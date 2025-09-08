@@ -94,6 +94,16 @@ class InstagramTexts:
         'check your email for a code',
         'проверьте почту на наличие кода',
         'verification code sent to',
+        # Spanish/Portuguese
+        'te enviamos un código',
+        'hemos enviado un código',
+        'código de verificación enviado',
+        'revise su correo',
+        'enviamos un código a tu correo',
+        'enviamos un código a su correo',
+        'enviamos um código',
+        'código de verificação enviado',
+        'verifique seu e-mail',
         'код подтверждения отправлен на',
         
         # Общие фразы email верификации (более специфичные)
@@ -153,6 +163,12 @@ class InstagramTexts:
         'security code',
         'код безопасности',
         'verification code',
+        # Spanish/Portuguese
+        'introduce el código',
+        'ingrese el código',
+        'código de verificación',
+        'código de segurança',
+        'insira o código',
         'код верификации',
         'we sent you',
         'мы отправили вам',
@@ -713,12 +729,20 @@ class InstagramSelectors:
         'button:has-text("Не сейчас")',
         'button:has-text("Not now")',
         'button:has-text("Not Now")',
+        'button:has-text("Agora não")',
+        'button:has-text("Ahora no")',
         'div[role="button"]:has-text("Не сейчас")',
         'div[role="button"]:has-text("Not now")',
+        'div[role="button"]:has-text("Agora не")',
+        'div[role="button"]:has-text("Ahora no")',
         '//button[contains(text(), "Не сейчас")]',
         '//button[contains(text(), "Not now")]',
+        '//button[contains(text(), "Agora não")]',
+        '//button[contains(text(), "Ahora no")]',
         '//div[@role="button" and contains(text(), "Не сейчас")]',
-        '//div[@role="button" and contains(text(), "Not now")]'
+        '//div[@role="button" and contains(text(), "Not now")]',
+        '//div[@role="button" and contains(text(), "Agora não")]',
+        '//div[@role="button" and contains(text(), "Ahora no")]'
     ]
     
     # Индикаторы успешной загрузки
@@ -748,6 +772,18 @@ class InstagramSelectors:
         'span:has-text("Posted")',
         'span:has-text("Post shared")',
         
+        # Испанские
+        'div:has-text("Se compartió tu publicación")',
+        'div:has-text("Publicado")',
+        'div:has-text("Publicación compartida")',
+        'span:has-text("Publicado")',
+        
+        # Португальские
+        'div:has-text("Sua publicação foi compartilhada")',
+        'div:has-text("Publicado")',
+        'div:has-text("Publicação compartilhada")',
+        'span:has-text("Publicado")',
+        
         # XPath селекторы для более точного поиска (русские)
         '//div[contains(text(), "Ваша публикация опубликована")]',
         '//div[contains(text(), "Публикация опубликована")]',
@@ -770,6 +806,12 @@ class InstagramSelectors:
         '//div[contains(text(), "Video published")]',
         '//span[contains(text(), "Posted")]',
         '//span[contains(text(), "Post shared")]',
+        
+        # XPath (испанские/португальские)
+        '//div[contains(text(), "Se compartió tu publicación")]',
+        '//div[contains(text(), "Publicado")]',
+        '//div[contains(text(), "Publicação compartilhada")]',
+        '//span[contains(text(), "Publicado")]',
         
         # Иконки и aria-label индикаторы
         'svg[aria-label*="Готово" i]',
@@ -846,6 +888,22 @@ class InstagramSelectors:
         'span:has-text("Error")',
         'span:has-text("Failed")',
         
+        # Испанские ошибки
+        'div:has-text("Algo salió mal")',
+        'div:has-text("Ocurrió un error")',
+        'div:has-text("Error")',
+        'div:has-text("Error al subir")',
+        'div:has-text("Vuelva a intentarlo")',
+        'span:has-text("Error")',
+        
+        # Португальские ошибки
+        'div:has-text("Algo deu errado")',
+        'div:has-text("Ocorreu um erro")',
+        'div:has-text("Erro")',
+        'div:has-text("Falha no upload")',
+        'div:has-text("Tente novamente")',
+        'span:has-text("Erro")',
+        
         # XPath селекторы для ошибок (русские)
         '//div[contains(text(), "Что-то пошло не так")]',
         '//div[contains(text(), "Произошла ошибка")]',
@@ -871,6 +929,14 @@ class InstagramSelectors:
         '//div[contains(text(), "Unable to upload")]',
         '//span[contains(text(), "Error")]',
         '//span[contains(text(), "Failed")]',
+        
+        # XPath селекторы для ошибок (испанские/португальские)
+        '//div[contains(text(), "Algo salió mal")]',
+        '//div[contains(text(), "Ocurrió un error")]',
+        '//div[contains(text(), "Algo deu errado")]',
+        '//div[contains(text(), "Ocorreu um erro")]',
+        '//span[contains(text(), "Error")]',
+        '//span[contains(text(), "Erro")]',
         
         # Иконки ошибок и aria-label
         'svg[aria-label*="Ошибка" i]',
@@ -920,14 +986,24 @@ class InstagramSelectors:
         'button:has-text("Опубликовать")',
         'div[role="button"]:has-text("Поделиться")',
         'button:has-text("Share")',
+        'button:has-text("Compartir")',
+        'button:has-text("Compartilhar")',
         'button:has-text("Publish")',
         'div[role="button"]:has-text("Share")',
+        'div[role="button"]:has-text("Compartir")',
+        'div[role="button"]:has-text("Compartilhar")',
         'textarea[aria-label*="Напишите подпись"]',
         'textarea[placeholder*="Напишите подпись"]',
         'textarea[aria-label*="Write a caption"]',
         'textarea[placeholder*="Write a caption"]',
+        'textarea[aria-label*="Escribe un pie de foto"]',
+        'textarea[placeholder*="Escribe un pie de foto"]',
+        'textarea[aria-label*="Escreva uma legenda"]',
+        'textarea[placeholder*="Escreva uma legenda"]',
         'button:has-text("Далее")',
         'button:has-text("Next")',
+        'button:has-text("Siguiente")',
+        'button:has-text("Avançar")',
         '[aria-label*="Обрезка"]',
         '[aria-label*="Crop"]',
         'button:has-text("Обрезка")'

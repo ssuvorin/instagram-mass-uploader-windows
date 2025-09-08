@@ -87,6 +87,8 @@ class InstagramAccount(models.Model):
     phone_number = models.CharField(max_length=32, null=True, blank=True)
     # Link to client from integrated cabinet
     client = models.ForeignKey('cabinet.Client', on_delete=models.SET_NULL, null=True, blank=True, related_name='accounts')
+    # Locale in Dolphin-style, e.g. ru_BY, en_IN, es_CL, es_MX, pt_BR
+    locale = models.CharField(max_length=5, default='ru_BY', help_text="Dolphin-style locale, e.g. ru_BY en_IN es_CL es_MX pt_BR")
 
 class DolphinProfileSnapshot(models.Model):
     """Full snapshot of Dolphin profile payload/response to be able to recreate 1:1."""
@@ -144,6 +146,21 @@ class DolphinProfileSnapshot(models.Model):
         # Add phone if exists
         if self.phone_number:
             data["phone"] = self.phone_number
+        
+        # Add locale and language mapping
+        try:
+            acc_locale = (self.locale or 'ru_BY')
+        except Exception:
+            acc_locale = 'ru_BY'
+        data["locale"] = acc_locale
+        # Map to language code: en, ru, es, pt
+        try:
+            lang = acc_locale.split('_', 1)[0].lower()
+            if lang not in ("en", "ru", "es", "pt"):
+                lang = "ru"
+        except Exception:
+            lang = "ru"
+        data["language"] = lang
             
         return data
     

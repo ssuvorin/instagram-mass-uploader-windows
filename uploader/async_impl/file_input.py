@@ -85,10 +85,10 @@ async def check_for_file_dialog_async(page) -> bool:
         try:
             page_text = await page.inner_text('body') or ""
             upload_keywords = [
-                'выбрать на компьютере', 'select from computer', 
-                'выбрать файлы', 'select files',
-                'перетащите файлы', 'drag files',
-                'загрузить файл', 'upload file'
+                'выбрать на компьютере', 'select from computer', 'seleccionar desde el ordenador', 'seleccionar desde la computadora', 'selecionar do computador',
+                'выбрать файлы', 'select files', 'seleccionar archivos', 'selecionar arquivos',
+                'перетащите файлы', 'drag files', 'arrastra los archivos', 'arrastar arquivos',
+                'загрузить файл', 'upload file', 'subir archivo', 'carregar arquivo'
             ]
             
             for keyword in upload_keywords:

@@ -106,7 +106,7 @@ async def perform_instagram_operations_async(page, account_details: Dict, videos
     try:
         log_info("[SEARCH] [ASYNC_NAVIGATION] Starting Instagram navigation with retry mechanism")
         
-        # Use retry mechanism for navigation
+        # Use retry mechanism for navigation (ensure Accept-Language already set by browser layer)
         navigation_success = await retry_navigation_async(page, "https://www.instagram.com/", max_attempts=3)
         
         if not navigation_success:

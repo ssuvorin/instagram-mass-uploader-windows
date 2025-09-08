@@ -1523,6 +1523,18 @@ def tiktok_booster(request):
     Selected server can be overridden via TIKTOK_API_BASE.
     """
     context = _tiktok_api_context(request)
+    # Enrich context with dashboard-like stats so System Overview works the same
+    try:
+        from uploader.models import UploadTask, InstagramAccount, Proxy
+        context.update({
+            'tasks_count': UploadTask.objects.count(),
+            'accounts_count': InstagramAccount.objects.count(),
+            'active_proxies_count': Proxy.objects.filter(is_active=True).count(),
+            'completed_tasks_count': UploadTask.objects.filter(status='COMPLETED').count(),
+        })
+    except Exception:
+        # In case models are unavailable for any reason, keep the page functional
+        pass
     return render(request, 'uploader/tiktok/booster.html', context)
 
 
@@ -1857,6 +1869,14 @@ def tiktok_booster_proxy_prepare_accounts(request):
             payload['cookie_robot'] = False
 
         resp = requests.post(f"{api_base}/booster/prepare_accounts", json=payload, timeout=60)
+        # Fallback to older/alternative endpoint if not found or method not allowed
+        if resp.status_code in (404, 405):
+            try:
+                alt_resp = requests.post(f"{api_base}/upload/prepare_accounts", json=payload, timeout=60)
+                if alt_resp is not None:
+                    resp = alt_resp
+            except Exception:
+                pass
         try:
             data = resp.json()
         except Exception:
@@ -1878,6 +1898,22 @@ def tiktok_booster_proxy_start(request):
     api_base = _get_tiktok_api_base(request)
     try:
         resp = requests.post(f"{api_base}/booster/start_booster", timeout=60)
+        # Fallback to alternative endpoint names if not found
+        if resp.status_code in (404, 405):
+            tried = False
+            try:
+                alt_resp = requests.post(f"{api_base}/booster/start_all", timeout=60)
+                resp = alt_resp
+                tried = True
+            except Exception:
+                pass
+            if not tried:
+                try:
+                    alt_resp2 = requests.post(f"{api_base}/booster/start", timeout=60)
+                    if alt_resp2 is not None:
+                        resp = alt_resp2
+                except Exception:
+                    pass
         try:
             data = resp.json()
         except Exception:

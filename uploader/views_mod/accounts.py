@@ -238,7 +238,7 @@ def create_account(request):
             try:
                 proxy_selection = request.POST.get('proxy_selection', 'locale_only')
                 selected_locale = request.POST.get('profile_locale', 'ru_BY')
-                if selected_locale != 'ru_BY':
+                if selected_locale not in ['ru_BY', 'en_IN', 'es_CL', 'es_MX', 'pt_BR']:
                     selected_locale = 'ru_BY'
 
                 base_qs = Proxy.objects.filter(is_active=True, assigned_account__isnull=True)
@@ -267,6 +267,17 @@ def create_account(request):
                 logger.error(f"[CREATE ACCOUNT] Error assigning proxy to account {account.username}: {str(e)}")
                 messages.error(request, f'Account {account.username} created, but an error occurred while assigning a proxy: {str(e)}')
             
+            # Persist selected locale on account regardless of Dolphin availability
+            try:
+                _sel = request.POST.get('profile_locale', 'ru_BY')
+                if _sel not in ['ru_BY', 'en_IN', 'es_CL', 'es_MX', 'pt_BR']:
+                    _sel = 'ru_BY'
+                if getattr(account, 'locale', None) != _sel:
+                    account.locale = _sel
+                    account.save(update_fields=['locale'])
+            except Exception:
+                pass
+
             # Step 2: Create Dolphin profile if proxy was assigned
             if assigned_proxy:
                 try:
@@ -316,7 +327,8 @@ def create_account(request):
                                 
                         if profile_id:
                             account.dolphin_profile_id = profile_id
-                            account.save(update_fields=['dolphin_profile_id'])
+                            account.locale = selected_locale
+                            account.save(update_fields=['dolphin_profile_id', 'locale'])
                             # Persist full snapshot for 1:1 recreation later
                             try:
                                 from uploader.models import DolphinProfileSnapshot
@@ -733,6 +745,13 @@ def import_accounts(request):
                     username=username,
                     defaults=defaults
                 )
+                # Persist locale selection on account
+                try:
+                    if account.locale != selected_locale:
+                        account.locale = selected_locale
+                        account.save(update_fields=['locale'])
+                except Exception:
+                    pass
                  
                 if created:
                     logger.info(f"[SUCCESS] Created new account: {username}")
@@ -849,7 +868,8 @@ def import_accounts(request):
                              
                         if profile_id:
                             account.dolphin_profile_id = profile_id
-                            account.save(update_fields=['dolphin_profile_id'])
+                            account.locale = selected_locale
+                            account.save(update_fields=['dolphin_profile_id', 'locale'])
                             dolphin_created_count += 1
                             logger.info(f"[SUCCESS] Created Dolphin profile {profile_id} for account {username}")
 
@@ -1419,7 +1439,14 @@ def import_accounts_ua_cookies(request):
 								profile_id = response["data"].get("id")
 						if profile_id:
 							account.dolphin_profile_id = profile_id
-							account.save(update_fields=['dolphin_profile_id'])
+							try:
+								if account.locale != selected_locale:
+									account.locale = selected_locale
+									account.save(update_fields=['dolphin_profile_id', 'locale'])
+								else:
+									account.save(update_fields=['dolphin_profile_id'])
+							except Exception:
+								account.save(update_fields=['dolphin_profile_id'])
 							dolphin_created_count += 1
 							logger.info(f"[UA+COOKIES][SUCCESS] Created Dolphin profile {profile_id} for account {username}")
 							# Import cookies to Dolphin (prefer Local API)

@@ -161,6 +161,22 @@ class InstagramSelectors:
         'button:has-text("Select from device")',
         'div[role="button"]:has-text("Select from device")',
         
+        # [TARGET] ПРИОРИТЕТ 4b: Испанские/Португальские тексты
+        'button:has-text("Seleccionar desde el ordenador")',
+        'div[role="button"]:has-text("Seleccionar desde el ordenador")',
+        'button:has-text("Seleccionar desde la computadora")',
+        'div[role="button"]:has-text("Seleccionar desde la computadora")',
+        'button:has-text("Seleccionar desde el dispositivo")',
+        'div[role="button"]:has-text("Seleccionar desde el dispositivo")',
+        'button:has-text("Seleccionar archivos")',
+        'div[role="button"]:has-text("Seleccionar archivos")',
+        'button:has-text("Selecionar do computador")',
+        'div[role="button"]:has-text("Selecionar do computador")',
+        'button:has-text("Selecionar do dispositivo")',
+        'div[role="button"]:has-text("Selecionar do dispositivo")',
+        'button:has-text("Selecionar arquivos")',
+        'div[role="button"]:has-text("Selecionar arquivos")',
+        
         # [TARGET] ПРИОРИТЕТ 5: XPath тексты
         '//button[contains(text(), "Выбрать на компьютере")]',
         '//div[@role="button" and contains(text(), "Выбрать на компьютере")]',
@@ -172,6 +188,20 @@ class InstagramSelectors:
         '//div[@role="button" and contains(text(), "Select files")]',
         '//button[contains(text(), "Select from device")]',
         '//div[@role="button" and contains(text(), "Select from device")]',
+        '//button[contains(text(), "Seleccionar desde el ordenador")]',
+        '//div[@role="button" and contains(text(), "Seleccionar desde el ordenador")]',
+        '//button[contains(text(), "Seleccionar desde la computadora")]',
+        '//div[@role="button" and contains(text(), "Seleccionar desde la computadora")]',
+        '//button[contains(text(), "Seleccionar archivos")]',
+        '//div[@role="button" and contains(text(), "Seleccionar archivos")]',
+        '//button[contains(text(), "Seleccionar desde el dispositivo")]',
+        '//div[@role="button" and contains(text(), "Seleccionar desde el dispositivo")]',
+        '//button[contains(text(), "Selecionar do computador")]',
+        '//div[@role="button" and contains(text(), "Selecionar do computador")]',
+        '//button[contains(text(), "Selecionar arquivos")]',
+        '//div[@role="button" and contains(text(), "Selecionar arquivos")]',
+        '//button[contains(text(), "Selecionar do dispositivo")]',
+        '//div[@role="button" and contains(text(), "Selecionar do dispositivo")]',
         
         # [TARGET] ПРИОРИТЕТ 6: Aria-label семантические
         'button[aria-label*="Выбрать"]',
@@ -207,6 +237,18 @@ class InstagramSelectors:
         '//button[contains(text(), "ОК")]',
     ]
     
+    # OK/Accept variants for dialogs (RU/EN/ES/PT)
+    OK_ACCEPT_BUTTONS = [
+        'button:has-text("OK")',
+        'button:has-text("ОК")',
+        'div[role="button"]:has-text("OK")',
+        'div[role="button"]:has-text("ОК")',
+        'button:has-text("Aceptar")',
+        'div[role="button"]:has-text("Aceptar")',
+        'button:has-text("Aceitar")',
+        'div[role="button"]:has-text("Aceitar")',
+    ]
+    
     # Next button selectors - SEMANTIC APPROACH
     NEXT_BUTTON = [
         # [TARGET] ПРИОРИТЕТ 1: Текстовые селекторы (самые надежные)
@@ -218,6 +260,11 @@ class InstagramSelectors:
         'div[role="button"]:has-text("Next")',
         'div[role="button"]:has-text("Продолжить")',
         'div[role="button"]:has-text("Continue")',
+        # Spanish/Portuguese fallbacks
+        'button:has-text("Siguiente")',
+        'div[role="button"]:has-text("Siguiente")',
+        'button:has-text("Avançar")',
+        'div[role="button"]:has-text("Avançar")',
         
         # [TARGET] ПРИОРИТЕТ 2: XPath текстовые
         '//button[contains(text(), "Далее")]',
@@ -241,6 +288,14 @@ class InstagramSelectors:
         '[role="button"]:has-text("Next")',
         '[role="button"][tabindex="0"]:has-text("Next")',
     ]
+
+    # Keywords to validate Next/Continue buttons by text content (lowercase)
+    NEXT_BUTTON_KEYWORDS = [
+        'далее', 'продолжить',
+        'next', 'continue',
+        'siguiente', 'continuar',
+        'avançar'
+    ]
     
     # Share button selectors - SEMANTIC APPROACH
     SHARE_BUTTON = [
@@ -254,6 +309,11 @@ class InstagramSelectors:
         'div[role="button"]:has-text("Share")',
         'div[role="button"]:has-text("Опубликовать")',
         'div[role="button"]:has-text("Post")',
+        # Spanish/Portuguese fallbacks
+        'button:has-text("Compartir")',
+        'div[role="button"]:has-text("Compartir")',
+        'button:has-text("Compartilhar")',
+        'div[role="button"]:has-text("Compartilhar")',
         
         # [TARGET] ПРИОРИТЕТ 2: XPath текстовые
         '//button[contains(text(), "Поделиться")]',
@@ -270,6 +330,30 @@ class InstagramSelectors:
         'button[aria-label*="Post"]',
         '[role="button"][aria-label*="Поделиться"]',
         '[role="button"][aria-label*="Share"]',
+    ]
+    
+    # Done button in mentions/location dialogs (RU/EN/ES/PT)
+    DONE_BUTTON = [
+        '//div[text()="Done"]',
+        '//div[text()="Готово"]',
+        '//div[text()="Listo"]',
+        '//div[text()="Concluído"]',
+        'div[role="button"]:has-text("Done")',
+        'button:has-text("Done")',
+        'div[role="button"]:has-text("Готово")',
+        'button:has-text("Готово")',
+        'div[role="button"]:has-text("Listo")',
+        'button:has-text("Listo")',
+        'div[role="button"]:has-text("Concluído")',
+        'button:has-text("Concluído")',
+        'div[aria-label*="Done"]',
+        'button[aria-label*="Done"]',
+        'div[aria-label*="Готово"]',
+        'button[aria-label*="Готово"]',
+        'div[aria-label*="Listo"]',
+        'button[aria-label*="Listo"]',
+        'div[aria-label*="Concluído"]',
+        'button[aria-label*="Concluído"]',
     ]
     
     # Caption textarea selectors - SEMANTIC APPROACH
@@ -291,6 +375,11 @@ class InstagramSelectors:
         'div[contenteditable="true"][aria-label*="caption"]',
         'div[contenteditable="true"][placeholder*="подпись"]',
         'div[contenteditable="true"][placeholder*="caption"]',
+        # Spanish/Portuguese fallbacks
+        'textarea[aria-label*="Escribe un pie de foto"]',
+        'textarea[placeholder*="Escribe un pie de foto"]',
+        'textarea[aria-label*="Escreva uma legenda"]',
+        'textarea[placeholder*="Escreva uma legenda"]',
         
         # [TARGET] ПРИОРИТЕТ 4: XPath
         '//textarea[contains(@aria-label, "подпись")]',
@@ -320,6 +409,11 @@ class InstagramSelectors:
             'button:has-text("Log in")',
             'div[role="button"]:has-text("Войти")',
             'div[role="button"]:has-text("Log in")',
+            # Spanish/Portuguese fallbacks
+            'button:has-text("Iniciar sesión")',
+            'div[role="button"]:has-text("Iniciar sesión")',
+            'button:has-text("Entrar")',
+            'div[role="button"]:has-text("Entrar")',
         ]
     }
     
@@ -328,8 +422,11 @@ class InstagramSelectors:
         'input[name="verificationCode"]',
         'input[aria-label*="код"]',
         'input[aria-label*="code"]',
+        'input[aria-label*="código" i]',
+        'input[aria-label*="código de segurança" i]',
         'input[placeholder*="код"]',
         'input[placeholder*="code"]',
+        'input[placeholder*="código" i]',
         'input[maxlength="6"]',
         'input[pattern="[0-9]*"]',
     ]
@@ -348,6 +445,12 @@ class InstagramSelectors:
         'div:has-text("Post shared")',
         'div:has-text("Video posted")',
         'div:has-text("Posted successfully")',
+        # Spanish/Portuguese success messages
+        'div:has-text("Se compartió tu publicación")',
+        'div:has-text("Publicado")',
+        'div:has-text("Reel compartido")',
+        'div:has-text("Sua publicação foi compartilhada")',
+        'div:has-text("Reel compartilhado")',
         
         # XPath selectors for success messages
         '//div[contains(text(), "Ваша публикация опубликована")]',
@@ -355,6 +458,181 @@ class InstagramSelectors:
         '//div[contains(text(), "Видео опубликовано")]',
         '//div[contains(text(), "Your post has been shared")]',
         '//div[contains(text(), "Post shared")]',
+    ]
+    
+    # Error dialog selectors
+    ERROR_DIALOG = [
+        'div:has-text("Error")',
+        'div:has-text("Ошибка")',
+        'div:has-text("Failed")',
+        'div:has-text("Не удалось")',
+        'div:has-text("Something went wrong")',
+        'div:has-text("Что-то пошло не так")',
+        'div:has-text("Algo salió mal")',
+        'div:has-text("Algo deu errado")',
+    ]
+
+    # Reels dialog detection selectors (RU/EN/ES/PT)
+    REELS_DIALOG_SELECTORS = [
+        'div:has(h2:has-text("Теперь видеопубликациями можно делиться как видео Reels"))',
+        'div:has(h2:has-text("Now video publications can be shared as Reels videos"))',
+        'div:has(h2:has-text("Ahora las publicaciones de video se pueden compartir como Reels"))',
+        'div:has(h2:has-text("Agora as publicações de vídeo podem ser compartilhadas como Reels"))',
+        'div:has(h2:has-text("видео Reels"))',
+        'div:has(h2:has-text("Reels videos"))',
+        'div:has(h2:has-text("videos de Reels"))',
+        'div:has(h2:has-text("vídeos do Reels"))',
+        'div:has(h2:has-text("Reels"))',
+        'div:has(span:has-text("видео Reels"))',
+        'div:has(span:has-text("Reels videos"))',
+        'div:has(span:has-text("videos de Reels"))',
+        'div:has(span:has-text("vídeos do Reels"))',
+        'div:has(span:has-text("Reels"))',
+        'div:has(span:has-text("Теперь видеопубликациями"))',
+        'div:has(span:has-text("Now video publications"))',
+        'div:has(span:has-text("Ahora las publicaciones de video"))',
+        'div:has(span:has-text("Agora as publicações de vídeo"))',
+        'div:has(span:has-text("общедоступный аккаунт"))',
+        'div:has(span:has-text("public account"))',
+        'div:has(span:has-text("cuenta pública"))',
+        'div:has(span:has-text("conta pública"))',
+        'div:has(span:has-text("создать видео Reels"))',
+        'div:has(span:has-text("create Reels videos"))',
+        'div:has(span:has-text("crear videos de Reels"))',
+        'div:has(span:has-text("criar vídeos do Reels"))',
+        'div:has(span:has-text("аудиодорожкой"))',
+        'div:has(span:has-text("audio track"))',
+        'div:has(span:has-text("pista de audio"))',
+        'div:has(span:has-text("faixa de áudio"))',
+        'div:has(span:has-text("сделать ремикс"))',
+        'div:has(span:has-text("make remix"))',
+        'div:has(span:has-text("hacer remix"))',
+        'div:has(span:has-text("fazer remix"))',
+        'div[role="dialog"]:has-text("Reels")',
+        # Icon-based hints
+        'div:has(img[src*="reels_nux_icon.png"])',
+        'div:has(img[alt*="reels"])',
+        'div:has(img[src*="reels"])',
+        'div[role="dialog"]',
+    ]
+
+    # Upload context indicators used to validate we're in the upload modal/page
+    UPLOAD_CONTEXT_INDICATORS = [
+        'div[role="dialog"]',
+        'div[aria-label*="Создать"]',
+        'div[aria-label*="Create"]',
+        'div[aria-label*="Publicar"]',
+        'div[aria-label*="Publicação"]',
+        'textarea[aria-label*="подпись"]',
+        'textarea[aria-label*="caption"]',
+        'textarea[aria-label*="Escribe un pie de foto"]',
+        'textarea[aria-label*="Escreva uma legenda"]',
+    ]
+
+    # Location input selectors (RU/EN/ES/PT)
+    LOCATION_INPUT = [
+        'input[name="creation-location-input"]',
+        'input[placeholder="Добавить место"]',
+        'input[placeholder*="место" i]',
+        'input[placeholder*="location" i]',
+        'input[aria-label*="место" i]',
+        'input[aria-label*="location" i]',
+        'input[aria-label*="Добавить место" i]',
+        '//input[@placeholder="Добавить место"]',
+        '//input[@name="creation-location-input"]',
+        # Spanish
+        'input[placeholder*="Agregar ubicación" i]',
+        'input[placeholder*="Añadir ubicación" i]',
+        'input[aria-label*="ubicación" i]',
+        # Portuguese
+        'input[placeholder*="Adicionar localização" i]',
+        'input[aria-label*="localização" i]',
+    ]
+
+    # Mentions input selectors (RU/EN/ES/PT)
+    MENTIONS_INPUT = [
+        'input[placeholder="Добавить соавторов"]',
+        'input[placeholder*="соавтор" i]',
+        'input[placeholder*="collaborator" i]',
+        'input[aria-label*="соавтор" i]',
+        'input[aria-label*="collaborator" i]',
+        'input[aria-label*="Добавить соавторов" i]',
+        'input[placeholder*="Добавить соавторов" i]',
+        '//input[@placeholder="Добавить соавторов"]',
+        # Spanish
+        'input[placeholder*="Agregar colaboradores" i]',
+        'input[placeholder*="Añadir colaboradores" i]',
+        'input[aria-label*="colaboradores" i]',
+        # Portuguese
+        'input[placeholder*="Adicionar colaboradores" i]',
+        'input[aria-label*="colaboradores" i]',
+    ]
+
+    # Phone verification indicators (RU/EN/ES/PT)
+    PHONE_VERIFICATION_INDICATORS = [
+        'div:has-text("Подтвердите свой номер телефона")',
+        'div:has-text("Введите код подтверждения")',
+        'div:has-text("Confirm your phone number")',
+        'div:has-text("Enter confirmation code")',
+        'input[placeholder*="код" i]',
+        'input[placeholder*="code" i]',
+        # Spanish
+        'div:has-text("Confirma tu número de teléfono")',
+        'div:has-text("Introduce el código de confirmación")',
+        'input[placeholder*="código" i]',
+        # Portuguese
+        'div:has-text("Confirme seu número de telefone")',
+        'div:has-text("Insira o código de confirmação")',
+        'input[placeholder*="código" i]',
+    ]
+
+    # Account suspension indicators (RU/EN/ES/PT)
+    SUSPENSION_INDICATORS = [
+        'div:has-text("Ваш аккаунт заблокирован")',
+        'div:has-text("аккаунт приостановлен")',
+        'div:has-text("временно заблокирован")',
+        'div:has-text("Your account has been disabled")',
+        'div:has-text("Account suspended")',
+        'div:has-text("temporarily locked")',
+        # Spanish
+        'div:has-text("Tu cuenta ha sido inhabilitada")',
+        'div:has-text("Cuenta suspendida")',
+        'div:has-text("bloqueada temporalmente")',
+        # Portuguese
+        'div:has-text("Sua conta foi desativada")',
+        'div:has-text("Conta suspensa")',
+        'div:has-text("bloqueada temporariamente")',
+    ]
+
+    # Suspension text keywords (used when scanning body text)
+    SUSPENSION_TEXT_KEYWORDS = [
+        'мы приостановили ваш аккаунт',
+        'приостановили ваш аккаунт',
+        'аккаунт приостановлен',
+        'ваш аккаунт приостановлен',
+        'account suspended',
+        'account has been suspended',
+        'we suspended your account',
+        'your account is suspended',
+        'your account has been disabled',
+        'account disabled',
+        'аккаунт заблокирован',
+        'ваш аккаунт заблокирован',
+        'временно приостановлен',
+        'temporarily suspended',
+        'осталось',
+        'days left'
+    ]
+
+    # Email submit buttons (RU/EN/ES/PT)
+    EMAIL_SUBMIT_BUTTONS = [
+        'button[type="submit"]',
+        'button:has-text("Confirm")',
+        'button:has-text("Подтвердить")',
+        'button:has-text("Confirmar")',
+        'div[role="button"]:has-text("Confirm")',
+        'div[role="button"]:has-text("Подтвердить")',
+        'div[role="button"]:has-text("Confirmar")'
     ]
     
     # Close button selectors
@@ -411,6 +689,96 @@ class InstagramSelectors:
         'input[type="file"]',
         'div:has-text("Drag photos and videos here")',
         'div:has-text("Select from computer")',
+    ]
+
+    # Broader upload detection indicators (RU/EN/ES/PT)
+    UPLOAD_BROAD_INDICATORS = [
+        'a[role="link"]:has(svg[aria-label*="Новая публикация"])',
+        'a[role="link"]:has(svg[aria-label*="New post"])',
+        'a[role="link"]:has(svg[aria-label*="Nueva publicación"])',
+        'a[role="link"]:has(svg[aria-label*="Nova publicação"])',
+        'a[role="link"]:has(span:has-text("Создать"))',
+        'a[role="link"]:has(span:has-text("Create"))',
+        'a[role="link"]:has(span:has-text("Crear"))',
+        'a[role="link"]:has(span:has-text("Criar"))',
+        'button:has(svg[aria-label*="Новая публикация"])',
+        'button:has(svg[aria-label*="New post"])',
+        'button:has(svg[aria-label*="Nueva publicación"])',
+        'button:has(svg[aria-label*="Nova publicação"])',
+        'div[role="button"]:has(svg[aria-label*="Новая публикация"])',
+        'div[role="button"]:has(svg[aria-label*="New post"])',
+        'div[role="button"]:has(svg[aria-label*="Nueva publicación"])',
+        'div[role="button"]:has(svg[aria-label*="Nova publicação"])',
+        'svg[aria-label*="Новая публикация"]',
+        'svg[aria-label*="New post"]',
+        'svg[aria-label*="Nueva publicación"]',
+        'svg[aria-label*="Nova publicação"]',
+        'svg:has(title:has-text("Новая публикация"))',
+        'svg:has(title:has-text("New post"))',
+        'svg:has(title:has-text("Nueva publicación"))',
+        'svg:has(title:has-text("Nova publicação"))',
+        'div:has-text("Создать")',
+        'div:has-text("Create")',
+        'div:has-text("Crear")',
+        'div:has-text("Criar")',
+        'div:has-text("Публикация")',
+        'div:has-text("Post")',
+        'div:has-text("Publicación")',
+        'div:has-text("Publicação")',
+        'div:has-text("Выбрать")',
+        'div:has-text("Select")',
+        'div:has-text("Seleccionar")',
+        'div:has-text("Selecionar")',
+        'button:has-text("Выбрать на компьютере")',
+        'button:has-text("Select from computer")',
+        'button:has-text("Seleccionar desde el ordenador")',
+        'button:has-text("Seleccionar desde la computadora")',
+        'button:has-text("Selecionar do computador")',
+        'button:has-text("Выбрать файлы")',
+        'button:has-text("Select files")',
+        'button:has-text("Selecionar arquivos")',
+        'button:has-text("Seleccionar archivos")',
+        'div[role="button"]:has-text("Создать")',
+        'div[role="button"]:has-text("Create")',
+        'div[role="button"]:has-text("Публикация")',
+        'div[role="button"]:has-text("Post")',
+        'div[role="button"]:has-text("Publicación")',
+        'div[role="button"]:has-text("Publicação")',
+        'input[type="file"]',
+        'input[accept*="video"]',
+        'input[accept*="image"]',
+        'input[accept*="mp4"]',
+        'input[accept*="quicktime"]',
+        'input[multiple]',
+        'form[enctype="multipart/form-data"] input[type="file"]',
+        'form[method="POST"] input[type="file"]',
+    ]
+
+    # Broader upload keyword heuristics for page text scanning
+    UPLOAD_KEYWORDS = [
+        'выбрать на компьютере', 'select from computer',
+        'перетащите', 'drag',
+        'выбрать файлы', 'select files',
+        'загрузить файл', 'upload file',
+        'создать публикацию', 'create post',
+        'добавить публикацию', 'add post',
+        'добавить фото', 'add photo',
+        'добавить видео', 'add video',
+        'перетащите сюда', 'drag here',
+        'нажмите для выбора', 'click to select',
+        'seleccionar desde el ordenador', 'seleccionar desde la computadora',
+        'seleccionar desde el dispositivo',
+        'arrastra', 'arrastre', 'arrastrar',
+        'seleccionar archivos', 'subir archivo', 'subir archivos',
+        'crear publicación', 'añadir publicación',
+        'añadir фото', 'añadir video', 'agregar foto', 'agregar video',
+        'arrastra aquí', 'haz clic para seleccionar',
+        'selecionar do computador', 'selecionar do dispositivo',
+        'arrastar', 'arraste',
+        'selecionar arquivos', 'enviar arquivo', 'enviar arquivos',
+        'criar publicação', 'adicionar publicação',
+        'adicionar фото', 'adicionar vídeo',
+        'arraste aqui', 'clique para selecionar'
     ]
 
     # Crop/Size selection selectors - FULLY ADAPTIVE VERSION (независимо от CSS-классов)
@@ -810,6 +1178,18 @@ class InstagramSelectors:
         '//div[@role="button" and contains(text(), "Allow")]',
         '//*[@tabindex="0" and contains(text(), "Разрешить")]',
         '//*[@tabindex="0" and contains(text(), "Allow")]',
+        
+        # Spanish/Portuguese accept variants
+        'button:has-text("Aceptar todas")',
+        'button:has-text("Aceptar todas las cookies")',
+        'button:has-text("Aceptar")',
+        'div[role="button"]:has-text("Aceptar todas")',
+        'div[role="button"]:has-text("Aceptar")',
+        'button:has-text("Aceitar todas")',
+        'button:has-text("Aceitar todos os cookies")',
+        'button:has-text("Aceitar")',
+        'div[role="button"]:has-text("Aceitar todas")',
+        'div[role="button"]:has-text("Aceitar")',
     ]
     
     # Alternative cookie consent selectors (for "Отклонить" / "Decline" buttons)
@@ -836,6 +1216,13 @@ class InstagramSelectors:
         
         # CSS класс для decline кнопки
         'button[class*="_a9_1"]',
+        # Spanish/Portuguese decline variants
+        'button:has-text("Rechazar")',
+        'button:has-text("Rechazar cookies opcionales")',
+        'button:has-text("Rechazar opcionales")',
+        'button:has-text("Recusar")',
+        'button:has-text("Recusar cookies opcionais")',
+        'button:has-text("Recusar opcionais")',
         'div[role="button"][class*="_a9_1"]',
     ]
     

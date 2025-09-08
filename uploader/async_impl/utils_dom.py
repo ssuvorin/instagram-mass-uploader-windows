@@ -73,24 +73,7 @@ async def check_if_already_logged_in_async(page, selectors):
     # Check page text for suspension keywords (PRIMARY METHOD)
     try:
         page_text = await page.inner_text('body') or ""
-        suspension_keywords = [
-            'мы приостановили ваш аккаунт',
-            'приостановили ваш аккаунт',
-            'аккаунт приостановлен',
-            'ваш аккаунт приостановлен',
-            'account suspended',
-            'account has been suspended',
-            'we suspended your account',
-            'your account is suspended',
-            'your account has been disabled',
-            'account disabled',
-            'аккаунт заблокирован',
-            'ваш аккаунт заблокирован',
-            'временно приостановлен',
-            'temporarily suspended',
-            'осталось',  # "Осталось X дней, чтобы обжаловать"
-            'days left'  # "X days left to appeal"
-        ]
+        suspension_keywords = SelectorConfig.SUSPENSION_TEXT_KEYWORDS
         
         for keyword in suspension_keywords:
             if keyword in page_text.lower():
@@ -248,8 +231,17 @@ async def wait_for_page_ready_async(page, max_wait_time=30.0) -> bool:
                     await asyncio.sleep(0.5)
                     continue
                 
-                # Quick check: upload button visibility (one selector)
-                upload_button = await page.query_selector('[aria-label*="Новая публикация"], [aria-label*="Создать"], [aria-label*="New post"], [aria-label*="Create"], [data-testid="new-post-button"]')
+                # Quick check: upload button visibility (centralized selectors)
+                upload_button = None
+                for sel in SelectorConfig.UPLOAD_BUTTON[:10]:
+                    try:
+                        formatted = f"xpath={sel}" if sel.startswith('//') else sel
+                        el = await page.query_selector(formatted)
+                        if el and await el.is_visible():
+                            upload_button = el
+                            break
+                    except Exception:
+                        continue
                 if not upload_button or not await upload_button.is_visible():
                     log_info(f"[ASYNC_READY] [WAIT] Upload button not visible")
                     await asyncio.sleep(3)
@@ -501,19 +493,8 @@ async def add_video_location_async(page, video_obj):
         # Wait a bit before location (after description and Enter)
         await asyncio.sleep(random.uniform(1.0, 2.0))
         
-        # Location field selectors
-        location_field_selectors = [
-            'input[placeholder="Добавить место"]',
-            'input[name="creation-location-input"]',
-            'input[placeholder*="место" i]',
-            'input[placeholder*="location" i]',
-            'input[aria-label*="место" i]',
-            'input[aria-label*="location" i]',
-            'input[aria-label*="Добавить место" i]',
-            'input[placeholder*="Добавить место" i]',
-            '//input[@placeholder="Добавить место"]',
-            '//input[@name="creation-location-input"]',
-        ]
+        # Location field selectors (centralized)
+        location_field_selectors = SelectorConfig.LOCATION_INPUT
         
         location_field = None
         for selector in location_field_selectors:
@@ -642,17 +623,8 @@ async def add_video_mentions_async(page, video_obj):
         # Wait a bit before mentions
         await asyncio.sleep(random.uniform(1.0, 2.0))
         
-        # Mentions field selectors
-        mentions_field_selectors = [
-            'input[placeholder="Добавить соавторов"]',
-            'input[placeholder*="соавтор" i]',
-            'input[placeholder*="collaborator" i]',
-            'input[aria-label*="соавтор" i]',
-            'input[aria-label*="collaborator" i]',
-            'input[aria-label*="Добавить соавторов" i]',
-            'input[placeholder*="Добавить соавторов" i]',
-            '//input[@placeholder="Добавить соавторов"]',
-        ]
+        # Mentions field selectors (centralized)
+        mentions_field_selectors = SelectorConfig.MENTIONS_INPUT
         
         mentions_field = None
         for selector in mentions_field_selectors:
@@ -782,21 +754,7 @@ async def add_video_mentions_async(page, video_obj):
         
         # ENHANCED: Click "Done" button after all mentions (like sync version)
         log_info("[ASYNC_UPLOAD] [SEARCH] Looking for 'Done' button...")
-        done_button_selectors = [
-            # Sync-style selector from upload_selenium_old.py
-            '//div[text()="Done"]',
-            '//div[text()="Готово"]',
-            # Alternative selectors
-            'div[role="button"]:has-text("Done")',
-            'button:has-text("Done")',
-            'div[role="button"]:has-text("Готово")',
-            'button:has-text("Готово")',
-            # Additional selectors
-            'div[aria-label*="Done"]',
-            'button[aria-label*="Done"]',
-            'div[aria-label*="Готово"]',
-            'button[aria-label*="Готово"]',
-        ]
+        done_button_selectors = SelectorConfig.DONE_BUTTON
         
         done_button = None
         for selector in done_button_selectors:
@@ -833,14 +791,7 @@ async def add_video_mentions_async(page, video_obj):
         # КРИТИЧЕСКОЕ ДОБАВЛЕНИЕ: Проверяем, что мы все еще в контексте загрузки
         try:
             # Проверяем наличие элементов загрузки
-            upload_context_indicators = [
-                'input[placeholder="Добавить соавторов"]',
-                'textarea[placeholder*="Напишите подпись"]',
-                'input[placeholder*="Добавить местоположение"]',
-                'div[role="dialog"]',
-                'div[aria-label*="Создать"]',
-                'div[aria-label*="Create"]'
-            ]
+            upload_context_indicators = SelectorConfig.UPLOAD_CONTEXT_INDICATORS
             
             context_found = False
             for indicator in upload_context_indicators:
@@ -876,14 +827,7 @@ async def click_share_button_async(page):
         
         # КРИТИЧЕСКОЕ ДОБАВЛЕНИЕ: Проверяем контекст загрузки перед поиском кнопки
         log_info("[ASYNC_UPLOAD] [SEARCH] Checking upload context before searching for share button...")
-        upload_context_indicators = [
-            'input[placeholder="Добавить соавторов"]',
-            'textarea[placeholder*="Напишите подпись"]',
-            'input[placeholder*="Добавить местоположение"]',
-            'div[role="dialog"]',
-            'div[aria-label*="Создать"]',
-            'div[aria-label*="Create"]'
-        ]
+        upload_context_indicators = SelectorConfig.UPLOAD_CONTEXT_INDICATORS
         
         context_found = False
         for indicator in upload_context_indicators:
@@ -904,47 +848,28 @@ async def click_share_button_async(page):
         
         # Enhanced share button selectors with more dynamic options
         share_selectors = [
-            # Primary selectors
-            'div[role="button"]:has-text("Поделиться")',
-            'button:has-text("Поделиться")',
-            'div[role="button"]:has-text("Share")',
-            'button:has-text("Share")',
-            
-            # Alternative selectors
-            'div[aria-label*="Поделиться"]',
-            'button[aria-label*="Поделиться"]',
-            'div[aria-label*="Share"]',
-            'button[aria-label*="Share"]',
-            
-            # XPath selectors
-            '//div[text()="Поделиться"]',
-            '//button[text()="Поделиться"]',
-            '//div[text()="Share"]',
-            '//button[text()="Share"]',
-            
-            # Instagram-specific selectors
+            *SelectorConfig.SHARE_BUTTON,
+            # Instagram-specific/dynamic extras kept here
             'div[class*="x1i10hfl"]:has-text("Поделиться")',
             'div[class*="x1i10hfl"]:has-text("Share")',
-            
-            # КРИТИЧЕСКОЕ ДОБАВЛЕНИЕ: Динамические селекторы для Instagram
+            'div[class*="x1i10hfl"]:has-text("Compartir")',
+            'div[class*="x1i10hfl"]:has-text("Compartilhar")',
             'div[class*="x1i10hfl"][class*="x1xfsgkm"]:has-text("Поделиться")',
             'div[class*="x1i10hfl"][class*="x1xfsgkm"]:has-text("Share")',
+            'div[class*="x1i10hfl"][class*="x1xfsgkm"]:has-text("Compartir")',
+            'div[class*="x1i10hfl"][class*="x1xfsgkm"]:has-text("Compartilhar")',
             'div[class*="x1i10hfl"][class*="xwib8y2"]:has-text("Поделиться")',
             'div[class*="x1i10hfl"][class*="xwib8y2"]:has-text("Share")',
-            
-            # КРИТИЧЕСКОЕ ДОБАВЛЕНИЕ: Селекторы по позиции в диалоге
+            'div[class*="x1i10hfl"][class*="xwib8y2"]:has-text("Compartir")',
+            'div[class*="x1i10hfl"][class*="xwib8y2"]:has-text("Compartilhar")',
             'div[role="dialog"] div[role="button"]:last-child',
             'div[role="dialog"] button:last-child',
             'div[aria-label*="Создать"] div[role="button"]:last-child',
             'div[aria-label*="Create"] div[role="button"]:last-child',
-            
-            # КРИТИЧЕСКОЕ ДОБАВЛЕНИЕ: Селекторы по data-testid
             'div[data-testid="share-button"]',
             'button[data-testid="share-button"]',
             'div[data-testid="post-button"]',
             'button[data-testid="post-button"]',
-            
-            # Generic button selectors (fallback)
             'div[role="button"]:last-child',
             'button:last-child',
         ]
@@ -1064,27 +989,9 @@ async def check_video_posted_successfully_async(page, video_file_path):
         log_info(f"[ASYNC_UPLOAD] [WAIT] Starting extended upload verification: {max_wait_time} seconds ({total_checks} checks every {check_interval}s)")
         
         # STRICT POLICY: Check for explicit success indicators ONLY
-        success_selectors = [
-            'div:has-text("Ваша публикация опубликована")',
-            'div:has-text("Your post has been shared")',
-            'div:has-text("Опубликовано")',
-            'div:has-text("Published")',
-            'div:has-text("Reel shared")',
-            'div:has-text("Рил опубликован")',
-            'div:has-text("Success")',
-            'div:has-text("Успешно")',
-            'div:has-text("Post shared")',
-            'div:has-text("Публикация опубликована")',
-        ]
+        success_selectors = SelectorConfig.SUCCESS_DIALOG
         
-        error_selectors = [
-            'div:has-text("Error")',
-            'div:has-text("Ошибка")',
-            'div:has-text("Failed")',
-            'div:has-text("Не удалось")',
-            'div:has-text("Something went wrong")',
-            'div:has-text("Что-то пошло не так")',
-        ]
+        error_selectors = SelectorConfig.ERROR_DIALOG
         
         for check_number in range(1, total_checks + 1):
             log_info(f"[ASYNC_UPLOAD] [SEARCH] Check {check_number}/{total_checks} - Looking for success/error indicators...")
@@ -1139,27 +1046,7 @@ async def handle_cookie_consent_async(page):
         modal_detected = False
         
         # Cookie modal indicators from sync version
-        cookie_modal_indicators = [
-            # Modal container selectors
-            'div[role="dialog"]:has-text("Cookies")',
-            'div[role="dialog"]:has-text("файлы cookie")',
-            'div[role="dialog"]:has-text("Allow Cookies")',
-            'div[role="dialog"]:has-text("Разрешить файлы cookie")',
-            'div[aria-modal="true"]:has-text("Cookies")',
-            'div[aria-modal="true"]:has-text("cookie")',
-            
-            # Modal text indicators
-            'div:has-text("We use cookies")',
-            'div:has-text("Мы используем файлы cookie")',
-            'div:has-text("This website uses cookies")',
-            'div:has-text("Этот сайт использует файлы cookie")',
-            
-            # Button presence as modal indicator
-            'button:has-text("Accept All Cookies")',
-            'button:has-text("Принять все файлы cookie")',
-            'button:has-text("Allow All")',
-            'button:has-text("Разрешить все")',
-        ]
+        cookie_modal_indicators = SelectorConfig.COOKIE_MODAL_INDICATORS
         
         for i, indicator in enumerate(cookie_modal_indicators):
             try:
@@ -1187,44 +1074,7 @@ async def handle_cookie_consent_async(page):
         log_info("🍪 [ASYNC_COOKIES] Attempting to accept all cookies...")
         
         # Cookie consent buttons from sync version (comprehensive list)
-        cookie_consent_buttons = [
-            # Russian Accept buttons
-            'button:has-text("Принять все")',
-            'button:has-text("Принять все файлы cookie")',
-            'button:has-text("Принять")',
-            'button:has-text("Разрешить все")',
-            'button:has-text("Разрешить")',
-            'button:has-text("ОК")',
-            'div[role="button"]:has-text("Принять все")',
-            'div[role="button"]:has-text("Принять")',
-            'div[role="button"]:has-text("Разрешить")',
-            
-            # English Accept buttons
-            'button:has-text("Accept All")',
-            'button:has-text("Accept All Cookies")',
-            'button:has-text("Accept")',
-            'button:has-text("Allow All")',
-            'button:has-text("Allow")',
-            'button:has-text("OK")',
-            'button:has-text("Got it")',
-            'div[role="button"]:has-text("Accept All")',
-            'div[role="button"]:has-text("Accept")',
-            'div[role="button"]:has-text("Allow")',
-            
-            # Generic cookie buttons
-            'button[data-testid*="cookie"]',
-            'button[data-testid*="accept"]',
-            'button[aria-label*="Accept"]',
-            'button[aria-label*="Принять"]',
-            
-            # XPath alternatives for comprehensive coverage
-            '//button[contains(text(), "Принять")]',
-            '//button[contains(text(), "Accept")]',
-            '//button[contains(text(), "Allow")]',
-            '//button[contains(text(), "Разрешить")]',
-            '//div[@role="button" and contains(text(), "Accept")]',
-            '//div[@role="button" and contains(text(), "Принять")]',
-        ]
+        cookie_consent_buttons = SelectorConfig.COOKIE_CONSENT_BUTTONS
         
         for i, selector in enumerate(cookie_consent_buttons):
             try:
@@ -1354,14 +1204,7 @@ async def handle_recaptcha_if_present_async(page, account_details=None):
 async def check_for_phone_verification_page_async(page):
     """Check for phone verification requirement - async version"""
     try:
-        phone_verification_indicators = [
-            'div:has-text("Подтвердите свой номер телефона")',
-            'div:has-text("Confirm your phone number")',
-            'div:has-text("Введите код подтверждения")',
-            'div:has-text("Enter confirmation code")',
-            'input[placeholder*="код"]',
-            'input[placeholder*="code"]',
-        ]
+        phone_verification_indicators = SelectorConfig.PHONE_VERIFICATION_INDICATORS
         
         for selector in phone_verification_indicators:
             try:
@@ -1385,13 +1228,7 @@ async def check_for_phone_verification_page_async(page):
 async def check_for_account_suspension_async(page):
     """Check for account suspension - async version"""
     try:
-        suspension_indicators = [
-            'div:has-text("Ваш аккаунт заблокирован")',
-            'div:has-text("Your account has been disabled")',
-            'div:has-text("Account suspended")',
-            'div:has-text("temporarily locked")',
-            'div:has-text("временно заблокирован")',
-        ]
+        suspension_indicators = SelectorConfig.SUSPENSION_INDICATORS
         
         for selector in suspension_indicators:
             try:
@@ -1702,7 +1539,15 @@ async def handle_email_field_verification_async(page, account_details):
         await asyncio.sleep(random.uniform(1, 2))
         
         # Submit email form
-        submit_button = await page.query_selector('button[type="submit"], button:has-text("Confirm"), button:has-text("Подтвердить")')
+        # Centralized email submit button selectors
+        submit_button = None
+        for sel in SelectorConfig.EMAIL_SUBMIT_BUTTONS:
+            try:
+                submit_button = await page.query_selector(sel)
+                if submit_button and await submit_button.is_visible():
+                    break
+            except Exception:
+                continue
         if submit_button:
             await submit_button.click()
             await asyncio.sleep(random.uniform(3, 5))
@@ -1806,6 +1651,18 @@ async def get_account_details_async(account_id):
                 
                 # Use the to_dict() method which includes proxy information
                 account_details = account.to_dict()
+                # Ensure locale and language present even if to_dict missed
+                try:
+                    account_details.setdefault('locale', account.locale or 'ru_BY')
+                except Exception:
+                    account_details.setdefault('locale', 'ru_BY')
+                try:
+                    lang = (account_details.get('locale') or 'ru_BY').split('_', 1)[0].lower()
+                    if lang not in ('en','ru','es','pt'):
+                        lang = 'ru'
+                    account_details.setdefault('language', lang)
+                except Exception:
+                    account_details.setdefault('language', 'ru')
                 
                 log_debug(f"[SEARCH] [ACCOUNT_DETAILS] Retrieved account details for {account.username}")
                 if account_details.get('proxy'):
@@ -1996,9 +1853,18 @@ async def verify_page_elements_state_async(page) -> bool:
             log_info("[ASYNC_UPLOAD] [WARN] No navigation element found")
             return False
         
-        # Quick check: upload button
-        upload_button = await page.query_selector('[aria-label*="Новая публикация"], [aria-label*="Создать"], [aria-label*="New post"], [aria-label*="Create"], [data-testid="new-post-button"]')
-        if not upload_button or not await upload_button.is_visible():
+        # Quick check: upload button (centralized)
+        upload_button = None
+        for sel in SelectorConfig.UPLOAD_BUTTON[:10]:
+            try:
+                formatted = f"xpath={sel}" if sel.startswith('//') else sel
+                el = await page.query_selector(formatted)
+                if el and await el.is_visible():
+                    upload_button = el
+                    break
+            except Exception:
+                continue
+        if not upload_button:
             log_info("[ASYNC_UPLOAD] [WARN] Upload button not found or not visible")
             return False
         
