@@ -2,52 +2,127 @@
 
 {% block title %}Cabinet — Agency Dashboard{% endblock %}
 
+{% block extra_css %}
+<style>
+@media (max-width: 768px) {
+  .mobile-header {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 1rem;
+  }
+  
+  .mobile-btn-group {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .mobile-btn-group .btn {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .mobile-card-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .mobile-chart-container {
+    height: 200px !important;
+  }
+  
+  .mobile-table {
+    font-size: 0.8rem;
+  }
+  
+  .mobile-table th,
+  .mobile-table td {
+    padding: 0.5rem 0.25rem;
+    white-space: nowrap;
+  }
+  
+  .mobile-hide {
+    display: none !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .agency-title {
+    font-size: 1.5rem;
+    line-height: 1.2;
+    margin-bottom: 0.5rem;
+  }
+  
+  .mobile-stack {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  .mobile-full-width {
+    width: 100% !important;
+  }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h2 class="mb-0">Agency: {{ agency.name }}</h2>
-  <div class="btn-toolbar gap-2">
+<div class="d-flex justify-content-between align-items-center mb-4 mobile-header">
+  <h2 class="mb-0 agency-title">Agency: {{ agency.name }}</h2>
+  <div class="btn-toolbar gap-2 mobile-btn-group">
     {% if user.is_superuser %}
-    <a class="btn btn-outline-primary" href="{% url 'cabinet_manage_clients' %}">Manage Clients</a>
+    <a class="btn btn-outline-primary btn-sm" href="{% url 'cabinet_manage_clients' %}">
+      <i class="bi bi-people d-sm-none"></i>
+      <span class="d-none d-sm-inline">Manage Clients</span>
+    </a>
     {% endif %}
-    <a class="btn btn-outline-secondary" href="{% url 'cabinet_agency_calculator' %}">Agency Calculator</a>
-    <a class="btn btn-success" href="{% url 'cabinet_export_excel' %}"><i class="bi bi-file-earmark-excel"></i> Export Excel</a>
-    <a class="btn btn-outline-info" href="{% url 'cabinet_export_calculations_csv' %}"><i class="bi bi-file-earmark-csv"></i> Export Calculations</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'cabinet_agency_calculator' %}">
+      <i class="bi bi-calculator d-sm-none"></i>
+      <span class="d-none d-sm-inline">Calculator</span>
+    </a>
+    <a class="btn btn-success btn-sm" href="{% url 'cabinet_export_excel' %}">
+      <i class="bi bi-file-earmark-excel"></i>
+      <span class="d-none d-sm-inline"> Excel</span>
+    </a>
+    <a class="btn btn-outline-info btn-sm d-none d-md-inline-block" href="{% url 'cabinet_export_calculations_csv' %}">
+      <i class="bi bi-file-earmark-csv"></i> CSV
+    </a>
   </div>
 </div>
 
 <div class="card">
   <div class="card-header"><h5 class="mb-0">Clients overview</h5></div>
   <div class="card-body p-0">
-    <div class="row g-3 px-3 pt-3">
-      <div class="col-md-4">
+    <div class="row g-2 g-md-3 px-3 pt-3">
+      <div class="col-12 col-sm-6 col-md-4">
         <div class="card action-card">
-          <div class="card-body text-center">
+          <div class="card-body text-center py-3">
             <div class="text-muted small">Total videos</div>
-            <div class="h3 mb-0">{{ kpi_total_videos|default:0 }}</div>
+            <div class="h4 h3-md mb-0">{{ kpi_total_videos|default:0 }}</div>
           </div>
         </div>
       </div>
-      <div class="col-md-4">
+      <div class="col-12 col-sm-6 col-md-4">
         <div class="card action-card">
-          <div class="card-body text-center">
+          <div class="card-body text-center py-3">
             <div class="text-muted small">Total views</div>
-            <div class="h3 mb-0">{{ kpi_total_views|default:0 }}</div>
+            <div class="h4 h3-md mb-0">{{ kpi_total_views|default:0 }}</div>
           </div>
         </div>
       </div>
-      <div class="col-md-4">
+      <div class="col-12 col-md-4">
         <div class="card action-card">
-          <div class="card-body text-center">
+          <div class="card-body text-center py-3">
             <div class="text-muted small">AVG per video</div>
-            <div class="h3 mb-0">{{ kpi_avg_per_video|floatformat:0 }}</div>
+            <div class="h4 h3-md mb-0">{{ kpi_avg_per_video|floatformat:0 }}</div>
           </div>
         </div>
       </div>
     </div>
     <div class="table-responsive">
-      <table class="table table-sm align-middle mb-0">
+      <table class="table table-sm align-middle mb-0 mobile-table">
         <thead><tr>
-          <th>Client</th><th>Total views</th><th>Avg views</th><th>All accounts</th>
+          <th>Client</th>
+          <th class="text-end">Views</th>
+          <th class="text-end d-none d-md-table-cell">Avg views</th>
+          <th class="text-center d-none d-lg-table-cell">Accounts</th>
         </tr></thead>
         <tbody>
           {% for row in client_rows %}
@@ -58,10 +133,13 @@
               {% else %}
                 {{ row.client.name }}
               {% endif %}
+              <div class="d-md-none small text-muted mt-1">
+                Avg: {{ row.avg_views|floatformat:0 }}
+              </div>
             </td>
-            <td>{{ row.total_views }}</td>
-            <td>{{ row.avg_views|floatformat:0 }}</td>
-            <td>
+            <td class="text-end">{{ row.total_views }}</td>
+            <td class="text-end d-none d-md-table-cell">{{ row.avg_views|floatformat:0 }}</td>
+            <td class="text-center d-none d-lg-table-cell">
               {% if user.is_superuser %}
                 <a class="btn btn-sm btn-outline-secondary" href="{% url 'account_list' %}?client_id={{ row.client.id }}">Open</a>
               {% else %}
@@ -70,7 +148,8 @@
             </td>
           </tr>
           {% empty %}
-          <tr><td colspan="3" class="text-center text-muted">No clients</td></tr>
+          <tr><td colspan="2" class="d-md-none text-center text-muted">No clients</td></tr>
+          <tr class="d-none d-md-table-row"><td colspan="4" class="text-center text-muted">No clients</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -92,69 +171,79 @@
       </div>
       <div class="card-body p-0">
         <div class="table-responsive">
-          <table class="table table-sm align-middle mb-0">
+          <table class="table table-sm align-middle mb-0 mobile-table">
             <thead>
               <tr>
                 <th>Date</th>
-                <th>Client</th>
-                <th>Volume (M)</th>
-                <th>Platforms</th>
-                <th>Countries</th>
-                <th>Currency</th>
-                <th>Total Cost</th>
-                <th>User</th>
-                <th>Actions</th>
+                <th class="d-none d-sm-table-cell">Client</th>
+                <th>Volume</th>
+                <th class="d-none d-md-table-cell">Platforms</th>
+                <th class="d-none d-lg-table-cell">Countries</th>
+                <th class="d-none d-md-table-cell">Currency</th>
+                <th>Cost</th>
+                <th class="d-none d-lg-table-cell">User</th>
+                <th class="text-center">Actions</th>
               </tr>
             </thead>
             <tbody id="calculationsTableBody" data-initial-count="{{ recent_calculations|length }}">
               {% for calc in recent_calculations %}
               <tr>
                 <td>
-                  <small>{{ calc.created_at|date:"d.m.Y H:i" }}</small>
+                  <small>{{ calc.created_at|date:"d.m.Y" }}</small>
+                  <div class="d-sm-none small text-muted">
+                    {% if calc.client_name %}{{ calc.client_name }}{% endif %}
+                  </div>
                 </td>
-                <td>
+                <td class="d-none d-sm-table-cell">
                   {{ calc.client_name|default:"—" }}
                 </td>
                 <td>
                   <strong>{{ calc.volume_millions|floatformat:1 }}M</strong>
+                  <div class="d-md-none small text-muted">
+                    {% if calc.platforms %}{{ calc.platforms|join:", " }}{% endif %}
+                  </div>
                 </td>
-                <td>
+                <td class="d-none d-md-table-cell">
                   <span class="badge bg-info">
                     {{ calc.platforms|join:", "|default:"—" }}
                   </span>
                 </td>
-                <td>
+                <td class="d-none d-lg-table-cell">
                   {% for country in calc.countries %}
                     <span class="badge bg-secondary me-1">{{ country.code }}</span>
                   {% empty %}
                     —
                   {% endfor %}
                 </td>
-                <td>
+                <td class="d-none d-md-table-cell">
                   <strong>{{ calc.currency }}</strong>
                 </td>
                 <td>
                   {% if calc.currency == "RUB" %}
-                    <strong>{{ calc.final_cost_rub|floatformat:0 }} ₽</strong>
+                    <strong class="d-none d-md-inline">{{ calc.final_cost_rub|floatformat:0 }} ₽</strong>
+                    <strong class="d-md-none">{{ calc.final_cost_rub|floatformat:0|slice:":6" }}₽</strong>
                   {% elif calc.currency == "USD" %}
-                    <strong>${{ calc.final_cost_usd|floatformat:0 }}</strong>
+                    <strong class="d-none d-md-inline">${{ calc.final_cost_usd|floatformat:0 }}</strong>
+                    <strong class="d-md-none">${{ calc.final_cost_usd|floatformat:0|slice:":6" }}</strong>
                   {% else %}
-                    <strong>{{ calc.final_cost_rub|floatformat:0 }} ₽</strong>
+                    <strong class="d-none d-md-inline">{{ calc.final_cost_rub|floatformat:0 }} ₽</strong>
+                    <strong class="d-md-none">{{ calc.final_cost_rub|floatformat:0|slice:":6" }}₽</strong>
                   {% endif %}
+                  <div class="d-md-none small text-muted">{{ calc.currency }}</div>
                 </td>
-                <td>
+                <td class="d-none d-lg-table-cell">
                   <small>{{ calc.user.username }}</small>
                 </td>
-                <td>
+                <td class="text-center">
                   <div class="btn-group" role="group">
                     <a href="{% url 'cabinet_download_calculation_excel' calc.id %}" 
                        class="btn btn-sm btn-outline-success" 
-                       title="Download Excel">
+                       title="Excel">
                       <i class="bi bi-file-earmark-excel"></i>
                     </a>
                     <button class="btn btn-sm btn-outline-info btn-view-calc" 
                             data-calc-id="{{ calc.id }}"
-                            title="View Details">
+                            title="Details">
                       <i class="bi bi-eye"></i>
                     </button>
                   </div>
@@ -162,7 +251,10 @@
               </tr>
               {% empty %}
               <tr>
-                <td colspan="8" class="text-center text-muted py-3">
+                <td colspan="4" class="d-md-none text-center text-muted py-3">
+                  No calculations yet. <a href="{% url 'cabinet_agency_calculator' %}">Create first</a>
+                </td>
+                <td colspan="9" class="d-none d-md-table-cell text-center text-muted py-3">
                   No calculations yet. <a href="{% url 'cabinet_agency_calculator' %}">Create your first calculation</a>
                 </td>
               </tr>
@@ -183,67 +275,79 @@
 </div>
 
 <div class="row mt-4">
-  <div class="col-xl-6 col-lg-12">
+  <div class="col-12 col-lg-6">
     <div class="card mb-4">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Views — last 7 days</h5>
+      <div class="card-header">
+        <h6 class="mb-0">Views — last 7 days</h6>
       </div>
       <div class="card-body">
-        <canvas id="chartViews" height="200"></canvas>
+        <div style="height: 180px; position: relative;" class="mobile-chart-container">
+          <canvas id="chartViews"></canvas>
+        </div>
       </div>
     </div>
   </div>
-  <div class="col-xl-6 col-lg-12">
+  <div class="col-12 col-lg-6">
     <div class="card mb-4">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Videos — last 7 days</h5>
+      <div class="card-header">
+        <h6 class="mb-0">Videos — last 7 days</h6>
       </div>
       <div class="card-body">
-        <canvas id="chartVideos" height="200"></canvas>
+        <div style="height: 180px; position: relative;" class="mobile-chart-container">
+          <canvas id="chartVideos"></canvas>
+        </div>
       </div>
     </div>
   </div>
-  <div class="col-xl-6 col-lg-12">
+  <div class="col-12 col-lg-6">
     <div class="card mb-4">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Likes — last 7 days</h5>
+      <div class="card-header">
+        <h6 class="mb-0">Likes — last 7 days</h6>
       </div>
       <div class="card-body">
-        <canvas id="chartLikes" height="200"></canvas>
+        <div style="height: 180px; position: relative;" class="mobile-chart-container">
+          <canvas id="chartLikes"></canvas>
+        </div>
       </div>
     </div>
   </div>
-  <div class="col-xl-6 col-lg-12">
+  <div class="col-12 col-lg-6">
     <div class="card mb-4">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Comments — last 7 days</h5>
+      <div class="card-header">
+        <h6 class="mb-0">Comments — last 7 days</h6>
       </div>
       <div class="card-body">
-        <canvas id="chartComments" height="200"></canvas>
+        <div style="height: 180px; position: relative;" class="mobile-chart-container">
+          <canvas id="chartComments"></canvas>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
 <div class="row">
-  <div class="col-xl-6 col-lg-12">
+  <div class="col-12 col-lg-6">
     <div class="card mb-4">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Top Hashtags (by Views)</h5>
+      <div class="card-header">
+        <h6 class="mb-0">Top Hashtags (by Views)</h6>
       </div>
       <div class="card-body">
-        <canvas id="chartHashtags" height="220"></canvas>
+        <div style="height: 200px; position: relative;" class="mobile-chart-container">
+          <canvas id="chartHashtags"></canvas>
+        </div>
       </div>
     </div>
   </div>
-  <div class="col-xl-6 col-lg-12">
+  <div class="col-12 col-lg-6">
     <div class="card mb-4">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Top Clients (by Views)</h5>
-        <a href="{% url 'account_list' %}" class="btn btn-sm btn-outline-secondary">All Accounts</a>
+        <h6 class="mb-0">Top Clients</h6>
+        <a href="{% url 'account_list' %}" class="btn btn-sm btn-outline-secondary d-none d-md-inline-block">All Accounts</a>
       </div>
       <div class="card-body">
-        <canvas id="chartClients" height="220"></canvas>
+        <div style="height: 200px; position: relative;" class="mobile-chart-container">
+          <canvas id="chartClients"></canvas>
+        </div>
       </div>
     </div>
   </div>
@@ -257,27 +361,40 @@
       </div>
       <div class="card-body p-0">
         <div class="table-responsive">
-          <table class="table table-sm align-middle mb-0">
+          <table class="table table-sm align-middle mb-0 mobile-table">
             <thead>
               <tr>
                 <th>Hashtag</th>
-                <th class="text-end">Total Videos</th>
+                <th class="text-end d-none d-sm-table-cell">Videos</th>
                 <th class="text-end">Views</th>
-                <th class="text-end">Average Views</th>
-                <th class="text-end">ER</th>
+                <th class="text-end d-none d-md-table-cell">Avg Views</th>
+                <th class="text-end d-none d-lg-table-cell">ER</th>
               </tr>
             </thead>
             <tbody>
               {% for h in hashtags_breakdown %}
               <tr>
-                <td>#{{ h.hashtag }}</td>
-                <td class="text-end">{{ h.videos }}</td>
-                <td class="text-end">{{ h.views }}</td>
-                <td class="text-end">{{ h.avg_views|floatformat:0 }}</td>
-                <td class="text-end">{{ h.er|floatformat:4 }}</td>
+                <td>
+                  #{{ h.hashtag }}
+                  <div class="d-sm-none small text-muted mt-1">
+                    {{ h.videos }} videos
+                  </div>
+                </td>
+                <td class="text-end d-none d-sm-table-cell">{{ h.videos }}</td>
+                <td class="text-end">
+                  {{ h.views }}
+                  <div class="d-md-none small text-muted">
+                    Avg: {{ h.avg_views|floatformat:0 }}
+                  </div>
+                </td>
+                <td class="text-end d-none d-md-table-cell">{{ h.avg_views|floatformat:0 }}</td>
+                <td class="text-end d-none d-lg-table-cell">{{ h.er|floatformat:4 }}</td>
               </tr>
               {% empty %}
-              <tr><td colspan="5" class="text-center text-muted">No data</td></tr>
+              <tr>
+                <td colspan="2" class="d-sm-none text-center text-muted">No data</td>
+                <td colspan="5" class="d-none d-sm-table-cell text-center text-muted">No data</td>
+              </tr>
               {% endfor %}
             </tbody>
           </table>
@@ -292,29 +409,42 @@
     <div class="card">
       <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Account Analytics</h5>
-        <a href="{% url 'account_list' %}" class="btn btn-sm btn-outline-secondary">Open Accounts Table</a>
+        <a href="{% url 'account_list' %}" class="btn btn-sm btn-outline-secondary d-none d-md-inline-block">Open Accounts Table</a>
       </div>
       <div class="card-body p-0">
         <div class="table-responsive">
-          <table class="table table-sm align-middle mb-0">
+          <table class="table table-sm align-middle mb-0 mobile-table">
             <thead>
               <tr>
                 <th>Account</th>
-                <th class="text-end">Total Videos</th>
+                <th class="text-end d-none d-sm-table-cell">Videos</th>
                 <th class="text-end">Views</th>
-                <th class="text-end">Average Views</th>
+                <th class="text-end d-none d-md-table-cell">Avg Views</th>
               </tr>
             </thead>
             <tbody>
               {% for a in accounts_analytics %}
               <tr>
-                <td>@{{ a.username }}</td>
-                <td class="text-end">{{ a.videos }}</td>
-                <td class="text-end">{{ a.views }}</td>
-                <td class="text-end">{{ a.avg_views|floatformat:0 }}</td>
+                <td>
+                  @{{ a.username }}
+                  <div class="d-sm-none small text-muted mt-1">
+                    {{ a.videos }} videos
+                  </div>
+                </td>
+                <td class="text-end d-none d-sm-table-cell">{{ a.videos }}</td>
+                <td class="text-end">
+                  {{ a.views }}
+                  <div class="d-md-none small text-muted">
+                    Avg: {{ a.avg_views|floatformat:0 }}
+                  </div>
+                </td>
+                <td class="text-end d-none d-md-table-cell">{{ a.avg_views|floatformat:0 }}</td>
               </tr>
               {% empty %}
-              <tr><td colspan="4" class="text-center text-muted">No data</td></tr>
+              <tr>
+                <td colspan="2" class="d-sm-none text-center text-muted">No data</td>
+                <td colspan="4" class="d-none d-sm-table-cell text-center text-muted">No data</td>
+              </tr>
               {% endfor %}
             </tbody>
           </table>

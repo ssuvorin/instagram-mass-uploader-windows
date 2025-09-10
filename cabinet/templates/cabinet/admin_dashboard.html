@@ -67,21 +67,196 @@
         <h5 class="mb-0">Views & Videos — last 7 days</h5>
       </div>
       <div class="card-body">
-        <canvas id="adminDailyChart" height="200"></canvas>
+        <div style="height: 200px; position: relative;">
+          <canvas id="adminDailyChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Interactive Analytics Charts -->
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Interactive Analytics</h5>
+        <div class="d-flex gap-2">
+          <select class="form-select form-select-sm" id="agencyFilter" style="width: 200px;">
+            <option value="">All Agencies</option>
+            {% for agency in agencies %}
+            <option value="{{ agency.id }}">{{ agency.name }}</option>
+            {% endfor %}
+          </select>
+          <select class="form-select form-select-sm" id="clientFilter" style="width: 200px;">
+            <option value="">All Clients</option>
+            {% for client in clients %}
+            <option value="{{ client.id }}">{{ client.name }}</option>
+            {% endfor %}
+          </select>
+          <select class="form-select form-select-sm" id="timeFilter" style="width: 150px;">
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option>
+          </select>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-xl-6 col-lg-12 mb-4">
+            <h6>Views & Videos Over Time</h6>
+            <div style="height: 250px; position: relative;">
+              <canvas id="interactiveChart"></canvas>
+            </div>
+          </div>
+          <div class="col-xl-6 col-lg-12 mb-4">
+            <h6>Engagement Rate & Interactions</h6>
+            <div style="height: 250px; position: relative;">
+              <canvas id="engagementChart"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-xl-4 col-lg-6 mb-4">
+            <h6>Top Hashtags by Views</h6>
+            <div style="height: 200px; position: relative;">
+              <canvas id="hashtagsChart"></canvas>
+            </div>
+          </div>
+          <div class="col-xl-4 col-lg-6 mb-4">
+            <h6>Top Agencies by Performance</h6>
+            <div style="height: 200px; position: relative;">
+              <canvas id="agenciesChart"></canvas>
+            </div>
+          </div>
+          <div class="col-xl-4 col-lg-6 mb-4">
+            <h6>Top Clients by Performance</h6>
+            <div style="height: 200px; position: relative;">
+              <canvas id="clientsChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col-xl-6 col-lg-12">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Agencies Analytics (7 days)</h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Agency</th>
+                <th class="text-end">Clients</th>
+                <th class="text-end">Views</th>
+                <th class="text-end">Videos</th>
+                <th class="text-end">Avg/View</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in agencies_rows %}
+              <tr>
+                <td>{{ r.agency.name }}</td>
+                <td class="text-end">{{ r.clients_count }}</td>
+                <td class="text-end">{{ r.views }}</td>
+                <td class="text-end">{{ r.videos }}</td>
+                <td class="text-end">{{ r.avg_views|floatformat:0 }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="5" class="text-center text-muted">No data</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-6 col-lg-12">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Top Clients (7 days)</h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Client</th>
+                <th>Agency</th>
+                <th class="text-end">Views</th>
+                <th class="text-end">Videos</th>
+                <th class="text-end">Avg/View</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in clients_rows %}
+              <tr>
+                <td>{{ r.client.name }}</td>
+                <td>{% if r.agency %}{{ r.agency.name }}{% else %}-{% endif %}</td>
+                <td class="text-end">{{ r.views }}</td>
+                <td class="text-end">{{ r.videos }}</td>
+                <td class="text-end">{{ r.avg_views|floatformat:0 }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="5" class="text-center text-muted">No data</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
 {% block extra_js %}
+{{ daily_stats|json_script:"dailyStats" }}
+{{ agencies_rows|json_script:"agenciesRows" }}
+{{ clients_rows|json_script:"clientsRows" }}
+{{ top_hashtags|json_script:"hashtagsBreakdown" }}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
-(function(){
-  const labels = [{% for s in daily_stats %}'{{ s.day_name }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
-  const views = [{% for s in daily_stats %}{{ s.total_views|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
-  const videos = [{% for s in daily_stats %}{{ s.total_videos|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
-  const likes = [{% for s in daily_stats %}{{ s.total_likes|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
-  const comments = [{% for s in daily_stats %}{{ s.total_comments|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+// Global chart instances
+let interactiveChart, engagementChart, hashtagsChart, agenciesChart, clientsChart;
+
+// Initial data from Django
+const initialData = {
+  dailyStats: JSON.parse(document.getElementById('dailyStats').textContent || '[]'),
+  agenciesRows: JSON.parse(document.getElementById('agenciesRows').textContent || '[]'),
+  clientsRows: JSON.parse(document.getElementById('clientsRows').textContent || '[]'),
+  hashtagsBreakdown: JSON.parse(document.getElementById('hashtagsBreakdown').textContent || '[]')
+};
+
+// Chart colors
+const colors = {
+  primary: '#667eea',
+  secondary: '#4facfe', 
+  success: '#43e97b',
+  warning: '#f093fb',
+  danger: '#f5576c',
+  info: '#17a2b8'
+};
+
+// Initialize all charts
+function initCharts() {
+  initDailyChart();
+  initInteractiveCharts();
+}
+
+// Original daily chart
+function initDailyChart() {
+  const labels = initialData.dailyStats.map(s => s.day_name);
+  const views = initialData.dailyStats.map(s => s.total_views || 0);
+  const videos = initialData.dailyStats.map(s => s.total_videos || 0);
+  const likes = initialData.dailyStats.map(s => s.total_likes || 0);
+  const comments = initialData.dailyStats.map(s => s.total_comments || 0);
+  
   try {
     const ctx = document.getElementById('adminDailyChart').getContext('2d');
     new Chart(ctx, {
@@ -89,16 +264,223 @@
       data: {
         labels,
         datasets: [
-          {label: 'Views', data: views, borderColor: '#667eea', backgroundColor: 'rgba(102,126,234,0.15)', tension: 0.35, fill: true, yAxisID: 'y'},
-          {label: 'Videos', data: videos, borderColor: '#4facfe', backgroundColor: 'rgba(79,172,254,0.12)', tension: 0.35, fill: false, yAxisID: 'y1'},
-          {label: 'Likes', data: likes, borderColor: '#43e97b', backgroundColor: 'rgba(67,233,123,0.15)', tension: 0.35, fill: false, yAxisID: 'y2'},
-          {label: 'Comments', data: comments, borderColor: '#f093fb', backgroundColor: 'rgba(240,147,251,0.15)', tension: 0.35, fill: false, yAxisID: 'y2'}
+          {label: 'Views', data: views, borderColor: colors.primary, backgroundColor: colors.primary + '15', tension: 0.35, fill: true, yAxisID: 'y'},
+          {label: 'Videos', data: videos, borderColor: colors.secondary, backgroundColor: colors.secondary + '12', tension: 0.35, fill: false, yAxisID: 'y1'},
+          {label: 'Likes', data: likes, borderColor: colors.success, backgroundColor: colors.success + '15', tension: 0.35, fill: false, yAxisID: 'y2'},
+          {label: 'Comments', data: comments, borderColor: colors.warning, backgroundColor: colors.warning + '15', tension: 0.35, fill: false, yAxisID: 'y2'}
         ]
       },
-      options: {responsive: true, maintainAspectRatio: false}
+      options: {
+        responsive: true, 
+        maintainAspectRatio: false,
+        scales: {
+          y: { type: 'linear', display: true, position: 'left' },
+          y1: { type: 'linear', display: true, position: 'right' },
+          y2: { type: 'linear', display: false }
+        }
+      }
     });
-  } catch(e) {}
-})();
+  } catch(e) {
+    console.error('Daily chart error:', e);
+  }
+}
+
+// Interactive charts
+function initInteractiveCharts() {
+  // Views & Videos over time
+  const interactiveCtx = document.getElementById('interactiveChart').getContext('2d');
+  interactiveChart = new Chart(interactiveCtx, {
+    type: 'line',
+    data: {
+      labels: initialData.dailyStats.map(s => s.day_name),
+      datasets: [
+        {label: 'Views', data: initialData.dailyStats.map(s => s.total_views || 0), borderColor: colors.primary, backgroundColor: colors.primary + '20', tension: 0.4, fill: true},
+        {label: 'Videos', data: initialData.dailyStats.map(s => s.total_videos || 0), borderColor: colors.secondary, backgroundColor: colors.secondary + '20', tension: 0.4, fill: false}
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
+
+  // Engagement Rate & Interactions
+  const engagementCtx = document.getElementById('engagementChart').getContext('2d');
+  engagementChart = new Chart(engagementCtx, {
+    type: 'line',
+    data: {
+      labels: initialData.dailyStats.map(s => s.day_name),
+      datasets: [
+        {label: 'Likes', data: initialData.dailyStats.map(s => s.total_likes || 0), borderColor: colors.success, backgroundColor: colors.success + '20', tension: 0.4, fill: false},
+        {label: 'Comments', data: initialData.dailyStats.map(s => s.total_comments || 0), borderColor: colors.warning, backgroundColor: colors.warning + '20', tension: 0.4, fill: false}
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
+
+  // Top Hashtags
+  const hashtagsCtx = document.getElementById('hashtagsChart').getContext('2d');
+  const hashtagData = initialData.hashtagsBreakdown.slice(0, 10);
+  hashtagsChart = new Chart(hashtagsCtx, {
+    type: 'bar',
+    data: {
+      labels: hashtagData.map(h => '#' + h.hashtag),
+      datasets: [{
+        label: 'Views',
+        data: hashtagData.map(h => h.total_views || 0),
+        backgroundColor: colors.primary + '80',
+        borderColor: colors.primary,
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      scales: {
+        x: { beginAtZero: true }
+      }
+    }
+  });
+
+  // Top Agencies
+  const agenciesCtx = document.getElementById('agenciesChart').getContext('2d');
+  const agencyData = initialData.agenciesRows.slice(0, 8);
+  agenciesChart = new Chart(agenciesCtx, {
+    type: 'bar',
+    data: {
+      labels: agencyData.map(a => a.agency.name),
+      datasets: [{
+        label: 'Views',
+        data: agencyData.map(a => a.views),
+        backgroundColor: colors.success + '80',
+        borderColor: colors.success,
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      scales: {
+        x: { beginAtZero: true }
+      }
+    }
+  });
+
+  // Top Clients
+  const clientsCtx = document.getElementById('clientsChart').getContext('2d');
+  const clientData = initialData.clientsRows.slice(0, 8);
+  clientsChart = new Chart(clientsCtx, {
+    type: 'bar',
+    data: {
+      labels: clientData.map(c => c.client.name),
+      datasets: [{
+        label: 'Views',
+        data: clientData.map(c => c.views),
+        backgroundColor: colors.info + '80',
+        borderColor: colors.info,
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      scales: {
+        x: { beginAtZero: true }
+      }
+    }
+  });
+}
+
+// Filter functionality
+function setupFilters() {
+  document.getElementById('agencyFilter').addEventListener('change', updateCharts);
+  document.getElementById('clientFilter').addEventListener('change', updateCharts);
+  document.getElementById('timeFilter').addEventListener('change', updateCharts);
+}
+
+// Update charts based on filters
+async function updateCharts() {
+  const agencyId = document.getElementById('agencyFilter').value;
+  const clientId = document.getElementById('clientFilter').value;
+  const days = document.getElementById('timeFilter').value;
+  
+  try {
+    const params = new URLSearchParams();
+    if (agencyId) params.append('agency_id', agencyId);
+    if (clientId) params.append('client_id', clientId);
+    params.append('days', days);
+    
+    const response = await fetch(`/cabinet/api/admin-analytics/?${params}`);
+    const data = await response.json();
+    
+    if (data.success) {
+      updateChartData(data);
+    }
+  } catch (error) {
+    console.error('Filter update error:', error);
+  }
+}
+
+// Update chart data
+function updateChartData(data) {
+  // Update interactive chart
+  if (interactiveChart) {
+    interactiveChart.data.labels = data.dailyStats.map(s => s.day_name);
+    interactiveChart.data.datasets[0].data = data.dailyStats.map(s => s.total_views || 0);
+    interactiveChart.data.datasets[1].data = data.dailyStats.map(s => s.total_videos || 0);
+    interactiveChart.update();
+  }
+  
+  // Update engagement chart
+  if (engagementChart) {
+    engagementChart.data.labels = data.dailyStats.map(s => s.day_name);
+    engagementChart.data.datasets[0].data = data.dailyStats.map(s => s.total_likes || 0);
+    engagementChart.data.datasets[1].data = data.dailyStats.map(s => s.total_comments || 0);
+    engagementChart.update();
+  }
+  
+  // Update hashtags chart
+  if (hashtagsChart && data.hashtagsBreakdown) {
+    const hashtagData = data.hashtagsBreakdown.slice(0, 10);
+    hashtagsChart.data.labels = hashtagData.map(h => '#' + h.hashtag);
+    hashtagsChart.data.datasets[0].data = hashtagData.map(h => h.total_views || 0);
+    hashtagsChart.update();
+  }
+  
+  // Update agencies chart
+  if (agenciesChart && data.agenciesRows) {
+    const agencyData = data.agenciesRows.slice(0, 8);
+    agenciesChart.data.labels = agencyData.map(a => a.agency.name);
+    agenciesChart.data.datasets[0].data = agencyData.map(a => a.views);
+    agenciesChart.update();
+  }
+  
+  // Update clients chart
+  if (clientsChart && data.clientsRows) {
+    const clientData = data.clientsRows.slice(0, 8);
+    clientsChart.data.labels = clientData.map(c => c.client.name);
+    clientsChart.data.datasets[0].data = clientData.map(c => c.views);
+    clientsChart.update();
+  }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+  initCharts();
+  setupFilters();
+});
 </script>
 {% endblock %}
 {% endblock %}

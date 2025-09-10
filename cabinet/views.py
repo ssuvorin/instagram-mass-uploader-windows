@@ -311,14 +311,92 @@ def admin_dashboard(request):
     kpi_total_videos = sum(d["total_videos"] for d in daily_stats)
     kpi_avg_per_video = (kpi_total_views / kpi_total_videos) if kpi_total_videos > 0 else 0.0
 
+    # Agencies analytics (last 7 days)
+    agencies_rows: list[dict] = []
+    for a in agencies:
+        a_clients = list(a.clients.all())
+        a_hashtags = ClientHashtag.objects.filter(client__in=a_clients).values_list("hashtag", flat=True)
+        if not a_hashtags:
+            agencies_rows.append({
+                "agency": {"id": a.id, "name": a.name},
+                "clients_count": len(a_clients),
+                "views": 0,
+                "videos": 0,
+                "avg_views": 0.0,
+            })
+            continue
+        agg = (
+            HashtagAnalytics.objects.filter(hashtag__in=list(a_hashtags), created_at__gte=start, created_at__lte=end)
+            .aggregate(
+                views=Sum("total_views"),
+                videos=Sum("analyzed_medias"),
+                likes=Sum("total_likes"),
+                comments=Sum("total_comments"),
+            )
+        )
+        views_sum = int(agg.get("views") or 0)
+        videos_sum = int(agg.get("videos") or 0)
+        avg_views = (views_sum / videos_sum) if videos_sum > 0 else 0.0
+        agencies_rows.append({
+            "agency": {"id": a.id, "name": a.name},
+            "clients_count": len(a_clients),
+            "views": views_sum,
+            "videos": videos_sum,
+            "avg_views": avg_views,
+        })
+    agencies_rows = sorted(agencies_rows, key=lambda x: x["views"], reverse=True)
+
+    # Clients analytics (last 7 days, top 50)
+    clients_rows: list[dict] = []
+    for c in clients:
+        c_hashtags = ClientHashtag.objects.filter(client=c).values_list("hashtag", flat=True)
+        if not c_hashtags:
+            continue
+        agg = (
+            HashtagAnalytics.objects.filter(hashtag__in=list(c_hashtags), created_at__gte=start, created_at__lte=end)
+            .aggregate(
+                views=Sum("total_views"),
+                videos=Sum("analyzed_medias"),
+                likes=Sum("total_likes"),
+                comments=Sum("total_comments"),
+            )
+        )
+        views_sum = int(agg.get("views") or 0)
+        videos_sum = int(agg.get("videos") or 0)
+        if views_sum == 0 and videos_sum == 0:
+            continue
+        avg_views = (views_sum / videos_sum) if videos_sum > 0 else 0.0
+        clients_rows.append({
+            "client": {"id": c.id, "name": c.name},
+            "agency": {"id": c.agency.id, "name": c.agency.name} if c.agency else None,
+            "views": views_sum,
+            "videos": videos_sum,
+            "avg_views": avg_views,
+        })
+    clients_rows = sorted(clients_rows, key=lambda x: x["views"], reverse=True)[:50]
+
     return render(
         request,
         "cabinet/admin_dashboard.html",
         {
-            "agencies": agencies,
-            "clients": clients,
-            "top_hashtags": latest_unique,
+            "agencies": [{"id": a.id, "name": a.name} for a in agencies],
+            "clients": [{"id": c.id, "name": c.name} for c in clients],
+            "top_hashtags": [
+                {
+                    "hashtag": h.hashtag,
+                    "total_views": h.total_views or 0,
+                    "analyzed_medias": h.analyzed_medias or 0,
+                    "average_views": h.average_views or 0.0,
+                    "total_likes": getattr(h, 'total_likes', 0) or 0,
+                    "total_comments": getattr(h, 'total_comments', 0) or 0,
+                    "engagement_rate": getattr(h, 'engagement_rate', 0.0) or 0.0,
+                    "created_at": h.created_at.isoformat() if h.created_at else "",
+                }
+                for h in latest_unique
+            ],
             "daily_stats": daily_stats,
+            "agencies_rows": agencies_rows,
+            "clients_rows": clients_rows,
         },
     )
 
@@ -1188,3 +1266,152 @@ def calculations_list_api(request):
     }
     
     return JsonResponse(data)
+
+
+@login_required
+def admin_analytics_api(request):
+    """API endpoint for filtered admin analytics"""
+    if not request.user.is_superuser:
+        return JsonResponse({"success": False, "error": "Forbidden"}, status=403)
+    
+    agency_id = request.GET.get('agency_id')
+    client_id = request.GET.get('client_id')
+    days = int(request.GET.get('days', 7))
+    
+    # Time range
+    end = timezone.now()
+    start = end - timezone.timedelta(days=days)
+    
+    # Build filter conditions
+    hashtag_filter = {}
+    if agency_id:
+        agency = Agency.objects.filter(id=agency_id).first()
+        if agency:
+            agency_clients = list(agency.clients.all())
+            agency_hashtags = ClientHashtag.objects.filter(client__in=agency_clients).values_list("hashtag", flat=True)
+            hashtag_filter["hashtag__in"] = list(agency_hashtags)
+    elif client_id:
+        client = Client.objects.filter(id=client_id).first()
+        if client:
+            client_hashtags = ClientHashtag.objects.filter(client=client).values_list("hashtag", flat=True)
+            hashtag_filter["hashtag__in"] = list(client_hashtags)
+    
+    # Daily stats
+    qs = (
+        HashtagAnalytics.objects.filter(created_at__gte=start, created_at__lte=end, **hashtag_filter)
+        .annotate(day=TruncDate("created_at"))
+        .values("day")
+        .annotate(
+            total_views=Sum("total_views"),
+            total_videos=Sum("analyzed_medias"),
+            total_likes=Sum("total_likes"),
+            total_comments=Sum("total_comments"),
+        )
+        .order_by("day")
+    )
+    daily_stats = [
+        {
+            "date": row["day"].strftime("%Y-%m-%d") if row["day"] else "",
+            "day_name": row["day"].strftime("%b %d") if row["day"] else "",
+            "total_views": int(row.get("total_views") or 0),
+            "total_videos": int(row.get("total_videos") or 0),
+            "total_likes": int(row.get("total_likes") or 0),
+            "total_comments": int(row.get("total_comments") or 0),
+        }
+        for row in qs
+    ]
+    
+    # Agencies analytics
+    agencies_rows = []
+    if not client_id:  # Only show agencies if not filtering by specific client
+        agencies = Agency.objects.all()
+        for a in agencies:
+            a_clients = list(a.clients.all())
+            a_hashtags = ClientHashtag.objects.filter(client__in=a_clients).values_list("hashtag", flat=True)
+            if not a_hashtags:
+                continue
+            agg = (
+                HashtagAnalytics.objects.filter(hashtag__in=list(a_hashtags), created_at__gte=start, created_at__lte=end)
+                .aggregate(
+                    views=Sum("total_views"),
+                    videos=Sum("analyzed_medias"),
+                )
+            )
+            views_sum = int(agg.get("views") or 0)
+            videos_sum = int(agg.get("videos") or 0)
+            if views_sum == 0 and videos_sum == 0:
+                continue
+            avg_views = (views_sum / videos_sum) if videos_sum > 0 else 0.0
+            agencies_rows.append({
+                "agency": {"id": a.id, "name": a.name},
+                "views": views_sum,
+                "videos": videos_sum,
+                "avg_views": avg_views,
+            })
+        agencies_rows = sorted(agencies_rows, key=lambda x: x["views"], reverse=True)
+    
+    # Clients analytics
+    clients_rows = []
+    clients = Client.objects.all()
+    if agency_id:
+        clients = clients.filter(agency_id=agency_id)
+    elif client_id:
+        clients = clients.filter(id=client_id)
+    
+    for c in clients:
+        c_hashtags = ClientHashtag.objects.filter(client=c).values_list("hashtag", flat=True)
+        if not c_hashtags:
+            continue
+        agg = (
+            HashtagAnalytics.objects.filter(hashtag__in=list(c_hashtags), created_at__gte=start, created_at__lte=end)
+            .aggregate(
+                views=Sum("total_views"),
+                videos=Sum("analyzed_medias"),
+            )
+        )
+        views_sum = int(agg.get("views") or 0)
+        videos_sum = int(agg.get("videos") or 0)
+        if views_sum == 0 and videos_sum == 0:
+            continue
+        avg_views = (views_sum / videos_sum) if videos_sum > 0 else 0.0
+        clients_rows.append({
+            "client": {"id": c.id, "name": c.name},
+            "agency": {"id": c.agency.id, "name": c.agency.name} if c.agency else None,
+            "views": views_sum,
+            "videos": videos_sum,
+            "avg_views": avg_views,
+        })
+    clients_rows = sorted(clients_rows, key=lambda x: x["views"], reverse=True)
+    
+    # Top hashtags
+    hashtags_breakdown = []
+    if not hashtag_filter:  # Only show all hashtags if not filtering
+        hashtag_qs = (
+            HashtagAnalytics.objects.filter(created_at__gte=start, created_at__lte=end)
+            .values("hashtag")
+            .annotate(
+                views=Sum("total_views"),
+                videos=Sum("analyzed_medias"),
+                likes=Sum("total_likes"),
+                comments=Sum("total_comments"),
+            )
+            .order_by("-views")[:20]
+        )
+        hashtags_breakdown = [
+            {
+                "hashtag": row["hashtag"],
+                "total_views": int(row.get("views") or 0),
+                "analyzed_medias": int(row.get("videos") or 0),
+                "total_likes": int(row.get("likes") or 0),
+                "total_comments": int(row.get("comments") or 0),
+            }
+            for row in hashtag_qs
+        ]
+    
+    return JsonResponse({
+        "success": True,
+        "dailyStats": daily_stats,
+        "agenciesRows": agencies_rows,
+        "clientsRows": clients_rows,
+        "hashtagsBreakdown": hashtags_breakdown,
+    })

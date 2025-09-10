@@ -259,7 +259,7 @@
         
         @media (max-width: 768px) {
             .main-container {
-                margin: 1rem;
+                margin: 0.5rem;
                 border-radius: 15px;
             }
             
@@ -290,16 +290,80 @@
             .form-section {
                 padding: 1rem;
             }
+            
+            .form-card {
+                padding: 1.5rem !important;
+                margin-bottom: 1.5rem !important;
+            }
+            
+            .tariffs-section {
+                padding: 1rem !important;
+                margin: 1rem !important;
+            }
+            
+            .tariff-card {
+                margin-bottom: 1rem;
+            }
+            
+            .result-section {
+                padding: 1.5rem !important;
+                margin: 1rem !important;
+            }
+            
+            .country-select {
+                max-height: 300px;
+                font-size: 0.9rem;
+            }
+            
+            .btn {
+                width: 100%;
+                margin-bottom: 0.5rem;
+            }
+            
+            .d-flex.justify-content-between {
+                flex-direction: column !important;
+            }
+            
+            .accordion-body {
+                padding: 1rem;
+            }
         }
         
         @media (max-width: 480px) {
+            .main-container {
+                margin: 0.25rem;
+            }
+            
             .header-section h1 {
-                font-size: 1.5rem;
+                font-size: 1.4rem;
             }
             
             .header-controls {
                 flex-direction: column;
                 gap: 0.5rem;
+            }
+            
+            .form-card {
+                padding: 1rem !important;
+            }
+            
+            .tariffs-section {
+                padding: 0.5rem !important;
+                margin: 0.5rem !important;
+            }
+            
+            .result-section {
+                padding: 1rem !important;
+                margin: 0.5rem !important;
+            }
+            
+            .form-control, .form-select {
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+            
+            .final-cost {
+                font-size: 1.5rem;
+                padding: 1.5rem;
             }
         }
 </style>

@@ -29,6 +29,7 @@ urlpatterns = [
     path('download/calculation/<int:calculation_id>/excel/', views.download_calculation_excel, name='cabinet_download_calculation_excel'),
     path('api/calculation/<int:calculation_id>/', views.calculation_details_api, name='cabinet_calculation_details_api'),
     path('api/calculations/', views.calculations_list_api, name='cabinet_calculations_list_api'),
+    path('api/admin-analytics/', views.admin_analytics_api, name='cabinet_admin_analytics_api'),
 ]
 
 
