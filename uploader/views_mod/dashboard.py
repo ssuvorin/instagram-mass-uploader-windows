@@ -1,12 +1,14 @@
 """Views module: dashboard (split from monolith)."""
 from .common import *
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
 def dashboard(request):
+    # Redirect agents/clients to cabinet
+    if not request.user.is_superuser:
+        return redirect('cabinet_dashboard')
     """Dashboard with recent tasks and accounts"""
     tasks = UploadTask.objects.order_by('-created_at')[:10]
     accounts = InstagramAccount.objects.order_by('-last_used')[:10]

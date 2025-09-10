@@ -18,6 +18,32 @@
 <div class="card">
   <div class="card-header"><h5 class="mb-0">Clients overview</h5></div>
   <div class="card-body p-0">
+    <div class="row g-3 px-3 pt-3">
+      <div class="col-md-4">
+        <div class="card action-card">
+          <div class="card-body text-center">
+            <div class="text-muted small">Total videos</div>
+            <div class="h3 mb-0">{{ kpi_total_videos|default:0 }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card action-card">
+          <div class="card-body text-center">
+            <div class="text-muted small">Total views</div>
+            <div class="h3 mb-0">{{ kpi_total_views|default:0 }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card action-card">
+          <div class="card-body text-center">
+            <div class="text-muted small">AVG per video</div>
+            <div class="h3 mb-0">{{ kpi_avg_per_video|floatformat:0 }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="table-responsive">
       <table class="table table-sm align-middle mb-0">
         <thead><tr>
@@ -153,13 +179,142 @@
 </div>
 
 <div class="row mt-4">
+  <div class="col-xl-6 col-lg-12">
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Views — last 7 days</h5>
+      </div>
+      <div class="card-body">
+        <canvas id="chartViews" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-6 col-lg-12">
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Videos — last 7 days</h5>
+      </div>
+      <div class="card-body">
+        <canvas id="chartVideos" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-6 col-lg-12">
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Likes — last 7 days</h5>
+      </div>
+      <div class="card-body">
+        <canvas id="chartLikes" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-6 col-lg-12">
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Comments — last 7 days</h5>
+      </div>
+      <div class="card-body">
+        <canvas id="chartComments" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-xl-6 col-lg-12">
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Top Hashtags (by Views)</h5>
+      </div>
+      <div class="card-body">
+        <canvas id="chartHashtags" height="220"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-6 col-lg-12">
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Top Clients (by Views)</h5>
+        <a href="{% url 'account_list' %}" class="btn btn-sm btn-outline-secondary">All Accounts</a>
+      </div>
+      <div class="card-body">
+        <canvas id="chartClients" height="220"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
   <div class="col-12">
     <div class="card">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Views & Videos — last 7 days</h5>
+        <h5 class="mb-0">Hashtag Analytics</h5>
       </div>
-      <div class="card-body">
-        <canvas id="agencyDailyChart" height="200"></canvas>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Hashtag</th>
+                <th class="text-end">Total Videos</th>
+                <th class="text-end">Views</th>
+                <th class="text-end">Average Views</th>
+                <th class="text-end">ER</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for h in hashtags_breakdown %}
+              <tr>
+                <td>#{{ h.hashtag }}</td>
+                <td class="text-end">{{ h.videos }}</td>
+                <td class="text-end">{{ h.views }}</td>
+                <td class="text-end">{{ h.avg_views|floatformat:0 }}</td>
+                <td class="text-end">{{ h.er|floatformat:4 }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="5" class="text-center text-muted">No data</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Account Analytics</h5>
+        <a href="{% url 'account_list' %}" class="btn btn-sm btn-outline-secondary">Open Accounts Table</a>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Account</th>
+                <th class="text-end">Total Videos</th>
+                <th class="text-end">Views</th>
+                <th class="text-end">Average Views</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for a in accounts_analytics %}
+              <tr>
+                <td>@{{ a.username }}</td>
+                <td class="text-end">{{ a.videos }}</td>
+                <td class="text-end">{{ a.views }}</td>
+                <td class="text-end">{{ a.avg_views|floatformat:0 }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="4" class="text-center text-muted">No data</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -168,32 +323,109 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 {{ daily_stats|json_script:"dailyStatsJson" }}
+{{ daily_stats_detailed|json_script:"dailyStatsDetailedJson" }}
+{{ hashtags_breakdown|json_script:"hashtagsBreakdownJson" }}
+{{ clients_breakdown|json_script:"clientsBreakdownJson" }}
 <script>
 (function(){
   const dailyStats = JSON.parse(document.getElementById('dailyStatsJson').textContent || '[]');
+  const dailyStatsDetailed = JSON.parse(document.getElementById('dailyStatsDetailedJson').textContent || '{}');
   const labels = dailyStats.map(s => s.day_name);
   const views = dailyStats.map(s => s.total_views || 0);
   const videos = dailyStats.map(s => s.total_videos || 0);
   const likes = dailyStats.map(s => s.total_likes || 0);
   const comments = dailyStats.map(s => s.total_comments || 0);
+  
+  // Custom tooltip function with hashtag breakdown
+  const createTooltip = (metricName, metricKey) => ({
+    mode: 'index',
+    intersect: false,
+    callbacks: {
+      afterBody: function(tooltipItems) {
+        const dataIndex = tooltipItems[0].dataIndex;
+        const date = dailyStats[dataIndex]?.date;
+        if (!date || !dailyStatsDetailed[date]) return '';
+        
+        const hashtags = dailyStatsDetailed[date].hashtags || [];
+        if (hashtags.length === 0) return '';
+        
+        let breakdown = '\n--- Breakdown by hashtags ---\n';
+        hashtags.forEach(h => {
+          const value = h[metricKey] || 0;
+          breakdown += `#${h.hashtag}: ${value.toLocaleString()}\n`;
+        });
+        return breakdown;
+      }
+    }
+  });
+
   try {
-    const ctx = document.getElementById('agencyDailyChart').getContext('2d');
-    new Chart(ctx, {
+    const baseOpts = {
+      responsive: true, 
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      }
+    };
+    
+    const mk = (el, label, data, color, metricKey) => new Chart(document.getElementById(el).getContext('2d'), {
+      type: 'line',
+      data: { 
+        labels, 
+        datasets: [{ 
+          label, 
+          data, 
+          borderColor: color, 
+          backgroundColor: color+'33', 
+          tension: .3, 
+          fill: true 
+        }] 
+      },
+      options: {
+        ...baseOpts,
+        plugins: {
+          tooltip: createTooltip(label, metricKey)
+        }
+      }
+    });
+    
+    mk('chartViews', 'Views', views, '#43e97b', 'views');
+    mk('chartVideos', 'Videos', videos, '#4facfe', 'videos');
+    mk('chartLikes', 'Likes', likes, '#f093fb', 'likes');
+    mk('chartComments', 'Comments', comments, '#f5576c', 'comments');
+  } catch(e) {
+    console.error('Chart creation error:', e);
+  }
+})();
+
+// Breakdown charts
+(function(){
+  const hb = JSON.parse(document.getElementById('hashtagsBreakdownJson').textContent || '[]');
+  const cb = JSON.parse(document.getElementById('clientsBreakdownJson').textContent || '[]');
+  try {
+    new Chart(document.getElementById('chartHashtags').getContext('2d'), {
       type: 'bar',
       data: {
-        labels,
+        labels: hb.map(x => '#'+x.hashtag),
         datasets: [
-          {label: 'Views', data: views, backgroundColor: '#43e97b', yAxisID: 'y'},
-          {label: 'Videos', data: videos, backgroundColor: '#4facfe', yAxisID: 'y1'},
-          {label: 'Likes', data: likes, backgroundColor: 'rgba(67,233,123,0.6)', yAxisID: 'y2'},
-          {label: 'Comments', data: comments, backgroundColor: 'rgba(240,147,251,0.6)', yAxisID: 'y2'}
+          {label: 'Views', data: hb.map(x => x.views), backgroundColor: '#4facfe'}
         ]
       },
-      options: {responsive: true, maintainAspectRatio: false}
+      options: {indexAxis: 'y', responsive: true, maintainAspectRatio: false}
+    });
+    new Chart(document.getElementById('chartClients').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: cb.map(x => x.client),
+        datasets: [
+          {label: 'Views', data: cb.map(x => x.views), backgroundColor: '#43e97b'}
+        ]
+      },
+      options: {indexAxis: 'y', responsive: true, maintainAspectRatio: false}
     });
   } catch(e) {}
 })();
-
 // Calculation details modal and functions
 function viewCalculationDetails(calcId) {
   fetch(`/cabinet/api/calculation/${calcId}/`)

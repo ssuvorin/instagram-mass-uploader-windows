@@ -271,6 +271,14 @@ def admin_dashboard(request):
             seen.add(row.hashtag)
         if len(latest_unique) >= 20:
             break
+    # Defaults for KPIs/analytics to avoid NameError on edge branches
+    kpi_total_views = 0
+    kpi_total_videos = 0
+    kpi_avg_per_video = 0.0
+    hashtags_breakdown = []
+    clients_breakdown = []
+    accounts_analytics = []
+
     # Daily stats for last 7 days (views and videos)
     end = timezone.now()
     start = end - timezone.timedelta(days=7)
@@ -298,6 +306,11 @@ def admin_dashboard(request):
         for row in qs
     ]
 
+    # KPI: totals and avg per video (last 7 days)
+    kpi_total_views = sum(d["total_views"] for d in daily_stats)
+    kpi_total_videos = sum(d["total_videos"] for d in daily_stats)
+    kpi_avg_per_video = (kpi_total_views / kpi_total_videos) if kpi_total_videos > 0 else 0.0
+
     return render(
         request,
         "cabinet/admin_dashboard.html",
@@ -312,6 +325,14 @@ def admin_dashboard(request):
 
 @login_required
 def agency_dashboard(request):
+    # Defaults for KPIs/analytics to avoid NameError on edge branches
+    kpi_total_views = 0
+    kpi_total_videos = 0
+    kpi_avg_per_video = 0.0
+    hashtags_breakdown = []
+    clients_breakdown = []
+    accounts_analytics = []
+
     agency = Agency.objects.filter(owner=request.user).first()
     client_scope = False
     client_for_scope = None
@@ -364,6 +385,7 @@ def agency_dashboard(request):
         agency_hashtags = ClientHashtag.objects.filter(client=client_for_scope).values_list("hashtag", flat=True)
     else:
         agency_hashtags = ClientHashtag.objects.filter(client__agency=agency).values_list("hashtag", flat=True)
+    # Daily stats aggregated by day
     qs = (
         HashtagAnalytics.objects.filter(hashtag__in=agency_hashtags, created_at__gte=start, created_at__lte=end)
         .annotate(day=TruncDate("created_at"))
@@ -388,6 +410,109 @@ def agency_dashboard(request):
         for row in qs
     ]
 
+    # Daily stats with hashtag breakdown for tooltips
+    qs_detailed = (
+        HashtagAnalytics.objects.filter(hashtag__in=agency_hashtags, created_at__gte=start, created_at__lte=end)
+        .annotate(day=TruncDate("created_at"))
+        .values("day", "hashtag")
+        .annotate(
+            views=Sum("total_views"),
+            videos=Sum("analyzed_medias"),
+            likes=Sum("total_likes"),
+            comments=Sum("total_comments"),
+        )
+        .order_by("day", "hashtag")
+    )
+    
+    # Group by day with hashtag details for tooltips
+    daily_stats_detailed = {}
+    for row in qs_detailed:
+        day_str = row["day"].strftime("%Y-%m-%d") if row["day"] else ""
+        if day_str not in daily_stats_detailed:
+            daily_stats_detailed[day_str] = {
+                "date": day_str,
+                "day_name": row["day"].strftime("%b %d") if row["day"] else "",
+                "hashtags": []
+            }
+        daily_stats_detailed[day_str]["hashtags"].append({
+            "hashtag": row["hashtag"],
+            "views": int(row.get("views") or 0),
+            "videos": int(row.get("videos") or 0),
+            "likes": int(row.get("likes") or 0),
+            "comments": int(row.get("comments") or 0),
+        })
+
+    # KPIs
+    kpi_total_views = sum(d.get("total_views", 0) for d in daily_stats)
+    kpi_total_videos = sum(d.get("total_videos", 0) for d in daily_stats)
+    kpi_avg_per_video = (kpi_total_views / kpi_total_videos) if kpi_total_videos > 0 else 0.0
+
+    # Hashtag breakdown for last 7 days (top 10 by views)
+    hb_qs = (
+        HashtagAnalytics.objects.filter(hashtag__in=agency_hashtags, created_at__gte=start, created_at__lte=end)
+        .values("hashtag")
+        .annotate(
+            views=Sum("total_views"),
+            videos=Sum("analyzed_medias"),
+            likes=Sum("total_likes"),
+            comments=Sum("total_comments"),
+        )
+        .order_by("-views")[:10]
+    )
+    hashtags_breakdown = [
+        {
+            "hashtag": row["hashtag"],
+            "views": int(row.get("views") or 0),
+            "videos": int(row.get("videos") or 0),
+            "likes": int(row.get("likes") or 0),
+            "comments": int(row.get("comments") or 0),
+            "avg_views": (int(row.get("views") or 0) / int(row.get("videos") or 0)) if int(row.get("videos") or 0) > 0 else 0.0,
+            "er": ((int(row.get("likes") or 0) + int(row.get("comments") or 0)) / max(int(row.get("views") or 0), 1)),
+        }
+        for row in hb_qs
+    ]
+
+    # Client breakdown by latest snapshot totals (sum of last snapshot per client's hashtags)
+    clients_breakdown = []
+    for c in clients_list:
+        c_hashtags = ClientHashtag.objects.filter(client=c).values_list("hashtag", flat=True)
+        latest_views = 0
+        latest_videos = 0
+        for h in c_hashtags:
+            last = HashtagAnalytics.objects.filter(hashtag=h).order_by("-created_at").first()
+            if last:
+                latest_views += int(last.total_views or 0)
+                latest_videos += int(getattr(last, "analyzed_medias", 0) or 0)
+        clients_breakdown.append({
+            "client": c.name,
+            "views": latest_views,
+            "videos": latest_videos,
+        })
+    # Account analytics (last 7 days) for accounts under agency's clients
+    accounts_qs = (
+        AccountAnalytics.objects.filter(
+            account__client__in=clients_list, created_at__gte=start, created_at__lte=end
+        )
+        .values("account__id", "account__username")
+        .annotate(
+            views=Sum("total_views"),
+            videos=Sum("total_videos"),
+        )
+        .order_by("-views")[:15]
+    )
+    accounts_analytics = [
+        {
+            "account_id": row["account__id"],
+            "username": row["account__username"] or f"#{row['account__id']}",
+            "views": int(row.get("views") or 0),
+            "videos": int(row.get("videos") or 0),
+            "avg_views": (int(row.get("views") or 0) / int(row.get("videos") or 0)) if int(row.get("videos") or 0) > 0 else 0.0,
+        }
+        for row in accounts_qs
+    ]
+    # Sort and keep top 10 by views
+    clients_breakdown = sorted(clients_breakdown, key=lambda x: x["views"], reverse=True)[:10]
+
     # Get recent calculations for this agency
     recent_calculations = CalculationHistory.objects.filter(
         agency=agency
@@ -400,6 +525,13 @@ def agency_dashboard(request):
             "agency": agency,
             "client_rows": client_rows,
             "daily_stats": daily_stats,
+            "daily_stats_detailed": daily_stats_detailed,
+            "hashtags_breakdown": hashtags_breakdown,
+            "clients_breakdown": clients_breakdown,
+            "kpi_total_views": kpi_total_views,
+            "kpi_total_videos": kpi_total_videos,
+            "kpi_avg_per_video": kpi_avg_per_video,
+            "accounts_analytics": accounts_analytics,
             "recent_calculations": recent_calculations,
         },
     )
