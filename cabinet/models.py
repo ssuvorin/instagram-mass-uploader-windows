@@ -39,6 +39,9 @@ class CalculationHistory(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="calculations")
     agency = models.ForeignKey(Agency, on_delete=models.SET_NULL, null=True, blank=True, related_name="calculations")
     
+    # Клиент (имя по вводу после сохранения расчета)
+    client_name = models.CharField(max_length=255, blank=True, default="")
+    
     # Входные параметры
     volume_millions = models.FloatField()
     platforms = models.JSONField(default=list)  # ["instagram", "tiktok"] 

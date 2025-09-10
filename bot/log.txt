@@ -26109,3 +26109,46 @@ KeyboardInterrupt
 2025-09-05 13:28:00,295 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [404] GET https://www.instagram.com/explore/tags/caspin12/?__a=1&__d=dis
 2025-09-05 13:28:01,297 - instagrapi - INFO - https://i.instagram.com/api/v1/tags/caspin12/info/
 2025-09-05 13:28:02,763 - private_request - INFO - None [403] GET https://i.instagram.com/api/v1/tags/caspin12/info/ (None, None SM-G973F)
+2025-09-10 14:21:39,775 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-10 14:21:39,777 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-10 14:21:39,777 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-10 14:21:47,366 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-10 14:21:47,366 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-10 14:21:47,366 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-10 14:21:53,971 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-10 14:21:53,971 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-10 14:21:53,971 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-10 14:21:57,555 - instagrapi - INFO - https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/
+2025-09-10 14:22:04,691 - private_request - INFO - None [200] GET https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-10 14:22:18,155 - public_request - DEBUG - public_request 201: https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-10 14:22:18,168 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [201] GET https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-10 14:22:18,170 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/mellstroy/?__a=1&__d=dis) >>> 
+2025-09-10 14:22:24,264 - public_request - DEBUG - public_request 201: https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-10 14:22:24,264 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [201] GET https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-10 14:22:24,266 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/mellstroy/?__a=1&__d=dis) >>> 
+2025-09-10 14:22:31,914 - public_request - DEBUG - public_request 201: https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-10 14:22:31,915 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [201] GET https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-10 14:22:31,915 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/mellstroy/?__a=1&__d=dis) >>> 
+2025-09-10 14:22:35,657 - instagrapi - INFO - https://i.instagram.com/api/v1/users/mellstroy/usernameinfo/
+2025-09-10 14:22:39,976 - private_request - INFO - None [200] GET https://i.instagram.com/api/v1/users/mellstroy/usernameinfo/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-10 14:22:46,070 - private_request - INFO - None [200] GET https://i.instagram.com/rupload_igvideo/1757514164798_0_6660924260 (269.0.0.18.75, samsung SM-G973F)
+2025-09-10 14:22:49,590 - private_request - INFO - None [200] POST https://i.instagram.com/rupload_igvideo/1757514164798_0_6660924260 (269.0.0.18.75, samsung SM-G973F)
+2025-09-10 14:23:01,085 - private_request - INFO - None [200] POST https://i.instagram.com/rupload_igphoto/1757514164798_0_7792454361 (269.0.0.18.75, samsung SM-G973F)
+2025-09-10 14:23:04,088 - instagrapi - INFO - https://i.instagram.com/api/v1/location_search/
+2025-09-10 14:23:04,909 - private_request - INFO - None [200] GET https://i.instagram.com/api/v1/location_search/?latitude=55.7558&longitude=37.6173 (269.0.0.18.75, samsung SM-G973F)
+2025-09-10 14:23:08,639 - instagrapi - INFO - https://i.instagram.com/api/v1/media/configure_to_clips/?video=1
+2025-09-10 14:23:14,201 - private_request - INFO - None [200] POST https://i.instagram.com/api/v1/media/configure_to_clips/?video=1 (269.0.0.18.75, samsung SM-G973F)
+2025-09-10 14:23:16,249 - instagrapi - INFO - https://i.instagram.com/api/v1/qe/expose/
+2025-09-10 14:23:16,961 - private_request - INFO - None [200] POST https://i.instagram.com/api/v1/qe/expose/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-10 14:31:18,997 - public_request - DEBUG - public_request 404: https://www.instagram.com/explore/tags/caspin11/?__a=1&__d=dis
+2025-09-10 14:31:18,998 - public_request - INFO - [http://UyBSdD63:rcx9ij7R@193.5.28.171:63686] [404] GET https://www.instagram.com/explore/tags/caspin11/?__a=1&__d=dis
+2025-09-10 14:31:20,003 - instagrapi - INFO - https://i.instagram.com/api/v1/tags/caspin11/info/
+2025-09-10 14:31:21,059 - private_request - INFO - None [200] GET https://i.instagram.com/api/v1/tags/caspin11/info/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-10 14:31:22,065 - instagrapi - INFO - https://i.instagram.com/api/v1/tags/caspin11/sections/
+2025-09-10 14:31:25,717 - private_request - INFO - None [200] POST https://i.instagram.com/api/v1/tags/caspin11/sections/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-10 14:31:28,807 - instagrapi - INFO - https://i.instagram.com/api/v1/tags/caspin11/sections/
+2025-09-10 14:31:32,045 - private_request - INFO - None [200] POST https://i.instagram.com/api/v1/tags/caspin11/sections/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-10 14:31:34,130 - instagrapi - INFO - https://i.instagram.com/api/v1/tags/caspin11/sections/
+2025-09-10 14:31:36,907 - private_request - INFO - None [200] POST https://i.instagram.com/api/v1/tags/caspin11/sections/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-10 14:31:39,732 - instagrapi - INFO - https://i.instagram.com/api/v1/tags/caspin11/sections/
+2025-09-10 14:31:40,669 - private_request - INFO - None [403] POST https://i.instagram.com/api/v1/tags/caspin11/sections/ (269.0.0.18.75, samsung SM-G973F)

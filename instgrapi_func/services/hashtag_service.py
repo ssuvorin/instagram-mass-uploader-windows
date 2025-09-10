@@ -3,6 +3,7 @@ import logging
 import random
 import time
 from typing import Callable, Dict, List, Optional, Tuple
+import os
 
 from instagrapi import Client  # type: ignore
 from instagrapi.exceptions import ChallengeRequired, PleaseWaitFewMinutes, LoginRequired  # type: ignore
@@ -57,10 +58,39 @@ class HashtagAnalysisResult:
 class HashtagAnalysisService:
     def __init__(self, provider: Optional[TwoFactorProvider] = None) -> None:
         self.auth = IGAuthService(provider=provider)
+        # Delay configuration via environment variables (falls back to sane defaults)
+        try:
+            self.delay_min_s = float(os.getenv("IG_DELAY_MIN_S", "0.8"))
+        except Exception:
+            self.delay_min_s = 0.8
+        try:
+            self.delay_max_s = float(os.getenv("IG_DELAY_MAX_S", "2.2"))
+        except Exception:
+            self.delay_max_s = 2.2
+        # Occasional long think pause configuration
+        try:
+            self.delay_long_every_n = int(os.getenv("IG_DELAY_LONG_EVERY_N", "4"))  # every ~N pages
+        except Exception:
+            self.delay_long_every_n = 4
+        try:
+            self.delay_long_min_s = float(os.getenv("IG_DELAY_LONG_MIN_S", "6.0"))
+        except Exception:
+            self.delay_long_min_s = 6.0
+        try:
+            self.delay_long_max_s = float(os.getenv("IG_DELAY_LONG_MAX_S", "14.0"))
+        except Exception:
+            self.delay_long_max_s = 14.0
 
-    def _human_delay(self, min_s: float = 0.8, max_s: float = 1.8) -> None:
+    def _human_delay(self, min_s: Optional[float] = None, max_s: Optional[float] = None) -> None:
         # Randomized delay to mimic human behavior
-        time.sleep(random.uniform(min_s, max_s))
+        lo = self.delay_min_s if min_s is None else min_s
+        hi = self.delay_max_s if max_s is None else max_s
+        if hi < lo:
+            hi = lo + 0.2
+        time.sleep(random.uniform(lo, hi))
+
+    def _human_long_think(self) -> None:
+        time.sleep(random.uniform(self.delay_long_min_s, self.delay_long_max_s))
 
     def _sum_media_views(self, cl: Client, medias: List) -> Tuple[int, int, int, int]:
         total_views = 0
@@ -176,6 +206,8 @@ class HashtagAnalysisService:
             raise LoginRequired("Login failed or 2FA/Challenge unresolved")
         if on_log:
             on_log(f"hashtag: authenticated as {account_username}")
+        # Small post-login pause like a human reading the screen
+        self._human_delay()
 
         # Save refreshed session to store and DB after auth
         try:
@@ -213,10 +245,12 @@ class HashtagAnalysisService:
         pages_loaded: int = 0
         max_id: Optional[str] = None
 
-        for _ in range(max_pages):
+        for loop_index in range(max_pages):
             try:
                 if on_log:
                     on_log(f"page {pages_loaded+1}: request recent chunk (max_id={'set' if max_id else 'none'})")
+                # Short pre-request delay to avoid tight loops
+                self._human_delay()
                 medias, max_id = cl.hashtag_medias_v1_chunk(
                     hashtag,
                     max_amount=page_size,
@@ -256,7 +290,10 @@ class HashtagAnalysisService:
                 )
 
             # Human-like delay between pages
-            self._human_delay(0.9, 2.2)
+            self._human_delay()
+            # Occasionally add a longer "think" pause
+            if self.delay_long_every_n > 0 and ((loop_index + 1) % self.delay_long_every_n == 0):
+                self._human_long_think()
 
             if not max_id:
                 if on_log:

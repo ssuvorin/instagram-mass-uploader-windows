@@ -897,9 +897,13 @@ def agency_calc_quote(request):
             usd_to_rub = 92.5
             final_cost_usd = totals.get("rub_total", 0) / usd_to_rub
             
+            # Подхватываем имя клиента, если пришло в payload (после модального окна)
+            client_name = (data.get("client_name") or "").strip()
+
             calculation = CalculationHistory.objects.create(
                 user=request.user,
                 agency=user_agency,
+                client_name=client_name,
                 volume_millions=inputs.get("volume_millions", 0),
                 platforms=inputs.get("platforms", []),
                 countries=inputs.get("countries", []),
@@ -963,6 +967,7 @@ def export_calculations_csv(request):
         'Дата создания',
         'Пользователь',
         'Агентство',
+        'Имя клиента',
         'Объем (млн)',
         'Платформы',
         'Страны',
@@ -995,6 +1000,7 @@ def export_calculations_csv(request):
             calc.created_at.strftime('%Y-%m-%d %H:%M:%S'),
             calc.user.username if calc.user else '-',
             calc.agency.name if calc.agency else '-',
+            calc.client_name or '-',
             calc.volume_millions,
             platforms_str,
             countries_str,
@@ -1113,6 +1119,7 @@ def calculation_details_api(request, calculation_id):
         "success": True,
         "calculation": {
             "id": calculation.id,
+            "client_name": calculation.client_name,
             "volume_millions": calculation.volume_millions,
             "platforms": calculation.platforms,
             "countries": calculation.countries,
@@ -1166,6 +1173,7 @@ def calculations_list_api(request):
         "calculations": [
             {
                 "id": calc.id,
+                "client_name": calc.client_name,
                 "volume_millions": calc.volume_millions,
                 "platforms": calc.platforms,
                 "countries": calc.countries,

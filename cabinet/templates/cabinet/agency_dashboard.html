@@ -96,6 +96,7 @@
             <thead>
               <tr>
                 <th>Date</th>
+                <th>Client</th>
                 <th>Volume (M)</th>
                 <th>Platforms</th>
                 <th>Countries</th>
@@ -105,11 +106,14 @@
                 <th>Actions</th>
               </tr>
             </thead>
-            <tbody id="calculationsTableBody">
+            <tbody id="calculationsTableBody" data-initial-count="{{ recent_calculations|length }}">
               {% for calc in recent_calculations %}
               <tr>
                 <td>
                   <small>{{ calc.created_at|date:"d.m.Y H:i" }}</small>
+                </td>
+                <td>
+                  {{ calc.client_name|default:"—" }}
                 </td>
                 <td>
                   <strong>{{ calc.volume_millions|floatformat:1 }}M</strong>
@@ -148,8 +152,8 @@
                        title="Download Excel">
                       <i class="bi bi-file-earmark-excel"></i>
                     </a>
-                    <button class="btn btn-sm btn-outline-info" 
-                            onclick="viewCalculationDetails({{ calc.id }})"
+                    <button class="btn btn-sm btn-outline-info btn-view-calc" 
+                            data-calc-id="{{ calc.id }}"
                             title="View Details">
                       <i class="bi bi-eye"></i>
                     </button>
@@ -513,7 +517,8 @@ function showCalculationModal(calc) {
   modal.show();
 }
 
-let calculationsOffset = {{ recent_calculations|length }};
+const calcTableBodyEl = document.getElementById('calculationsTableBody');
+let calculationsOffset = parseInt((calcTableBodyEl && calcTableBodyEl.dataset.initialCount) ? calcTableBodyEl.dataset.initialCount : '0', 10);
 
 function loadMoreCalculations() {
   fetch(`/cabinet/api/calculations/?offset=${calculationsOffset}`)
@@ -529,10 +534,12 @@ function loadMoreCalculations() {
         
         // Hide load more button if no more data
         if (data.calculations.length < 10) {
-          document.querySelector('.card-footer').style.display = 'none';
+          const footer = document.querySelector('.card-footer');
+          if (footer) footer.style.display = 'none';
         }
       } else {
-        document.querySelector('.card-footer').style.display = 'none';
+        const footer = document.querySelector('.card-footer');
+        if (footer) footer.style.display = 'none';
       }
     })
     .catch(error => {
@@ -556,6 +563,7 @@ function createCalculationRow(calc) {
   return `
     <tr>
       <td><small>${new Date(calc.created_at).toLocaleDateString('ru-RU')} ${new Date(calc.created_at).toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}</small></td>
+      <td>${calc.client_name || '—'}</td>
       <td><strong>${calc.volume_millions.toFixed(1)}M</strong></td>
       <td>${platformsBadge}</td>
       <td>${countryBadges || '—'}</td>
