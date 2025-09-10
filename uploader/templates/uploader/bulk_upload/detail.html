@@ -1012,7 +1012,7 @@
         <a href="{% url 'start_bulk_upload' task_id=task.id %}?async=true" class="btn btn-success btn-enhanced" id="startAsyncUploadBtn" title="Start with parallel account processing">
             <i class="bi bi-lightning-charge"></i> Start ASYNC Upload
         </a>
-        <a href="{% url 'start_bulk_upload_api' task_id=task.id %}" class="btn btn-success btn-enhanced" style="background: linear-gradient(135deg, #2563eb, #0ea5e9);" title="Start via API (instagrapi)">
+        <a href="{% url 'start_bulk_upload_api' task_id=task.id %}" class="btn btn-success btn-enhanced" id="startApiUploadBtn" style="background: linear-gradient(135deg, #2563eb, #0ea5e9);" title="Start via API (instagrapi)">
             <i class="bi bi-cloud-upload"></i> Start ASYNC via API
         </a>
         <a href="{% url 'add_bulk_videos' task_id=task.id %}" class="btn btn-outline-primary btn-enhanced">
@@ -1030,6 +1030,28 @@
         <button type="button" class="btn btn-outline-danger btn-enhanced" data-bs-toggle="modal" data-bs-target="#deleteTaskModal">
             <i class="bi bi-trash3"></i> Delete Task
         </button>
+    </div>
+
+    <div class="mt-3 p-3 bg-light rounded">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-6">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="1" id="videoRoundsMode">
+                    <label class="form-check-label" for="videoRoundsMode">
+                        Run in rounds by video (shuffle accounts each round)
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="1" id="initDelayMode" checked>
+                    <label class="form-check-label" for="initDelayMode">
+                        Add extra initial random delay per account (0–5s)
+                    </label>
+                </div>
+            </div>
+        </div>
+        <small class="text-muted d-block mt-2">These options apply to API mode only.</small>
     </div>
     
     {% if task.videos.count > 0 and accounts|length > 0 %}
@@ -1523,6 +1545,23 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Periodic progress updates
     setInterval(updateTaskProgress, 3000);
+
+    // Inject toggle params into API-start link
+    const apiBtn = document.getElementById('startApiUploadBtn');
+    if (apiBtn) {
+        apiBtn.addEventListener('click', function() {
+            try {
+                const rnd = document.getElementById('videoRoundsMode');
+                const initDelay = document.getElementById('initDelayMode');
+                const url = new URL(apiBtn.href, window.location.origin);
+                if (rnd && rnd.checked) url.searchParams.set('rounds', '1');
+                if (initDelay && initDelay.checked) url.searchParams.set('init_delay', '1');
+                apiBtn.href = url.toString();
+            } catch (err) {
+                // ignore
+            }
+        }, { once: true });
+    }
 });
 </script>
 {% else %}

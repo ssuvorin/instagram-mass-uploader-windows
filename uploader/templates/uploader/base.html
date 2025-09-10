@@ -100,12 +100,15 @@
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto scrollable-navbar">
+                        {% if user.is_superuser %}
                         <li class="nav-item">
                             <a class="nav-link {% if active_tab == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
                                 <i class="bi bi-grid"></i> Dashboard
                             </a>
                         </li>
+                        {% endif %}
 
+                        {% if user.is_superuser %}
                         <!-- Content group -->
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle {% if active_tab in 'bulk_upload avatars bio' %}active{% endif %}" href="#" id="contentDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -181,8 +184,9 @@
                                 <li><a class="dropdown-item" href="{% url 'hashtag_analyzer' %}"><i class="bi bi-hash me-2"></i>Hashtag Analyzer</a></li>
                             </ul>
                         </li>
+                        {% endif %}
 
-                        <!-- Cabinet group -->
+                        <!-- Cabinet group (always visible) -->
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="cabinetDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="bi bi-speedometer2"></i> Cabinet
@@ -190,13 +194,17 @@
                             <ul class="dropdown-menu" aria-labelledby="cabinetDropdown">
                                 <li class="dropdown-header">Dashboards</li>
                                 <li><a class="dropdown-item" href="{% url 'cabinet_dashboard' %}"><i class="bi bi-house-door me-2"></i>Overview</a></li>
+                                {% if user.is_superuser %}
                                 <li><a class="dropdown-item" href="{% url 'cabinet_admin_dashboard' %}"><i class="bi bi-person-gear me-2"></i>Admin Dashboard</a></li>
+                                {% endif %}
                                 <li><a class="dropdown-item" href="{% url 'cabinet_agency_dashboard' %}"><i class="bi bi-building me-2"></i>Agency Dashboard</a></li>
+                                {% if user.is_superuser %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li class="dropdown-header">Management</li>
                                 <li><a class="dropdown-item" href="{% url 'cabinet_manage_agencies' %}"><i class="bi bi-diagram-3 me-2"></i>Manage Agencies</a></li>
                                 <li><a class="dropdown-item" href="{% url 'cabinet_manage_clients' %}"><i class="bi bi-people me-2"></i>Manage Clients</a></li>
                                 <li><a class="dropdown-item" href="{% url 'cabinet_manage_hashtags' %}"><i class="bi bi-hash me-2"></i>Manage Hashtags</a></li>
+                                {% endif %}
                             </ul>
                         </li>
 

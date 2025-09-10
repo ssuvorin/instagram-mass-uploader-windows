@@ -25,6 +25,8 @@ class HashtagAnalysisResult:
         total_medias_reported: int,
         fetched_medias: int,
         total_views: int,
+        total_likes: int,
+        total_comments: int,
         analyzed_medias: int,
         pages_loaded: int,
     ) -> None:
@@ -32,6 +34,8 @@ class HashtagAnalysisResult:
         self.total_medias_reported = total_medias_reported
         self.fetched_medias = fetched_medias
         self.total_views = total_views
+        self.total_likes = total_likes
+        self.total_comments = total_comments
         self.analyzed_medias = analyzed_medias
         self.pages_loaded = pages_loaded
 
@@ -44,6 +48,9 @@ class HashtagAnalysisResult:
             "analyzed_medias": self.analyzed_medias,
             "pages_loaded": self.pages_loaded,
             "average_views": (self.total_views / self.analyzed_medias) if self.analyzed_medias else 0,
+            "total_likes": self.total_likes,
+            "total_comments": self.total_comments,
+            "engagement_rate": ((self.total_likes + self.total_comments) / self.total_views) if self.total_views else 0,
         }
 
 
@@ -55,8 +62,10 @@ class HashtagAnalysisService:
         # Randomized delay to mimic human behavior
         time.sleep(random.uniform(min_s, max_s))
 
-    def _sum_media_views(self, cl: Client, medias: List) -> Tuple[int, int]:
+    def _sum_media_views(self, cl: Client, medias: List) -> Tuple[int, int, int, int]:
         total_views = 0
+        total_likes = 0
+        total_comments = 0
         analyzed = 0
         for m in medias:
             try:
@@ -79,12 +88,29 @@ class HashtagAnalysisService:
                             )
                         except Exception:
                             v = None
+                # Likes/comments (best-effort)
+                likes_val = getattr(m, "like_count", None)
+                comments_val = getattr(m, "comment_count", None)
+                if not isinstance(likes_val, (int, float)) or not isinstance(comments_val, (int, float)):
+                    try:
+                        mi2 = cl.media_info(getattr(m, "id", None) or getattr(m, "pk", None))
+                        if not isinstance(likes_val, (int, float)):
+                            likes_val = getattr(mi2, "like_count", None)
+                        if not isinstance(comments_val, (int, float)):
+                            comments_val = getattr(mi2, "comment_count", None)
+                    except Exception:
+                        pass
+
                 if isinstance(v, (int, float)):
                     total_views += int(v)
                     analyzed += 1
+                if isinstance(likes_val, (int, float)):
+                    total_likes += int(likes_val)
+                if isinstance(comments_val, (int, float)):
+                    total_comments += int(comments_val)
             except Exception:
                 continue
-        return total_views, analyzed
+        return total_views, total_likes, total_comments, analyzed
 
     def _save_session_db(self, username: str, cl: Client, on_log: Optional[Callable[[str], None]]) -> None:
         try:
@@ -181,6 +207,8 @@ class HashtagAnalysisService:
         # Iterate recent medias via chunked pagination (Private API)
         fetched_total: int = 0
         total_views: int = 0
+        total_likes: int = 0
+        total_comments: int = 0
         analyzed_total: int = 0
         pages_loaded: int = 0
         max_id: Optional[str] = None
@@ -216,8 +244,10 @@ class HashtagAnalysisService:
                     on_log(f"page {pages_loaded}: no medias returned — stop")
                 break
 
-            views, analyzed = self._sum_media_views(cl, medias)
+            views, likes, comments, analyzed = self._sum_media_views(cl, medias)
             total_views += views
+            total_likes += likes
+            total_comments += comments
             analyzed_total += analyzed
             fetched_total += len(medias)
             if on_log:
@@ -235,7 +265,7 @@ class HashtagAnalysisService:
 
         if on_log:
             on_log(
-                f"done: fetched={fetched_total}, analyzed={analyzed_total}, pages={pages_loaded}, total_views={total_views}"
+                f"done: fetched={fetched_total}, analyzed={analyzed_total}, pages={pages_loaded}, total_views={total_views}, total_likes={total_likes}, total_comments={total_comments}"
             )
 
         result_obj = HashtagAnalysisResult(
@@ -243,6 +273,8 @@ class HashtagAnalysisService:
             total_medias_reported=total_reported,
             fetched_medias=fetched_total,
             total_views=total_views,
+            total_likes=total_likes,
+            total_comments=total_comments,
             analyzed_medias=analyzed_total,
             pages_loaded=pages_loaded,
         )
@@ -261,6 +293,9 @@ class HashtagAnalysisService:
                 pages_loaded=result.pages_loaded,
                 total_views=result.total_views,
                 average_views=(result.total_views / result.analyzed_medias) if result.analyzed_medias else 0,
+                total_likes=result.total_likes,
+                total_comments=result.total_comments,
+                engagement_rate=((result.total_likes + result.total_comments) / result.total_views) if result.total_views else 0,
                 info_json=getattr(self, '_last_info_json', None),
             )
             if on_log:

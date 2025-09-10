@@ -623,6 +623,10 @@ class HashtagAnalytics(models.Model):
     pages_loaded = models.IntegerField(default=0)
     total_views = models.BigIntegerField(default=0)
     average_views = models.FloatField(default=0.0)
+    # New metrics for engagement tracking
+    total_likes = models.BigIntegerField(default=0)
+    total_comments = models.BigIntegerField(default=0)
+    engagement_rate = models.FloatField(default=0.0, help_text="(likes+comments)/views, 0 if views == 0")
     info_json = models.JSONField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -635,6 +639,36 @@ class HashtagAnalytics(models.Model):
 
     def __str__(self):
         return f"#{self.hashtag} at {self.created_at:%Y-%m-%d %H:%M}"
+
+    @property
+    def total_videos(self) -> int:
+        """Alias for analyzed_medias to match personal_cab wording."""
+        try:
+            return int(self.analyzed_medias or 0)
+        except Exception:
+            return 0
+
+
+# Per-account aggregated analytics snapshots
+class AccountAnalytics(models.Model):
+    account = models.ForeignKey(InstagramAccount, on_delete=models.CASCADE, related_name='analytics')
+    total_videos = models.IntegerField(default=0)
+    total_views = models.BigIntegerField(default=0)
+    total_likes = models.BigIntegerField(default=0)
+    total_comments = models.BigIntegerField(default=0)
+    average_views = models.FloatField(default=0.0)
+    engagement_rate = models.FloatField(default=0.0, help_text="(likes+comments)/views, 0 if views == 0")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['account', 'created_at']),
+        ]
+        verbose_name = 'Account analytics'
+        verbose_name_plural = 'Account analytics'
+
+    def __str__(self):
+        return f"{self.account.username} analytics @ {self.created_at:%Y-%m-%d %H:%M}"
 
 class BulkLoginAccount(models.Model):
     STATUS_CHOICES = [

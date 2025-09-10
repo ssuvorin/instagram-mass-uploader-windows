@@ -1,0 +1,74 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}Cabinet — Account {{ account.username }}{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Account: {{ account.username }}</h2>
+
+<div class="row">
+  <div class="col-md-6">
+    <div class="card mb-3">
+      <div class="card-header"><h5 class="mb-0">Latest snapshot</h5></div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead><tr>
+              <th>Total videos</th><th>Total views</th><th>Avg views</th><th>Likes</th><th>Comments</th><th>ER</th><th>Created at</th>
+            </tr></thead>
+            <tbody>
+              {% if latest %}
+              <tr>
+                <td>{{ latest.total_videos }}</td>
+                <td>{{ latest.total_views }}</td>
+                <td>{{ latest.average_views|floatformat:0 }}</td>
+                <td>{{ latest.total_likes|default:0 }}</td>
+                <td>{{ latest.total_comments|default:0 }}</td>
+                <td>{{ latest.engagement_rate|default:0|floatformat:4 }}</td>
+                <td>{{ latest.created_at }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="7" class="text-center text-muted">No data</td></tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card mb-3">
+      <div class="card-header"><h5 class="mb-0">Daily trend (30 days)</h5></div>
+      <div class="card-body">
+        <canvas id="accountDailyChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function(){
+  const labels = [{% for s in daily_stats %}'{{ s.day_name }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const views = [{% for s in daily_stats %}{{ s.total_views|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const videos = [{% for s in daily_stats %}{{ s.total_videos|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+  try {
+    const ctx = document.getElementById('accountDailyChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {label: 'Views', data: views, borderColor: '#667eea', backgroundColor: 'rgba(102,126,234,0.15)', tension: 0.35, fill: true},
+          {label: 'Videos', data: videos, borderColor: '#4facfe', backgroundColor: 'rgba(79,172,254,0.12)', tension: 0.35, fill: false}
+        ]
+      },
+      options: {responsive: true, maintainAspectRatio: false}
+    });
+  } catch(e) {}
+})();
+</script>
+{% endblock %}
+
+

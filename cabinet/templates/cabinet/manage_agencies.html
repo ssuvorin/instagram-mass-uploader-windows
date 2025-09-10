@@ -31,6 +31,13 @@
             <div class="fw-semibold">{{ a.name }}</div>
             <div class="text-muted small">Owner: {{ a.owner }}</div>
           </div>
+          <div class="btn-group">
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="createOrResetAgencyLogin({{ a.id }}, '{{ a.name|escapejs }}')">Create/Reset Login</button>
+            <form method="post" action="{% url 'cabinet_delete_agency' a.id %}" onsubmit="return confirm('Delete agency {{ a.name }}?');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+            </form>
+          </div>
         </li>
         {% empty %}
         <li class="list-group-item text-muted">No agencies</li>
@@ -39,6 +46,97 @@
     </div>
   </div>
 </div>
+<script>
+async function createOrResetAgencyLogin(agencyId, agencyName){
+  if(!confirm(`Create or reset login for agency "${agencyName}"?`)) return;
+  try {
+    const resp = await fetch(`/cabinet/api/admin/agency/${agencyId}/reset-owner/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') }
+    });
+    const data = await resp.json();
+    if (resp.ok && data.success){
+      showCredsModal(data.username, data.password);
+    } else {
+      alert(data.error || 'Error');
+    }
+  } catch(e){
+    alert('Network error');
+  }
+}
+function getCookie(name){
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+}
+
+function showCredsModal(username, password){
+  const existing = document.getElementById('credsModal');
+  if (existing) existing.remove();
+  const html = `
+  <div class="modal fade" id="credsModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Credentials</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Login</label>
+            <div class="input-group">
+              <input type="text" class="form-control" id="credsUsername" value="${username}" readonly>
+              <button class="btn btn-outline-secondary" type="button" onclick="copyText('#credsUsername')"><i class="bi bi-clipboard"></i></button>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Password</label>
+            <div class="input-group">
+              <input type="text" class="form-control" id="credsPassword" value="${password}" readonly>
+              <button class="btn btn-outline-secondary" type="button" onclick="copyText('#credsPassword')"><i class="bi bi-clipboard"></i></button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-primary" type="button" onclick="copyBothCreds()">
+            <i class="bi bi-clipboard-check"></i> Copy both
+          </button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+  const modal = new bootstrap.Modal(document.getElementById('credsModal'));
+  modal.show();
+}
+
+function copyText(selector){
+  const el = document.querySelector(selector);
+  if (!el) return;
+  el.select();
+  el.setSelectionRange(0, 99999);
+  try { document.execCommand('copy'); } catch(e) {}
+}
+
+function copyBothCreds(){
+  const u = document.getElementById('credsUsername')?.value || '';
+  const p = document.getElementById('credsPassword')?.value || '';
+  const blob = new Blob([`Login: ${u}\nPassword: ${p}`], {type: 'text/plain'});
+  const data = [new ClipboardItem({ 'text/plain': blob })];
+  if (navigator.clipboard && navigator.clipboard.write) {
+    navigator.clipboard.write(data).catch(()=>{});
+  } else {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = `Login: ${u}\nPassword: ${p}`;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+}
+</script>
 {% endblock %}
 
 

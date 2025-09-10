@@ -31,6 +31,15 @@
             <div class="fw-semibold">{{ c.name }}</div>
             <div class="text-muted small">Agency: {{ c.agency.name|default:"—" }}{% if c.user %} • User: {{ c.user }}{% endif %}</div>
           </div>
+          <div class="btn-group">
+            {% if c.user %}
+            <a href="{% url 'cabinet_reset_client_password' c.id %}" class="btn btn-sm btn-outline-secondary">Reset Password</a>
+            {% endif %}
+            <form method="post" action="{% url 'cabinet_delete_client' c.id %}" onsubmit="return confirm('Delete client {{ c.name }}?');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+            </form>
+          </div>
         </li>
         {% empty %}
         <li class="list-group-item text-muted">No clients</li>

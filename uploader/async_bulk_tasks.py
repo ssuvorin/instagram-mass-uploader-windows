@@ -942,19 +942,77 @@ class AsyncTaskCoordinator:
             # Преобразуем данные в DTO
             task_data = await self._create_task_data(task, account_tasks, all_videos, all_titles)
             
-            # Создаем задачи для всех аккаунтов
-            tasks = []
-            for account_task in account_tasks:
-                processor = AsyncAccountProcessor(account_task, task_data, logger)
-                task_coroutine = self._process_account_with_semaphore(processor, account_task)
-                tasks.append(task_coroutine)
-            
-            # Запускаем все задачи параллельно
-            await logger.log('INFO', f"Starting {len(tasks)} account tasks in parallel")
-            results = await asyncio.gather(*tasks, return_exceptions=True)
+            # Determine execution mode: default parallel-per-account or rounds-by-video (API only)
+            use_rounds = False
+            extra_init_delay = False
+            try:
+                from django.core.cache import cache as _cache
+                use_rounds = bool(_cache.get(f"bulk_rounds_{self.task_id}"))
+                extra_init_delay = bool(_cache.get(f"bulk_init_delay_{self.task_id}"))
+            except Exception:
+                pass
+
+            # Store flags on instance for downstream use
+            self.use_rounds = use_rounds
+            self.extra_init_delay = extra_init_delay
+
+            if use_rounds:
+                await logger.log('INFO', '[MODE] Using rounds-by-video scheduling (API)')
+                # In rounds mode: iterate videos; for each video, shuffle accounts and run per-account upload of only that video
+                # Build lightweight per-video task data clones
+                all_video_datas = list(task_data.videos)
+                total_rounds = len(all_video_datas)
+                for round_index, video_data in enumerate(all_video_datas, start=1):
+                    await logger.log('INFO', f"[ROUND] Starting round {round_index}/{total_rounds}: {os.path.basename(video_data.file_path)}")
+                    # Shuffle accounts each round
+                    accounts_order = list(account_tasks)
+                    random.shuffle(accounts_order)
+                    # Build tasks for this round
+                    round_tasks = []
+                    for account_task in accounts_order:
+                        # Clone task_data with only this one video
+                        single_video_task_data = TaskData(
+                            id=task_data.id,
+                            name=task_data.name,
+                            status=task_data.status,
+                            accounts=task_data.accounts,
+                            videos=[video_data],
+                            titles=task_data.titles,
+                        )
+                        processor = AsyncAccountProcessor(account_task, single_video_task_data, logger)
+                        coro = self._process_account_with_semaphore(processor, account_task)
+                        round_tasks.append(coro)
+                    # Run this round with concurrency control
+                    await logger.log('INFO', f"[ROUND] Dispatching {len(round_tasks)} accounts for round {round_index}")
+                    _ = await asyncio.gather(*round_tasks, return_exceptions=True)
+            else:
+                # Создаем задачи для всех аккаунтов (default)
+                tasks = []
+                for account_task in account_tasks:
+                    processor = AsyncAccountProcessor(account_task, task_data, logger)
+                    task_coroutine = self._process_account_with_semaphore(processor, account_task)
+                    tasks.append(task_coroutine)
+                
+                # Запускаем все задачи параллельно
+                await logger.log('INFO', f"Starting {len(tasks)} account tasks in parallel")
+                results = await asyncio.gather(*tasks, return_exceptions=True)
             
             # Обрабатываем результаты
-            await self._process_results(results, account_tasks, logger)
+            try:
+                # If 'results' is undefined due to rounds mode, compute a synthetic list to aggregate
+                if 'results' not in locals():
+                    # Aggregate per-account status from DB to produce summary
+                    await logger.log('INFO', '[ROUND] Aggregating results from account tasks')
+                    results = []
+                    for at in account_tasks:
+                        # approximate: if account completed at least one upload in rounds, mark success 1,0
+                        completed = getattr(at, 'uploaded_success_count', 0) or 0
+                        failed = getattr(at, 'uploaded_failed_count', 0) or 0
+                        res_type = 'success' if completed > 0 else ('failed' if failed > 0 else 'failed')
+                        results.append((res_type, int(completed), int(failed)))
+                await self._process_results(results, account_tasks, logger)
+            except Exception:
+                await logger.log('WARNING', 'Result aggregation encountered an issue; continuing to finalize task')
             
             # Завершаем задачу
             await self._finalize_task(task, logger)
@@ -1039,6 +1097,12 @@ class AsyncTaskCoordinator:
             # Добавляем случайную задержку между аккаунтами
             delay = random.uniform(AsyncConfig.ACCOUNT_DELAY_MIN, AsyncConfig.ACCOUNT_DELAY_MAX)
             await asyncio.sleep(delay)
+            # Дополнительная небольшая задержка перед началом (0–5s) по флагу
+            try:
+                if getattr(self, 'extra_init_delay', False):
+                    await asyncio.sleep(random.uniform(0.0, 5.0))
+            except Exception:
+                pass
             
             return await processor.process()
     

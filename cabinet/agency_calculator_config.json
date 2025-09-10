@@ -1,0 +1,151 @@
+{
+  "currency": {
+    "usd_to_rub": 92.5
+  },
+  "base_prices": {
+    "volume_brackets": [
+      { "min_millions": 15, "max_millions": 30, "rub_per_view": 0.041, "usd_per_view": 0.0004 },
+      { "min_millions": 30, "max_millions": 50, "rub_per_view": 0.038, "usd_per_view": 0.0004 },
+      { "min_millions": 50, "max_millions": 100, "rub_per_view": 0.034, "usd_per_view": 0.0004 },
+      { "min_millions": 100, "max_millions": null, "rub_per_view": 0.030, "usd_per_view": 0.0003 }
+    ]
+  },
+  "tiers": {
+    "tier1": {
+      "name": "Tier 1",
+      "multiplier": 1.0,
+      "countries": [
+        "США", "United States",
+        "Великобритания", "United Kingdom",
+        "Германия", "Germany",
+        "Франция", "France",
+        "Япония", "Japan",
+        "Канада", "Canada",
+        "Австралия", "Australia",
+        "Нидерланды", "Netherlands",
+        "Швеция", "Sweden",
+        "Швейцария", "Switzerland",
+        "Норвегия", "Norway",
+        "Дания", "Denmark",
+        "Финляндия", "Finland",
+        "Австрия", "Austria",
+        "Бельгия", "Belgium",
+        "Ирландия", "Ireland",
+        "Сингапур", "Singapore",
+        "Гонконг", "Hong Kong",
+        "Южная Корея", "South Korea",
+        "Новая Зеландия", "New Zealand"
+      ]
+    },
+    "tier2": {
+      "name": "Tier 2",
+      "multiplier": 0.85,
+      "countries": [
+        "Италия", "Italy",
+        "Испания", "Spain",
+        "Португалия", "Portugal",
+        "Греция", "Greece",
+        "Польша", "Poland",
+        "Чехия", "Czech Republic",
+        "Венгрия", "Hungary",
+        "Словакия", "Slovakia",
+        "Словения", "Slovenia",
+        "Эстония", "Estonia",
+        "Латвия", "Latvia",
+        "Литва", "Lithuania",
+        "Бразилия", "Brazil",
+        "Индия", "India",
+        "Россия", "Russia",
+        "Мексика", "Mexico",
+        "Турция", "Turkey",
+        "Аргентина", "Argentina",
+        "Чили", "Chile",
+        "Колумбия", "Colombia",
+        "Перу", "Peru",
+        "Венесуэла", "Venezuela",
+        "Уругвай", "Uruguay",
+        "Эквадор", "Ecuador",
+        "Боливия", "Bolivia",
+        "Парагвай", "Paraguay",
+        "ЮАР", "South Africa"
+      ]
+    },
+    "tier3": {
+      "name": "Tier 3",
+      "multiplier": 0.70,
+      "countries": [
+        "Нигерия", "Nigeria",
+        "Кения", "Kenya",
+        "Гана", "Ghana",
+        "Уганда", "Uganda",
+        "Танзания", "Tanzania",
+        "Эфиопия", "Ethiopia",
+        "Мозамбик", "Mozambique",
+        "Зимбабве", "Zimbabwe",
+        "Замбия", "Zambia",
+        "Малави", "Malawi",
+        "Ботсвана", "Botswana",
+        "Намибия", "Namibia",
+        "Вьетнам", "Vietnam",
+        "Филиппины", "Philippines",
+        "Египет", "Egypt",
+        "Пакистан", "Pakistan",
+        "Бангладеш", "Bangladesh",
+        "Шри-Ланка", "Sri Lanka",
+        "Непал", "Nepal",
+        "Мьянма", "Myanmar",
+        "Камбоджа", "Cambodia",
+        "Лаос", "Laos",
+        "Монголия", "Mongolia"
+      ]
+    },
+    "complex": {
+      "name": "Complex",
+      "multiplier": 1.0,
+      "extra_percent": 0.30,
+      "countries": [
+        "Афганистан", "Afghanistan",
+        "Иран", "Iran",
+        "Ирак", "Iraq",
+        "Сирия", "Syria",
+        "Ливан", "Lebanon",
+        "Иордания", "Jordan",
+        "Палестина", "Palestine",
+        "Йемен", "Yemen",
+        "Оман", "Oman",
+        "Кувейт", "Kuwait",
+        "Катар", "Qatar",
+        "Бахрейн", "Bahrain",
+        "ОАЭ", "United Arab Emirates", "UAE",
+        "Саудовская Аравия", "Saudi Arabia",
+        "Украина", "Ukraine"
+      ]
+    }
+  },
+  "platform_multipliers": {
+    "instagram": 1.0,
+    "tiktok": 1.0,
+    "youtube_shorts": 1.15
+  },
+  "surcharges": {
+    "urgent": 0.40,
+    "peak_season": 0.25,
+    "exclusive_content": 0.35
+  },
+  "discounts": {
+    "own_badge": 0.03,
+    "own_content": 0.15,
+    "pilot": 0.10,
+    "vip_max": 0.15
+  },
+  "market_discounts": [
+    { "min_millions": 50, "percent": 0.05 },
+    { "min_millions": 100, "percent": 0.10 },
+    { "min_millions": 200, "percent": 0.15 },
+    { "min_millions": 500, "percent": 0.20 }
+  ],
+  "minimums": {
+    "min_order_millions": 15,
+    "min_order_amount_rub": 615000
+  }
+}

@@ -313,6 +313,15 @@ def start_bulk_upload_api(request, task_id):
     except Exception:
         pass
     
+    # Read feature toggles from query and store to cache (API mode only)
+    try:
+        rounds = request.GET.get('rounds') == '1'
+        init_delay = request.GET.get('init_delay') == '1'
+        cache.set(f"bulk_rounds_{task.id}", bool(rounds), timeout=3600)
+        cache.set(f"bulk_init_delay_{task.id}", bool(init_delay), timeout=3600)
+    except Exception:
+        pass
+    
     # Initialize WebLogger for this task so background logs are visible immediately
     try:
         from uploader.bulk_tasks_playwright import init_web_logger

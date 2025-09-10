@@ -22,19 +22,26 @@
   </div>
   <div class="col-md-6">
     <div class="card mb-3">
-      <div class="card-header"><h5 class="mb-0">Latest analytics</h5></div>
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Latest analytics</h5>
+        <a class="btn btn-sm btn-success" href="{% url 'cabinet_export_excel' %}"><i class="bi bi-file-earmark-excel"></i> Export Excel</a>
+      </div>
       <div class="card-body p-0">
         <div class="table-responsive">
           <table class="table table-sm align-middle mb-0">
             <thead><tr>
-              <th>#</th><th>Total views</th><th>Average views</th>
+              <th>#</th><th>Total videos</th><th>Total views</th><th>Average views</th><th>Likes</th><th>Comments</th><th>ER</th>
             </tr></thead>
             <tbody>
-              {% for s in summaries %}
+              {% for d in details %}
               <tr>
-                <td><code>#{{ s.hashtag }}</code></td>
-                <td>{{ s.total_views }}</td>
-                <td>{{ s.average_views|floatformat:0 }}</td>
+                <td><code>#{{ d.hashtag }}</code></td>
+                <td>{{ d.total_videos }}</td>
+                <td>{{ d.total_views }}</td>
+                <td>{{ d.average_views|floatformat:0 }}</td>
+                <td>{{ d.total_likes }}</td>
+                <td>{{ d.total_comments }}</td>
+                <td>{{ d.engagement_rate|floatformat:4 }}</td>
               </tr>
               {% empty %}
               <tr><td colspan="3" class="text-center text-muted">No analytics yet</td></tr>
@@ -46,6 +53,82 @@
     </div>
   </div>
 </div>
+
+<div class="row">
+  <div class="col-md-6">
+    <div class="card mb-3">
+      <div class="card-header"><h5 class="mb-0">Performance trend (7 days)</h5></div>
+      <div class="card-body">
+        <canvas id="dailyChart" height="180"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card mb-3">
+      <div class="card-header"><h5 class="mb-0">Performance trend (12 weeks)</h5></div>
+      <div class="card-body">
+        <canvas id="weeklyChart" height="180"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-12">
+    <div class="alert alert-info">
+      <i class="bi bi-info-circle"></i>
+      <a href="{% url 'account_list' %}?client_id={{ client.id }}" class="alert-link">All accounts in work</a> for this client.
+    </div>
+  </div>
+</div>
 {% endblock %}
 
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function(){
+  const dailyLabels = [{% for s in daily_stats %}'{{ s.day_name }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const dailyViews = [{% for s in daily_stats %}{{ s.total_views|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const dailyVideos = [{% for s in daily_stats %}{{ s.total_videos|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const dailyLikes = [{% for s in daily_stats %}{{ s.total_likes|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const dailyComments = [{% for s in daily_stats %}{{ s.total_comments|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
 
+  const weeklyLabels = [{% for s in weekly_stats %}'{{ s.label }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const weeklyViews = [{% for s in weekly_stats %}{{ s.total_views|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const weeklyVideos = [{% for s in weekly_stats %}{{ s.total_videos|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const weeklyLikes = [{% for s in weekly_stats %}{{ s.total_likes|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const weeklyComments = [{% for s in weekly_stats %}{{ s.total_comments|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+
+  try {
+    const dctx = document.getElementById('dailyChart').getContext('2d');
+    new Chart(dctx, {
+      type: 'line',
+      data: {
+        labels: dailyLabels,
+        datasets: [
+          {label: 'Views', data: dailyViews, borderColor: '#667eea', backgroundColor: 'rgba(102,126,234,0.15)', tension: 0.35, fill: true, yAxisID: 'y'},
+          {label: 'Videos', data: dailyVideos, borderColor: '#4facfe', backgroundColor: 'rgba(79,172,254,0.12)', tension: 0.35, fill: false, yAxisID: 'y1'},
+          {label: 'Likes', data: dailyLikes, borderColor: '#43e97b', backgroundColor: 'rgba(67,233,123,0.15)', tension: 0.35, fill: false, yAxisID: 'y2'},
+          {label: 'Comments', data: dailyComments, borderColor: '#f093fb', backgroundColor: 'rgba(240,147,251,0.15)', tension: 0.35, fill: false, yAxisID: 'y2'}
+        ]
+      },
+      options: {responsive: true, maintainAspectRatio: false}
+    });
+  } catch (e) {}
+
+  try {
+    const wctx = document.getElementById('weeklyChart').getContext('2d');
+    new Chart(wctx, {
+      type: 'bar',
+      data: {
+        labels: weeklyLabels,
+        datasets: [
+          {label: 'Views', data: weeklyViews, backgroundColor: '#43e97b', yAxisID: 'y'},
+          {label: 'Videos', data: weeklyVideos, backgroundColor: '#4facfe', yAxisID: 'y1'},
+          {label: 'Likes', data: weeklyLikes, backgroundColor: 'rgba(67,233,123,0.6)', yAxisID: 'y2'},
+          {label: 'Comments', data: weeklyComments, backgroundColor: 'rgba(240,147,251,0.6)', yAxisID: 'y2'}
+        ]
+      },
+      options: {responsive: true, maintainAspectRatio: false}
+    });
+  } catch (e) {}
+})();
+</script>
+{% endblock %}

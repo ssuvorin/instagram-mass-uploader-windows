@@ -1,7 +1,11 @@
 """Views module: dashboard (split from monolith)."""
 from .common import *
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.shortcuts import redirect
 
 
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
 def dashboard(request):
     """Dashboard with recent tasks and accounts"""
     tasks = UploadTask.objects.order_by('-created_at')[:10]

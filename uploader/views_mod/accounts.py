@@ -8,6 +8,9 @@ def account_list(request):
     """List all Instagram accounts"""
     status_filter = request.GET.get('status', '')
     search_query = request.GET.get('q', '')
+    client_id = request.GET.get('client_id')
+    client_name = request.GET.get('client_name')
+    agency_id = request.GET.get('agency_id')
     
     # Sort by creation date descending (newest first) for consistency
     accounts = (
@@ -27,11 +30,44 @@ def account_list(request):
             Q(email_username__icontains=search_query) |
             Q(notes__icontains=search_query)
         )
+
+    # Optional filtering by client/agency for cabinet deep links
+    try:
+        if client_id:
+            accounts = accounts.filter(client_id=int(client_id))
+    except Exception:
+        pass
+    if client_name:
+        accounts = accounts.filter(client__name__iexact=client_name)
+    try:
+        if agency_id:
+            accounts = accounts.filter(client__agency_id=int(agency_id))
+    except Exception:
+        pass
+
+    # Role-based visibility restrictions
+    if not request.user.is_superuser:
+        try:
+            from cabinet.models import Client as CabinetClient, Agency as CabinetAgency
+            my_client = CabinetClient.objects.filter(user=request.user).first()
+            if my_client:
+                accounts = accounts.filter(client_id=my_client.id)
+            else:
+                my_agency = CabinetAgency.objects.filter(owner=request.user).first()
+                if my_agency:
+                    accounts = accounts.filter(client__agency_id=my_agency.id)
+                else:
+                    accounts = accounts.none()
+        except Exception:
+            accounts = accounts.none()
     
     context = {
         'accounts': accounts,
         'status_filter': status_filter,
         'search_query': search_query,
+        'client_id': client_id or '',
+        'client_name': client_name or '',
+        'agency_id': agency_id or '',
         'active_tab': 'accounts'
     }
     return render(request, 'uploader/account_list.html', context)

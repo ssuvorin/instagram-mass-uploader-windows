@@ -5,7 +5,14 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <h2 class="mb-0">Agency: {{ agency.name }}</h2>
-  <a class="btn btn-outline-primary" href="{% url 'cabinet_manage_clients' %}">Manage Clients</a>
+  <div class="btn-toolbar gap-2">
+    {% if user.is_superuser %}
+    <a class="btn btn-outline-primary" href="{% url 'cabinet_manage_clients' %}">Manage Clients</a>
+    {% endif %}
+    <a class="btn btn-outline-secondary" href="{% url 'cabinet_agency_calculator' %}">Agency Calculator</a>
+    <a class="btn btn-success" href="{% url 'cabinet_export_excel' %}"><i class="bi bi-file-earmark-excel"></i> Export Excel</a>
+    <a class="btn btn-outline-info" href="{% url 'cabinet_export_calculations_csv' %}"><i class="bi bi-file-earmark-csv"></i> Export Calculations</a>
+  </div>
 </div>
 
 <div class="card">
@@ -14,14 +21,27 @@
     <div class="table-responsive">
       <table class="table table-sm align-middle mb-0">
         <thead><tr>
-          <th>Client</th><th>Total views</th><th>Avg views</th>
+          <th>Client</th><th>Total views</th><th>Avg views</th><th>All accounts</th>
         </tr></thead>
         <tbody>
           {% for row in client_rows %}
           <tr>
-            <td>{{ row.client.name }}</td>
+            <td>
+              {% if user.is_superuser %}
+                <a href="{% url 'cabinet_manage_hashtags' %}?client_id={{ row.client.id }}">{{ row.client.name }}</a>
+              {% else %}
+                {{ row.client.name }}
+              {% endif %}
+            </td>
             <td>{{ row.total_views }}</td>
             <td>{{ row.avg_views|floatformat:0 }}</td>
+            <td>
+              {% if user.is_superuser %}
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'account_list' %}?client_id={{ row.client.id }}">Open</a>
+              {% else %}
+                —
+              {% endif %}
+            </td>
           </tr>
           {% empty %}
           <tr><td colspan="3" class="text-center text-muted">No clients</td></tr>
@@ -31,6 +51,300 @@
     </div>
   </div>
 </div>
+
+<!-- Recent Calculations -->
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Recent Calculations</h5>
+        <div>
+          <a href="{% url 'cabinet_agency_calculator' %}" class="btn btn-sm btn-primary">
+            <i class="bi bi-calculator"></i> New Calculation
+          </a>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Volume (M)</th>
+                <th>Platforms</th>
+                <th>Countries</th>
+                <th>Currency</th>
+                <th>Total Cost</th>
+                <th>User</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="calculationsTableBody">
+              {% for calc in recent_calculations %}
+              <tr>
+                <td>
+                  <small>{{ calc.created_at|date:"d.m.Y H:i" }}</small>
+                </td>
+                <td>
+                  <strong>{{ calc.volume_millions|floatformat:1 }}M</strong>
+                </td>
+                <td>
+                  <span class="badge bg-info">
+                    {{ calc.platforms|join:", "|default:"—" }}
+                  </span>
+                </td>
+                <td>
+                  {% for country in calc.countries %}
+                    <span class="badge bg-secondary me-1">{{ country.code }}</span>
+                  {% empty %}
+                    —
+                  {% endfor %}
+                </td>
+                <td>
+                  <strong>{{ calc.currency }}</strong>
+                </td>
+                <td>
+                  {% if calc.currency == "RUB" %}
+                    <strong>{{ calc.final_cost_rub|floatformat:0 }} ₽</strong>
+                  {% elif calc.currency == "USD" %}
+                    <strong>${{ calc.final_cost_usd|floatformat:0 }}</strong>
+                  {% else %}
+                    <strong>{{ calc.final_cost_rub|floatformat:0 }} ₽</strong>
+                  {% endif %}
+                </td>
+                <td>
+                  <small>{{ calc.user.username }}</small>
+                </td>
+                <td>
+                  <div class="btn-group" role="group">
+                    <a href="{% url 'cabinet_download_calculation_excel' calc.id %}" 
+                       class="btn btn-sm btn-outline-success" 
+                       title="Download Excel">
+                      <i class="bi bi-file-earmark-excel"></i>
+                    </a>
+                    <button class="btn btn-sm btn-outline-info" 
+                            onclick="viewCalculationDetails({{ calc.id }})"
+                            title="View Details">
+                      <i class="bi bi-eye"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="8" class="text-center text-muted py-3">
+                  No calculations yet. <a href="{% url 'cabinet_agency_calculator' %}">Create your first calculation</a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if recent_calculations|length >= 10 %}
+        <div class="card-footer text-center">
+          <button class="btn btn-sm btn-outline-primary" onclick="loadMoreCalculations()">
+            <i class="bi bi-arrow-down"></i> Load More
+          </button>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Views & Videos — last 7 days</h5>
+      </div>
+      <div class="card-body">
+        <canvas id="agencyDailyChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{{ daily_stats|json_script:"dailyStatsJson" }}
+<script>
+(function(){
+  const dailyStats = JSON.parse(document.getElementById('dailyStatsJson').textContent || '[]');
+  const labels = dailyStats.map(s => s.day_name);
+  const views = dailyStats.map(s => s.total_views || 0);
+  const videos = dailyStats.map(s => s.total_videos || 0);
+  const likes = dailyStats.map(s => s.total_likes || 0);
+  const comments = dailyStats.map(s => s.total_comments || 0);
+  try {
+    const ctx = document.getElementById('agencyDailyChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {label: 'Views', data: views, backgroundColor: '#43e97b', yAxisID: 'y'},
+          {label: 'Videos', data: videos, backgroundColor: '#4facfe', yAxisID: 'y1'},
+          {label: 'Likes', data: likes, backgroundColor: 'rgba(67,233,123,0.6)', yAxisID: 'y2'},
+          {label: 'Comments', data: comments, backgroundColor: 'rgba(240,147,251,0.6)', yAxisID: 'y2'}
+        ]
+      },
+      options: {responsive: true, maintainAspectRatio: false}
+    });
+  } catch(e) {}
+})();
+
+// Calculation details modal and functions
+function viewCalculationDetails(calcId) {
+  fetch(`/cabinet/api/calculation/${calcId}/`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        showCalculationModal(data.calculation);
+      } else {
+        alert('Error loading calculation details');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error loading calculation details');
+    });
+}
+
+function showCalculationModal(calc) {
+  const modalHtml = `
+    <div class="modal fade" id="calcDetailsModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Calculation #${calc.id} Details</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-md-6">
+                <h6>Input Parameters</h6>
+                <table class="table table-sm">
+                  <tr><td>Volume:</td><td>${calc.volume_millions}M views</td></tr>
+                  <tr><td>Platforms:</td><td>${calc.platforms.join(', ')}</td></tr>
+                  <tr><td>Countries:</td><td>${calc.countries.map(c => c.code).join(', ')}</td></tr>
+                  <tr><td>Currency:</td><td>${calc.currency}</td></tr>
+                  <tr><td>Created:</td><td>${new Date(calc.created_at).toLocaleString()}</td></tr>
+                  <tr><td>User:</td><td>${calc.user_name}</td></tr>
+                </table>
+              </div>
+              <div class="col-md-6">
+                <h6>Calculation Results</h6>
+                <table class="table table-sm">
+                  <tr><td>Base Price/View:</td><td>${calc.base_price_per_view.toFixed(6)} ₽</td></tr>
+                  <tr><td>Tier Multiplier:</td><td>${calc.tier_multiplier.toFixed(3)}</td></tr>
+                  <tr><td>Platform Multiplier:</td><td>${calc.platform_multiplier.toFixed(3)}</td></tr>
+                  <tr><td>Discounts:</td><td>${calc.discounts_percent.toFixed(1)}%</td></tr>
+                  <tr><td>Surcharges:</td><td>${calc.surcharges_percent.toFixed(1)}%</td></tr>
+                  <tr><td>Market Discount:</td><td>${calc.market_discount_percent.toFixed(1)}%</td></tr>
+                </table>
+              </div>
+            </div>
+            <div class="row mt-3">
+              <div class="col-12">
+                <h6>Final Costs</h6>
+                <div class="alert alert-info">
+                  <strong>RUB:</strong> ${calc.final_cost_rub.toFixed(2)} ₽<br>
+                  <strong>USD:</strong> $${calc.final_cost_usd.toFixed(2)}
+                </div>
+              </div>
+            </div>
+            ${calc.notes ? `<div class="row"><div class="col-12"><h6>Notes</h6><p>${calc.notes}</p></div></div>` : ''}
+          </div>
+          <div class="modal-footer">
+            <a href="/cabinet/download/calculation/${calc.id}/excel/" class="btn btn-success">
+              <i class="bi bi-file-earmark-excel"></i> Download Excel
+            </a>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Remove existing modal if any
+  const existingModal = document.getElementById('calcDetailsModal');
+  if (existingModal) {
+    existingModal.remove();
+  }
+  
+  // Add modal to body
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  
+  // Show modal
+  const modal = new bootstrap.Modal(document.getElementById('calcDetailsModal'));
+  modal.show();
+}
+
+let calculationsOffset = {{ recent_calculations|length }};
+
+function loadMoreCalculations() {
+  fetch(`/cabinet/api/calculations/?offset=${calculationsOffset}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success && data.calculations.length > 0) {
+        const tbody = document.getElementById('calculationsTableBody');
+        data.calculations.forEach(calc => {
+          const row = createCalculationRow(calc);
+          tbody.insertAdjacentHTML('beforeend', row);
+        });
+        calculationsOffset += data.calculations.length;
+        
+        // Hide load more button if no more data
+        if (data.calculations.length < 10) {
+          document.querySelector('.card-footer').style.display = 'none';
+        }
+      } else {
+        document.querySelector('.card-footer').style.display = 'none';
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error loading more calculations');
+    });
+}
+
+function createCalculationRow(calc) {
+  const platformsBadge = calc.platforms.length > 0 ? 
+    `<span class="badge bg-info">${calc.platforms.join(', ')}</span>` : '—';
+  
+  const countryBadges = calc.countries.map(c => 
+    `<span class="badge bg-secondary me-1">${c.code}</span>`
+  ).join('');
+  
+  const finalCost = calc.currency === 'USD' ? 
+    `$${calc.final_cost_usd.toFixed(0)}` : 
+    `${calc.final_cost_rub.toFixed(0)} ₽`;
+    
+  return `
+    <tr>
+      <td><small>${new Date(calc.created_at).toLocaleDateString('ru-RU')} ${new Date(calc.created_at).toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'})}</small></td>
+      <td><strong>${calc.volume_millions.toFixed(1)}M</strong></td>
+      <td>${platformsBadge}</td>
+      <td>${countryBadges || '—'}</td>
+      <td><strong>${calc.currency}</strong></td>
+      <td><strong>${finalCost}</strong></td>
+      <td><small>${calc.user_name}</small></td>
+      <td>
+        <div class="btn-group" role="group">
+          <a href="/cabinet/download/calculation/${calc.id}/excel/" class="btn btn-sm btn-outline-success" title="Download Excel">
+            <i class="bi bi-file-earmark-excel"></i>
+          </a>
+          <button class="btn btn-sm btn-outline-info" onclick="viewCalculationDetails(${calc.id})" title="View Details">
+            <i class="bi bi-eye"></i>
+          </button>
+        </div>
+      </td>
+    </tr>
+  `;
+}
+</script>
+{% endblock %}
 {% endblock %}
 
 

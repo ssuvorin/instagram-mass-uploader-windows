@@ -5,10 +5,11 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <h2 class="mb-0">Admin Dashboard</h2>
-  <div>
+  <div class="btn-toolbar gap-2">
     <a class="btn btn-outline-primary" href="{% url 'cabinet_manage_agencies' %}">Manage Agencies</a>
     <a class="btn btn-outline-primary" href="{% url 'cabinet_manage_clients' %}">Manage Clients</a>
     <a class="btn btn-outline-primary" href="{% url 'cabinet_manage_hashtags' %}">Manage Hashtags</a>
+    <a class="btn btn-success" href="{% url 'cabinet_export_excel' %}"><i class="bi bi-file-earmark-excel"></i> Export Excel</a>
   </div>
   </div>
 
@@ -36,24 +37,70 @@
     <div class="table-responsive">
       <table class="table table-sm align-middle mb-0">
         <thead><tr>
-          <th>#</th><th>Total views</th><th>Average views</th><th>Created at</th>
+          <th>#</th><th>Total videos</th><th>Total views</th><th>Average views</th><th>Likes</th><th>Comments</th><th>ER</th><th>Created at</th>
         </tr></thead>
         <tbody>
           {% for r in top_hashtags %}
           <tr>
-            <td><code>#{{ r.hashtag }}</code></td>
+            <td><a href="{% url 'cabinet_hashtag_detail' r.hashtag %}"><code>#{{ r.hashtag }}</code></a></td>
+            <td>{{ r.analyzed_medias }}</td>
             <td>{{ r.total_views }}</td>
             <td>{{ r.average_views|floatformat:0 }}</td>
+            <td>{{ r.total_likes|default:0 }}</td>
+            <td>{{ r.total_comments|default:0 }}</td>
+            <td>{{ r.engagement_rate|default:0|floatformat:4 }}</td>
             <td>{{ r.created_at }}</td>
           </tr>
           {% empty %}
-          <tr><td colspan="4" class="text-center text-muted">No analytics yet</td></tr>
+          <tr><td colspan="8" class="text-center text-muted">No analytics yet</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
 </div>
+
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Views & Videos — last 7 days</h5>
+      </div>
+      <div class="card-body">
+        <canvas id="adminDailyChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function(){
+  const labels = [{% for s in daily_stats %}'{{ s.day_name }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const views = [{% for s in daily_stats %}{{ s.total_views|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const videos = [{% for s in daily_stats %}{{ s.total_videos|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const likes = [{% for s in daily_stats %}{{ s.total_likes|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const comments = [{% for s in daily_stats %}{{ s.total_comments|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+  try {
+    const ctx = document.getElementById('adminDailyChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {label: 'Views', data: views, borderColor: '#667eea', backgroundColor: 'rgba(102,126,234,0.15)', tension: 0.35, fill: true, yAxisID: 'y'},
+          {label: 'Videos', data: videos, borderColor: '#4facfe', backgroundColor: 'rgba(79,172,254,0.12)', tension: 0.35, fill: false, yAxisID: 'y1'},
+          {label: 'Likes', data: likes, borderColor: '#43e97b', backgroundColor: 'rgba(67,233,123,0.15)', tension: 0.35, fill: false, yAxisID: 'y2'},
+          {label: 'Comments', data: comments, borderColor: '#f093fb', backgroundColor: 'rgba(240,147,251,0.15)', tension: 0.35, fill: false, yAxisID: 'y2'}
+        ]
+      },
+      options: {responsive: true, maintainAspectRatio: false}
+    });
+  } catch(e) {}
+})();
+</script>
+{% endblock %}
 {% endblock %}
 
 

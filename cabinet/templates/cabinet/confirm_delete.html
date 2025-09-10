@@ -1,0 +1,17 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}Cabinet — Confirm Delete{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Confirm delete {{ type }}</h2>
+
+<div class="alert alert-danger">This action cannot be undone.</div>
+
+<form method="post">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-danger">Delete</button>
+  <a href="{% url 'cabinet_admin_dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+  </form>
+{% endblock %}
+
+

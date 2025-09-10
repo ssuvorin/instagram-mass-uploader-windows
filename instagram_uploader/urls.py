@@ -17,6 +17,24 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
+from uploader.views_auth import logout_view
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import redirect
+
+
+def post_login_redirect(request):
+    # Superuser → root dashboard
+    if request.user.is_superuser:
+        return redirect('dashboard')
+    # Client → client dashboard if has client; else agency
+    from cabinet.models import Client, Agency
+    client = Client.objects.filter(user=request.user).first()
+    if client:
+        return redirect('cabinet_agency_dashboard')
+    agency = Agency.objects.filter(owner=request.user).first()
+    if agency:
+        return redirect('cabinet_agency_dashboard')
+    return redirect('login')
 from django.conf import settings
 from django.conf.urls.static import static
 import os
@@ -26,8 +44,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('uploader.urls')),
     path('cabinet/', include('cabinet.urls')),
-    path('login/', auth_views.LoginView.as_view(template_name='uploader/login.html'), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
+    path('login/', auth_views.LoginView.as_view(template_name='uploader/login.html', redirect_authenticated_user=True), name='login'),
+    path('post-login/', login_required(post_login_redirect), name='post_login'),
+    path('logout/', logout_view, name='logout'),
 ]
 
 # Always serve static and media files 

@@ -27,7 +27,7 @@
       <div class="table-responsive">
         <table class="table table-sm mb-0">
           <thead>
-            <tr><th>Client</th><th>Hashtag</th><th>Added</th></tr>
+            <tr><th>Client</th><th>Hashtag</th><th>Added</th><th></th></tr>
           </thead>
           <tbody>
             {% for it in items %}
@@ -35,6 +35,12 @@
               <td>{{ it.client.name }} ({{ it.client.agency.name }})</td>
               <td>#{{ it.hashtag }}</td>
               <td>{{ it.created_at }}</td>
+              <td class="text-end">
+                <form method="post" action="{% url 'cabinet_delete_client_hashtag' it.id %}" onsubmit="return confirm('Unassign #{{ it.hashtag }} from {{ it.client.name }}?');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                </form>
+              </td>
             </tr>
             {% empty %}
             <tr><td colspan="3" class="text-muted text-center">No assignments</td></tr>
