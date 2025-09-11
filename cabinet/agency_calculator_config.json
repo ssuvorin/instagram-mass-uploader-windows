@@ -1,124 +1,164 @@
 {
+  "info": {
+    "version": "2025.1",
+    "description": "Агентские тарифы для Instagram и TikTok (25% скидка от розничных цен)",
+    "last_updated": "2025-01-01",
+    "exchange_rate_note": "Курс USD/RUB актуальный на 2025 год"
+  },
   "currency": {
-    "usd_to_rub": 92.5
+    "usd_to_rub": 92.5,
+    "eur_to_rub": 100.8
   },
   "base_prices": {
+    "description": "Агентские цены за просмотр (уже с 25% скидкой)",
     "volume_brackets": [
-      { "min_millions": 15, "max_millions": 30, "rub_per_view": 0.041, "usd_per_view": 0.0004 },
-      { "min_millions": 30, "max_millions": 50, "rub_per_view": 0.038, "usd_per_view": 0.0004 },
-      { "min_millions": 50, "max_millions": 100, "rub_per_view": 0.034, "usd_per_view": 0.0004 },
-      { "min_millions": 100, "max_millions": null, "rub_per_view": 0.030, "usd_per_view": 0.0003 }
+      { 
+        "min_millions": 15, 
+        "max_millions": 30, 
+        "rub_per_view": 0.041, 
+        "usd_per_view": 0.0004,
+        "cpm_rub": 41,
+        "cpm_usd": 0.44
+      },
+      { 
+        "min_millions": 30, 
+        "max_millions": 50, 
+        "rub_per_view": 0.038, 
+        "usd_per_view": 0.0004,
+        "cpm_rub": 38,
+        "cpm_usd": 0.41
+      },
+      { 
+        "min_millions": 50, 
+        "max_millions": 100, 
+        "rub_per_view": 0.034, 
+        "usd_per_view": 0.0004,
+        "cpm_rub": 34,
+        "cpm_usd": 0.37
+      },
+      { 
+        "min_millions": 100, 
+        "max_millions": null, 
+        "rub_per_view": 0.030, 
+        "usd_per_view": 0.0003,
+        "cpm_rub": 30,
+        "cpm_usd": 0.32
+      }
     ]
   },
   "tiers": {
     "tier1": {
-      "name": "Tier 1",
+      "name": "Tier 1 - Премиум страны",
       "multiplier": 1.0,
+      "description": "100% от базовой агентской цены",
       "countries": [
-        "США", "United States",
-        "Великобритания", "United Kingdom",
-        "Германия", "Germany",
-        "Франция", "France",
-        "Япония", "Japan",
-        "Канада", "Canada",
-        "Австралия", "Australia",
-        "Нидерланды", "Netherlands",
-        "Швеция", "Sweden",
-        "Швейцария", "Switzerland",
-        "Норвегия", "Norway",
-        "Дания", "Denmark",
-        "Финляндия", "Finland",
-        "Австрия", "Austria",
-        "Бельгия", "Belgium",
-        "Ирландия", "Ireland",
-        "Сингапур", "Singapore",
-        "Гонконг", "Hong Kong",
-        "Южная Корея", "South Korea",
-        "Новая Зеландия", "New Zealand"
+        "США", "United States", "USA", "US",
+        "Великобритания", "United Kingdom", "UK", "GB",
+        "Германия", "Germany", "DE",
+        "Франция", "France", "FR",
+        "Япония", "Japan", "JP",
+        "Канада", "Canada", "CA",
+        "Австралия", "Australia", "AU",
+        "Нидерланды", "Netherlands", "NL",
+        "Швеция", "Sweden", "SE",
+        "Швейцария", "Switzerland", "CH",
+        "Норвегия", "Norway", "NO",
+        "Дания", "Denmark", "DK",
+        "Финляндия", "Finland", "FI",
+        "Австрия", "Austria", "AT",
+        "Бельгия", "Belgium", "BE",
+        "Ирландия", "Ireland", "IE",
+        "Сингапур", "Singapore", "SG",
+        "Гонконг", "Hong Kong", "HK",
+        "Южная Корея", "South Korea", "KR",
+        "Новая Зеландия", "New Zealand", "NZ"
       ]
     },
     "tier2": {
-      "name": "Tier 2",
+      "name": "Tier 2 - Развивающиеся страны", 
       "multiplier": 0.85,
+      "description": "85% от базовой агентской цены",
       "countries": [
-        "Италия", "Italy",
-        "Испания", "Spain",
-        "Португалия", "Portugal",
-        "Греция", "Greece",
-        "Польша", "Poland",
-        "Чехия", "Czech Republic",
-        "Венгрия", "Hungary",
-        "Словакия", "Slovakia",
-        "Словения", "Slovenia",
-        "Эстония", "Estonia",
-        "Латвия", "Latvia",
-        "Литва", "Lithuania",
-        "Бразилия", "Brazil",
-        "Индия", "India",
-        "Россия", "Russia",
-        "Мексика", "Mexico",
-        "Турция", "Turkey",
-        "Аргентина", "Argentina",
-        "Чили", "Chile",
-        "Колумбия", "Colombia",
-        "Перу", "Peru",
-        "Венесуэла", "Venezuela",
-        "Уругвай", "Uruguay",
-        "Эквадор", "Ecuador",
-        "Боливия", "Bolivia",
-        "Парагвай", "Paraguay",
-        "ЮАР", "South Africa"
+        "Италия", "Italy", "IT",
+        "Испания", "Spain", "ES",
+        "Португалия", "Portugal", "PT",
+        "Греция", "Greece", "GR",
+        "Польша", "Poland", "PL",
+        "Чехия", "Czech Republic", "CZ",
+        "Венгрия", "Hungary", "HU",
+        "Словакия", "Slovakia", "SK",
+        "Словения", "Slovenia", "SI",
+        "Эстония", "Estonia", "EE",
+        "Латвия", "Latvia", "LV",
+        "Литва", "Lithuania", "LT",
+        "Бразилия", "Brazil", "BR",
+        "Индия", "India", "IN",
+        "Россия", "Russia", "RU",
+        "Мексика", "Mexico", "MX",
+        "Турция", "Turkey", "TR",
+        "Аргентина", "Argentina", "AR",
+        "Чили", "Chile", "CL",
+        "Колумбия", "Colombia", "CO",
+        "Перу", "Peru", "PE",
+        "Венесуэла", "Venezuela", "VE",
+        "Уругвай", "Uruguay", "UY",
+        "Эквадор", "Ecuador", "EC",
+        "Боливия", "Bolivia", "BO",
+        "Парагвай", "Paraguay", "PY",
+        "ЮАР", "South Africa", "ZA"
       ]
     },
     "tier3": {
-      "name": "Tier 3",
+      "name": "Tier 3 - Экономичные страны",
       "multiplier": 0.70,
+      "description": "70% от базовой агентской цены",
       "countries": [
-        "Нигерия", "Nigeria",
-        "Кения", "Kenya",
-        "Гана", "Ghana",
-        "Уганда", "Uganda",
-        "Танзания", "Tanzania",
-        "Эфиопия", "Ethiopia",
-        "Мозамбик", "Mozambique",
-        "Зимбабве", "Zimbabwe",
-        "Замбия", "Zambia",
-        "Малави", "Malawi",
-        "Ботсвана", "Botswana",
-        "Намибия", "Namibia",
-        "Вьетнам", "Vietnam",
-        "Филиппины", "Philippines",
-        "Египет", "Egypt",
-        "Пакистан", "Pakistan",
-        "Бангладеш", "Bangladesh",
-        "Шри-Ланка", "Sri Lanka",
-        "Непал", "Nepal",
-        "Мьянма", "Myanmar",
-        "Камбоджа", "Cambodia",
-        "Лаос", "Laos",
-        "Монголия", "Mongolia"
+        "Нигерия", "Nigeria", "NG",
+        "Кения", "Kenya", "KE",
+        "Гана", "Ghana", "GH",
+        "Уганда", "Uganda", "UG",
+        "Танзания", "Tanzania", "TZ",
+        "Эфиопия", "Ethiopia", "ET",
+        "Мозамбик", "Mozambique", "MZ",
+        "Зимбабве", "Zimbabwe", "ZW",
+        "Замбия", "Zambia", "ZM",
+        "Малави", "Malawi", "MW",
+        "Ботсвана", "Botswana", "BW",
+        "Намибия", "Namibia", "NA",
+        "Вьетнам", "Vietnam", "VN",
+        "Филиппины", "Philippines", "PH",
+        "Египет", "Egypt", "EG",
+        "Пакистан", "Pakistan", "PK",
+        "Бангладеш", "Bangladesh", "BD",
+        "Шри-Ланка", "Sri Lanka", "LK",
+        "Непал", "Nepal", "NP",
+        "Мьянма", "Myanmar", "MM",
+        "Камбоджа", "Cambodia", "KH",
+        "Лаос", "Laos", "LA",
+        "Монголия", "Mongolia", "MN"
       ]
     },
     "complex": {
-      "name": "Complex",
+      "name": "Сложные страны",
       "multiplier": 1.0,
       "extra_percent": 0.30,
+      "description": "100% от базовой цены + дополнительные сложности",
       "countries": [
-        "Афганистан", "Afghanistan",
-        "Иран", "Iran",
-        "Ирак", "Iraq",
-        "Сирия", "Syria",
-        "Ливан", "Lebanon",
-        "Иордания", "Jordan",
-        "Палестина", "Palestine",
-        "Йемен", "Yemen",
-        "Оман", "Oman",
-        "Кувейт", "Kuwait",
-        "Катар", "Qatar",
-        "Бахрейн", "Bahrain",
-        "ОАЭ", "United Arab Emirates", "UAE",
-        "Саудовская Аравия", "Saudi Arabia",
-        "Украина", "Ukraine"
+        "Афганистан", "Afghanistan", "AF",
+        "Иран", "Iran", "IR",
+        "Ирак", "Iraq", "IQ",
+        "Сирия", "Syria", "SY",
+        "Ливан", "Lebanon", "LB",
+        "Иордания", "Jordan", "JO",
+        "Палестина", "Palestine", "PS",
+        "Йемен", "Yemen", "YE",
+        "Оман", "Oman", "OM",
+        "Кувейт", "Kuwait", "KW",
+        "Катар", "Qatar", "QA",
+        "Бахрейн", "Bahrain", "BH",
+        "ОАЭ", "United Arab Emirates", "UAE", "AE",
+        "Саудовская Аравия", "Saudi Arabia", "SA",
+        "Украина", "Ukraine", "UA"
       ]
     }
   },
@@ -128,24 +168,52 @@
     "youtube_shorts": 1.15
   },
   "surcharges": {
+    "description": "Надбавки к агентской стоимости",
     "urgent": 0.40,
     "peak_season": 0.25,
     "exclusive_content": 0.35
   },
   "discounts": {
+    "description": "Скидки от агентской стоимости",
     "own_badge": 0.03,
     "own_content": 0.15,
     "pilot": 0.10,
     "vip_max": 0.15
   },
   "market_discounts": [
-    { "min_millions": 50, "percent": 0.05 },
-    { "min_millions": 100, "percent": 0.10 },
-    { "min_millions": 200, "percent": 0.15 },
-    { "min_millions": 500, "percent": 0.20 }
+    { 
+      "min_millions": 50, 
+      "percent": 0.05,
+      "description": "50+ млн просмотров"
+    },
+    { 
+      "min_millions": 100, 
+      "percent": 0.10,
+      "description": "100+ млн просмотров"
+    },
+    { 
+      "min_millions": 200, 
+      "percent": 0.15,
+      "description": "200+ млн просмотров"
+    },
+    { 
+      "min_millions": 500, 
+      "percent": 0.20,
+      "description": "500+ млн просмотров"
+    }
   ],
   "minimums": {
     "min_order_millions": 15,
-    "min_order_amount_rub": 615000
+    "min_order_amount_rub": 615000,
+    "min_order_amount_usd": 6650
+  },
+  "agency_conditions": {
+    "discount_from_retail": 0.25,
+    "prepayment_percent": 0.50,
+    "supported_currencies": ["RUB", "USD", "EUR"],
+    "support_24_7": true,
+    "personal_manager": true,
+    "marketing_materials": true,
+    "team_training": true
   }
 }
