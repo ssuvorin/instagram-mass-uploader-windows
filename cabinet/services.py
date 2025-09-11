@@ -8,6 +8,7 @@ from django.utils import timezone
 from django.db.models.functions import TruncDate, TruncWeek
 from .models import Client, ClientHashtag
 from uploader.models import HashtagAnalytics
+from .currency_service import currency_service
 
 
 @dataclass
@@ -323,7 +324,11 @@ class AgencyCalculatorService:
 
         bracket = self._find_bracket(inp.volume_millions)
         base_rub_per_view = float(bracket.get("rub_per_view", 0.0))
-        usd_to_rub = float(self.config.get("currency", {}).get("usd_to_rub", 92.5))
+        
+        # Получаем актуальные курсы валют
+        current_rates = currency_service.get_current_rates()
+        usd_to_rub = current_rates["usd_rub"]
+        eur_to_rub = current_rates["eur_rub"]
 
         # Calculate average tier multiplier for selected countries
         tier_key, tier_multiplier, is_complex, complex_extra = self._calculate_countries_multiplier(countries)
@@ -404,10 +409,17 @@ class AgencyCalculatorService:
                 "total_views_effective": effective_views,
                 "rub_total": _fmt_money(total_price_rub_effective),
                 "usd_total": _fmt_money(total_price_usd_effective),
+                "eur_total": _fmt_money(total_price_rub_effective / eur_to_rub if eur_to_rub else 0.0),
                 "applied_min_volume": applied_min_volume,
                 "applied_min_amount": applied_min_amount,
                 "min_order_millions": min_order_millions,
                 "min_order_amount_rub": min_order_amount_rub,
+            },
+            "currency": {
+                "usd_to_rub": _fmt_money(usd_to_rub),
+                "eur_to_rub": _fmt_money(eur_to_rub),
+                "source": current_rates.get("source", "unknown"),
+                "last_updated": currency_service.get_rates_info()
             },
         }
 

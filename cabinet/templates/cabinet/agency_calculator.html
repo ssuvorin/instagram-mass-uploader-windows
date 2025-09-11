@@ -257,6 +257,15 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
         }
         
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
         @media (max-width: 768px) {
             .main-container {
                 margin: 0.5rem;
@@ -419,10 +428,13 @@
         <!-- Тарифы -->
         <div class="tariffs-section">
             <h3><i class="bi bi-currency-exchange"></i> Агентская тарифная сетка</h3>
-            <div class="alert alert-info text-center mb-3">
+            <div class="alert alert-info text-center mb-3" id="rates-info">
                 <strong>Агентские цены:</strong> уже включена скидка 25% от розничных цен | 
-                <strong>Курс:</strong> 1 USD = 92.5 RUB | 
+                <strong>Курс:</strong> <span id="currency-rates">загружается...</span> | 
                 <strong>Минимум:</strong> 15 млн просмотров / 615,000 ₽
+                <button id="refresh-rates" class="btn btn-sm btn-outline-primary ms-2" style="display:none;" onclick="updateCurrencyRates()">
+                    <i class="bi bi-arrow-clockwise"></i> Обновить курсы
+                </button>
             </div>
             <div class="row">
                 <div class="col-md-3">
@@ -897,9 +909,10 @@
             'exclusive_content': 35
         };
         
-        // Курсы валют по ЦБ РФ (актуальные на 2025 год)
-        const usdToRub = 92.5;  // 1 USD = 92.5 RUB
-        const eurToRub = 100.8; // 1 EUR = 100.8 RUB
+        // Курсы валют (получаются динамически с сервера)
+        let usdToRub = 92.5;  // Резервное значение
+        let eurToRub = 100.8; // Резервное значение
+        let currencySource = 'fallback';
         
         // Выбранные страны
         let selectedCountries = [];
@@ -910,8 +923,109 @@
             if (parts.length === 2) return parts.pop().split(';').shift();
         }
         
+        // Функции для работы с курсами валют
+        async function loadCurrencyRates() {
+            try {
+                const response = await fetch('/cabinet/api/currency/rates/', {
+                    method: 'GET',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                        'Content-Type': 'application/json',
+                    },
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.rates) {
+                        updateCurrencyDisplay(data.rates);
+                    }
+                } else {
+                    console.warn('Не удалось загрузить курсы валют, используем резервные значения');
+                    updateCurrencyDisplay({
+                        usd_rub: usdToRub,
+                        eur_rub: eurToRub,
+                        source: 'fallback'
+                    });
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки курсов валют:', error);
+                updateCurrencyDisplay({
+                    usd_rub: usdToRub,
+                    eur_rub: eurToRub,
+                    source: 'fallback'
+                });
+            }
+        }
+        
+        function updateCurrencyDisplay(rates) {
+            usdToRub = rates.usd_rub;
+            eurToRub = rates.eur_rub;
+            currencySource = rates.source;
+            
+            const sourceInfo = rates.source === 'cbr' ? '(ЦБ РФ)' : 
+                              rates.source === 'exchangerate-api' ? '(ExchangeRate API)' :
+                              rates.source === 'fixer' ? '(Fixer.io)' : '(резервные)';
+            
+            const ratesElement = document.getElementById('currency-rates');
+            ratesElement.innerHTML = `1 USD = ${usdToRub.toFixed(2)} ₽, 1 EUR = ${eurToRub.toFixed(2)} ₽ ${sourceInfo}`;
+            
+            // Показываем кнопку обновления для superuser
+            const refreshBtn = document.getElementById('refresh-rates');
+            if (rates.source !== 'fallback' && refreshBtn) {
+                refreshBtn.style.display = 'inline-block';
+            }
+            
+            // Добавляем индикатор состояния
+            const ratesInfo = document.getElementById('rates-info');
+            if (rates.source === 'fallback') {
+                ratesInfo.classList.add('alert-warning');
+                ratesInfo.classList.remove('alert-info');
+            } else {
+                ratesInfo.classList.add('alert-info');
+                ratesInfo.classList.remove('alert-warning');
+            }
+        }
+        
+        async function updateCurrencyRates() {
+            const refreshBtn = document.getElementById('refresh-rates');
+            const originalText = refreshBtn.innerHTML;
+            
+            try {
+                refreshBtn.disabled = true;
+                refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise spin"></i> Обновление...';
+                
+                const response = await fetch('/cabinet/api/currency/force-update/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                        'Content-Type': 'application/json',
+                    },
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.rates) {
+                        updateCurrencyDisplay(data.rates);
+                        showNotification('Курсы валют обновлены', 'success');
+                        
+                        // Пересчитываем калькулятор с новыми курсами
+                        calculate();
+                    }
+                } else {
+                    showNotification('Ошибка обновления курсов валют', 'error');
+                }
+            } catch (error) {
+                console.error('Ошибка обновления курсов валют:', error);
+                showNotification('Ошибка подключения к серверу', 'error');
+            } finally {
+                refreshBtn.disabled = false;
+                refreshBtn.innerHTML = originalText;
+            }
+        }
+        
         // Инициализация
         document.addEventListener('DOMContentLoaded', function() {
+            loadCurrencyRates();
             initializeCountrySelection();
             initializeEventHandlers();
             calculate();

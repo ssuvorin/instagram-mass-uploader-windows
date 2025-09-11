@@ -19,6 +19,7 @@ from .forms import AgencyForm, ClientForm, ClientHashtagForm
 from django.contrib.auth import get_user_model
 from .services import AnalyticsService
 from .services import AgencyCalculatorService
+from .currency_service import currency_service
 
 
 @login_required
@@ -1415,3 +1416,56 @@ def admin_analytics_api(request):
         "clientsRows": clients_rows,
         "hashtagsBreakdown": hashtags_breakdown,
     })
+
+
+# === Currency API endpoints ===
+
+@login_required
+@require_http_methods(["GET"])
+def get_currency_rates(request):
+    """
+    Получить актуальные курсы валют
+    """
+    # Только superuser или владелец агентства
+    if not request.user.is_superuser:
+        my_agency = Agency.objects.filter(owner=request.user).first()
+        if not my_agency:
+            return JsonResponse({"error": "Forbidden"}, status=403)
+    
+    try:
+        rates_info = currency_service.get_rates_info()
+        return JsonResponse({
+            "success": True,
+            "rates": rates_info,
+            "timestamp": timezone.now().isoformat(),
+        })
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def force_update_currency_rates(request):
+    """
+    Принудительно обновить курсы валют
+    """
+    # Только superuser
+    if not request.user.is_superuser:
+        return JsonResponse({"error": "Forbidden"}, status=403)
+    
+    try:
+        rates = currency_service.force_update()
+        return JsonResponse({
+            "success": True,
+            "message": "Курсы валют обновлены",
+            "rates": rates,
+            "timestamp": timezone.now().isoformat(),
+        })
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        }, status=500)

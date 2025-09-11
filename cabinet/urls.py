@@ -30,6 +30,9 @@ urlpatterns = [
     path('api/calculation/<int:calculation_id>/', views.calculation_details_api, name='cabinet_calculation_details_api'),
     path('api/calculations/', views.calculations_list_api, name='cabinet_calculations_list_api'),
     path('api/admin-analytics/', views.admin_analytics_api, name='cabinet_admin_analytics_api'),
+    # Currency API
+    path('api/currency/rates/', views.get_currency_rates, name='cabinet_currency_rates'),
+    path('api/currency/force-update/', views.force_update_currency_rates, name='cabinet_currency_force_update'),
 ]
 
 
