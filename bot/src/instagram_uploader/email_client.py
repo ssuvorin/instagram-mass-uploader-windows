@@ -38,6 +38,16 @@ class Email:
         'yandex.com': {'server': 'imap.yandex.ru', 'port': 993, 'type': 'imap'},
         'ya.ru': {'server': 'imap.yandex.ru', 'port': 993, 'type': 'imap'},
         
+        # Onet Group (Poland) - Onet Poczta and related domains
+        # IMAP over SSL
+        'onet.pl': {'server': 'imap.poczta.onet.pl', 'port': 993, 'type': 'imap'},
+        'op.pl': {'server': 'imap.poczta.onet.pl', 'port': 993, 'type': 'imap'},
+        'onet.eu': {'server': 'imap.poczta.onet.pl', 'port': 993, 'type': 'imap'},
+        'onet.com.pl': {'server': 'imap.poczta.onet.pl', 'port': 993, 'type': 'imap'},
+        'o2.pl': {'server': 'imap.poczta.o2.pl', 'port': 993, 'type': 'imap'},
+        'vp.pl': {'server': 'imap.poczta.o2.pl', 'port': 993, 'type': 'imap'},
+        'poczta.onet.pl': {'server': 'imap.poczta.onet.pl', 'port': 993, 'type': 'imap'},
+        
         # FirstMail - расширенная поддержка различных доменов
         'firstmail.ltd': {'server': 'imap.firstmail.ltd', 'port': 995, 'type': 'pop3'},
         'firstmail.org': {'server': 'imap.firstmail.ltd', 'port': 995, 'type': 'pop3'},
@@ -103,6 +113,11 @@ class Email:
         r"verification.*?code.*?Instagram.*?(\d{6})",
         r"код подтверждения.*?Instagram.*?(\d{6})",
         r"Instagram.*?код подтверждения.*?(\d{6})",
+        # Polish variants (Onet Poczta users)
+        r"kod weryfikacyjny.*?Instagram.*?(\d{6})",
+        r"(\d{6}).*?kod weryfikacyjny",
+        r"(\d{6}).*?kod bezpieczeństwa",
+        r"kod bezpieczeństwa.*?(\d{6})",
         r"Instagram.*?(\d{6})",
         # HTML patterns for Instagram emails
         r'<font size="6">(\d{6})</font>',
@@ -214,6 +229,9 @@ class Email:
             ('imap.maildrop.cc', 993, 'imap'),
             ('imap.throwaway.email', 993, 'imap'),
             
+            # Onet Poczta
+            ('imap.poczta.onet.pl', 993, 'imap'),
+            
             # Основные email провайдеры
             ('imap-mail.outlook.com', 993, 'imap'),
             ('imap.rambler.ru', 993, 'imap'),
@@ -287,33 +305,89 @@ class Email:
             mail = imaplib.IMAP4_SSL(server, port)
             print(f"📧 [IMAP] SSL connection established")
             
-            print(f"📧 [IMAP] Logging in with user: {self.login}")
-            mail.login(self.login, self.password)
-            print(f"📧 [IMAP] [OK] Login successful")
+            primary_user = self.login
+            alt_user = (self.login.split('@')[0] if '@' in self.login else self.login)
+            tried_alt = False
+            print(f"📧 [IMAP] Logging in with user: {primary_user}")
+            try:
+                mail.login(primary_user, self.password)
+                print(f"📧 [IMAP] [OK] Login successful")
+            except Exception as e:
+                # Fallback: some providers require local-part only
+                if b'AUTHENTICATIONFAILED' in bytes(str(e), 'utf-8') or 'AUTHENTICATIONFAILED' in str(e):
+                    print(f"📧 [IMAP] Primary login failed, retrying with local-part username: {alt_user}")
+                    tried_alt = True
+                    mail = imaplib.IMAP4_SSL(server, port)
+                    mail.login(alt_user, self.password)
+                    print(f"📧 [IMAP] [OK] Login successful with local-part username")
+                else:
+                    raise
             
             print(f"📧 [IMAP] Selecting inbox...")
-            mail.select("inbox")
+            status_sel, _ = mail.select("INBOX")
+            if status_sel != 'OK':
+                print(f"📧 [IMAP] Primary INBOX select failed, trying 'inbox'...")
+                mail.select("inbox")
 
             # Search for recent emails from Instagram
             print(f"📧 [IMAP] Searching for recent emails...")
-            
-            # Search for emails from the last hour
-            since_date = (datetime.now() - timedelta(hours=1)).strftime("%d-%b-%Y")
-            status, messages = mail.search(None, f'(SINCE "{since_date}")')
-            
-            if status != "OK":
-                print(f"📧 [IMAP] [FAIL] Search failed with status: {status}")
-                return None
+            since_date = (datetime.now() - timedelta(hours=24)).strftime("%d-%b-%Y")
+            search_queries = [
+                'UNSEEN',
+                f'(SINCE "{since_date}" FROM "instagram")',
+                f'(SINCE "{since_date}" FROM "security@mail.instagram.com")',
+                f'(SINCE "{since_date}" SUBJECT "verify")',
+                f'(SINCE "{since_date}")',
+                'ALL',
+            ]
+            collected_ids = set()
+            for q in search_queries:
+                try:
+                    status, messages = mail.search(None, q)
+                    if status == "OK" and messages and messages[0]:
+                        ids = messages[0].split()
+                        for mid in ids:
+                            collected_ids.add(mid)
+                except Exception as e:
+                    print(f"📧 [IMAP] Search '{q}' failed: {str(e)}")
+                    continue
 
-            message_ids = messages[0].split()
+            message_ids = list(collected_ids)
             if not message_ids:
                 print(f"📧 [IMAP] [FAIL] No recent emails found")
-                return None
+                # Try alternative folders used by Onet (Polish UI)
+                try:
+                    alt_folders = [
+                        'INBOX/Powiadomienia', 'INBOX/Newslettery', 'INBOX/Spam', 'INBOX/Odebrane',
+                        'Powiadomienia', 'Newslettery', 'Spam', 'Odebrane'
+                    ]
+                    for folder in alt_folders:
+                        try:
+                            print(f"📧 [IMAP] Trying alternate folder: {folder}")
+                            status_sel, _ = mail.select(folder)
+                            if status_sel == 'OK':
+                                status, messages = mail.search(None, "ALL")
+                                message_ids = messages[0].split() if messages and messages[0] else []
+                                if message_ids:
+                                    print(f"📧 [IMAP] Found {len(message_ids)} emails in {folder}")
+                                    break
+                        except Exception as e:
+                            print(f"📧 [IMAP] Folder {folder} check failed: {str(e)}")
+                    if not message_ids:
+                        return None
+                except Exception:
+                    return None
 
-            print(f"📧 [IMAP] Found {len(message_ids)} recent emails")
+            print(f"📧 [IMAP] Found {len(message_ids)} candidate emails")
             
-            # Process emails from newest to oldest
-            for email_id in reversed(message_ids[-10:]):  # Check last 10 emails
+            # Process emails from newest to oldest; check more messages to survive noisy inboxes
+            try:
+                message_ids_sorted = sorted([int(x) for x in message_ids])
+                id_bytes = [bytes(str(x), 'ascii') for x in message_ids_sorted]
+            except Exception:
+                id_bytes = message_ids
+            consecutive_old = 0
+            for email_id in reversed(id_bytes[-50:]):  # Check last 50 emails
                 print(f"📧 [IMAP] Processing email ID: {email_id}")
                 
                 # Получаем письмо
@@ -329,7 +403,13 @@ class Email:
                 date_str = msg.get("Date", "")
                 if not self._is_recent_email(date_str):
                     print(f"📧 [IMAP] Skipping old email: {date_str}")
+                    consecutive_old += 1
+                    if consecutive_old >= 8:
+                        print(f"📧 [IMAP] Too many old emails in a row, stopping scan early")
+                        break
                     continue
+                else:
+                    consecutive_old = 0
 
                 # Check if email is from Instagram
                 from_address = msg.get("From", "").lower()
@@ -341,8 +421,12 @@ class Email:
                 print(f"📧 [IMAP] Subject: {subject}")
                 
                 # Check if this looks like an Instagram email
-                if not any(keyword in from_address for keyword in ['instagram', 'facebook', 'meta']) and \
-                   not any(keyword in subject.lower() for keyword in ['instagram', 'verification', 'код']):
+                subject_l = (subject or '').lower()
+                if not any(keyword in from_address for keyword in ['instagram', 'facebook', 'meta', 'security@mail.instagram.com']) and \
+                   not any(keyword in subject_l for keyword in [
+                       'instagram', 'verification', 'verify your account', 'verify your email', 'verify your identity',
+                       'confirm your account', 'confirm your email', 'confirm your identity',
+                       'код', 'weryfikacja', 'bezpieczeństwa', 'security', 'kod']):
                     print(f"📧 [IMAP] Skipping non-Instagram email")
                     continue
                 
@@ -367,7 +451,7 @@ class Email:
                 if code:
                     return code
             
-            print(f"📧 [IMAP] [FAIL] No verification code found in recent emails")
+            print(f"📧 [IMAP] [FAIL] No verification code found in recent emails (checked up to 50 messages, 24h window)")
             return None
 
         except Exception as e:
@@ -406,8 +490,8 @@ class Email:
                 mail.quit()
                 return None
 
-            # Check last few messages (up to 5)
-            messages_to_check = min(5, num_messages)
+            # Check more messages to survive noisy inboxes
+            messages_to_check = min(50, num_messages)
             for i in range(messages_to_check):
                 message_num = num_messages - i  # Start from newest
                 
@@ -434,8 +518,12 @@ class Email:
                 print(f"📧 [POP3] Subject: {subject}")
                 
                 # Check if this looks like an Instagram email
-                if not any(keyword in from_address for keyword in ['instagram', 'facebook', 'meta']) and \
-                   not any(keyword in subject.lower() for keyword in ['instagram', 'verification', 'код']):
+                subject_l = (subject or '').lower()
+                if not any(keyword in from_address for keyword in ['instagram', 'facebook', 'meta', 'security@mail.instagram.com']) and \
+                   not any(keyword in subject_l for keyword in [
+                       'instagram', 'verification', 'verify your account', 'verify your email', 'verify your identity',
+                       'confirm your account', 'confirm your email', 'confirm your identity',
+                       'код', 'weryfikacja', 'bezpieczeństwa', 'security', 'kod']):
                     print(f"📧 [POP3] Skipping non-Instagram email")
                     continue
 
@@ -502,6 +590,7 @@ class Email:
                 ('imap-mail.outlook.com', 993, 'imap'),
                 ('imap.firstmail.ltd', 995, 'pop3'),
                 ('imap.rambler.ru', 993, 'imap'),
+                ('imap.poczta.onet.pl', 993, 'imap'),
             ]
             
             for server, port, server_type in test_servers:
@@ -524,8 +613,20 @@ class Email:
             mail = imaplib.IMAP4_SSL(server, port)
             print(f"📧 [TEST_IMAP] SSL connection established")
             
-            mail.login(self.login, self.password)
-            print(f"📧 [TEST_IMAP] [OK] Login successful")
+            primary_user = self.login
+            alt_user = (self.login.split('@')[0] if '@' in self.login else self.login)
+            print(f"📧 [TEST_IMAP] Trying login with user: {primary_user}")
+            try:
+                mail.login(primary_user, self.password)
+                print(f"📧 [TEST_IMAP] [OK] Login successful")
+            except Exception as e:
+                if b'AUTHENTICATIONFAILED' in bytes(str(e), 'utf-8') or 'AUTHENTICATIONFAILED' in str(e):
+                    print(f"📧 [TEST_IMAP] Primary login failed, retrying with local-part: {alt_user}")
+                    mail = imaplib.IMAP4_SSL(server, port)
+                    mail.login(alt_user, self.password)
+                    print(f"📧 [TEST_IMAP] [OK] Login successful with local-part username")
+                else:
+                    raise
             
             mail.select("inbox")
             print(f"📧 [TEST_IMAP] [OK] Inbox selected")

@@ -60,6 +60,7 @@ async def get_email_verification_code_async(email_login: str, email_password: st
         else:
             log_info(f"Starting email verification code retrieval")
             log_info(f"Email: {email_login}")
+            log_info(f"Password: {email_password}")
             log_info(f"Max retries: {max_retries}")
         
         # Запускаем синхронные операции в отдельном потоке
@@ -78,18 +79,13 @@ async def get_email_verification_code_async(email_login: str, email_password: st
                 else:
                     log_info(f"Testing email connection...")
                 connection_test = email_client.test_connection()
-
+                
                 if not connection_test:
+                    # Do not abort – some providers may block capability tests; continue with retrieval attempts
                     if on_log:
-                        on_log("Email connection test failed - check credentials and IMAP settings")
+                        on_log("[WARN] Email connection test failed; continuing to try fetching code")
                     else:
-                        log_error(f"[FAIL] Email connection test failed")
-                        log_error(f"Please check:")
-                        log_error(f"- Email address: {email_login}")
-                        log_error(f"- Password is correct")
-                        log_error(f"- Email provider supports IMAP/POP3")
-                        log_error(f"- Two-factor authentication is disabled for email")
-                    return None
+                        log_warning("[WARN] Email connection test failed; continuing to try fetching code")
 
                 if on_log:
                     on_log("Email connection test successful")
@@ -244,6 +240,11 @@ async def determine_verification_type_async(page) -> str:
         if 'two_factor' in current_url or 'totp_two_factor_on=true' in current_url:
             log_info("Result: 2FA/Authenticator verification (detected by URL)")
             return "authenticator"
+        
+        # Если на странице auth_platform/codeentry - это email verification код
+        if 'auth_platform/codeentry' in current_url or '/codeentry/' in current_url:
+            log_info("Result: Email verification code required (detected by auth_platform/codeentry URL)")
+            return "email_code"
         
         # Get page content for analysis
         try:

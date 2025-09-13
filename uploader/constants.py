@@ -197,12 +197,29 @@ class InstagramTexts:
         'текстовое сообщение',
         'phone number',
         'номер телефона',
+        # Spanish/Portuguese 2FA keywords
+        'aplicación de autenticación',
+        'aplicación authenticator',
+        'código de respaldo',
+        'código de recuperación',
+        'código sms',
+        'mensaje de texto',
+        'número de teléfono',
+        'aplicação de autenticação',
+        'aplicativo authenticator',
+        'código de backup',
+        'código de recuperação',
+        'código sms',
+        'mensagem de texto',
+        'número de telefone',
         # Дополнительные подсказки 2FA
         'two-factor',
         'two factor',
         '2fa',
         'authenticator',
         'verification code from your authenticator app',
+        'código de verificación de tu aplicación authenticator',
+        'código de verificação do seu aplicativo authenticator',
     ]
     
     # Сохранение данных входа

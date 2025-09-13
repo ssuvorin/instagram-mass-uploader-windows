@@ -25,6 +25,7 @@ from ..constants import (
     VerboseFilters, InstagramSelectors, APIConstants
 )
 from ..selectors_config import InstagramSelectors as SelectorConfig, SelectorUtils
+from ..multilingual_selector_provider import get_multilingual_selector_provider, LocaleResolver
 from ..task_utils import (
     update_task_log, update_account_task, update_task_status, get_account_username,
     get_account_from_task, mark_account_as_used, get_task_with_accounts, 
@@ -224,16 +225,39 @@ async def wait_for_page_ready_async(page, max_wait_time=30.0) -> bool:
                     await asyncio.sleep(2)  # Faster check interval
                     continue
                 
-                # Quick check: main Instagram interface elements (one selector)
-                main_element = await page.query_selector('nav, [role="navigation"], [data-testid="navigation"]')
-                if not main_element:
+                # Quick check: main Instagram interface elements (broadened, multilingual)
+                navigation_selectors = [
+                    'nav', '[role="navigation"]', '[data-testid="navigation"]', 'main[role="main"]',
+                    'div[data-testid="ig-nav-bar"]'
+                ]
+                main_interface_found = False
+                # Try navigation containers first
+                for nav_sel in navigation_selectors:
+                    try:
+                        el = await page.query_selector(nav_sel)
+                        if el and await el.is_visible():
+                            main_interface_found = True
+                            break
+                    except Exception:
+                        continue
+                # If not found, try explicit MAIN_INTERFACE icons/labels (RU/EN/ES/PT)
+                if not main_interface_found:
+                    for sel in SelectorConfig.MAIN_INTERFACE:
+                        try:
+                            el = await page.query_selector(sel)
+                            if el and await el.is_visible():
+                                main_interface_found = True
+                                break
+                        except Exception:
+                            continue
+                if not main_interface_found:
                     log_info(f"[ASYNC_READY] [WAIT] Main interface not found")
-                    await asyncio.sleep(0.5)
+                    await asyncio.sleep(0.8)
                     continue
                 
                 # Quick check: upload button visibility (centralized selectors)
                 upload_button = None
-                for sel in SelectorConfig.UPLOAD_BUTTON[:10]:
+                for sel in SelectorConfig.UPLOAD_BUTTON:
                     try:
                         formatted = f"xpath={sel}" if sel.startswith('//') else sel
                         el = await page.query_selector(formatted)
@@ -321,10 +345,19 @@ async def check_for_dropdown_menu_async(page) -> bool:
         log_info(f"[ASYNC_UPLOAD] Error checking for dropdown menu: {str(e)}")
         return False
 
-async def click_post_option_async(page) -> bool:
-    """Find and click post option in dropdown - ENHANCED with longer waits and better error handling"""
+async def click_post_option_async(page, account=None) -> bool:
+    """Find and click post option in dropdown - ENHANCED with multilingual support"""
     try:
-        log_info("[ASYNC_UPLOAD] [SEARCH] Looking for 'Публикация' option with enhanced detection...")
+        log_info("[ASYNC_UPLOAD] [SEARCH] Looking for 'Post' option with multilingual detection...")
+        
+        # Resolve account locale for multilingual selectors
+        locale = 'ru'  # default
+        if account:
+            locale = LocaleResolver.resolve_account_locale(account)
+            log_info(f"[ASYNC_UPLOAD] [LOCALE] Using locale: {locale} for account")
+        
+        # Get multilingual selector provider
+        provider = get_multilingual_selector_provider()
         
         # ENHANCED: Longer human-like pause to read menu options
         reading_time = 4.0 + random.uniform(-1.0, 1.0)  # Increased from 2.0 to 4.0 seconds
@@ -336,14 +369,17 @@ async def click_post_option_async(page) -> bool:
         post_option = None
         found_selector = None
         
-        for i, selector in enumerate(SelectorConfig.POST_OPTION):
+        # Get multilingual post option selectors
+        post_selectors = provider.get_post_option_selectors(locale)
+        
+        for i, selector in enumerate(post_selectors):
             try:
                 if i > 0:
                     # ENHANCED: Longer pause between selectors
                     selector_wait = 1.0 + random.uniform(-0.3, 0.3)  # Increased from 0.3-0.7 to 0.7-1.3
                     await asyncio.sleep(selector_wait)
                 
-                log_info(f"[ASYNC_UPLOAD] [SEARCH] Trying selector {i+1}/{len(SelectorConfig.POST_OPTION)}: {selector}")
+                log_info(f"[ASYNC_UPLOAD] [SEARCH] Trying selector {i+1}/{len(post_selectors)}: {selector}")
                 
                 if selector.startswith('//'):
                     post_option = await page.query_selector(f"xpath={selector}")
@@ -356,15 +392,19 @@ async def click_post_option_async(page) -> bool:
                         element_aria = await post_option.get_attribute('aria-label') or ""
                         combined_text = (element_text + " " + element_aria).lower()
                         
-                        # ENHANCED: More comprehensive post keywords
-                        post_keywords = [
-                            'публикация', 'post', 'создать публикацию', 'create post',
-                            'создать', 'create', 'новая публикация', 'new post',
-                            'добавить публикацию', 'add post', 'создать пост', 'create post'
-                        ]
+                        # ENHANCED: Multilingual post keywords based on locale
+                        post_keywords = []
+                        if locale == 'es':
+                            post_keywords = ['publicación', 'post', 'crear publicación', 'crear', 'nueva publicación']
+                        elif locale == 'pt':
+                            post_keywords = ['publicação', 'post', 'criar publicação', 'criar', 'nova publicação']
+                        elif locale == 'en':
+                            post_keywords = ['post', 'create post', 'create', 'new post', 'add post']
+                        else:  # ru
+                            post_keywords = ['публикация', 'post', 'создать публикацию', 'создать', 'новая публикация']
                         
                         if any(keyword in combined_text for keyword in post_keywords):
-                            log_info(f"[ASYNC_UPLOAD] [OK] Found 'Публикация' option: '{element_text.strip()}'")
+                            log_info(f"[ASYNC_UPLOAD] [OK] Found 'Post' option: '{element_text.strip()}'")
                             found_selector = selector
                             break
                         else:
@@ -372,7 +412,7 @@ async def click_post_option_async(page) -> bool:
                             post_option = None
                             continue
                     except Exception as text_error:
-                        log_info(f"[ASYNC_UPLOAD] [OK] Found potential 'Публикация' option (text check failed: {str(text_error)})")
+                        log_info(f"[ASYNC_UPLOAD] [OK] Found potential 'Post' option (text check failed: {str(text_error)})")
                         found_selector = selector
                         break
                 
@@ -453,10 +493,19 @@ async def click_post_option_async(page) -> bool:
         log_info(f"[ASYNC_UPLOAD] [FAIL] Error in enhanced click_post_option: {str(e)}")
         return False
 
-async def add_video_location_async(page, video_obj):
-    """Add video location - FULL VERSION like sync"""
+async def add_video_location_async(page, video_obj, account=None):
+    """Add video location - FULL VERSION with multilingual support"""
     try:
         log_info(f"[ASYNC_UPLOAD] [SEARCH] Starting location search for video_obj: {type(video_obj)}")
+        
+        # Resolve account locale for multilingual selectors
+        locale = 'ru'  # default
+        if account:
+            locale = LocaleResolver.resolve_account_locale(account)
+            log_info(f"[ASYNC_UPLOAD] [LOCALE] Using locale: {locale} for account")
+        
+        # Get multilingual selector provider
+        provider = get_multilingual_selector_provider()
         
         # Get location from video object
         location = None
@@ -493,7 +542,7 @@ async def add_video_location_async(page, video_obj):
         # Wait a bit before location (after description and Enter)
         await asyncio.sleep(random.uniform(1.0, 2.0))
         
-        # Location field selectors (centralized)
+        # Get multilingual location input selectors
         location_field_selectors = SelectorConfig.LOCATION_INPUT
         
         location_field = None
@@ -581,10 +630,19 @@ async def add_video_location_async(page, video_obj):
         log_info(f"[ASYNC_UPLOAD] [FAIL] Error setting location: {str(e)}")
         return False
 
-async def add_video_mentions_async(page, video_obj):
-    """Add video mentions - FULL VERSION like sync"""
+async def add_video_mentions_async(page, video_obj, account=None):
+    """Add video mentions - FULL VERSION with multilingual support"""
     try:
         log_info(f"[ASYNC_UPLOAD] [SEARCH] Starting mentions search for video_obj: {type(video_obj)}")
+        
+        # Resolve account locale for multilingual selectors
+        locale = 'ru'  # default
+        if account:
+            locale = LocaleResolver.resolve_account_locale(account)
+            log_info(f"[ASYNC_UPLOAD] [LOCALE] Using locale: {locale} for account")
+        
+        # Get multilingual selector provider
+        provider = get_multilingual_selector_provider()
         
         # Get mentions from video object
         mentions = None
@@ -754,7 +812,7 @@ async def add_video_mentions_async(page, video_obj):
         
         # ENHANCED: Click "Done" button after all mentions (like sync version)
         log_info("[ASYNC_UPLOAD] [SEARCH] Looking for 'Done' button...")
-        done_button_selectors = SelectorConfig.DONE_BUTTON
+        done_button_selectors = provider.get_done_button_selectors(locale)
         
         done_button = None
         for selector in done_button_selectors:
@@ -820,10 +878,19 @@ async def add_video_mentions_async(page, video_obj):
         log_info(f"[ASYNC_UPLOAD] [FAIL] Error setting mentions: {str(e)}")
         return False
 
-async def click_share_button_async(page):
-    """Click share button - ENHANCED VERSION with multiple selectors and context checking"""
+async def click_share_button_async(page, account=None):
+    """Click share button - ENHANCED VERSION with multilingual selector support"""
     try:
         log_info("[ASYNC_UPLOAD] Looking for share button...")
+        
+        # Resolve account locale for multilingual selectors
+        locale = 'ru'  # default
+        if account:
+            locale = LocaleResolver.resolve_account_locale(account)
+            log_info(f"[ASYNC_UPLOAD] [LOCALE] Using locale: {locale} for account")
+        
+        # Get multilingual selector provider
+        provider = get_multilingual_selector_provider()
         
         # КРИТИЧЕСКОЕ ДОБАВЛЕНИЕ: Проверяем контекст загрузки перед поиском кнопки
         log_info("[ASYNC_UPLOAD] [SEARCH] Checking upload context before searching for share button...")
@@ -846,33 +913,24 @@ async def click_share_button_async(page):
             await page.keyboard.press('Tab')
             await asyncio.sleep(random.uniform(1.0, 2.0))
         
-        # Enhanced share button selectors with more dynamic options
-        share_selectors = [
-            *SelectorConfig.SHARE_BUTTON,
-            # Instagram-specific/dynamic extras kept here
-            'div[class*="x1i10hfl"]:has-text("Поделиться")',
-            'div[class*="x1i10hfl"]:has-text("Share")',
-            'div[class*="x1i10hfl"]:has-text("Compartir")',
-            'div[class*="x1i10hfl"]:has-text("Compartilhar")',
-            'div[class*="x1i10hfl"][class*="x1xfsgkm"]:has-text("Поделиться")',
-            'div[class*="x1i10hfl"][class*="x1xfsgkm"]:has-text("Share")',
-            'div[class*="x1i10hfl"][class*="x1xfsgkm"]:has-text("Compartir")',
-            'div[class*="x1i10hfl"][class*="x1xfsgkm"]:has-text("Compartilhar")',
-            'div[class*="x1i10hfl"][class*="xwib8y2"]:has-text("Поделиться")',
-            'div[class*="x1i10hfl"][class*="xwib8y2"]:has-text("Share")',
-            'div[class*="x1i10hfl"][class*="xwib8y2"]:has-text("Compartir")',
-            'div[class*="x1i10hfl"][class*="xwib8y2"]:has-text("Compartilhar")',
+        # Get multilingual share button selectors
+        share_selectors = provider.get_share_button_selectors(locale)
+        
+        # Add Instagram-specific dynamic selectors as fallback
+        share_selectors.extend([
+            'div[class*="x1i10hfl"][class*="x1xfsgkm"]',
+            'div[class*="x1i10hfl"][class*="xwib8y2"]',
             'div[role="dialog"] div[role="button"]:last-child',
             'div[role="dialog"] button:last-child',
             'div[aria-label*="Создать"] div[role="button"]:last-child',
             'div[aria-label*="Create"] div[role="button"]:last-child',
+            'div[aria-label*="Crear"] div[role="button"]:last-child',
+            'div[aria-label*="Criar"] div[role="button"]:last-child',
             'div[data-testid="share-button"]',
             'button[data-testid="share-button"]',
-            'div[data-testid="post-button"]',
-            'button[data-testid="post-button"]',
             'div[role="button"]:last-child',
             'button:last-child',
-        ]
+        ])
         
         share_button = None
         for selector in share_selectors:
@@ -1249,36 +1307,21 @@ async def check_for_account_suspension_async(page):
         log_error(f"[FAIL] [ASYNC_SUSPENSION] Error checking account suspension: {str(e)}")
         return {'account_suspended': False}
 
-async def _find_original_by_text_content_async(page):
-    """Поиск 'Оригинал' по текстовому содержимому - async version"""
-    log_info("[ASYNC_CROP] 📐 [TEXT] Searching for 'Оригинал' by text content...")
+async def _find_original_by_text_content_async(page, account=None):
+    """Поиск 'Оригинал' по текстовому содержимому - async version with multilingual support"""
+    log_info("[ASYNC_CROP] 📐 [TEXT] Searching for 'Original' by text content...")
     
-    # Семантические селекторы по тексту (независимы от CSS-классов)
-    text_selectors = [
-        # Прямой поиск span с текстом "Оригинал"
-        'span:has-text("Оригинал")',
-        'span:has-text("Original")',
-        
-        # Поиск родительских элементов
-        'div[role="button"]:has(span:has-text("Оригинал"))',
-        'button:has(span:has-text("Оригинал"))',
-        'div[role="button"]:has(span:has-text("Original"))',
-        'button:has(span:has-text("Original"))',
-        
-        # Прямой поиск по тексту в кнопках
-        'button:has-text("Оригинал")',
-        'div[role="button"]:has-text("Оригинал")',
-        'button:has-text("Original")',
-        'div[role="button"]:has-text("Original")',
-        
-        # XPath селекторы (самые точные)
-        '//span[text()="Оригинал"]',
-        '//span[text()="Original"]',
-        '//div[@role="button" and .//span[text()="Оригинал"]]',
-        '//button[.//span[text()="Оригинал"]]',
-        '//div[@role="button" and .//span[text()="Original"]]',
-        '//button[.//span[text()="Original"]]',
-    ]
+    # Resolve account locale for multilingual selectors
+    locale = 'ru'  # default
+    if account:
+        locale = LocaleResolver.resolve_account_locale(account)
+        log_info(f"[ASYNC_CROP] [LOCALE] Using locale: {locale} for account")
+    
+    # Get multilingual selector provider
+    provider = get_multilingual_selector_provider()
+    
+    # Get multilingual crop original selectors
+    text_selectors = provider.get_crop_original_selectors(locale)
     
     for selector in text_selectors:
         try:
@@ -1847,15 +1890,32 @@ async def verify_page_elements_state_async(page) -> bool:
             await asyncio.sleep(2)  # Faster check interval
             return False
         
-        # Quick check: main navigation element
-        nav_element = await page.query_selector('nav, [role="navigation"], [data-testid="navigation"]')
-        if not nav_element:
-            log_info("[ASYNC_UPLOAD] [WARN] No navigation element found")
+        # Quick check: main navigation element or MAIN_INTERFACE icons (multilingual)
+        main_interface_found = False
+        for nav_sel in ['nav', '[role="navigation"]', '[data-testid="navigation"]', 'main[role="main"]', 'div[data-testid="ig-nav-bar"]']:
+            try:
+                el = await page.query_selector(nav_sel)
+                if el and await el.is_visible():
+                    main_interface_found = True
+                    break
+            except Exception:
+                continue
+        if not main_interface_found:
+            for sel in SelectorConfig.MAIN_INTERFACE:
+                try:
+                    el = await page.query_selector(sel)
+                    if el and await el.is_visible():
+                        main_interface_found = True
+                        break
+                except Exception:
+                    continue
+        if not main_interface_found:
+            log_info("[ASYNC_UPLOAD] [WARN] Main interface not found")
             return False
         
         # Quick check: upload button (centralized)
         upload_button = None
-        for sel in SelectorConfig.UPLOAD_BUTTON[:10]:
+        for sel in SelectorConfig.UPLOAD_BUTTON:
             try:
                 formatted = f"xpath={sel}" if sel.startswith('//') else sel
                 el = await page.query_selector(formatted)

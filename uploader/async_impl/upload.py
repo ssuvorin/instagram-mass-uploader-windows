@@ -40,6 +40,7 @@ from ..constants import (
     VerboseFilters, InstagramSelectors, APIConstants
 )
 from ..selectors_config import InstagramSelectors as SelectorConfig, SelectorUtils
+from ..multilingual_selector_provider import get_multilingual_selector_provider, LocaleResolver
 from ..task_utils import (
     update_task_log, update_account_task, update_task_status, get_account_username,
     get_account_from_task, mark_account_as_used, get_task_with_accounts, 
@@ -162,10 +163,19 @@ async def navigate_to_upload_with_human_behavior_async(page, account_details=Non
         log_info(f"[ASYNC_UPLOAD] [FAIL] Navigation failed: {str(e)}")
         return False
 
-async def navigate_to_upload_core_async(page):
-    """Navigate to upload page with human behavior - OPTIMIZED VERSION"""
+async def navigate_to_upload_core_async(page, account=None):
+    """Navigate to upload page with human behavior - OPTIMIZED VERSION with multilingual support"""
     try:
         log_info("[ASYNC_UPLOAD] [BRAIN] Starting navigation to upload page")
+        
+        # Resolve account locale for multilingual selectors
+        locale = 'ru'  # default
+        if account:
+            locale = LocaleResolver.resolve_account_locale(account)
+            log_info(f"[ASYNC_UPLOAD] [LOCALE] Using locale: {locale} for account")
+        
+        # Get multilingual selector provider
+        provider = get_multilingual_selector_provider()
         
         # Quick page readiness check
         page_ready = await wait_for_page_ready_async(page, max_wait_time=10.0)  # Reduced timeout
@@ -175,8 +185,9 @@ async def navigate_to_upload_core_async(page):
         # Simulate page assessment
         await simulate_page_scan_async(page)
         
-        # Find upload button
-        upload_button = await find_element_with_selectors_async(page, SelectorConfig.UPLOAD_BUTTON)
+        # Find upload button with multilingual selectors
+        upload_button_selectors = provider.get_upload_button_selectors(locale)
+        upload_button = await find_element_with_selectors_async(page, upload_button_selectors)
         
         if not upload_button:
             log_info("[ASYNC_UPLOAD] [WARN] Upload button not found, trying broader detection...")
@@ -231,7 +242,7 @@ async def navigate_to_upload_core_async(page):
             return await retry_upload_with_page_refresh_async(page)
         return True
 
-async def handle_post_upload_click_async(page) -> bool:
+async def handle_post_upload_click_async(page, account=None) -> bool:
     """Handle what happens after clicking upload button - ENHANCED with longer timeouts and retry logic"""
     try:
         log_info("[ASYNC_UPLOAD] [START] Starting enhanced post-upload click handling...")
@@ -249,7 +260,7 @@ async def handle_post_upload_click_async(page) -> bool:
         # Check for dropdown menu
         if await check_for_dropdown_menu_async(page):
             log_info("[ASYNC_UPLOAD] [CLIPBOARD] Dropdown menu detected - selecting post option")
-            return await click_post_option_async(page)
+            return await click_post_option_async(page, account)
         
         # ENHANCED: Longer additional wait and check again
         additional_wait = 5.0 + random.uniform(-1.0, 1.0)  # Increased from 2.0 to 5.0 seconds
@@ -262,7 +273,7 @@ async def handle_post_upload_click_async(page) -> bool:
         
         if await check_for_dropdown_menu_async(page):
             log_info("[ASYNC_UPLOAD] [CLIPBOARD] Menu appeared after enhanced delay")
-            return await click_post_option_async(page)
+            return await click_post_option_async(page, account)
         
         # ENHANCED: Try broader detection with retry logic
         log_info("[ASYNC_UPLOAD] [WARN] Neither menu nor file dialog detected, trying enhanced broader detection...")
@@ -329,7 +340,7 @@ async def retry_upload_with_page_refresh_async(page) -> bool:
         # Check for dropdown menu
         if await check_for_dropdown_menu_async(page):
             log_info("[ASYNC_UPLOAD] [CLIPBOARD] Menu appeared after retry - selecting post option")
-            return await click_post_option_async(page)
+            return await click_post_option_async(page, account)
         
         # Final broader detection attempt
         log_info("[ASYNC_UPLOAD] [RETRY] Final broader detection attempt after retry...")
@@ -431,8 +442,8 @@ async def navigate_to_upload_alternative_async(page) -> bool:
     except Exception:
         return False
 
-async def upload_video_with_human_behavior_async(page, video_file_path, video_obj):
-    """Upload video with advanced human behavior - ПОЛНАЯ КОПИЯ sync версии"""
+async def upload_video_with_human_behavior_async(page, video_file_path, video_obj, account=None):
+    """Upload video with advanced human behavior and multilingual support"""
     try:
         log_info(f"[ASYNC_UPLOAD] [VIDEO] Starting video upload following exact Selenium pipeline: {os.path.basename(video_file_path)}")
         
@@ -447,16 +458,29 @@ async def upload_video_with_human_behavior_async(page, video_file_path, video_ob
         # 7. Set mentions (with suggestion selection and done button)
         # 8. Post video (share button)
         # 9. Verify success (wait for success message)
-        return await upload_video_core_async(page, video_file_path, video_obj)
+        return await upload_video_core_async(page, video_file_path, video_obj, account)
         
     except Exception as e:
         log_info(f"[ASYNC_UPLOAD] [FAIL] Upload failed: {str(e)}")
         return False
 
-async def upload_video_core_async(page, video_file_path, video_obj):
-    """Core video upload logic - FULL ADAPTIVE SEARCH like sync version"""
+async def upload_video_core_async(page, video_file_path, video_obj, account=None):
+    """Core video upload logic - FULL ADAPTIVE SEARCH with multilingual support"""
     try:
         log_info(f"[ASYNC_UPLOAD] [FOLDER] Starting adaptive file input search for: {os.path.basename(video_file_path)}")
+        
+        # Resolve account locale for multilingual selectors
+        locale = 'ru'  # default
+        if account:
+            locale = LocaleResolver.resolve_account_locale(account)
+            log_info(f"[ASYNC_UPLOAD] [LOCALE] Using locale: {locale} for account")
+        
+        # Get multilingual selector provider
+        provider = get_multilingual_selector_provider()
+        
+        # Initialize advanced human behavior for this session
+        from ..advanced_human_behavior import init_advanced_human_behavior
+        init_advanced_human_behavior(page)
         
         # ENHANCED: Verify file exists before attempting upload
         if not os.path.exists(video_file_path):
@@ -487,10 +511,10 @@ async def upload_video_core_async(page, video_file_path, video_obj):
         await asyncio.sleep(processing_delay)
         
         # 🔥 НОВАЯ ЛОГИКА: Обрабатываем диалог Reels если он появился
-        await handle_reels_dialog_async(page)
+        await handle_reels_dialog_async(page, account)
         
         # Handle crop (FULL ADAPTIVE VERSION)
-        if not await handle_crop_async(page):
+        if not await handle_crop_async(page, account):
             log_info("[ASYNC_UPLOAD] [FAIL] Failed to handle crop")
             return False
         
@@ -498,7 +522,7 @@ async def upload_video_core_async(page, video_file_path, video_obj):
         # В sync версии: for i in range(2): _click_next_button(i + 1)
         log_info("[ASYNC_UPLOAD] [RETRY] Clicking Next buttons (like sync version)...")
         for step in range(2):  # Click Next twice like sync version
-            next_success = await click_next_button_async(page, step + 1)
+            next_success = await click_next_button_async(page, step + 1, account)
             if not next_success:
                 log_info(f"[ASYNC_UPLOAD] [FAIL] Failed to click Next button {step + 1}")
                 return False
@@ -572,7 +596,7 @@ async def upload_video_core_async(page, video_file_path, video_obj):
         # ENHANCED: Add caption if we found any text
         if caption_text and caption_text.strip():
             log_info(f"[ASYNC_UPLOAD] [TARGET] Adding caption: '{caption_text[:100]}...'")
-            caption_success = await add_video_caption_async(page, caption_text)
+            caption_success = await add_video_caption_async(page, caption_text, account)
             if not caption_success:
                 log_info(f"[ASYNC_UPLOAD] [WARN] Failed to add caption, but continuing...")
         else:
@@ -580,15 +604,15 @@ async def upload_video_core_async(page, video_file_path, video_obj):
         
         # Add location if available (like sync _set_location_selenium_style)
         log_info(f"[ASYNC_UPLOAD] [LOCATION] Adding location for video_obj: {type(video_obj)}")
-        await add_video_location_async(page, video_obj)
+        await add_video_location_async(page, video_obj, account)
         
         # Add mentions if available (like sync _set_mentions_selenium_style)
         log_info(f"[ASYNC_UPLOAD] [USERS] Adding mentions for video_obj: {type(video_obj)}")
-        await add_video_mentions_async(page, video_obj)
+        await add_video_mentions_async(page, video_obj, account)
         
         # Click Share button (like sync _post_video_selenium_style)
         log_info("[ASYNC_UPLOAD] [START] Clicking Share button...")
-        share_success = await click_share_button_async(page)
+        share_success = await click_share_button_async(page, account)
         if not share_success:
             log_info("[ASYNC_UPLOAD] [FAIL] Failed to click Share button")
             return False
@@ -603,16 +627,25 @@ async def upload_video_core_async(page, video_file_path, video_obj):
         log_info(f"[ASYNC_UPLOAD] [SEARCH] Full traceback: {traceback.format_exc()}")
         return False
 
-async def click_next_button_async(page, step_number):
-    """Click next button with human-like behavior - ПОЛНАЯ КОПИЯ sync версии"""
+async def click_next_button_async(page, step_number, account=None):
+    """Click next button with human-like behavior - ENHANCED with multilingual support"""
     try:
         log_info(f"[ASYNC_UPLOAD] Clicking next button for step {step_number}...")
+        
+        # Resolve account locale for multilingual selectors
+        locale = 'ru'  # default
+        if account:
+            locale = LocaleResolver.resolve_account_locale(account)
+            log_info(f"[ASYNC_UPLOAD] [LOCALE] Using locale: {locale} for account")
+        
+        # Get multilingual selector provider
+        provider = get_multilingual_selector_provider()
         
         # Human-like delay before clicking (ПОЛНАЯ КОПИЯ из sync)
         await asyncio.sleep(random.uniform(3, 5))
         
-        # Look for next button with comprehensive selectors (RU/EN/ES/PT)
-        next_button_selectors = SelectorConfig.NEXT_BUTTON
+        # Look for next button with multilingual selectors
+        next_button_selectors = provider.get_next_button_selectors(locale)
         
         next_button = None
         for selector in next_button_selectors:
@@ -672,8 +705,8 @@ async def click_next_button_async(page, step_number):
         log_info(f"[ASYNC_UPLOAD] [FAIL] Error in next button click: {str(e)}")
         return False
 
-async def add_video_caption_async(page, caption_text):
-    """Add video caption - FULL VERSION like sync"""
+async def add_video_caption_async(page, caption_text, account=None):
+    """Add video caption - FULL VERSION with multilingual support"""
     try:
         if not caption_text:
             log_info("[ASYNC_UPLOAD] No caption text provided")
@@ -681,11 +714,20 @@ async def add_video_caption_async(page, caption_text):
         
         log_info(f"[ASYNC_UPLOAD] Setting caption: {caption_text[:50]}...")
         
+        # Resolve account locale for multilingual selectors
+        locale = 'ru'  # default
+        if account:
+            locale = LocaleResolver.resolve_account_locale(account)
+            log_info(f"[ASYNC_UPLOAD] [LOCALE] Using locale: {locale} for account")
+        
+        # Get multilingual selector provider
+        provider = get_multilingual_selector_provider()
+        
         # Wait a bit before caption
         await asyncio.sleep(random.uniform(1.0, 2.0))
         
-        # Find caption field with comprehensive selectors (centralized)
-        caption_field_selectors = SelectorConfig.CAPTION_TEXTAREA
+        # Find caption field with multilingual selectors
+        caption_field_selectors = provider.get_caption_textarea_selectors(locale)
         
         caption_field = None
         for selector in caption_field_selectors:
@@ -705,18 +747,67 @@ async def add_video_caption_async(page, caption_text):
         
         if not caption_field:
             log_info("[ASYNC_UPLOAD] [WARN] Caption field not found")
+            # Debug: log all available textbox elements
+            try:
+                all_textboxes = await page.query_selector_all('[role="textbox"]')
+                log_info(f"[ASYNC_UPLOAD] [DEBUG] Found {len(all_textboxes)} textbox elements")
+                
+                contenteditable_divs = await page.query_selector_all('div[contenteditable="true"]')
+                log_info(f"[ASYNC_UPLOAD] [DEBUG] Found {len(contenteditable_divs)} contenteditable divs")
+                
+                if contenteditable_divs:
+                    for i, div in enumerate(contenteditable_divs[:3]):  # Check first 3
+                        aria_label = await div.get_attribute('aria-label') or 'no aria-label'
+                        placeholder = await div.get_attribute('aria-placeholder') or 'no placeholder'
+                        log_info(f"[ASYNC_UPLOAD] [DEBUG] Div {i}: aria-label='{aria_label}', placeholder='{placeholder}'")
+            except Exception as debug_error:
+                log_info(f"[ASYNC_UPLOAD] [DEBUG] Debug failed: {str(debug_error)}")
+            
             return False
         
         # Click field and wait (like sync version)
         await caption_field.click()
         await asyncio.sleep(random.uniform(0.8, 1.5))
         
-        # Clear field (like sync version)
-        await caption_field.fill('')
-        await asyncio.sleep(random.uniform(0.5, 1.0))
+        # Check if it's a contenteditable element
+        is_contenteditable = await caption_field.get_attribute('contenteditable')
         
-        # Type caption with human-like behavior (like sync version)
-        await _type_like_human_async(page, caption_field, caption_text)
+        # Use advanced human typing behavior
+        from ..advanced_human_behavior import get_advanced_human_behavior
+        human_behavior = get_advanced_human_behavior()
+        
+        if human_behavior:
+            # Use advanced human typing
+            success = await human_behavior.human_type(caption_field, caption_text, "caption_input")
+            if success:
+                log_info("[ASYNC_UPLOAD] [OK] Caption added with advanced human behavior")
+            else:
+                log_info("[ASYNC_UPLOAD] [FALLBACK] Advanced typing failed, using basic approach")
+                await _type_like_human_async(page, caption_field, caption_text)
+        else:
+            # Fallback to basic human typing
+            if is_contenteditable == 'true':
+                # For contenteditable elements, use different approach
+                log_info("[ASYNC_UPLOAD] [CONTENTEDITABLE] Using contenteditable approach")
+                
+                # Clear content using selectAll + delete
+                await page.keyboard.press('Control+a')
+                await asyncio.sleep(random.uniform(0.2, 0.4))
+                await page.keyboard.press('Delete')
+                await asyncio.sleep(random.uniform(0.3, 0.6))
+                
+                # Type caption character by character for contenteditable
+                for char in caption_text:
+                    await page.keyboard.type(char)
+                    await asyncio.sleep(random.uniform(0.02, 0.08))  # Human-like typing speed
+            else:
+                # For regular input/textarea elements
+                log_info("[ASYNC_UPLOAD] [TEXTAREA] Using textarea approach")
+                await caption_field.fill('')
+                await asyncio.sleep(random.uniform(0.5, 1.0))
+                
+                # Type caption with human-like behavior (like sync version)
+                await _type_like_human_async(page, caption_field, caption_text)
         
         # Press Enter for line break after description (like sync version)
         log_info("[ASYNC_UPLOAD] Pressing Enter for line break...")
@@ -857,10 +948,19 @@ async def run_bulk_upload_task_async(task_id):
     """
     return await run_bulk_upload_task_parallel_async(task_id)
 
-async def handle_reels_dialog_async(page):
-    """Handle Reels dialog that may appear after file upload"""
+async def handle_reels_dialog_async(page, account=None):
+    """Handle Reels dialog that may appear after file upload with multilingual support"""
     try:
         log_info("[ASYNC_REELS_DIALOG] [SEARCH] Checking for Reels dialog...")
+        
+        # Resolve account locale for multilingual selectors
+        locale = 'ru'  # default
+        if account:
+            locale = LocaleResolver.resolve_account_locale(account)
+            log_info(f"[ASYNC_REELS_DIALOG] [LOCALE] Using locale: {locale} for account")
+        
+        # Get multilingual selector provider
+        provider = get_multilingual_selector_provider()
         
         # Ждем немного для появления диалога
         await asyncio.sleep(random.uniform(1, 2))
@@ -876,9 +976,9 @@ async def handle_reels_dialog_async(page):
             try:
                 dialog_element = await page.query_selector(selector)
                 if dialog_element and await dialog_element.is_visible():
-                    # Дополнительная проверка содержимого
+                    # Дополнительная проверка содержимого (мультиязычная)
                     dialog_text = await dialog_element.text_content()
-                    if dialog_text and any(keyword in dialog_text for keyword in ['Reels', 'видео', 'Теперь', 'Now', 'общедоступный', 'public']):
+                    if dialog_text and any(keyword in dialog_text for keyword in SelectorConfig.REELS_DIALOG_KEYWORDS):
                         log_info(f"[ASYNC_REELS_DIALOG] [OK] Found Reels dialog with selector: {selector}")
                         log_info(f"[ASYNC_REELS_DIALOG] [TEXT] Dialog text preview: {dialog_text[:100]}...")
                         dialog_found = True
@@ -890,13 +990,8 @@ async def handle_reels_dialog_async(page):
             log_info("[ASYNC_REELS_DIALOG] [WARN] No Reels dialog found, continuing...")
             return True
         
-        # Ищем кнопку OK в диалоге
-        ok_button_selectors = [
-            *SelectorConfig.OK_ACCEPT_BUTTONS,
-            'div[role="dialog"] button',
-            'button[type="button"]',
-            'div[role="button"]',
-        ]
+        # Используем централизованные селекторы из SelectorConfig
+        ok_button_selectors = SelectorConfig.REELS_DIALOG_ACCEPT_BUTTONS
         
         ok_button = None
         for selector in ok_button_selectors:
@@ -904,10 +999,10 @@ async def handle_reels_dialog_async(page):
                 # Ищем кнопку внутри диалога
                 ok_button = await page.query_selector(f'{selector}')
                 if ok_button and await ok_button.is_visible():
-                    # Проверяем, что кнопка действительно в диалоге
+                    # Проверяем, что кнопка действительно подходящая
                     button_text = await ok_button.text_content()
-                    if button_text and ('OK' in button_text.upper() or 'ОК' in button_text.upper()):
-                        log_info(f"[ASYNC_REELS_DIALOG] [OK] Found OK button with selector: {selector} (text: {button_text})")
+                    if button_text and any(keyword.upper() in button_text.upper() for keyword in SelectorConfig.ACCEPT_BUTTON_KEYWORDS):
+                        log_info(f"[ASYNC_REELS_DIALOG] [OK] Found accept button with selector: {selector} (text: {button_text})")
                         break
                     else:
                         ok_button = None

@@ -49,6 +49,7 @@ from .constants import (
     VerboseFilters, InstagramSelectors, APIConstants
 )
 from .selectors_config import InstagramSelectors as SelectorConfig, SelectorUtils
+from .multilingual_selector_provider import get_multilingual_selector_provider, LocaleResolver
 from .task_utils import (
     update_task_log, update_account_task, update_task_status, get_account_username,
     get_account_from_task, mark_account_as_used, get_task_with_accounts, 
@@ -424,8 +425,8 @@ def get_email_verification_code(email_login, email_password, max_retries=3):
         log_error(f"📧 [EMAIL_CODE] Exception type: {type(e).__name__}")
         return None
 
-def navigate_to_upload_with_human_behavior(page):
-    """Navigate to upload page with advanced human behavior - Handles both menu and direct file dialog scenarios"""
+def navigate_to_upload_with_human_behavior(page, account=None):
+    """Navigate to upload page with advanced human behavior and multilingual support"""
     try:
         log_info("[UPLOAD] [START] Starting enhanced navigation to upload interface", LogCategories.NAVIGATION)
         
@@ -462,16 +463,17 @@ def navigate_to_upload_with_human_behavior(page):
                 file_inputs = page.query_selector_all('input[type="file"]')
                 log_info(f"[UPLOAD] [FOLDER] Found {len(file_inputs)} file input elements", LogCategories.NAVIGATION)
                 
-                # Also check for semantic file input selectors (не зависящие от динамических CSS-классов)
+                # Also check for semantic file input selectors (centralized)
                 semantic_file_inputs = []
-                semantic_selectors = [
-                    'input[accept*="video"]',
-                    'input[accept*="image"]', 
-                    'input[multiple]',
-                    'button:has-text("Выбрать на компьютере")',
-                    'button:has-text("Select from computer")',
-                    'button:has-text("Select from device")',
-                ]
+                
+                # Resolve account locale for multilingual selectors
+                locale = 'ru'  # default
+                if account:
+                    locale = LocaleResolver.resolve_account_locale(account)
+                
+                # Get multilingual selector provider
+                provider = get_multilingual_selector_provider()
+                semantic_selectors = provider.get_file_input_selectors(locale)
                 
                 for selector in semantic_selectors:
                     try:
@@ -507,8 +509,8 @@ def navigate_to_upload_with_human_behavior(page):
         log_error(f"[UPLOAD] [FAIL] Navigation failed: {str(e)}", LogCategories.NAVIGATION)
         return False
 
-def upload_video_with_human_behavior(page, video_file_path, video_obj):
-    """Upload video with advanced human behavior - Now follows exact Selenium pipeline"""
+def upload_video_with_human_behavior(page, video_file_path, video_obj, account=None):
+    """Upload video with advanced human behavior and multilingual support"""
     try:
         log_info(f"[UPLOAD] [VIDEO] Starting video upload following exact Selenium pipeline: {os.path.basename(video_file_path)}")
         
@@ -1436,7 +1438,7 @@ def process_account_videos(account_task, task, all_videos, all_titles, task_id):
     result_queue = queue.Queue()
     browser_thread = threading.Thread(
         target=run_dolphin_browser,
-        args=(account_details, videos_for_account, video_files_to_upload, result_queue, task_id, account_task.id)
+        args=(account_details, videos_for_account, video_files_to_upload, result_queue, task_id, account_task.id, account)
     )
     browser_thread.daemon = True
     browser_thread.start()
@@ -1567,8 +1569,8 @@ def cleanup_temp_files(temp_files):
             except Exception as e:
                 log_error(f"Error deleting temporary file {file_path}: {str(e)}")
 
-def run_dolphin_browser(account_details, videos, video_files_to_upload, result_queue, task_id, account_task_id):
-    """Enhanced Dolphin browser runner with comprehensive error handling and monitoring"""
+def run_dolphin_browser(account_details, videos, video_files_to_upload, result_queue, task_id, account_task_id, account=None):
+    """Enhanced Dolphin browser runner with comprehensive error handling and multilingual support"""
     dolphin = None
     dolphin_browser = None
     page = None
@@ -1675,7 +1677,7 @@ def run_dolphin_browser(account_details, videos, video_files_to_upload, result_q
         
         # Perform Instagram operations with comprehensive monitoring
         operation_start_time = time.time()
-        operation_success = perform_instagram_operations(page, account_details, videos, video_files_to_upload)
+        operation_success = perform_instagram_operations(page, account_details, videos, video_files_to_upload, account)
         operation_duration = time.time() - operation_start_time
         
         if operation_success:
@@ -1819,10 +1821,19 @@ def get_dolphin_profile_id(username):
         log_error(f"Error getting dolphin profile ID for {username}: {str(e)}")
         return None
 
-def perform_instagram_operations(page, account_details, videos, video_files_to_upload):
-    """Perform Instagram operations with enhanced error handling and monitoring"""
+def perform_instagram_operations(page, account_details, videos, video_files_to_upload, account=None):
+    """Perform Instagram operations with enhanced error handling and multilingual support"""
     try:
         log_info("🌐 [NAVIGATION] Navigating to Instagram.com", LogCategories.NAVIGATION)
+        
+        # Resolve account locale for multilingual selectors
+        locale = 'ru'  # default
+        if account:
+            locale = LocaleResolver.resolve_account_locale(account)
+            log_info(f"[LOCALE] Using locale: {locale} for account {account.username}")
+        
+        # Get multilingual selector provider
+        provider = get_multilingual_selector_provider()
         
         # Navigate to Instagram with extended timeout
         page.goto("https://www.instagram.com/", wait_until="domcontentloaded", timeout=60000)
@@ -1858,7 +1869,7 @@ def perform_instagram_operations(page, account_details, videos, video_files_to_u
         handle_cookie_consent(page)
         
         # Check login status and login if needed
-        if not handle_login_flow(page, account_details):
+        if not handle_login_flow(page, account_details, account):
             return False, "LOGIN_FAILED"
         
         # Upload videos
@@ -1871,12 +1882,12 @@ def perform_instagram_operations(page, account_details, videos, video_files_to_u
                 log_video_info(i, len(video_files_to_upload), video_file_path, video_obj)
                 
                 # Navigate to upload page
-                if not navigate_to_upload_with_human_behavior(page):
+                if not navigate_to_upload_with_human_behavior(page, account):
                     log_error(f"[FAIL] Could not navigate to upload page for video {i}")
                     continue
                 
                 # Upload video
-                if upload_video_with_human_behavior(page, video_file_path, video_obj):
+                if upload_video_with_human_behavior(page, video_file_path, video_obj, account):
                     uploaded_videos += 1
                     log_info(f"[SUCCESS] Video {i}/{len(video_files_to_upload)} uploaded successfully")
                     video_obj.uploaded = True
@@ -1922,8 +1933,8 @@ def cleanup_browser_session(page, dolphin_browser, dolphin_profile_id, dolphin):
     except Exception as cleanup_error:
         log_error(f"[CLEANUP] Emergency cleanup failed: {str(cleanup_error)}")
 
-def handle_login_flow(page, account_details):
-    """Handle Instagram login flow with comprehensive verification checks"""
+def handle_login_flow(page, account_details, account=None):
+    """Handle Instagram login flow with comprehensive verification checks and multilingual support"""
     try:
         log_info("🔑 Need to login to Instagram", LogCategories.LOGIN)
         

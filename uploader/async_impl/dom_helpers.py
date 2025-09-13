@@ -29,13 +29,28 @@ async def find_element_with_fallbacks(page: "Page", selectors: Sequence[str], *,
     """
     for sel in selectors:
         try:
-            loc = page.locator(sel)
-            # Use a very short wait if timeout provided, else rely on existing waits outside.
-            if timeout:
-                await loc.wait_for(state="visible", timeout=timeout)
-            return loc
+            # Support XPath selectors by prefixing with "xpath="
+            formatted = f"xpath={sel}" if isinstance(sel, str) and sel.startswith('//') else sel
+            loc = page.locator(formatted).first()
+            # Prefer returning only when element is actually visible
+            wait_timeout = timeout if timeout is not None else 800  # short per-selector wait when not provided
+            try:
+                await loc.wait_for(state="visible", timeout=wait_timeout)
+                return loc
+            except Exception as wait_err:
+                # If visible wait failed, try a quick attached check before skipping
+                try:
+                    await loc.wait_for(state="attached", timeout=200)
+                    # If attached, attempt a quick visibility probe
+                    if await loc.is_visible():
+                        return loc
+                except Exception:
+                    pass
+                logger.debug(f"Selector not visible yet, skipping: {formatted} ({wait_err})")
+                continue
         except Exception as e:
             logger.debug(f"Selector failed: {sel} ({e})")
+            continue
     return None
 
 __all__ = ["click_human_like", "find_element_with_fallbacks"]

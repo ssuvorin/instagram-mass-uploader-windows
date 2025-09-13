@@ -11,12 +11,23 @@ class InstagramSelectors:
         'a[role="link"]:has(span:has-text("Создать"))',
         'a[role="link"]:has(svg[aria-label*="New post"])',
         'a[role="link"]:has(span:has-text("Create"))',
+        # Spanish/Portuguese high-priority
+        'a[role="link"]:has(svg[aria-label*="Nueva publicación"])',
+        'a[role="link"]:has(span:has-text("Crear"))',
+        'a[role="link"]:has(svg[aria-label*="Nova publicação"])',
+        'a[role="link"]:has(span:has-text("Criar"))',
         'button:has(svg[aria-label*="Новая публикация"])',
         'button:has(svg[aria-label*="New post"])',
+        'button:has(svg[aria-label*="Nueva publicación"])',
+        'button:has(svg[aria-label*="Nova publicação"])',
         'div[role="button"]:has(svg[aria-label*="Новая публикация"])',
         'div[role="button"]:has(svg[aria-label*="New post"])',
+        'div[role="button"]:has(svg[aria-label*="Nueva publicación"])',
+        'div[role="button"]:has(svg[aria-label*="Nova publicação"])',
         'svg:has(title:has-text("Новая публикация"))',
         'svg:has(title:has-text("New post"))',
+        'svg:has(title:has-text("Nueva publicación"))',
+        'svg:has(title:has-text("Nova publicação"))',
         
         # [TARGET] ПРИОРИТЕТ 1: Семантические атрибуты (самые устойчивые)
         'svg[aria-label="Новая публикация"]',
@@ -24,6 +35,10 @@ class InstagramSelectors:
         'svg[aria-label*="New post"]',
         'svg[aria-label*="Create"]',
         'svg[aria-label*="Создать"]',
+        'svg[aria-label*="Nueva publicación"]',
+        'svg[aria-label*="Nova publicação"]',
+        'svg[aria-label*="Crear"]',
+        'svg[aria-label*="Criar"]',
         
         # [TARGET] ПРИОРИТЕТ 2: Родительские элементы с семантическими SVG
         'a:has(svg[aria-label="Новая публикация"])',
@@ -32,6 +47,12 @@ class InstagramSelectors:
         'a:has(svg[aria-label*="New post"])',
         'button:has(svg[aria-label*="New post"])',
         'div[role="button"]:has(svg[aria-label*="New post"])',
+        'a:has(svg[aria-label*="Nueva publicación"])',
+        'button:has(svg[aria-label*="Nueva publicación"])',
+        'div[role="button"]:has(svg[aria-label*="Nueva publicación"])',
+        'a:has(svg[aria-label*="Nova publicação"])',
+        'button:has(svg[aria-label*="Nova publicação"])',
+        'div[role="button"]:has(svg[aria-label*="Nova publicação"])',
         
         # [TARGET] ПРИОРИТЕТ 3: Текстовые селекторы
         'span:has-text("Создать")',
@@ -42,6 +63,14 @@ class InstagramSelectors:
         'a:has(span:has-text("Create"))',
         'div[role="button"]:has-text("Create")',
         'button:has-text("Create")',
+        'span:has-text("Crear")',
+        'a:has(span:has-text("Crear"))',
+        'div[role="button"]:has-text("Crear")',
+        'button:has-text("Crear")',
+        'span:has-text("Criar")',
+        'a:has(span:has-text("Criar"))',
+        'div[role="button"]:has-text("Criar")',
+        'button:has-text("Criar")',
         
         # [TARGET] ПРИОРИТЕТ 4: XPath семантические
         '//svg[@aria-label="Новая публикация"]',
@@ -49,6 +78,10 @@ class InstagramSelectors:
         '//svg[contains(@aria-label, "New post")]',
         '//svg[contains(@aria-label, "Create")]',
         '//svg[contains(@aria-label, "Создать")]',
+        '//svg[contains(@aria-label, "Nueva publicación")]',
+        '//svg[contains(@aria-label, "Nova publicação")]',
+        '//svg[contains(@aria-label, "Crear")]',
+        '//svg[contains(@aria-label, "Criar")]',
         '//a[.//svg[@aria-label="Новая публикация"]]',
         '//button[.//svg[@aria-label="Новая публикация"]]',
         '//div[@role="button" and .//svg[@aria-label="Новая публикация"]]',
@@ -62,16 +95,32 @@ class InstagramSelectors:
         '//a[.//span[contains(text(), "Create")]]',
         '//div[@role="button" and contains(text(), "Create")]',
         '//button[contains(text(), "Create")]',
+        '//span[contains(text(), "Crear")]',
+        '//a[.//span[contains(text(), "Crear")]]',
+        '//div[@role="button" and contains(text(), "Crear")]',
+        '//button[contains(text(), "Crear")]',
+        '//span[contains(text(), "Criar")]',
+        '//a[.//span[contains(text(), "Criar")]]',
+        '//div[@role="button" and contains(text(), "Criar")]',
+        '//button[contains(text(), "Criar")]',
         
         # [TARGET] ПРИОРИТЕТ 6: Универсальные aria-label
         '[aria-label*="Создать"]',
         '[aria-label*="Новая публикация"]',
         '[aria-label*="Create"]',
         '[aria-label*="New post"]',
+        '[aria-label*="Nueva publicación"]',
+        '[aria-label*="Nova publicação"]',
+        '[aria-label*="Crear"]',
+        '[aria-label*="Criar"]',
         'button[aria-label*="Создать"]',
         'button[aria-label*="Create"]',
+        'button[aria-label*="Crear"]',
+        'button[aria-label*="Criar"]',
         'a[aria-label*="Создать"]',
         'a[aria-label*="Create"]',
+        'a[aria-label*="Crear"]',
+        'a[aria-label*="Criar"]',
     ]
     
     # Post option selectors - SEMANTIC APPROACH
@@ -247,6 +296,31 @@ class InstagramSelectors:
         'div[role="button"]:has-text("Aceptar")',
         'button:has-text("Aceitar")',
         'div[role="button"]:has-text("Aceitar")',
+        'button:has-text("Accept")',
+        'div[role="button"]:has-text("Accept")',
+        'button:has-text("Принять")',
+        'div[role="button"]:has-text("Принять")',
+    ]
+    
+    # Reels dialog specific accept buttons (more specific than OK_ACCEPT_BUTTONS)
+    REELS_DIALOG_ACCEPT_BUTTONS = [
+        # Высокоприоритетные текстовые селекторы
+        'button:has-text("Aceptar")',
+        'div[role="button"]:has-text("Aceptar")',
+        'button:has-text("Aceitar")',
+        'div[role="button"]:has-text("Aceitar")',
+        'button:has-text("OK")',
+        'button:has-text("ОК")',
+        'div[role="button"]:has-text("OK")',
+        'div[role="button"]:has-text("ОК")',
+        # Селекторы внутри диалога Reels
+        'div[role="dialog"] button:last-child',
+        'div[role="dialog"] div[role="button"]:last-child',
+        # XPath для более точного поиска
+        '//div[@role="dialog"]//button[contains(text(), "Aceptar")]',
+        '//div[@role="dialog"]//button[contains(text(), "Aceitar")]',
+        '//div[@role="dialog"]//button[contains(text(), "OK")]',
+        '//div[@role="dialog"]//button[contains(text(), "ОК")]',
     ]
     
     # Next button selectors - SEMANTIC APPROACH
@@ -356,36 +430,60 @@ class InstagramSelectors:
         'button[aria-label*="Concluído"]',
     ]
     
-    # Caption textarea selectors - SEMANTIC APPROACH
+    # Caption textarea selectors - SEMANTIC APPROACH (multilingual)
     CAPTION_TEXTAREA = [
-        # [TARGET] ПРИОРИТЕТ 1: Семантические aria-label
+        # [TARGET] ПРИОРИТЕТ 1: Семантические aria-label (все языки)
         'textarea[aria-label*="Напишите подпись"]',
         'textarea[aria-label*="Write a caption"]',
         'textarea[aria-label*="подпись"]',
         'textarea[aria-label*="caption"]',
+        'textarea[aria-label*="Escribe una descripción"]',
+        'textarea[aria-label*="descripción"]',
+        'textarea[aria-label*="Escreva uma descrição"]',
+        'textarea[aria-label*="descrição"]',
         
-        # [TARGET] ПРИОРИТЕТ 2: Placeholder атрибуты
+        # [TARGET] ПРИОРИТЕТ 2: Contenteditable div (все языки)
+        'div[contenteditable="true"][aria-label*="подпись"]',
+        'div[contenteditable="true"][aria-label*="caption"]',
+        'div[contenteditable="true"][aria-label*="Escribe una descripción"]',
+        'div[contenteditable="true"][aria-label*="descripción"]',
+        'div[contenteditable="true"][aria-label*="Escreva uma descrição"]',
+        'div[contenteditable="true"][aria-label*="descrição"]',
+        
+        # [TARGET] ПРИОРИТЕТ 3: Placeholder атрибуты
         'textarea[placeholder*="Напишите подпись"]',
         'textarea[placeholder*="Write a caption"]',
         'textarea[placeholder*="подпись"]',
         'textarea[placeholder*="caption"]',
-        
-        # [TARGET] ПРИОРИТЕТ 3: Contenteditable div
-        'div[contenteditable="true"][aria-label*="подпись"]',
-        'div[contenteditable="true"][aria-label*="caption"]',
         'div[contenteditable="true"][placeholder*="подпись"]',
         'div[contenteditable="true"][placeholder*="caption"]',
-        # Spanish/Portuguese fallbacks
+        'div[contenteditable="true"][placeholder*="descripción"]',
+        'div[contenteditable="true"][placeholder*="descrição"]',
+        
+        # [TARGET] ПРИОРИТЕТ 4: Дополнительные испанские/португальские варианты
         'textarea[aria-label*="Escribe un pie de foto"]',
         'textarea[placeholder*="Escribe un pie de foto"]',
         'textarea[aria-label*="Escreva uma legenda"]',
         'textarea[placeholder*="Escreva uma legenda"]',
         
-        # [TARGET] ПРИОРИТЕТ 4: XPath
+        # [TARGET] ПРИОРИТЕТ 5: XPath (все языки)
         '//textarea[contains(@aria-label, "подпись")]',
         '//textarea[contains(@aria-label, "caption")]',
+        '//textarea[contains(@aria-label, "descripción")]',
+        '//textarea[contains(@aria-label, "descrição")]',
         '//div[@contenteditable="true" and contains(@aria-label, "подпись")]',
         '//div[@contenteditable="true" and contains(@aria-label, "caption")]',
+        '//div[@contenteditable="true" and contains(@aria-label, "descripción")]',
+        '//div[@contenteditable="true" and contains(@aria-label, "descrição")]',
+        
+        # [TARGET] ПРИОРИТЕТ 6: Роль textbox (универсальный)
+        'div[role="textbox"][contenteditable="true"]',
+        '[role="textbox"][contenteditable="true"]',
+        
+        # [TARGET] ПРИОРИТЕТ 7: Специфичные селекторы для новых интерфейсов
+        'div[contenteditable="true"][data-lexical-editor="true"]',
+        'div[contenteditable="true"][spellcheck="true"]',
+        'div[contenteditable="true"][tabindex="0"]',
     ]
     
     # Login form selectors
@@ -477,6 +575,7 @@ class InstagramSelectors:
         'div:has(h2:has-text("Теперь видеопубликациями можно делиться как видео Reels"))',
         'div:has(h2:has-text("Now video publications can be shared as Reels videos"))',
         'div:has(h2:has-text("Ahora las publicaciones de video se pueden compartir como Reels"))',
+        'div:has(h2:has-text("Las publicaciones con video ahora se comparten como reels"))',
         'div:has(h2:has-text("Agora as publicações de vídeo podem ser compartilhadas como Reels"))',
         'div:has(h2:has-text("видео Reels"))',
         'div:has(h2:has-text("Reels videos"))',
@@ -509,6 +608,13 @@ class InstagramSelectors:
         'div:has(span:has-text("hacer remix"))',
         'div:has(span:has-text("fazer remix"))',
         'div[role="dialog"]:has-text("Reels")',
+        'div[role="dialog"]:has-text("видео")',
+        'div[role="dialog"]:has-text("Теперь")',
+        'div[role="dialog"]:has-text("Now")',
+        'div[role="dialog"]:has-text("Las publicaciones con video")',
+        'div[role="dialog"]:has-text("ahora se comparten como reels")',
+        'div[role="dialog"]:has-text("As publicações de vídeo")',
+        'div[role="dialog"]:has-text("agora são compartilhadas como reels")',
         # Icon-based hints
         'div:has(img[src*="reels_nux_icon.png"])',
         'div:has(img[alt*="reels"])',
@@ -521,6 +627,8 @@ class InstagramSelectors:
         'div[role="dialog"]',
         'div[aria-label*="Создать"]',
         'div[aria-label*="Create"]',
+        'div[aria-label*="Crear"]',
+        'div[aria-label*="Criar"]',
         'div[aria-label*="Publicar"]',
         'div[aria-label*="Publicação"]',
         'textarea[aria-label*="подпись"]',
@@ -623,6 +731,19 @@ class InstagramSelectors:
         'осталось',
         'days left'
     ]
+    
+    # Reels dialog detection keywords (multilingual)
+    REELS_DIALOG_KEYWORDS = [
+        'Reels', 'видео', 'Теперь', 'Now', 'общедоступный', 'public',
+        'Las publicaciones con video', 'ahora se comparten como reels',
+        'As publicações de vídeo', 'agora são compartilhadas como reels',
+        'Tu cuenta es pública', 'Sua conta é pública'
+    ]
+    
+    # Accept button keywords (multilingual)
+    ACCEPT_BUTTON_KEYWORDS = [
+        'OK', 'ОК', 'Aceptar', 'Aceitar', 'Accept', 'Принять'
+    ]
 
     # Email submit buttons (RU/EN/ES/PT)
     EMAIL_SUBMIT_BUTTONS = [
@@ -633,6 +754,60 @@ class InstagramSelectors:
         'div[role="button"]:has-text("Confirm")',
         'div[role="button"]:has-text("Подтвердить")',
         'div[role="button"]:has-text("Confirmar")'
+    ]
+    
+    # Crop page indicators (multilingual)
+    CROP_PAGE_INDICATORS = [
+        # Text-based selectors for all languages
+        'button:has-text("Оригинал")',
+        'button:has-text("Original")',
+        'button:has-text("Original")',  # Spanish uses same word
+        'button:has-text("Original")',  # Portuguese uses same word
+        'div[role="button"]:has-text("Оригинал")',
+        'div[role="button"]:has-text("Original")',
+        'span:has-text("Original")',
+        'span:has-text("Оригинал")',
+        # SVG aria-labels for crop (multilingual)
+        'svg[aria-label*="Выбрать размер"]',
+        'svg[aria-label*="Select crop"]',
+        'svg[aria-label*="Seleccionar recorte"]',
+        'svg[aria-label*="Selecionar corte"]',
+        'svg[aria-label*="Crop"]',
+        'svg[aria-label*="обрезать"]',
+        'svg[aria-label*="recorte"]',
+        'svg[aria-label*="corte"]',
+        # Crop option indicators
+        'span:has-text("1:1")',
+        'span:has-text("9:16")',
+        'span:has-text("16:9")',
+        # SVG titles for crop icons
+        'svg[title*="recorte"]',
+        'svg[title*="crop"]',
+        'svg[title*="обрезать"]',
+    ]
+    
+    # Original crop button selectors (multilingual, prioritized)
+    CROP_ORIGINAL_SELECTORS = [
+        # High priority: direct span text (all languages)
+        'span:has-text("Original")',
+        'span:has-text("Оригинал")',
+        # Medium priority: clickable elements with text
+        'button:has-text("Original")',
+        'button:has-text("Оригинал")',
+        'div[role="button"]:has-text("Original")',
+        'div[role="button"]:has-text("Оригинал")',
+        # Lower priority: parent elements containing text
+        'div:has(span:has-text("Original"))',
+        'div:has(span:has-text("Оригинал"))',
+        '[role="button"]:has(span:has-text("Original"))',
+        '[role="button"]:has(span:has-text("Оригинал"))',
+        # XPath for more precise matching
+        '//span[text()="Original"]',
+        '//span[text()="Оригинал"]',
+        '//div[@role="button" and .//span[text()="Original"]]',
+        '//div[@role="button" and .//span[text()="Оригинал"]]',
+        '//button[.//span[text()="Original"]]',
+        '//button[.//span[text()="Оригинал"]]',
     ]
     
     # Close button selectors
@@ -682,6 +857,40 @@ class InstagramSelectors:
         'svg[aria-label*="Create"]',
         '[aria-label*="Главная"]',
         '[aria-label*="Home"]',
+        # Spanish navigation labels
+        'svg[aria-label*="Inicio"]',
+        '[aria-label*="Inicio"]',
+        'svg[aria-label*="Buscar"]',
+        '[aria-label*="Buscar"]',
+        'svg[aria-label*="Explorar"]',
+        '[aria-label*="Explorar"]',
+        'svg[aria-label*="Reels"]',
+        '[aria-label*="Reels"]',
+        'svg[aria-label*="Mensajes"]',
+        '[aria-label*="Mensajes"]',
+        'svg[aria-label*="Notificaciones"]',
+        '[aria-label*="Notificaciones"]',
+        'svg[aria-label*="Crear"]',
+        '[aria-label*="Crear"]',
+        'svg[aria-label*="Perfil"]',
+        '[aria-label*="Perfil"]',
+        # Portuguese navigation labels
+        'svg[aria-label*="Início"]',
+        '[aria-label*="Início"]',
+        'svg[aria-label*="Pesquisar"]',
+        '[aria-label*="Pesquisar"]',
+        'svg[aria-label*="Explorar"]',
+        '[aria-label*="Explorar"]',
+        'svg[aria-label*="Reels"]',
+        '[aria-label*="Reels"]',
+        'svg[aria-label*="Mensagens"]',
+        '[aria-label*="Mensagens"]',
+        'svg[aria-label*="Notificações"]',
+        '[aria-label*="Notificações"]',
+        'svg[aria-label*="Criar"]',
+        '[aria-label*="Criar"]',
+        'svg[aria-label*="Perfil"]',
+        '[aria-label*="Perfil"]',
     ]
     
     # Upload indicators (to check if still on upload page)
@@ -1000,6 +1209,53 @@ class InstagramSelectors:
         '[aria-label*="Home"]',
         'a[href="/"]',
         '[data-testid="home-icon"]',
+        
+        # Spanish indicators
+        'svg[aria-label*="Inicio"]',
+        '[aria-label*="Inicio"]',
+        'a[aria-label*="Inicio"]',
+        'svg[aria-label*="Buscar"]',
+        '[aria-label*="Buscar"]',
+        'input[placeholder*="Buscar"]',
+        'svg[aria-label*="Explorar"]',
+        '[aria-label*="Explorar"]',
+        'svg[aria-label*="Reels"]',
+        '[aria-label*="Reels"]',
+        'svg[aria-label*="Mensajes"]',
+        '[aria-label*="Mensajes"]',
+        'a[href*="/direct/"]',
+        'svg[aria-label*="Notificaciones"]',
+        '[aria-label*="Notificaciones"]',
+        'svg[aria-label*="Crear"]',
+        '[aria-label*="Crear"]',
+        'svg[aria-label*="Nueva publicación"]',
+        '[aria-label*="Nueva publicación"]',
+        'svg[aria-label*="Perfil"]',
+        '[aria-label*="Perfil"]',
+        'img[alt*="foto del perfil"]',
+
+        # Portuguese indicators
+        'svg[aria-label*="Início"]',
+        '[aria-label*="Início"]',
+        'a[aria-label*="Início"]',
+        'svg[aria-label*="Pesquisar"]',
+        '[aria-label*="Pesquisar"]',
+        'input[placeholder*="Pesquisar"]',
+        'svg[aria-label*="Explorar"]',
+        '[aria-label*="Explorar"]',
+        'svg[aria-label*="Reels"]',
+        '[aria-label*="Reels"]',
+        'svg[aria-label*="Mensagens"]',
+        '[aria-label*="Mensagens"]',
+        'svg[aria-label*="Notificações"]',
+        '[aria-label*="Notificações"]',
+        'svg[aria-label*="Criar"]',
+        '[aria-label*="Criar"]',
+        'svg[aria-label*="Nova publicação"]',
+        '[aria-label*="Nova publicação"]',
+        'svg[aria-label*="Perfil"]',
+        '[aria-label*="Perfil"]',
+        'img[alt*="foto do perfil"]',
         
         # Profile/user menu indicators
         'svg[aria-label*="Profile"]',

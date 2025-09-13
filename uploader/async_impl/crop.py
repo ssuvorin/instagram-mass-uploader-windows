@@ -56,8 +56,8 @@ import django
 from ..models import InstagramAccount, BulkUploadAccount
 
 
-async def handle_crop_async(page):
-    """Handle crop interface - FULL ADAPTIVE VERSION like sync"""
+async def handle_crop_async(page, account=None):
+    """Handle crop interface - FULL ADAPTIVE VERSION with multilingual support"""
     try:
         log_info("[ASYNC_CROP] 🖼️ Starting ADAPTIVE crop handling...")
         
@@ -66,15 +66,8 @@ async def handle_crop_async(page):
         
         # Проверяем, не остался ли диалог Reels открытым
         try:
-            # Используем надежные селекторы без динамических классов
-            reels_dialog_selectors = [
-                'div[role="dialog"]:has-text("Reels")',
-                'div[role="dialog"]:has-text("видео")',
-                'div[role="dialog"]:has-text("Теперь")',
-                'div[role="dialog"]:has-text("Now")',
-                'div:has(h2:has-text("Reels"))',
-                'div:has(span:has-text("Reels"))',
-            ]
+            # Используем централизованные селекторы из SelectorConfig
+            reels_dialog_selectors = SelectorConfig.REELS_DIALOG_SELECTORS
             
             for selector in reels_dialog_selectors:
                 reels_dialog = await page.query_selector(selector)
@@ -104,7 +97,7 @@ async def handle_crop_async(page):
             return True
         
         # Use adaptive crop detection and handling
-        if await _handle_crop_adaptive_async(page):
+        if await _handle_crop_adaptive_async(page, account):
             log_info("[ASYNC_CROP] [OK] Crop handled successfully with adaptive method")
             return True
         else:
@@ -120,17 +113,8 @@ async def _verify_crop_page_adaptive_async(page):
     try:
         log_info("[ASYNC_CROP] [SEARCH] Verifying crop page...")
         
-        # Look for crop-related elements
-        crop_indicators = [
-            'button:has-text("Оригинал")',
-            'button:has-text("Original")',
-            'div[role="button"]:has-text("Оригинал")',
-            'div[role="button"]:has-text("Original")',
-            'svg[aria-label*="Выбрать размер"]',
-            'svg[aria-label*="Select crop"]',
-            'svg[aria-label*="Crop"]',
-            'svg[aria-label*="обрезать"]',
-        ]
+        # Use centralized crop indicators from SelectorConfig
+        crop_indicators = SelectorConfig.CROP_PAGE_INDICATORS
         
         for selector in crop_indicators:
             try:
@@ -148,8 +132,8 @@ async def _verify_crop_page_adaptive_async(page):
         log_info(f"[ASYNC_CROP] [FAIL] Crop page verification failed: {str(e)}")
         return False
 
-async def _handle_crop_adaptive_async(page):
-    """Handle crop with adaptive detection - async version"""
+async def _handle_crop_adaptive_async(page, account=None):
+    """Handle crop with adaptive detection - async version with multilingual support"""
     try:
         log_info("[ASYNC_CROP] 📐 Starting adaptive crop handling...")
         
@@ -173,7 +157,7 @@ async def _handle_crop_adaptive_async(page):
                     await _human_click_crop_button_async(page, crop_button)
                     
                     # Теперь ищем и выбираем "Оригинал"
-                    if await _select_original_aspect_ratio_async(page):
+                    if await _select_original_aspect_ratio_async(page, account):
                         log_info("[ASYNC_CROP] [OK] Original aspect ratio selected successfully")
                         return True
                     else:
@@ -376,8 +360,8 @@ async def _human_click_crop_button_async(page, crop_button):
         log_info(f"[ASYNC_CROP] 📐 [CLICK] [FAIL] Failed to click crop button: {str(e)}")
         raise
 
-async def _select_original_aspect_ratio_async(page):
-    """Select the 'Оригинал' (Original) aspect ratio option - IMPROVED for dynamic selectors - async version"""
+async def _select_original_aspect_ratio_async(page, account=None):
+    """Select the 'Оригинал' (Original) aspect ratio option - IMPROVED with multilingual support"""
     log_info("[ASYNC_CROP] 📐 Looking for 'Оригинал' (Original) aspect ratio option...")
     
     # [TARGET] АДАПТИВНАЯ СТРАТЕГИЯ: Поиск по семантическим признакам
@@ -392,7 +376,11 @@ async def _select_original_aspect_ratio_async(page):
         log_info(f"[ASYNC_CROP] 📐 [ORIGINAL] Trying strategy {strategy_index}: {strategy.__name__}")
         
         try:
-            original_element = await strategy(page)
+            # Pass account parameter to strategies that support it
+            if strategy.__name__ == '_find_original_by_text_content_async':
+                original_element = await strategy(page, account)
+            else:
+                original_element = await strategy(page)
             if original_element:
                 log_info(f"[ASYNC_CROP] 📐 [ORIGINAL] [OK] Found 'Оригинал' using strategy {strategy_index}")
                 

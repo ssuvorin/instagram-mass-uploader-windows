@@ -16,6 +16,7 @@ import json
 import tempfile
 import shutil
 from datetime import datetime, timedelta
+import re
 from typing import Dict, List, Tuple, Any, Optional, Callable, Awaitable
 from pathlib import Path
 import aiohttp
@@ -83,8 +84,12 @@ async def handle_login_flow_async(page, account_details: Dict) -> bool:
                     'button[type="submit"]:has-text("Log in")',
                     'button:has-text("Log in")',
                     'button:has-text("Войти")',
+                    'button:has-text("Iniciar sesión")',
+                    'button:has-text("Entrar")',
                     'div[role="button"]:has-text("Log in")',
                     'div[role="button"]:has-text("Войти")',
+                    'div[role="button"]:has-text("Iniciar sesión")',
+                    'div[role="button"]:has-text("Entrar")',
                     
                     # Формы логина
                     'form[id*="loginForm"]',
@@ -159,10 +164,28 @@ async def handle_login_flow_async(page, account_details: Dict) -> bool:
                     'a[href="/"]',
                     '[data-testid="home-icon"]',
                     
+                    # Spanish indicators
+                    'svg[aria-label*="Inicio"]',
+                    'svg[aria-label*="Notificaciones"]',
+                    'svg[aria-label*="Nueva publicación"]',
+                    '[aria-label*="Inicio"]',
+                    '[aria-label*="Notificaciones"]',
+                    
+                    # Portuguese indicators  
+                    'svg[aria-label*="Início"]',
+                    'svg[aria-label*="Notificações"]',
+                    'svg[aria-label*="Nova publicação"]',
+                    '[aria-label*="Início"]',
+                    '[aria-label*="Notificações"]',
+                    
                     # Profile/user menu indicators
                     'svg[aria-label*="Profile"]',
+                    'svg[aria-label*="Perfil"]',
                     '[aria-label*="Profile"]',
+                    '[aria-label*="Perfil"]',
                     'img[alt*="profile picture"]',
+                    'img[alt*="foto de perfil"]',
+                    'img[alt*="foto do perfil"]',
                     '[data-testid="user-avatar"]',
                     
                     # Navigation indicators - БОЛЕЕ СПЕЦИФИЧНЫЕ
@@ -178,17 +201,28 @@ async def handle_login_flow_async(page, account_details: Dict) -> bool:
                     
                     # Search indicators
                     'svg[aria-label*="Search"]',
+                    'svg[aria-label*="Buscar"]',
                     '[aria-label*="Search"]',
+                    '[aria-label*="Buscar"]',
                     'input[placeholder*="Search"]',
+                    'input[placeholder*="Buscar"]',
                     
                     # Messages indicators
                     'svg[aria-label*="Direct"]',
+                    'svg[aria-label*="Directo"]',
+                    'svg[aria-label*="Direto"]',
                     '[aria-label*="Direct"]',
+                    '[aria-label*="Directo"]',
+                    '[aria-label*="Direto"]',
                     'a[href*="/direct/"]',
                     
                     # Activity indicators
                     'svg[aria-label*="Activity"]',
+                    'svg[aria-label*="Actividad"]',
+                    'svg[aria-label*="Atividade"]',
                     '[aria-label*="Activity"]',
+                    '[aria-label*="Actividad"]',
+                    '[aria-label*="Atividade"]',
                     
                     # Instagram main navigation - ИСКЛЮЧАЕМ СТРАНИЦЫ ЛОГИНА
                     'div[role="main"]:not(:has(form)):not(:has(input[name="password"]))',
@@ -339,9 +373,15 @@ async def check_post_login_verifications_async(page, account_details):
             'a[href*="/accounts/"]',
             'button[aria-label*="New post"]',
             'button[aria-label*="Create"]',
+            'button[aria-label*="Nueva publicación"]',
+            'button[aria-label*="Criar"]',
             'svg[aria-label="Notifications"]',
+            'svg[aria-label="Notificaciones"]',
+            'svg[aria-label="Notificações"]',
             'svg[aria-label="Direct"]',
             'svg[aria-label="New post"]',
+            'svg[aria-label*="Nueva publicación"]',
+            'svg[aria-label*="Nova publicação"]',
             'main[role="main"]',
             'nav[role="navigation"]'
         ]
@@ -410,6 +450,16 @@ async def check_post_login_verifications_async(page, account_details):
                 'svg[aria-label="Notifications"]',
                 'svg[aria-label="Direct"]', 
                 'svg[aria-label="New post"]',
+                # Spanish UI
+                'svg[aria-label*="Notificaciones"]',
+                'svg[aria-label*="Directo"]',
+                'svg[aria-label*="Nueva publicación"]',
+                'a[aria-label*="Inicio"]',
+                # Portuguese UI
+                'svg[aria-label*="Notificações"]',
+                'svg[aria-label*="Direto"]',
+                'svg[aria-label*="Nova publicação"]',
+                'a[aria-label*="Início"]',
                 # Common containers/links
                 'main[role="main"]:not(:has(form))',
                 'nav[role="navigation"]',
@@ -481,10 +531,16 @@ async def perform_instagram_login_optimized_async(page, account_details):
             'input[name="email"]',
             'input[aria-label*="Телефон"]',
             'input[aria-label*="Phone"]',
+            'input[aria-label*="Teléfono"]',
+            'input[aria-label*="Telefone"]',
             'input[placeholder*="Телефон"]',
             'input[placeholder*="Phone"]',
+            'input[placeholder*="Teléfono"]',
+            'input[placeholder*="Telefone"]',
             'input[placeholder*="Username"]',
             'input[placeholder*="Имя пользователя"]',
+            'input[aria-label*="usuario"]',
+            'input[placeholder*="usuario"]',
         ]
         
         username_field = None
@@ -508,6 +564,10 @@ async def perform_instagram_login_optimized_async(page, account_details):
             'input[type="password"]',
             'input[aria-label*="Пароль"]',
             'input[aria-label*="Password"]',
+            'input[aria-label*="Contraseña"]',
+            'input[aria-label*="Senha"]',
+            'input[placeholder*="Contraseña"]',
+            'input[placeholder*="Senha"]',
         ]
         
         password_field = None
@@ -538,15 +598,34 @@ async def perform_instagram_login_optimized_async(page, account_details):
         
         # Find and click login button
         login_selectors = [
-            'button[type="submit"]',
-            'button:has-text("Войти")',
-            'button:has-text("Log in")',
-            'button:has-text("Iniciar sesión")',
-            'button:has-text("Entrar")',
-            'div[role="button"]:has-text("Войти")',
-            'div[role="button"]:has-text("Log in")',
-            'div[role="button"]:has-text("Iniciar sesión")',
-            'div[role="button"]:has-text("Entrar")',
+            # XPATH селекторы - более точные и надежные для всех языков
+            # Основная кнопка входа (НЕ Facebook) - по тексту внутри кнопки
+            '//button[@type="submit" and (contains(text(), "Log in") or contains(text(), "Войти") or contains(text(), "Iniciar sesión") or contains(text(), "Entrar") or contains(text(), "Вход"))]',
+            '//button[@type="submit" and (.//div[contains(text(), "Log in") or contains(text(), "Войти") or contains(text(), "Iniciar sesión") or contains(text(), "Entrar")])]',
+            '//button[@type="submit" and (.//span[contains(text(), "Log in") or contains(text(), "Войти") or contains(text(), "Iniciar sesión") or contains(text(), "Entrar")])]',
+            
+            # Исключаем Facebook кнопки явно
+            '//button[@type="submit" and not(contains(., "Facebook")) and not(contains(., "facebook"))]',
+            '//form[@id="loginForm"]//button[@type="submit"]',
+            '//form[contains(@id, "login")]//button[@type="submit"]',
+            
+            # CSS селекторы как fallback
+            'form#loginForm button[type="submit"]:not(:has-text("Facebook"))',
+            'form[id*="login"] button[type="submit"]:not(:has-text("Facebook"))',
+            'button[type="submit"]:not(:has-text("Facebook")):not(:has-text("facebook"))',
+            
+            # Instagram's dynamic class-based selectors (исключаем Facebook)
+            'button[class*="_aswp"][type="submit"]:not(:has-text("Facebook"))',
+            'button[class*="_aswr"][type="submit"]:not(:has-text("Facebook"))',
+            'button[class*="_aswu"][type="submit"]:not(:has-text("Facebook"))',
+            'button[class*="_asw_"][type="submit"]:not(:has-text("Facebook"))',
+            'button[class*="_asx2"][type="submit"]:not(:has-text("Facebook"))',
+            
+            # Text-based селекторы (точные тексты)
+            'button:has-text("Войти"):not(:has-text("Facebook"))',
+            'button:has-text("Log in"):not(:has-text("Facebook"))',
+            'button:has-text("Iniciar sesión"):not(:has-text("Facebook"))',
+            'button:has-text("Entrar"):not(:has-text("Facebook"))',
         ]
         
         login_button = None
@@ -554,20 +633,96 @@ async def perform_instagram_login_optimized_async(page, account_details):
             try:
                 login_button = await page.query_selector(selector)
                 if login_button and await login_button.is_visible():
-                    log_info(f"[OK] [ASYNC_LOGIN] Found login button: '{await login_button.text_content()}'")
-                    break
+                    button_text = await login_button.text_content() or ""
+                    # Убеждаемся что это НЕ Facebook кнопка
+                    if 'facebook' not in button_text.lower():
+                        log_info(f"[OK] [ASYNC_LOGIN] Found login button: '{button_text.strip()}'")
+                        break
+                    else:
+                        log_info(f"[SKIP] [ASYNC_LOGIN] Skipping Facebook button: '{button_text.strip()}'")
+                        login_button = None
             except:
                 continue
         
         if not login_button:
+            # Fallbacks: try submitting the form or pressing Enter in password field (works with dynamic, disabled buttons)
+            log_info("[WARN] [ASYNC_LOGIN] Login button not found - trying form submit fallbacks")
+            try:
+                # Try to submit via the form element
+                form_el = await page.query_selector('form#loginForm, form[id*="login"], form[action*="login"]')
+                if form_el:
+                    try:
+                        await form_el.evaluate('(el) => el.requestSubmit ? el.requestSubmit() : el.submit()')
+                        await asyncio.sleep(random.uniform(3, 5))
+                        current_url = page.url
+                        if '/accounts/login' not in current_url and 'instagram.com' in current_url:
+                            log_info("[OK] [ASYNC_LOGIN] Login submitted via form fallback")
+                            return True
+                    except Exception:
+                        pass
+                # Press Enter on password field
+                try:
+                    await password_field.press('Enter')
+                    await asyncio.sleep(random.uniform(3, 5))
+                    current_url = page.url
+                    if '/accounts/login' not in current_url and 'instagram.com' in current_url:
+                        log_info("[OK] [ASYNC_LOGIN] Login submitted via Enter key fallback")
+                        return True
+                except Exception:
+                    pass
+            except Exception:
+                pass
             log_info("[FAIL] [ASYNC_LOGIN] Login button not found")
             return False
         
+        # Wait for button to become enabled if it's initially disabled
+        try:
+            is_disabled = True
+            for i in range(15):  # up to ~7.5s
+                try:
+                    disabled_attr = await login_button.get_attribute('disabled')
+                    # Check if disabled attribute is present (even if empty string)
+                    is_disabled = disabled_attr is not None
+                    if not is_disabled:
+                        log_info(f"[OK] [ASYNC_LOGIN] Login button enabled after {i * 0.5}s")
+                        break
+                    log_info(f"[WAIT] [ASYNC_LOGIN] Button still disabled, waiting... ({i * 0.5}s)")
+                except Exception:
+                    # If we can't check, assume enabled
+                    is_disabled = False
+                    break
+                await asyncio.sleep(0.5)
+            
+            if is_disabled:
+                log_info("[WARN] [ASYNC_LOGIN] Login button still disabled after waiting, will try anyway")
+        except Exception:
+            pass
+
         log_info("🔐 [ASYNC_LOGIN] Clicking login button...")
-        await login_button.click()
+        navigation_promises = [
+            page.wait_for_url(re.compile(r"https://www\\.instagram\\.com/.*"), timeout=20000),
+            page.wait_for_load_state('domcontentloaded', timeout=20000)
+        ]
+        try:
+            async with asyncio.TaskGroup() as tg:
+                tg.create_task(navigation_promises[0])
+                tg.create_task(navigation_promises[1])
+                await login_button.click()
+        except Exception:
+            try:
+                await login_button.evaluate('(el) => el.click()')
+            except Exception:
+                try:
+                    await password_field.press('Enter')
+                except Exception:
+                    pass
+            try:
+                await page.wait_for_load_state('domcontentloaded', timeout=20000)
+            except Exception:
+                pass
         
-        # Wait for login to process
-        await asyncio.sleep(random.uniform(5, 8))
+        # Give time for client-side redirects/render
+        await asyncio.sleep(random.uniform(3, 5))
         
         # Check if login was successful
         current_url = page.url
@@ -603,11 +758,17 @@ async def perform_enhanced_instagram_login_async(page, account_details):
             'input[name="email"]',
             'input[aria-label*="Телефон"]',
             'input[aria-label*="Phone"]',
+            'input[aria-label*="Teléfono"]',
+            'input[aria-label*="Telefone"]',
             'input[aria-label*="Username"]',
             'input[placeholder*="Телефон"]',
             'input[placeholder*="Phone"]',
+            'input[placeholder*="Teléfono"]',
+            'input[placeholder*="Telefone"]',
             'input[placeholder*="Username"]',
             'input[placeholder*="Имя пользователя"]',
+            'input[aria-label*="usuario"]',
+            'input[placeholder*="usuario"]',
         ]
         
         username_field = None
@@ -631,6 +792,10 @@ async def perform_enhanced_instagram_login_async(page, account_details):
             'input[type="password"]',
             'input[aria-label*="Пароль"]',
             'input[aria-label*="Password"]',
+            'input[aria-label*="Contraseña"]',
+            'input[aria-label*="Senha"]',
+            'input[placeholder*="Contraseña"]',
+            'input[placeholder*="Senha"]',
             'input[placeholder*="Пароль"]',
             'input[placeholder*="Password"]',
         ]
@@ -682,17 +847,34 @@ async def perform_enhanced_instagram_login_async(page, account_details):
         
         # Find and click login button with enhanced selectors
         login_selectors = [
-            'button[type="submit"]',
-            'button:has-text("Войти")',
-            'button:has-text("Log in")',
-            'button:has-text("Log In")',
-            'button:has-text("Iniciar sesión")',
-            'button:has-text("Entrar")',
-            'div[role="button"]:has-text("Войти")',
-            'div[role="button"]:has-text("Log in")',
-            'div[role="button"]:has-text("Iniciar sesión")',
-            'div[role="button"]:has-text("Entrar")',
-            'input[type="submit"]',
+            # XPATH селекторы - более точные и надежные для всех языков
+            # Основная кнопка входа (НЕ Facebook) - по тексту внутри кнопки
+            '//button[@type="submit" and (contains(text(), "Log in") or contains(text(), "Войти") or contains(text(), "Iniciar sesión") or contains(text(), "Entrar") or contains(text(), "Вход"))]',
+            '//button[@type="submit" and (.//div[contains(text(), "Log in") or contains(text(), "Войти") or contains(text(), "Iniciar sesión") or contains(text(), "Entrar")])]',
+            '//button[@type="submit" and (.//span[contains(text(), "Log in") or contains(text(), "Войти") or contains(text(), "Iniciar sesión") or contains(text(), "Entrar")])]',
+            
+            # Исключаем Facebook кнопки явно
+            '//button[@type="submit" and not(contains(., "Facebook")) and not(contains(., "facebook"))]',
+            '//form[@id="loginForm"]//button[@type="submit"]',
+            '//form[contains(@id, "login")]//button[@type="submit"]',
+            
+            # CSS селекторы как fallback
+            'form#loginForm button[type="submit"]:not(:has-text("Facebook"))',
+            'form[id*="login"] button[type="submit"]:not(:has-text("Facebook"))',
+            'button[type="submit"]:not(:has-text("Facebook")):not(:has-text("facebook"))',
+            
+            # Instagram's dynamic class-based selectors (исключаем Facebook)
+            'button[class*="_aswp"][type="submit"]:not(:has-text("Facebook"))',
+            'button[class*="_aswr"][type="submit"]:not(:has-text("Facebook"))',
+            'button[class*="_aswu"][type="submit"]:not(:has-text("Facebook"))',
+            'button[class*="_asw_"][type="submit"]:not(:has-text("Facebook"))',
+            'button[class*="_asx2"][type="submit"]:not(:has-text("Facebook"))',
+            
+            # Text-based селекторы (точные тексты)
+            'button:has-text("Войти"):not(:has-text("Facebook"))',
+            'button:has-text("Log in"):not(:has-text("Facebook"))',
+            'button:has-text("Iniciar sesión"):not(:has-text("Facebook"))',
+            'button:has-text("Entrar"):not(:has-text("Facebook"))',
         ]
         
         login_button = None
@@ -702,13 +884,36 @@ async def perform_enhanced_instagram_login_async(page, account_details):
                 if login_button and await login_button.is_visible():
                     # Verify this is actually a login button
                     button_text = await login_button.text_content() or ""
-                    if any(keyword in button_text.lower() for keyword in ['войти', 'log in', 'login', 'submit']):
+                    if (any(keyword in button_text.lower() for keyword in ['войти', 'log in', 'login', 'submit', 'iniciar sesión', 'entrar', 'entrar']) and 
+                        'facebook' not in button_text.lower()):
                         log_info(f"[OK] [ASYNC_LOGIN] Found login button: '{button_text.strip()}'")
                         break
+                    elif 'facebook' in button_text.lower():
+                        log_info(f"[SKIP] [ASYNC_LOGIN] Skipping Facebook button: '{button_text.strip()}'")
+                        login_button = None
             except:
                 continue
         
         if not login_button:
+            # Fallbacks: submit the form or press Enter in password field
+            log_info("[WARN] [ASYNC_LOGIN] Login button not found - trying form submit fallbacks")
+            try:
+                form_el = await page.query_selector('form#loginForm, form[id*="login"], form[action*="login"]')
+                if form_el:
+                    try:
+                        await form_el.evaluate('(el) => el.requestSubmit ? el.requestSubmit() : el.submit()')
+                        await asyncio.sleep(random.uniform(3, 5))
+                        return await handle_login_completion_async(page, account_details)
+                    except Exception:
+                        pass
+                try:
+                    await password_field.press('Enter')
+                    await asyncio.sleep(random.uniform(3, 5))
+                    return await handle_login_completion_async(page, account_details)
+                except Exception:
+                    pass
+            except Exception:
+                pass
             log_info("[FAIL] [ASYNC_LOGIN] Login button not found")
             return False
         
@@ -716,11 +921,48 @@ async def perform_enhanced_instagram_login_async(page, account_details):
         await login_button.hover()
         await asyncio.sleep(random.uniform(0.5, 1.0))
         
+        # Wait for button to become enabled if disabled
+        try:
+            is_disabled = True
+            for i in range(15):  # up to ~7.5s
+                try:
+                    disabled_attr = await login_button.get_attribute('disabled')
+                    # Check if disabled attribute is present (even if empty string)
+                    is_disabled = disabled_attr is not None
+                    if not is_disabled:
+                        log_info(f"[OK] [ASYNC_LOGIN] Login button enabled after {i * 0.5}s")
+                        break
+                    log_info(f"[WAIT] [ASYNC_LOGIN] Button still disabled, waiting... ({i * 0.5}s)")
+                except Exception:
+                    # If we can't check, assume enabled
+                    is_disabled = False
+                    break
+                await asyncio.sleep(0.5)
+            
+            if is_disabled:
+                log_info("[WARN] [ASYNC_LOGIN] Login button still disabled after waiting, will try anyway")
+        except Exception:
+            pass
+
         log_info("🔐 [ASYNC_LOGIN] Clicking login button...")
-        await login_button.click()
+        try:
+            await login_button.click()
+        except Exception:
+            try:
+                await login_button.evaluate('(el) => el.click()')
+            except Exception:
+                try:
+                    await password_field.press('Enter')
+                except Exception:
+                    pass
         
-        # Wait for login to process with extended timeout
-        await asyncio.sleep(random.uniform(5, 8))
+        # Wait for navigation/load to settle to avoid destroyed execution context
+        try:
+            await page.wait_for_load_state('domcontentloaded', timeout=20000)
+        except Exception:
+            pass
+        # Small human-like wait
+        await asyncio.sleep(random.uniform(2, 4))
         
         # Check for login success or errors
         return await handle_login_completion_async(page, account_details)
@@ -739,8 +981,12 @@ async def handle_login_completion_async(page, account_details):
     try:
         log_info("[SEARCH] [ASYNC_LOGIN] Checking login completion...")
         
-        # Wait for page to respond
-        await asyncio.sleep(random.uniform(3, 5))
+        # Wait for page to respond and stabilize after navigation
+        try:
+            await page.wait_for_load_state('domcontentloaded', timeout=20000)
+        except Exception:
+            pass
+        await asyncio.sleep(random.uniform(2, 4))
         
         # Check current URL and page content
         current_url = page.url
@@ -770,40 +1016,65 @@ async def handle_login_completion_async(page, account_details):
         
         # ВАЖНО: Сначала проверяем, не на странице ли верификации
                # КРИТИЧНО: Проверяем URL ПЕРВЫМ ДЕЛОМ - если на странице верификации, логин НЕ завершен
-        if '/two_factor/' in current_url or '/challenge/' in current_url or '/accounts/login' in current_url:
+        if ('/two_factor/' in current_url or '/challenge/' in current_url or '/accounts/login' in current_url or 
+            'auth_platform/codeentry' in current_url or '/codeentry/' in current_url):
             log_info(f"[ALERT] [ASYNC_LOGIN] Still on authentication/verification page: {current_url}")
             # НЕ ПРОВЕРЯЕМ индикаторы входа - мы все еще в процессе аутентификации
             # Переходим к обработке верификации
         elif 'instagram.com' in current_url:
             # Additional verification - look for logged-in elements
             logged_in_indicators = [
+                # English
                 'svg[aria-label="Notifications"]',
                 'svg[aria-label="Direct"]', 
                 'svg[aria-label="New post"]',
+                'svg[aria-label*="Home"]',
+                # Russian
+                'svg[aria-label*="Главная"]',
+                'svg[aria-label*="Создать"]',
+                'svg[aria-label*="Сообщения"]',
+                'svg[aria-label*="Уведомления"]',
+                # Spanish
+                'svg[aria-label*="Notificaciones"]',
+                'svg[aria-label*="Inicio"]',
+                'svg[aria-label*="Nueva publicación"]',
+                'svg[aria-label*="Directo"]',
+                # Portuguese
+                'svg[aria-label*="Notificações"]',
+                'svg[aria-label*="Início"]',
+                'svg[aria-label*="Nova publicação"]',
+                'svg[aria-label*="Direto"]',
+                # Common elements
                 'a[href*="/accounts/edit/"]',
                 'main[role="main"]',
                 'nav[role="navigation"]',
                 'a[href="/"]',  # Home link
                 'a[href="/explore/"]',  # Explore link
                 'a[href="/reels/"]',  # Reels link
-                'a[href="/accounts/activity/"]',  # Activity link
+                'a[href*="/accounts/activity/"]',  # Activity link
             ]
             
-            for indicator in logged_in_indicators:
-                try:
-                    element = await page.query_selector(indicator)
-                    if element and await element.is_visible():
-                        log_info(f"[OK] [ASYNC_LOGIN] Login successful - found logged-in indicator: {indicator}")
-                        try:
-                            await clear_human_verification_badge_async(account_details['username'])
-                        except Exception:
-                            pass
-                        return True
-                except Exception as e:
-                    log_warning(f"[WARN] [ASYNC_LOGIN] Error checking indicator {indicator}: {e}")
-                    continue
-                except:
-                    continue
+            # Retry loop to avoid 'execution context destroyed' and allow UI to render
+            for _ in range(3):
+                for indicator in logged_in_indicators:
+                    try:
+                        element = await page.query_selector(indicator)
+                        if element and await element.is_visible():
+                            log_info(f"[OK] [ASYNC_LOGIN] Login successful - found logged-in indicator: {indicator}")
+                            try:
+                                await clear_human_verification_badge_async(account_details['username'])
+                            except Exception:
+                                pass
+                            return True
+                    except Exception as e:
+                        # If destroyed due to navigation, wait and retry
+                        if 'Execution context was destroyed' in str(e):
+                            await asyncio.sleep(1.0)
+                            continue
+                        log_warning(f"[WARN] [ASYNC_LOGIN] Error checking indicator {indicator}: {e}")
+                        continue
+                # brief wait between retries
+                await asyncio.sleep(1.0)
         
         # Check for login errors
         try:
@@ -886,7 +1157,7 @@ async def handle_login_completion_async(page, account_details):
         elif verification_type == "unknown":
             log_info("[OK] [ASYNC_LOGIN] No verification required - checking if truly logged in...")
             
-            # ТОЛЬКО ЗДЕСЬ проверяем индикаторы успешного входа (RU + EN)
+            # ТОЛЬКО ЗДЕСЬ проверяем индикаторы успешного входа (RU + EN + ES + PT)
             logged_in_indicators = [
                 # Russian UI
                 'svg[aria-label*="Главная"]',
@@ -900,6 +1171,19 @@ async def handle_login_completion_async(page, account_details):
                 'svg[aria-label="Notifications"]',
                 'svg[aria-label="Direct"]', 
                 'svg[aria-label="New post"]',
+                'svg[aria-label*="Home"]',
+                # Spanish UI
+                'svg[aria-label*="Notificaciones"]',
+                'svg[aria-label*="Inicio"]',
+                'svg[aria-label*="Nueva publicación"]',
+                'svg[aria-label*="Directo"]',
+                'a[aria-label*="Inicio"]',
+                # Portuguese UI
+                'svg[aria-label*="Notificações"]',
+                'svg[aria-label*="Início"]',
+                'svg[aria-label*="Nova publicação"]',
+                'svg[aria-label*="Direto"]',
+                'a[aria-label*="Início"]',
                 # Common containers/links
                 'main[role="main"]:not(:has(form))',
                 'nav[role="navigation"]',
@@ -971,28 +1255,19 @@ async def handle_2fa_async(page, account_details):
         
         log_info("[PHONE] [ASYNC_2FA] Handling 2FA authentication...")
         
-        # Find 2FA code input
+        # Find 2FA code input using centralized selectors
         code_input = None
-        code_selectors = [
-            'input[name="verificationCode"]',  # Основной селектор
-            'input[name="confirmationCode"]',
-            'input[name="securityCode"]',
-            'input[aria-label*="Код безопасности"]',  # Русский интерфейс
-            'input[aria-label*="Security Code"]',  # Английский интерфейс
-            'input[aria-describedby="verificationCodeDescription"]',  # По описанию
-            'input[type="tel"][maxlength]','input[type="tel"]',  # По типу
-            'input[autocomplete="off"][maxlength]','input[autocomplete="one-time-code"]',
-            'input[inputmode="numeric"]',
-            'input[maxlength="6"]', 'input[maxlength="8"]',  # Instagram иногда использует 8
-            'input[placeholder*="код"]','input[placeholder*="code"]',
-            'label:has-text("Код") + input'
-        ]
-        # Расширенные динамические селекторы
-        code_selectors.extend([
+        from ..selectors_config import InstagramSelectors as SelectorConfig
+        code_selectors = SelectorConfig.TFA_INPUT + [
+            # Additional dynamic selectors
             'input[id^="_r_"]',
             'input[type="text"][dir="ltr"][autocomplete="off"]',
             'label[for^="_r_"] + input',
-        ])
+            'input[aria-describedby="verificationCodeDescription"]',
+            'input[type="tel"][maxlength]',
+            'input[type="tel"]',
+            'label:has-text("Код") + input'
+        ]
         for selector in code_selectors:
             try:
                 code_input = await page.query_selector(selector)
@@ -1031,7 +1306,17 @@ async def handle_2fa_async(page, account_details):
             await asyncio.sleep(random.uniform(0.8, 1.6))
             
             # Submit 2FA form
-            submit_button = await page.query_selector('button[type="submit"], button:has-text("Confirm"), button:has-text("Подтвердить"), div[role="button"]:has-text("Confirm"), div[role="button"]:has-text("Подтвердить")')
+            submit_button = await page.query_selector(
+                'button[type="submit"], '
+                'button:has-text("Confirm"), '
+                'button:has-text("Подтвердить"), '
+                'button:has-text("Confirmar"), '
+                'button:has-text("Confirmação"), '
+                'div[role="button"]:has-text("Confirm"), '
+                'div[role="button"]:has-text("Подтвердить"), '
+                'div[role="button"]:has-text("Confirmar"), '
+                'div[role="button"]:has-text("Confirmação")'
+            )
             if submit_button:
                 await submit_button.click()
             else:
@@ -1129,9 +1414,28 @@ async def handle_email_verification_async(page, account_details):
         
         log_info("📧 [ASYNC_EMAIL] Starting email verification...")
         
-        # Find verification code input
+        # Wait for page to fully load and render email verification elements
+        log_info("📧 [ASYNC_EMAIL] Waiting for email verification page to load...")
+        try:
+            await page.wait_for_load_state('domcontentloaded', timeout=20000)
+            await page.wait_for_load_state('networkidle', timeout=15000)
+        except Exception as e:
+            log_info(f"[WARN] [ASYNC_EMAIL] Load state wait failed: {e}")
+        
+        # Additional wait for JavaScript rendering
+        await asyncio.sleep(random.uniform(3, 5))
+        
+        # Check if page content indicates email verification
+        try:
+            page_text = await page.inner_text('body') or ""
+            log_info(f"📧 [ASYNC_EMAIL] Page content check - contains verification keywords: {any(kw in page_text.lower() for kw in ['code', 'código', 'verification', 'verificación', 'confirm'])}")
+        except Exception:
+            pass
+        
+        # Find verification code input with retry logic
         code_input = None
         code_selectors = [
+            # Instagram's dynamic email/code fields for auth_platform/codeentry
             'input[name="email"]',  # Instagram специально путает - поле называется "email" но нужен КОД!
             'input[name="verificationCode"]',
             'input[name="confirmationCode"]',
@@ -1142,9 +1446,16 @@ async def handle_email_verification_async(page, account_details):
             'input[maxlength="8"]',
             'input[placeholder*="код"]',
             'input[placeholder*="code"]',
+            'input[placeholder*="código"]',  # Spanish
             'label:has-text("Код") + input',  # По label "Код"
+            
+            # XPath селекторы для более надежного поиска
+            '//input[@type="text" and (@autocomplete="off" or @autocomplete="one-time-code")]',
+            '//input[@inputmode="numeric"]',
+            '//input[@maxlength="6" or @maxlength="8"]',
+            '//input[contains(@placeholder, "code") or contains(@placeholder, "código") or contains(@placeholder, "код")]',
         ]
-                # Дополнительные селекторы из реального HTML Instagram
+        # Дополнительные селекторы из реального HTML Instagram
         additional_selectors = [
             'input[id^="_r_"]',  # Instagram использует динамические ID типа "_r_7_"
             'input[type="text"][dir="ltr"][autocomplete="off"]',
@@ -1152,27 +1463,55 @@ async def handle_email_verification_async(page, account_details):
         ]
         code_selectors.extend(additional_selectors)
         
-        for selector in code_selectors:
-            try:
-                code_input = await page.query_selector(selector)
-                if code_input and await code_input.is_visible():
-                    break
-            except:
-                continue
+        # Retry finding code input field with delays (page might still be loading)
+        max_retries = 10
+        for retry in range(max_retries):
+            log_info(f"📧 [ASYNC_EMAIL] Searching for code input field (attempt {retry + 1}/{max_retries})...")
+            
+            for selector in code_selectors:
+                try:
+                    code_input = await page.query_selector(selector)
+                    if code_input and await code_input.is_visible():
+                        log_info(f"📧 [ASYNC_EMAIL] Found code input field with selector: {selector}")
+                        break
+                except Exception as e:
+                    log_info(f"[WARN] [ASYNC_EMAIL] Error with selector {selector}: {e}")
+                    continue
+            
+            if code_input:
+                break
+            
+            # Wait before next retry
+            log_info(f"📧 [ASYNC_EMAIL] Code input not found, waiting before retry {retry + 1}/{max_retries}...")
+            await asyncio.sleep(2)
         
         if not code_input:
-            log_info("[FAIL] [ASYNC_EMAIL] Email verification code input not found")
+            log_info("[FAIL] [ASYNC_EMAIL] Email verification code input not found after retries")
+            # Debug: log page content for investigation
+            try:
+                page_html = await page.content()
+                log_info(f"[DEBUG] [ASYNC_EMAIL] Page URL: {page.url}")
+                log_info(f"[DEBUG] [ASYNC_EMAIL] Page title: {await page.title()}")
+                log_info(f"[DEBUG] [ASYNC_EMAIL] Page contains input fields: {page_html.count('<input')}")
+            except Exception:
+                pass
             return False
         
-        # Try up to 3 attempts: fetch code, enter, submit, poll for redirect
-        max_attempts = 3
-        for attempt in range(1, max_attempts + 1):
-            verification_code = await get_email_verification_code_async(email_login, email_password, max_retries=3)
+        # Extended polling for code arrival (avoid premature exit on slow providers like FirstMail)
+        total_wait_seconds = 240  # ~4 minutes budget
+        per_call_retries = 1      # let outer loop control timing; inner call should be quick
+        attempt = 0
+        start_ts = time.time()
+        while time.time() - start_ts < total_wait_seconds:
+            attempt += 1
+            log_info(f"📧 [ASYNC_EMAIL] Polling mailbox for code (attempt {attempt}, elapsed {int(time.time() - start_ts)}s/{total_wait_seconds}s)...")
+            verification_code = await get_email_verification_code_async(email_login, email_password, max_retries=per_call_retries)
             if not verification_code:
-                log_info("[FAIL] [ASYNC_EMAIL] Failed to get email verification code")
-                return False
+                # Wait a bit and retry until timeout
+                await asyncio.sleep(random.uniform(8, 15))
+                continue
             
-            log_info(f"📧 [ASYNC_EMAIL] Attempt {attempt}/{max_attempts}: got code: {verification_code}")
+            log_info(f"📧 [ASYNC_EMAIL] Got verification code: {verification_code}")
             
             # Enter verification code (human-like)
             await code_input.click()
@@ -1182,19 +1521,25 @@ async def handle_email_verification_async(page, account_details):
             await code_input.type(verification_code, delay=int(random.uniform(30, 70)))
             await asyncio.sleep(random.uniform(0.8, 1.6))
             
-            # Submit verification form - UPDATED SELECTORS for Instagram
-            submit_selectors = [
+            # Submit verification form - using centralized selectors
+            from ..selectors_config import InstagramSelectors as SelectorConfig
+            submit_selectors = SelectorConfig.EMAIL_SUBMIT_BUTTONS + [
+                # Additional continue/next button variants
                 'div[role="button"]:has-text("Продолжить")',
                 'div[role="button"]:has-text("Continue")',
-                'div[role="button"]:has-text("Continuar")',
-                'div[role="button"]:has-text("Continuar")',
+                'div[role="button"]:has-text("Continuar")',  # ES/PT
+                'div[role="button"]:has-text("Seguir")',      # PT
+                'div[role="button"]:has-text("Siguiente")',  # ES
                 'button:has-text("Продолжить")',
                 'button:has-text("Continue")', 
                 'button:has-text("Continuar")',
-                'button[type="submit"]',
+                'button:has-text("Seguir")',
+                'button:has-text("Siguiente")',
                 '[role="button"]:has(span:has-text("Продолжить"))',
                 '[role="button"]:has(span:has-text("Continue"))',
                 '[role="button"]:has(span:has-text("Continuar"))',
+                '[role="button"]:has(span:has-text("Seguir"))',
+                '[role="button"]:has(span:has-text("Siguiente"))',
             ]
 
             submit_button = None
@@ -1214,12 +1559,13 @@ async def handle_email_verification_async(page, account_details):
                 log_error("📧 [ASYNC_EMAIL] Submit button not found - trying Enter key")
                 await code_input.press('Enter')
             
-            # Poll up to 15s for redirect off verification pages
+            # Poll up to 30s for redirect off verification pages (can be slow)
             success = False
-            for _ in range(15):
+            for _ in range(30):
                 await asyncio.sleep(1.0)
                 current_url = page.url
-                if '/accounts/login' not in current_url and 'challenge' not in current_url and 'auth_platform' not in current_url:
+                if ('/accounts/login' not in current_url and 'challenge' not in current_url and 
+                    'auth_platform' not in current_url and '/codeentry/' not in current_url):
                     success = True
                     break
             
@@ -1257,9 +1603,9 @@ async def handle_email_verification_async(page, account_details):
             except Exception:
                 pass
             
-            log_info(f"[WARN] [ASYNC_EMAIL] No redirect after submit; retrying ({attempt}/{max_attempts})")
+            log_info(f"[WARN] [ASYNC_EMAIL] No redirect after code submit; will continue polling if time budget remains")
         
-        log_info("[FAIL] [ASYNC_EMAIL] Email verification failed after retries")
+        log_info("[FAIL] [ASYNC_EMAIL] Email verification failed after extended waiting")
         return False
             
     except Exception as e:
@@ -1280,8 +1626,14 @@ async def handle_save_login_info_dialog_async(page):
         
         # Keywords that indicate save login dialog (from sync version)
         save_login_keywords = [
-            'сохранить данные для входа', 'save login info', 'сохранить информацию', 
-            'save your login info', 'запомнить', 'remember', 'сохранить', 'save'
+            # Russian
+            'сохранить данные для входа', 'сохранить информацию', 'запомнить', 'сохранить',
+            # English
+            'save login info', 'save your login info', 'remember', 'save',
+            # Spanish
+            'guardar información de inicio', 'guardar inicio de sesión', 'guardar', 'recordar',
+            # Portuguese
+            'salvar informações de login', 'salvar login', 'salvar', 'lembrar'
         ]
         
         is_save_login_dialog = any(keyword in page_text.lower() for keyword in save_login_keywords)
@@ -1294,8 +1646,12 @@ async def handle_save_login_info_dialog_async(page):
             save_button_selectors = [
                 'button:has-text("Сохранить")',
                 'button:has-text("Save")',
+                'button:has-text("Guardar")',
+                'button:has-text("Salvar")',
                 'div[role="button"]:has-text("Сохранить")',
                 'div[role="button"]:has-text("Save")',
+                'div[role="button"]:has-text("Guardar")',
+                'div[role="button"]:has-text("Salvar")',
             ]
             
             save_button = None
@@ -1327,8 +1683,12 @@ async def handle_save_login_info_dialog_async(page):
                 'button:has-text("Не сейчас")',
                 'button:has-text("Not now")',
                 'button:has-text("Not Now")',
+                'button:has-text("Ahora no")',
+                'button:has-text("Agora não")',
                 'div[role="button"]:has-text("Не сейчас")',
                 'div[role="button"]:has-text("Not now")',
+                'div[role="button"]:has-text("Ahora no")',
+                'div[role="button"]:has-text("Agora não")',
             ]
             
             for selector in not_now_selectors:

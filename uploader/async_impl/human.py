@@ -43,6 +43,7 @@ from ..browser_utils import BrowserManager, PageUtils, ErrorHandler, NetworkUtil
 from ..crop_handler import CropHandler, handle_crop_and_aspect_ratio
 from ..logging_utils import log_info, log_error, log_debug, log_warning
 from ..human_behavior import AdvancedHumanBehavior, init_human_behavior, get_human_behavior
+from ..advanced_human_behavior import init_advanced_human_behavior, get_advanced_human_behavior
 from ..captcha_solver import solve_recaptcha_if_present, detect_recaptcha_on_page, solve_recaptcha_if_present_sync
 from ..email_verification_async import (
     get_email_verification_code_async,
@@ -124,14 +125,22 @@ async def click_element_with_behavior_async(page, element, element_name):
             log_info(f"[ASYNC_UPLOAD] [WARN] Error checking element readiness: {str(readiness_error)}")
             # Continue anyway, as the element might still be clickable
         
-        # Simulate mouse movement to element
+        # Use advanced human behavior if available
+        human_behavior = get_advanced_human_behavior()
+        if human_behavior:
+            success = await human_behavior.human_click(element, element_name)
+            if success:
+                return True
+            log_info(f"[ASYNC_UPLOAD] [FALLBACK] Advanced behavior failed, using basic click for {element_name}")
+        
+        # Fallback to basic behavior
         await simulate_mouse_movement_to_element_async(page, element)
         
         # Human decision pause
         decision_time = 1.0 + random.uniform(-0.3, 0.5)
         await asyncio.sleep(decision_time)
         
-        # ENHANCED: Try hover before click to avoid overlay issues
+        # Try hover before click
         try:
             await element.hover(timeout=2000)
         except Exception:
@@ -149,10 +158,19 @@ async def click_element_with_behavior_async(page, element, element_name):
         return False
 
 async def _type_like_human_async(page, element, text):
-    """Type text like a human with mistakes, corrections, and realistic timing - async version"""
+    """Type text like a human with advanced behavior simulation"""
     try:
-        log_info("[ASYNC_UPLOAD] [BOT] Starting human-like typing...")
+        log_info("[ASYNC_UPLOAD] [BOT] Starting advanced human-like typing...")
         
+        # Use advanced human behavior if available
+        human_behavior = get_advanced_human_behavior()
+        if human_behavior:
+            success = await human_behavior.human_type(element, text, "caption_typing")
+            if success:
+                return True
+            log_info("[ASYNC_UPLOAD] [FALLBACK] Advanced typing failed, using basic typing")
+        
+        # Fallback to basic human typing
         i = 0
         while i < len(text):
             char = text[i]
