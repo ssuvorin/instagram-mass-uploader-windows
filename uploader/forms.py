@@ -143,6 +143,13 @@ class VideoUploadForm(forms.Form):
 
 
 class BulkUploadTaskForm(forms.ModelForm):
+    client_filter = forms.ChoiceField(
+        choices=[],  # Will be set in __init__
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'client-filter'}),
+        label="Filter by client"
+    )
+    
     selected_accounts = forms.ModelMultipleChoiceField(
         queryset=None,  # Will be set in __init__
         widget=forms.CheckboxSelectMultiple,
@@ -174,6 +181,18 @@ class BulkUploadTaskForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        
+        # Set client filter choices
+        try:
+            from cabinet.models import Client
+            clients = Client.objects.all().order_by('name')
+            choices = [('', 'All clients'), ('no_client', 'Without client')]
+            choices.extend([(str(client.id), client.name) for client in clients])
+            self.fields['client_filter'].choices = choices
+        except ImportError:
+            # If cabinet app is not available, set empty choices but keep visible for debugging
+            self.fields['client_filter'].choices = [('', 'All clients (cabinet app not available)')]
+        
         # Set queryset dynamically to get fresh data from database
         # Sort by creation date descending (newest first) for better UX
         self.fields['selected_accounts'].queryset = (

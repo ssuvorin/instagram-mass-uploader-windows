@@ -146,10 +146,16 @@ class DolphinAnty:
     """
     OS_PLATFORMS = ["windows"]
     SCREEN_RESOLUTIONS = [
-        "1920x1080", "2560x1440", "1366x768",
-        "1440x900", "1536x864", "1680x1050"
+        # Popular desktop resolutions
+        "1920x1080", "2560x1440", "1366x768", "1440x900", "1536x864", "1680x1050",
+        # Modern high-res displays
+        "3440x1440", "2880x1800", "1920x1200", "2560x1600", "3840x2160",
+        # Ultrawide and gaming
+        "3440x1440", "2560x1080", "1920x1200", "2048x1152",
+        # Laptop common resolutions
+        "1600x900", "1280x800", "1280x720", "1024x768"
     ]
-    BROWSER_VERSIONS = ["138", "139"]
+    BROWSER_VERSIONS = ["140"]
     
     # Stealth defaults for headers (Belarus locale with Russian interface)
     DEFAULT_ACCEPT_LANGUAGE = "ru-BY,ru;q=0.9,en-US;q=0.8,en;q=0.7"
@@ -249,17 +255,40 @@ class DolphinAnty:
             "browser_version": browser_version,
             "platform": os_platform
         }
-        resp = self._make_request("get", "/fingerprints/useragent", params=params)
-        if resp and "data" in resp:
-            ua = resp["data"]
-            logger.info(f"[OK] Generated UA ({browser_version}): {ua[:40]}…")
-            return ua
-        logger.error(f"[FAIL] UA generation failed: {resp}")
+        
+        try:
+            resp = self._make_request("get", "/fingerprints/useragent", params=params)
+            if resp and "data" in resp:
+                ua = resp["data"]
+                logger.info(f"[OK] Generated UA ({browser_version}): {ua[:40]}…")
+                return ua
+        except Exception as e:
+            logger.warning(f"[WARN] UA generation failed for version {browser_version}: {e}")
+        
+        # Fallback: try with version 140 if the requested version fails
+        if browser_version != "140":
+            logger.info(f"[FALLBACK] Trying fallback UA generation with version 140")
+            fallback_params = {
+                "browser_type": "anty",
+                "browser_version": "140",
+                "platform": os_platform
+            }
+            try:
+                resp = self._make_request("get", "/fingerprints/useragent", params=fallback_params)
+                if resp and "data" in resp:
+                    ua = resp["data"]
+                    logger.info(f"[OK] Generated fallback UA (140): {ua[:40]}…")
+                    return ua
+            except Exception as fallback_error:
+                logger.error(f"[FAIL] Fallback UA generation also failed: {fallback_error}")
+        
+        logger.error(f"[FAIL] UA generation failed completely for {browser_version}")
         return None
 
     def generate_webgl_info(self,
                              os_platform: str,
                              browser_version: str) -> Optional[Dict[str, Any]]:
+        # Only Windows - use full range of resolutions
         screen = random.choice(self.SCREEN_RESOLUTIONS)
         params = {
             "browser_type":    "anty",
@@ -319,8 +348,8 @@ class DolphinAnty:
         if not proxy:
             return {"success": False, "error": "Proxy configuration is required"}
 
-        # 2) Choose OS and browser version
-        os_plat     = self.OS_PLATFORMS[0]
+        # 2) Choose OS and browser version - only Windows
+        os_plat = self.OS_PLATFORMS[0]
         browser_ver = random.choice(self.BROWSER_VERSIONS)
 
         # 2b) Geo-IP for proxy to sync locale/TZ/geo and maybe WebRTC public IP
@@ -350,21 +379,80 @@ class DolphinAnty:
         cpu_value    = random.choice([4, 8, 16]) 
         mem_value    = random.choice([8, 16, 32])
         
-        # 6) Randomize MAC address (manual)
+        # 6) Randomize MAC address (manual) - using real OUI prefixes
         def random_mac():
-            return ":".join(f"{random.randint(0,255):02X}" for _ in range(6))
+            # Real OUI prefixes from major manufacturers
+            oui_prefixes = [
+                # Dell
+                "00:14:22", "18:03:73", "B8:2A:72", "D4:AE:52", "F8:B1:56",
+                # HP
+                "00:1F:29", "70:5A:0F", "9C:8E:99", "A0:48:1C", "B4:99:BA",
+                # Lenovo
+                "00:21:CC", "54:EE:75", "8C:16:45", "E4:54:E8", "F0:DE:F1",
+                # Apple
+                "00:16:CB", "3C:07:54", "A4:5E:60", "BC:52:B7", "F0:18:98",
+                # ASUS
+                "00:1F:C6", "2C:56:DC", "50:46:5D", "AC:22:0B", "F8:32:E4",
+                # MSI
+                "00:21:85", "00:24:21", "70:85:C2", "E0:3F:49", "MSI123",
+                # Acer
+                "00:02:3F", "00:0E:9B", "B8:88:E3", "E0:94:67", "F0:76:1C",
+                # Samsung
+                "00:12:FB", "34:BE:00", "78:F8:82", "C8:BA:94", "E8:50:8B",
+                # Intel (NUC/motherboards)
+                "00:15:17", "94:C6:91", "A0:36:9F", "B4:96:91", "D8:CB:8A",
+                # Realtek (network cards)
+                "00:E0:4C", "52:54:00", "70:4D:7B", "E0:91:F5", "F8:59:71"
+            ]
+            
+            # Choose random OUI prefix
+            oui = random.choice(oui_prefixes)
+            
+            # Generate random last 3 bytes
+            last_bytes = ":".join(f"{random.randint(0,255):02X}" for _ in range(3))
+            
+            return f"{oui}:{last_bytes}"
+        
         mac_mode = "manual"
         mac_payload: Dict[str, Any] = {"mode": mac_mode}
         if mac_mode == "manual":
             mac_payload["value"] = random_mac()
         
-        # 7) Randomize DeviceName (manual)
+        # 7) Randomize DeviceName (manual) - realistic device names
         dev_mode = "manual"
         dev_payload: Dict[str, Any] = {"mode": dev_mode}
         if dev_mode == "manual":
-            # e.g. DESKTOP-XXXXXXX
-            suffix = "".join(random.choices(string.ascii_uppercase + string.digits, k=7))
-            dev_payload["value"] = f"DESKTOP-{suffix}"
+            def generate_realistic_device_name():
+                # Common first names for personal devices
+                first_names = [
+                    "Alex", "John", "Mike", "Anna", "Kate", "Tom", "Lisa", "Mark", 
+                    "Sarah", "David", "Emma", "Chris", "Maria", "Paul", "Julia",
+                    "Steve", "Helen", "Nick", "Amy", "Dan", "Sophie", "Max", "Eva"
+                ]
+                
+                # Windows device name patterns
+                patterns = [
+                    # Personal computers
+                    lambda: f"{random.choice(first_names)}-PC",
+                    lambda: f"{random.choice(first_names)}-DESKTOP",
+                    lambda: f"{random.choice(first_names)}-LAPTOP",
+                    # Windows default patterns
+                    lambda: f"DESKTOP-{random.choice(string.ascii_uppercase)}{random.randint(10,99)}{random.choice(string.ascii_uppercase)}{random.randint(100,999)}",
+                    lambda: f"LAPTOP-{random.choice(string.ascii_uppercase)}{random.randint(10,99)}{random.choice(string.ascii_uppercase)}{random.randint(100,999)}",
+                    # Company/office patterns
+                    lambda: f"WIN-{random.choice(string.ascii_uppercase)}{random.randint(10,99)}{random.choice(string.ascii_uppercase)}{random.randint(100,999)}",
+                    lambda: f"PC-{random.choice(['USER', 'OFFICE', 'HOME'])}{random.randint(10,99)}",
+                    # Brand-specific patterns
+                    lambda: f"DELL-{random.choice(string.ascii_uppercase)}{random.randint(1000,9999)}",
+                    lambda: f"HP-{random.choice(['PAVILION', 'ELITEBOOK', 'PROBOOK'])}{random.randint(100,999)}",
+                    lambda: f"LENOVO-{random.choice(['THINKPAD', 'IDEAPAD'])}{random.randint(100,999)}",
+                ]
+                
+                # Choose random pattern and execute it
+                pattern_func = random.choice(patterns)
+                return pattern_func()
+            
+            dev_payload["value"] = generate_realistic_device_name()
 
         # 8) Randomize Fonts
         fonts_mode = "auto"
@@ -507,7 +595,7 @@ class DolphinAnty:
             "tags":            tags,
             "platform":        os_plat,
             "platformVersion": plat_ver,
-            "mainWebsite":     random.choice(["instagram","google","facebook","tiktok","twitter","youtube"]),
+            "mainWebsite":     self._get_realistic_main_website(normalized_locale, geoip),
             "browserType":     "anty",
 
             "useragent": {
@@ -556,7 +644,7 @@ class DolphinAnty:
             },
 
             "mediaDevices": {"mode":"real"},
-            "doNotTrack":   (0 if random.random() < 0.85 else 1),
+            "doNotTrack":   0,
 
             "macAddress":   mac_payload,
             "deviceName":   dev_payload,
@@ -599,6 +687,14 @@ class DolphinAnty:
             logger.error(f"[FAIL] Profile creation failed: {resp}")
 
         return resp
+
+    def _get_realistic_main_website(self, locale: str, geoip: Optional[Dict] = None) -> str:
+        """
+        Choose realistic main website - simplified version
+        """
+        # Simple list of popular international websites
+        websites = ["google", "youtube", "facebook", "instagram", "twitter", "amazon"]
+        return random.choice(websites)
 
     def get_profile(self, profile_id: Union[str, int]) -> Dict:
         """Get information about a specific browser profile"""

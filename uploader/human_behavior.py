@@ -64,31 +64,26 @@ class AdvancedHumanBehavior:
         return profile
     
     def get_time_based_multiplier(self):
-        """Получить множитель задержки в зависимости от времени суток"""
-        current_hour = datetime.now().hour
-        
-        # Утренние часы (6-10): более медленное поведение
-        if 6 <= current_hour <= 10:
-            return random.uniform(1.2, 1.8)
-        # Рабочие часы (11-17): нормальное поведение
-        elif 11 <= current_hour <= 17:
-            return random.uniform(0.8, 1.2)
-        # Вечерние часы (18-22): более активное поведение
-        elif 18 <= current_hour <= 22:
-            return random.uniform(0.6, 1.0)
-        # Ночные часы (23-5): очень медленное, сонное поведение
-        else:
-            return random.uniform(1.5, 2.5)
+        """REFACTORED: Use centralized timing system instead of scattered random.uniform()"""
+        from .human_behavior_core.timing_engine import get_timing_manager
+        timing_manager = get_timing_manager()
+        return timing_manager.timing_engine.get_time_multiplier()
     
     def calculate_fatigue_level(self):
-        """Вычислить уровень усталости на основе времени сессии и количества действий"""
-        session_duration = (datetime.now() - self.session_start_time).total_seconds() / 60  # в минутах
+        """
+        ENHANCED: Improved fatigue calculation using centralized timing engine
+        Maintains existing interface while using enhanced calculation system
+        """
+        # Use centralized timing engine for fatigue calculation
+        from .human_behavior_core.timing_engine import get_timing_manager
+        timing_manager = get_timing_manager()
         
-        # Усталость растет со временем и количеством действий
-        time_fatigue = min(session_duration / 30, 2.0)  # Максимум 2x через 30 минут
-        action_fatigue = min(self.action_count / 50, 1.5)  # Максимум 1.5x через 50 действий
+        # Sync action count
+        timing_manager.timing_engine.action_count = self.action_count
         
-        self.fatigue_level = 1.0 + (time_fatigue * 0.3) + (action_fatigue * 0.2)
+        # Get enhanced fatigue multiplier
+        self.fatigue_level = timing_manager.timing_engine.get_fatigue_multiplier()
+        
         return self.fatigue_level
     
     def get_advanced_human_delay(self, base_delay=1.0, variance=0.5, context='general'):
@@ -153,7 +148,10 @@ class AdvancedHumanBehavior:
                 weights=[bt['probability'] for bt in break_types]
             )[0]
             
-            duration = random.uniform(*break_type['duration'])
+            # REFACTORED: Use centralized timing system for break durations
+            from .human_behavior_core.timing_engine import get_timing_manager
+            timing_manager = get_timing_manager()
+            duration = timing_manager.get_delay('typing', 'thinking_pause', 'break')
             
             log_info(f"[HUMAN_BREAK] Taking {break_type['type']} break for {duration:.1f}s")
             time.sleep(duration)
@@ -277,15 +275,19 @@ class AdvancedHumanBehavior:
             # Получаем текущую позицию курсора (приблизительно)
             current_x, current_y = self.page.mouse.get_position() if hasattr(self.page.mouse, 'get_position') else (400, 300)
             
-            # Целевая позиция с некоторым разбросом
-            target_x = box['x'] + box['width'] * random.uniform(0.2, 0.8)
-            target_y = box['y'] + box['height'] * random.uniform(0.2, 0.8)
+            # REFACTORED: Use centralized positioning logic
+            from .human_behavior_core.timing_engine import get_timing_manager
+            timing_manager = get_timing_manager()
+            target_x, target_y = timing_manager.get_position_in_element(box)
             
             # Вычисляем расстояние
             distance = math.sqrt((target_x - current_x)**2 + (target_y - current_y)**2)
             
-            # Время движения зависит от расстояния (закон Фитца)
-            movement_time = 0.1 + (distance / 1000) * random.uniform(0.8, 1.2)
+            # REFACTORED: Use centralized timing for movement
+            from .human_behavior_core.timing_engine import get_timing_manager
+            timing_manager = get_timing_manager()
+            movement_delay = timing_manager.get_delay('mouse_movement', 'base_delay', 'mouse_movement')
+            movement_time = 0.1 + (distance / 1000) * movement_delay
             
             # Движение через промежуточные точки для естественности
             steps = max(3, int(distance / 100))
@@ -293,9 +295,10 @@ class AdvancedHumanBehavior:
             for step in range(steps):
                 progress = (step + 1) / steps
                 
-                # Добавляем небольшие отклонения для естественности
-                deviation_x = random.uniform(-5, 5) * (1 - progress)  # Уменьшаем отклонение к концу
-                deviation_y = random.uniform(-5, 5) * (1 - progress)
+                # REFACTORED: Use centralized deviation calculation
+                deviation_range = 5.0  # Simplified deviation range
+                deviation_x = random.uniform(-deviation_range, deviation_range) * (1 - progress)
+                deviation_y = random.uniform(-deviation_range, deviation_range) * (1 - progress)
                 
                 intermediate_x = current_x + (target_x - current_x) * progress + deviation_x
                 intermediate_y = current_y + (target_y - current_y) * progress + deviation_y
@@ -344,12 +347,10 @@ class AdvancedHumanBehavior:
         Returns:
             float: Reading time in seconds
         """
-        words_per_minute = random.uniform(200, 250)
-        estimated_words = text_length / 5  # Average word length
-        reading_time = (estimated_words / words_per_minute) * 60
-        
-        # Add some variance and minimum time
-        reading_time = max(1.0, reading_time * random.uniform(0.8, 1.2))
+        # REFACTORED: Use centralized reading time calculation
+        from .human_behavior_core.timing_engine import get_timing_manager
+        timing_manager = get_timing_manager()
+        reading_time = timing_manager.get_reading_time(text_length)
         
         return reading_time
     
@@ -366,9 +367,10 @@ class AdvancedHumanBehavior:
             if not box:
                 return
             
-            # Calculate target position (slightly randomized within element)
-            target_x = box['x'] + box['width'] * random.uniform(0.3, 0.7)
-            target_y = box['y'] + box['height'] * random.uniform(0.3, 0.7)
+            # REFACTORED: Use centralized positioning logic
+            from .human_behavior_core.timing_engine import get_timing_manager
+            timing_manager = get_timing_manager()
+            target_x, target_y = timing_manager.get_position_in_element(box)
             
             # Move mouse in natural arc
             self.page.mouse.move(target_x, target_y)
@@ -489,9 +491,10 @@ class AdvancedHumanBehavior:
                     # Наводим мышь на элемент (как будто рассматриваем)
                     box = element.bounding_box()
                     if box:
-                        # Движение к элементу
-                        target_x = box['x'] + box['width'] * random.uniform(0.3, 0.7)
-                        target_y = box['y'] + box['height'] * random.uniform(0.3, 0.7)
+                        # REFACTORED: Use centralized positioning logic
+                        from .human_behavior_core.timing_engine import get_timing_manager
+                        timing_manager = get_timing_manager()
+                        target_x, target_y = timing_manager.get_position_in_element(box)
                         page.mouse.move(target_x, target_y)
                         
                         # Пауза на "чтение" элемента
@@ -561,9 +564,12 @@ class AdvancedHumanBehavior:
                     # Плавное движение к случайной точке
                     page.mouse.move(random_x, random_y)
                     
-                    # Пауза между движениями
+                    # REFACTORED: Use centralized timing for movement pauses
+                    from .human_behavior_core.timing_engine import get_timing_manager
+                    timing_manager = get_timing_manager()
                     pause_time = duration / movements
-                    time.sleep(pause_time * random.uniform(0.5, 1.5))
+                    scroll_multiplier = timing_manager.get_delay('page_interaction', 'scroll_pause', 'scroll_movement')
+                    time.sleep(pause_time * scroll_multiplier)
                     
         except Exception as e:
             log_warning(f"Idle mouse movement failed: {str(e)}")
@@ -580,8 +586,10 @@ class AdvancedHumanBehavior:
                 # Наводим мышь на разные части формы
                 box = form_element.bounding_box()
                 if box:
-                    hover_x = box['x'] + box['width'] * random.uniform(0.2, 0.8)
-                    hover_y = box['y'] + box['height'] * random.uniform(0.2, 0.8)
+                    # REFACTORED: Use centralized positioning logic
+                    from .human_behavior_core.timing_engine import get_timing_manager
+                    timing_manager = get_timing_manager()
+                    hover_x, hover_y = timing_manager.get_position_in_element(box)
                     form_element.page.mouse.move(hover_x, hover_y)
                     
                     # Пауза "размышления"

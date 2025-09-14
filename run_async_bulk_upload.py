@@ -349,6 +349,38 @@ async def run_async_task_with_monitoring(task_id):
         print(f"{Colors.BOLD}Execution Time:{Colors.END} {Colors.colorize(f'{execution_time:.2f}s', Colors.CYAN)}")
         return False
 
+def list_clients():
+    """List available clients with account counts"""
+    print_separator("AVAILABLE CLIENTS")
+    
+    try:
+        from cabinet.models import Client
+        clients = Client.objects.all()
+        
+        if not clients:
+            print(f"{Colors.YELLOW}No clients found{Colors.END}")
+            return
+        
+        # Table header
+        print(f"{Colors.BOLD}{'ID':<4} {'NAME':<30} {'ACCOUNTS':<9} {'ACTIVE':<7}{Colors.END}")
+        print("-" * 50)
+        
+        for client in clients:
+            total_accounts = client.accounts.count()
+            active_accounts = client.accounts.filter(status='ACTIVE').count()
+            
+            name = client.name[:29] if len(client.name) > 29 else client.name
+            
+            # Highlight clients with active accounts
+            if active_accounts > 0:
+                name = Colors.colorize(name, Colors.GREEN)
+                active_accounts = Colors.colorize(str(active_accounts), Colors.GREEN)
+            
+            print(f"{client.id:<4} {name:<30} {total_accounts:<9} {active_accounts:<7}")
+            
+    except ImportError:
+        print(f"{Colors.YELLOW}Cabinet module not available{Colors.END}")
+
 def list_suitable_tasks():
     """List tasks suitable for async testing"""
     print_separator("TASKS SUITABLE FOR ASYNC TESTING")
@@ -381,12 +413,19 @@ def list_suitable_tasks():
         
         print(f"{task.id:<4} {name:<25} {status_display:<15} {accounts_count:<9} {videos_count:<7} {created:<12}")
 
-def create_test_bulk_upload(name="Test Async Bulk Upload", add_video=True):
+def create_test_bulk_upload(name="Test Async Bulk Upload", add_video=True, client_id=None):
     """Create a test bulk upload task with multiple accounts for async testing"""
     print(f"Creating test async bulk upload task: {name}")
     
     # Check if we have multiple accounts
-    accounts = InstagramAccount.objects.filter(status='ACTIVE')[:3]  # Get up to 3 accounts
+    accounts_query = InstagramAccount.objects.filter(status='ACTIVE')
+    
+    # Filter by client if specified
+    if client_id:
+        accounts_query = accounts_query.filter(client_id=client_id)
+        print(f"Filtering accounts by client ID: {client_id}")
+    
+    accounts = accounts_query[:3]  # Get up to 3 accounts
     if not accounts:
         print(f"{Colors.RED}No active Instagram accounts found. Please create at least one account first.{Colors.END}")
         return None
@@ -493,6 +532,8 @@ Examples:
                        help='Run task in async mode')
     parser.add_argument('--list', action='store_true',
                        help='List tasks suitable for async testing')
+    parser.add_argument('--list-clients', action='store_true',
+                       help='List available clients with account counts')
     parser.add_argument('--config', action='store_true',
                        help='Show current async configuration')
     parser.add_argument('--create', action='store_true',
@@ -509,6 +550,7 @@ Examples:
                        help='Number of retry attempts (default: 2)')
     parser.add_argument('--name', type=str, help='Name for the new task', default="Test Async Bulk Upload")
     parser.add_argument('--no-video', action='store_true', help='Do not add test video to the task')
+    parser.add_argument('--client-id', type=int, help='Filter accounts by client ID')
     
     args = parser.parse_args()
     
@@ -528,7 +570,7 @@ Examples:
         print_async_config()
     
     elif args.create:
-        task = create_test_bulk_upload(name=args.name, add_video=not args.no_video)
+        task = create_test_bulk_upload(name=args.name, add_video=not args.no_video, client_id=args.client_id)
         if task:
             print(f"\n{Colors.GREEN}Created task with ID: {task.id}{Colors.END}")
             

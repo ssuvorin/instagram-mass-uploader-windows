@@ -37,6 +37,8 @@ from instgrapi_func.services.code_providers import (
 from instgrapi_func.services.session_store import DjangoDeviceSessionStore
 from instgrapi_func.services.geo import resolve_location_coordinates
 from instgrapi_func.services.device_service import ensure_persistent_device
+from ..rate_limiting_config import RateLimitingConfig, InstagramAPIErrorHandler
+from ..logging_utils import log_info, log_success, log_error, log_warning, log_debug
 
 
 def _extract_mentions(mentions_text: Optional[str]) -> List[str]:
@@ -71,23 +73,72 @@ def _build_usertags(cl: 'IGClient', usernames: List[str]) -> List['IGUsertag']:
 	user_tags: List['IGUsertag'] = []
 	if not usernames:
 		return user_tags
+	
 	for uname in usernames:
-		try:
-			user = cl.user_info_by_username(uname)  # type: ignore[attr-defined]
-			# Some instagrapi versions require UserShort; attempt to adapt
+		max_retries = 3
+		retry_count = 0
+		user_resolved = False
+		
+		while retry_count < max_retries and not user_resolved:
 			try:
-				from instagrapi.types import UserShort  # type: ignore
-				if hasattr(user, 'pk'):
-					user = UserShort(pk=getattr(user, 'pk'), username=getattr(user, 'username'))  # type: ignore
-			except Exception:
-				pass
-			# random but centered tag position
-			x = round(random.uniform(0.35, 0.65), 2)
-			y = round(random.uniform(0.35, 0.65), 2)
-			user_tags.append(Usertag(user=user, x=x, y=y))  # runtime type
-			log_info(f"[USERS] usertag prepared for @{uname} at ({x},{y})")
-		except Exception as e:
-			log_error(f"[USERS] failed to resolve @{uname}: {e}")
+				log_info(f"[USERS] Resolving @{uname} (attempt {retry_count + 1}/{max_retries})")
+				
+				# Add delay before user resolution to avoid rate limits
+				if retry_count > 0:
+					delay = RateLimitingConfig.get_retry_delay(retry_count, 'user_resolution')
+					log_info(f"[USERS] Waiting {delay:.1f}s before retry for @{uname}...")
+					time.sleep(delay)
+				else:
+					# Small delay even on first attempt
+					delay = RateLimitingConfig.get_delay('user_resolution')
+					time.sleep(delay)
+				
+				user = cl.user_info_by_username(uname)  # type: ignore[attr-defined]
+				
+				# Some instagrapi versions require UserShort; attempt to adapt
+				try:
+					from instagrapi.types import UserShort  # type: ignore
+					if hasattr(user, 'pk'):
+						user = UserShort(pk=getattr(user, 'pk'), username=getattr(user, 'username'))  # type: ignore
+				except Exception:
+					pass
+				
+				# random but centered tag position
+				x = round(random.uniform(0.35, 0.65), 2)
+				y = round(random.uniform(0.35, 0.65), 2)
+				user_tags.append(Usertag(user=user, x=x, y=y))  # runtime type
+				log_info(f"[USERS] usertag prepared for @{uname} at ({x},{y})")
+				user_resolved = True
+				
+			except Exception as e:
+				retry_count += 1
+				error_msg = str(e)
+				
+				# Check for specific error types using error handler
+				error_category = InstagramAPIErrorHandler.get_error_category(e)
+				
+				if error_category == 'rate_limit':
+					log_warning(f"[USERS] [RATE_LIMIT] Rate limit for @{uname}, waiting longer... (attempt {retry_count}/{max_retries})")
+					wait_time = RateLimitingConfig.get_delay('user_resolution', is_retry=True, is_rate_limited=True)
+					log_info(f"[USERS] [RATE_LIMIT] Waiting {wait_time:.1f}s before retry for @{uname}...")
+					time.sleep(wait_time)
+				elif "not found" in error_msg.lower() or "user not found" in error_msg.lower():
+					log_warning(f"[USERS] User @{uname} not found, skipping...")
+					break  # Don't retry for non-existent users
+				elif error_category == 'challenge':
+					log_warning(f"[USERS] Challenge required for @{uname}, skipping...")
+					break  # Don't retry for challenges
+				else:
+					log_warning(f"[USERS] Failed to resolve @{uname} (attempt {retry_count}/{max_retries}): {e}")
+					# Use retry delay for other errors
+					wait_time = RateLimitingConfig.get_retry_delay(retry_count, 'user_resolution')
+					log_info(f"[USERS] Waiting {wait_time:.1f}s before retry for @{uname}...")
+					time.sleep(wait_time)
+				
+				if retry_count >= max_retries:
+					log_error(f"[USERS] Failed to resolve @{uname} after {max_retries} attempts: {e}")
+					break
+	
 	return user_tags
 
 
@@ -124,6 +175,10 @@ def _resolve_location(cl: 'IGClient', location_text: Optional[str]) -> Optional[
 			if not callable(m):
 				continue
 			try:
+				# Add delay before location search to avoid rate limits
+				delay = RateLimitingConfig.get_delay('location_search')
+				time.sleep(delay)
+				
 				res = m(query)  # type: ignore[misc]
 				if not res:
 					continue
@@ -138,8 +193,14 @@ def _resolve_location(cl: 'IGClient', location_text: Optional[str]) -> Optional[
 					if lat is not None and lng is not None:
 						log_info(f"[LOCATION] resolved '{query}' → ({lat},{lng}) :: {name}")
 						return Location(name=str(name), lat=float(lat), lng=float(lng))  # runtime type
-			except Exception:
-				pass
+			except Exception as e:
+				error_category = InstagramAPIErrorHandler.get_error_category(e)
+				if error_category == 'rate_limit':
+					log_warning(f"[LOCATION] [RATE_LIMIT] Rate limit for location search '{query}', skipping...")
+					break  # Don't try other methods if rate limited
+				else:
+					log_debug(f"[LOCATION] Location search method failed for '{query}': {e}")
+					continue
 		# Fallback: try our geocoder (Nominatim + dictionary)
 		try:
 			coords = resolve_location_coordinates(query)
@@ -259,77 +320,131 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 	except Exception:
 		pass
 
-	# Upload loop
+		# Upload loop with enhanced error handling
 	completed = 0
 	failed = 0
 
 	for idx, path in enumerate(video_files_to_upload):
-		try:
-			caption = ""
+		max_retries = 3
+		retry_count = 0
+		upload_success = False
+		
+		while retry_count < max_retries and not upload_success:
 			try:
-				caption = str(videos[idx].title or "")
-			except Exception:
 				caption = ""
+				try:
+					caption = str(videos[idx].title or "")
+				except Exception:
+					caption = ""
 
-			# Mentions as separate usertags
-			mentions_text = None
-			try:
-				mentions_text = getattr(videos[idx], 'mentions', None)
-			except Exception:
+				# Mentions as separate usertags
 				mentions_text = None
-			mention_names = _extract_mentions(mentions_text)
-			usertags: List['IGUsertag'] = []
-			if mention_names:
-				usertags = _build_usertags(cl, mention_names)
+				try:
+					mentions_text = getattr(videos[idx], 'mentions', None)
+				except Exception:
+					mentions_text = None
+				mention_names = _extract_mentions(mentions_text)
+				usertags: List['IGUsertag'] = []
+				if mention_names:
+					usertags = _build_usertags(cl, mention_names)
 
-			# Location optional
-			location_obj: Optional['IGLocation'] = None
-			try:
-				location_text = getattr(videos[idx], 'location', None)
-				location_obj = _resolve_location(cl, location_text)
-			except Exception:
-				location_obj = None
+				# Location optional
+				location_obj: Optional['IGLocation'] = None
+				try:
+					location_text = getattr(videos[idx], 'location', None)
+					location_obj = _resolve_location(cl, location_text)
+				except Exception:
+					location_obj = None
 
-			log_info(f"[UPLOAD] Reels {idx+1}/{len(video_files_to_upload)}: {os.path.basename(path)}")
-			if on_log:
-				on_log(f"Starting upload {idx+1}/{len(video_files_to_upload)}: {os.path.basename(path)}")
-			# Human-like pause before upload
-			time.sleep(random.uniform(1.5, 5.0))
+				log_info(f"[UPLOAD] Reels {idx+1}/{len(video_files_to_upload)}: {os.path.basename(path)} (attempt {retry_count + 1}/{max_retries})")
+				if on_log:
+					on_log(f"Starting upload {idx+1}/{len(video_files_to_upload)}: {os.path.basename(path)} (attempt {retry_count + 1}/{max_retries})")
+				
+				# Enhanced human-like pause before upload (longer for retries)
+				if retry_count > 0:
+					delay = RateLimitingConfig.get_retry_delay(retry_count, 'upload_attempt')
+				else:
+					delay = RateLimitingConfig.get_delay('upload_attempt')
+				log_info(f"[UPLOAD] Waiting {delay:.1f}s before upload...")
+				time.sleep(delay)
 
-			# Optional thumbnail support: if file '<path>.jpg' exists, pass it
-			thumb_path = None
-			try:
-				cand = f"{path}.jpg"
-				if os.path.exists(cand):
-					thumb_path = cand
-			except Exception:
+				# Optional thumbnail support: if file '<path>.jpg' exists, pass it
 				thumb_path = None
-			media = cl.clip_upload(  # type: ignore[attr-defined]
-				path=path,
-				caption=caption,
-				thumbnail=thumb_path,
-				usertags=usertags or None,
-				location=location_obj,
-			)
-			code = getattr(media, 'code', None)
-			completed += 1
-			if code:
-				log_success(f"[OK] Published: https://www.instagram.com/p/{code}/")
-				if on_log:
-					on_log(f"Upload successful: https://www.instagram.com/p/{code}/")
-			else:
-				log_success("[OK] Published a clip")
-				if on_log:
-					on_log("Upload successful")
-			# Human-like pause after upload
-			time.sleep(random.uniform(2.0, 8.0))
-		except Exception as e:
-			failed += 1
-			log_error(f"[FAIL] clip upload error: {e}")
-			if on_log:
-				on_log(f"Upload failed: {e}")
-			# small backoff
-			time.sleep(random.uniform(4.0, 12.0))
+				try:
+					cand = f"{path}.jpg"
+					if os.path.exists(cand):
+						thumb_path = cand
+				except Exception:
+					thumb_path = None
+				
+				# Enhanced clip_upload with better error handling
+				media = cl.clip_upload(  # type: ignore[attr-defined]
+					path=path,
+					caption=caption,
+					thumbnail=thumb_path,
+					usertags=usertags or None,
+					location=location_obj,
+				)
+				
+				# Enhanced response validation
+				if media is None:
+					raise Exception("clip_upload returned None - no response from Instagram API")
+				
+				code = getattr(media, 'code', None)
+				media_id = getattr(media, 'id', None)
+				
+				# Check if we got a valid response
+				if not code and not media_id:
+					raise Exception(f"Invalid response from Instagram API: {media}")
+				
+				completed += 1
+				upload_success = True
+				
+				if code:
+					log_success(f"[OK] Published: https://www.instagram.com/p/{code}/")
+					if on_log:
+						on_log(f"Upload successful: https://www.instagram.com/p/{code}/")
+				else:
+					log_success(f"[OK] Published a clip (ID: {media_id})")
+					if on_log:
+						on_log(f"Upload successful (ID: {media_id})")
+				
+				# Human-like pause after upload
+				time.sleep(random.uniform(3.0, 10.0))
+				
+			except Exception as e:
+				retry_count += 1
+				error_msg = str(e)
+				
+				# Check for specific error types using error handler
+				error_category = InstagramAPIErrorHandler.get_error_category(e)
+				
+				if error_category == 'rate_limit':
+					log_warning(f"[RATE_LIMIT] Rate limit detected, waiting longer... (attempt {retry_count}/{max_retries})")
+					wait_time = RateLimitingConfig.get_delay('upload_attempt', is_retry=True, is_rate_limited=True)
+					log_info(f"[RATE_LIMIT] Waiting {wait_time:.1f}s before retry...")
+					time.sleep(wait_time)
+				elif error_category == 'challenge':
+					log_error(f"[CHALLENGE] Challenge required: {e}")
+					if on_log:
+						on_log(f"Challenge required: {e}")
+					break  # Don't retry challenges
+				else:
+					log_warning(f"[RETRY] Upload attempt {retry_count} failed: {e}")
+					if on_log:
+						on_log(f"Upload attempt {retry_count} failed: {e}")
+					# Use retry delay for other errors
+					wait_time = RateLimitingConfig.get_retry_delay(retry_count, 'upload_attempt')
+					log_info(f"[RETRY] Waiting {wait_time:.1f}s before retry...")
+					time.sleep(wait_time)
+				
+				if retry_count >= max_retries:
+					failed += 1
+					log_error(f"[FAIL] clip upload error after {max_retries} attempts: {e}")
+					if on_log:
+						on_log(f"Upload failed after {max_retries} attempts: {e}")
+					# Final backoff after all retries failed
+					time.sleep(random.uniform(10.0, 30.0))
 
 	return ("success" if completed > 0 else "failed", completed, failed)
 

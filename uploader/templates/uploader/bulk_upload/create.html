@@ -45,6 +45,31 @@
         position: relative;
     }
     
+    .client-filter-wrapper {
+        position: relative;
+    }
+    
+    .client-filter-wrapper select {
+        border-radius: 25px;
+        border: 2px solid rgba(255,255,255,0.3);
+        background: rgba(255,255,255,0.1);
+        color: white;
+        padding: 0.5rem 1rem;
+        width: 100%;
+    }
+    
+    .client-filter-wrapper select:focus {
+        background: rgba(255,255,255,0.2);
+        border-color: rgba(255,255,255,0.6);
+        box-shadow: 0 0 0 0.2rem rgba(255,255,255,0.25);
+        color: white;
+    }
+    
+    .client-filter-wrapper select option {
+        background: #667eea;
+        color: white;
+    }
+    
     .controls-row {
         margin-bottom: 1rem;
     }
@@ -628,11 +653,18 @@
                             <div class="accounts-controls">
                                 <div class="controls-row">
                                     <div class="row align-items-center">
-                                        <div class="col-md-6">
+                                        <div class="col-md-4">
                                             <div class="search-wrapper">
                                                 <i class="bi bi-search search-icon"></i>
                                                 <input type="text" id="accountSearch" class="form-control" placeholder="Search accounts by username...">
                                             </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            {% if form.client_filter.field.choices %}
+                                            <div class="client-filter-wrapper">
+                                                {{ form.client_filter }}
+                                            </div>
+                                            {% endif %}
                                         </div>
                                         <div class="col-md-6">
                                             <div class="d-flex justify-content-end align-items-center gap-2">
@@ -728,6 +760,7 @@
                                          data-last-login="{{ account.last_login|default:'never' }}"
                                          data-account-id="{{ account.id }}"
                                          data-status="{{ account.status|lower }}"
+                                         data-client-id="{% if account.client %}{{ account.client.id }}{% endif %}"
                                           {% with dev=account.device %}
                                           data-has-mobile-session="{% if dev and dev.session_settings %}true{% else %}false{% endif %}"
                                           {% endwith %}>
@@ -1031,6 +1064,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const shortcutsHint = document.getElementById('shortcutsHint');
     const mobileSessionWarning = document.getElementById('mobileSessionWarning');
     const mobileSessionCountEl = document.getElementById('mobileSessionCount');
+    const clientFilter = document.getElementById('client-filter');
     
     // State
     let currentView = 'card';
@@ -1054,6 +1088,13 @@ document.addEventListener('DOMContentLoaded', function() {
     searchInput.addEventListener('input', debounce(function() {
         filterAndPaginate();
     }, 300));
+    
+    // Client filter functionality
+    if (clientFilter) {
+        clientFilter.addEventListener('change', function() {
+            filterAndPaginate();
+        });
+    }
     
     // View toggle
     document.querySelectorAll('.view-toggle-btn').forEach(btn => {
@@ -1222,11 +1263,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 const lastLogin = item.dataset.lastLogin;
                 const status = item.dataset.status || '';
                 const hasMobileSession = item.dataset.hasMobileSession === 'true';
+                const clientId = item.dataset.clientId || '';
                 
                 // Search filter
                 if (searchTerm && !username.includes(searchTerm)) {
                     return false;
                 }
+                
+                // Client filter
+                if (clientFilter && clientFilter.value) {
+                    if (clientFilter.value === 'no_client') {
+                        // Показываем только аккаунты без клиента
+                        if (clientId !== '') {
+                            return false;
+                        }
+                    } else {
+                        // Показываем только аккаунты выбранного клиента
+                        if (clientId !== clientFilter.value) {
+                            return false;
+                        }
+                    }
+                }
+                // Если клиент не выбран (пустое значение), показываем все аккаунты
                 
                 // Category filter
                 switch(currentFilter) {
