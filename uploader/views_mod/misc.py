@@ -2028,13 +2028,18 @@ def tiktok_booster_proxy_pipeline(request):
 
 @login_required
 def get_api_server_logs(request):
-    """AJAX endpoint to fetch logs from the selected API server."""
+    """AJAX endpoint to fetch logs from the selected API server.
+
+    Use the same base resolution strategy as other TikTok endpoints to avoid
+    accidental overrides by environment variables.
+    """
     import requests
     import json
     from django.http import JsonResponse
 
-    # Get the selected server from request or environment
-    server_url = request.GET.get('server_url') or os.environ.get('TIKTOK_API_BASE')
+    # Resolve selected server consistently across pages
+    # Allow explicit override via ?server_url=...; otherwise use session/defaults
+    server_url = request.GET.get('server_url') or _get_tiktok_api_base(request)
 
     if not server_url:
         return JsonResponse({'error': 'No server URL provided', 'logs': []})
