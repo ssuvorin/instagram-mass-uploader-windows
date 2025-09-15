@@ -1738,8 +1738,14 @@ def tiktok_booster_start(request):
 
 # ====== Server-side proxy for TikTok Booster API ======
 
-def _get_tiktok_api_base(request=None) -> str:
-    """Resolve TikTok API base with precedence: request.POST.server_url -> session -> env/default."""
+def _get_tiktok_api_base(request=None, persist: bool = True) -> str:
+    """Resolve TikTok API base with precedence.
+
+    Order: request.POST.server_url -> session -> env/default.
+    If persist is True (default), saving POST.server_url into the session.
+    Use persist=False for read-only probes (e.g., ping across servers),
+    so we don't override user's selected server inadvertently.
+    """
     try:
         # 1) From current request (form submit)
         if request is not None:
@@ -1747,11 +1753,12 @@ def _get_tiktok_api_base(request=None) -> str:
             if getattr(request, 'method', '').upper() == 'POST':
                 server_url = (request.POST.get('server_url') or '').strip()
             if server_url:
-                # Persist in session for subsequent requests
-                try:
-                    request.session['selected_tiktok_api_base'] = server_url
-                except Exception:
-                    pass
+                # Persist only when requested (avoid side-effects during probes)
+                if persist:
+                    try:
+                        request.session['selected_tiktok_api_base'] = server_url
+                    except Exception:
+                        pass
                 return server_url
             # 2) From session
             try:
@@ -1949,7 +1956,9 @@ def tiktok_api_ping(request):
     import requests
     from django.http import JsonResponse
     # Allow GET or POST; prefer POST so we can accept server_url
-    base = _get_tiktok_api_base(request)
+    # Do not persist when server_url provided; this endpoint is used for
+    # diagnostics and batch probing of multiple servers.
+    base = _get_tiktok_api_base(request, persist=False)
     try:
         # Use /docs as simple reachable endpoint; could be /health if available
         resp = requests.get(f"{base}/docs", timeout=5, headers={"Accept": "text/html"})
