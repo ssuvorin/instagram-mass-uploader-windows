@@ -322,11 +322,11 @@ def import_proxies(request):
 
 
 def validate_all_proxies(request):
-    """Validate all active proxies in the system"""
-    proxies = Proxy.objects.filter(is_active=True)
+    """Validate all proxies in the system (both active and inactive)"""
+    proxies = Proxy.objects.all()
     
     if not proxies.exists():
-        messages.warning(request, 'No active proxies found in the system.')
+        messages.warning(request, 'No proxies found in the system.')
         return redirect('proxy_list')
     
     # Require authenticated user to attach messages/session to background thread

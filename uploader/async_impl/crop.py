@@ -187,6 +187,11 @@ async def _find_crop_by_semantic_attributes_async(page):
         '[aria-label*="Выбрать размер и обрезать"]',
         '[aria-label*="Select crop"]',
         '[aria-label*="Crop"]',
+        # Portuguese (pt-BR / pt-PT) variants seen in logs/UI
+        '[aria-label*="Selecionar corte"]',
+        '[aria-label*="Selecionar recorte"]',
+        '[aria-label*="Cortar"]',
+        '[aria-label*="Recortar"]',
     ]
     
     for selector in semantic_selectors:
@@ -200,10 +205,11 @@ async def _find_crop_by_semantic_attributes_async(page):
                 return element
             
             # Поиск родительского элемента
+            # Use f-strings for all entries; the last literal previously produced '[role="button"]:has({selector})'
             parent_selectors = [
                 f'button:has({selector})',
                 f'div[role="button"]:has({selector})',
-                '[role="button"]:has({selector})'
+                f'[role="button"]:has({selector})'
             ]
             
             for parent_selector in parent_selectors:

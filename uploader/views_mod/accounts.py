@@ -1455,7 +1455,7 @@ def import_accounts_ua_cookies(request):
 					try:
 						# Throttle between profile creations
 						if dolphin_created_count > 0:
-							delay_time = random.uniform(3.5, 6.5)
+							delay_time = random.uniform(1, 2)
 							logger.info(f"[UA+COOKIES][DOLPHIN] Delay {delay_time:.1f}s before creating next profile")
 							time.sleep(delay_time)
 

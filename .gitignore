@@ -18,6 +18,7 @@ instagrapi-master_SOURCE
 .env.production
 *.env
 windows_deployment.env
+modules FOR INSTAUPLOAD
 
 # Virtual environment
 venv/

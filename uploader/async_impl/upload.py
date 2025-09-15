@@ -16,6 +16,7 @@ from .utils_dom import add_video_mentions_async
 from .utils_dom import check_for_dropdown_menu_async
 from .utils_dom import check_video_posted_successfully_async
 from .utils_dom import cleanup_original_video_files_async
+from .utils_dom import handle_anti_automation_warning_async
 from .utils_dom import click_post_option_async
 from .utils_dom import click_share_button_async
 from .utils_dom import find_element_with_selectors_async
@@ -115,6 +116,11 @@ async def navigate_to_upload_with_human_behavior_async(page, account_details=Non
         
         if success:
             log_info("[ASYNC_UPLOAD] [OK] Successfully navigated to upload interface")
+            # NEW: Dismiss anti-automation warning if it appears post-login
+            try:
+                await handle_anti_automation_warning_async(page)
+            except Exception:
+                pass
             
             # Additional verification - check for file input immediately (ПОЛНАЯ КОПИЯ из sync)
             try:
@@ -772,41 +778,42 @@ async def add_video_caption_async(page, caption_text, account=None):
         # Check if it's a contenteditable element
         is_contenteditable = await caption_field.get_attribute('contenteditable')
         
-        # Use advanced human typing behavior
+        # Decide typing strategy
         from ..advanced_human_behavior import get_advanced_human_behavior
         human_behavior = get_advanced_human_behavior()
-        
-        if human_behavior:
-            # Use advanced human typing
-            success = await human_behavior.human_type(caption_field, caption_text, "caption_input")
-            if success:
-                log_info("[ASYNC_UPLOAD] [OK] Caption added with advanced human behavior")
-            else:
-                log_info("[ASYNC_UPLOAD] [FALLBACK] Advanced typing failed, using basic approach")
-                await _type_like_human_async(page, caption_field, caption_text)
+
+        # For contenteditable fields we ENFORCE strict char-by-char (avoid any paste/fill)
+        if is_contenteditable == 'true':
+            log_info("[ASYNC_UPLOAD] [CONTENTEDITABLE] Enforcing strict char-by-char typing")
+            # Platform-aware select all
+            try:
+                is_mac = await page.evaluate("navigator.platform.toLowerCase().includes('mac')")
+            except Exception:
+                is_mac = False
+            combo = 'Meta+a' if is_mac else 'Control+a'
+            await page.keyboard.press(combo)
+            await asyncio.sleep(random.uniform(0.2, 0.4))
+            await page.keyboard.press('Backspace')
+            await asyncio.sleep(random.uniform(0.3, 0.6))
+            for char in caption_text:
+                await page.keyboard.type(char)
+                await asyncio.sleep(random.uniform(0.02, 0.08))
         else:
-            # Fallback to basic human typing
-            if is_contenteditable == 'true':
-                # For contenteditable elements, use different approach
-                log_info("[ASYNC_UPLOAD] [CONTENTEDITABLE] Using contenteditable approach")
-                
-                # Clear content using selectAll + delete
-                await page.keyboard.press('Control+a')
-                await asyncio.sleep(random.uniform(0.2, 0.4))
-                await page.keyboard.press('Delete')
-                await asyncio.sleep(random.uniform(0.3, 0.6))
-                
-                # Type caption character by character for contenteditable
-                for char in caption_text:
-                    await page.keyboard.type(char)
-                    await asyncio.sleep(random.uniform(0.02, 0.08))  # Human-like typing speed
+            # Non-contenteditable inputs: prefer advanced behavior, else our human typing
+            if human_behavior:
+                success = await human_behavior.human_type(caption_field, caption_text, "caption_input")
+                if success:
+                    log_info("[ASYNC_UPLOAD] [OK] Caption added with advanced human behavior")
+                else:
+                    log_info("[ASYNC_UPLOAD] [FALLBACK] Advanced typing failed, using basic approach")
+                    await _type_like_human_async(page, caption_field, caption_text)
             else:
-                # For regular input/textarea elements
                 log_info("[ASYNC_UPLOAD] [TEXTAREA] Using textarea approach")
-                await caption_field.fill('')
+                try:
+                    await caption_field.fill('')
+                except Exception:
+                    pass
                 await asyncio.sleep(random.uniform(0.5, 1.0))
-                
-                # Type caption with human-like behavior (like sync version)
                 await _type_like_human_async(page, caption_field, caption_text)
         
         # Press Enter for line break after description (like sync version)

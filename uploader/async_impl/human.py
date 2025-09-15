@@ -343,13 +343,44 @@ async def _type_like_human_async(page, element, text):
             log_info("[ASYNC_UPLOAD] [OK] Unified human-like typing completed")
             return
         
-        # Final fallback to simple typing
-        log_info("[ASYNC_UPLOAD] [FALLBACK] Using simple typing")
-        await element.fill(text)
+        # Final fallback to simple typing (character-by-character to avoid sudden paste)
+        log_info("[ASYNC_UPLOAD] [FALLBACK] Using simple character-by-character typing")
+        await _simple_type_char_by_char(page, element, text)
         
     except Exception as e:
         log_info(f"[ASYNC_UPLOAD] [FAIL] Error in human-like typing: {str(e)[:100]}")
-        # Final fallback
+        # Final fallback: attempt character-by-character typing to avoid clipboard pastes
+        try:
+            await _simple_type_char_by_char(page, element, text)
+        except Exception:
+            pass
+
+
+async def _simple_type_char_by_char(page, element, text):
+    """
+    Minimalistic and robust typing fallback that avoids sudden full pastes.
+    - Focuses the element
+    - Selects all with platform-aware shortcut
+    - Clears content
+    - Types each character with small randomized delays
+    """
+    try:
+        await element.click()
+        # Platform-aware select all (Meta on macOS, Control elsewhere)
+        try:
+            is_mac = await page.evaluate("navigator.platform.toLowerCase().includes('mac')")
+        except Exception:
+            is_mac = False
+        combo = 'Meta+a' if is_mac else 'Control+a'
+        await page.keyboard.press(combo)
+        await asyncio.sleep(random.uniform(0.08, 0.16))
+        await page.keyboard.press('Backspace')
+        await asyncio.sleep(random.uniform(0.12, 0.22))
+        for ch in text:
+            await page.keyboard.type(ch)
+            await asyncio.sleep(random.uniform(0.02, 0.06))
+    except Exception:
+        # As a last resort, try element.fill (may paste the whole text)
         try:
             await element.fill(text)
         except Exception:
@@ -398,7 +429,7 @@ async def _type_with_enhanced_errors(page, element, text):
         char = text[i]
         
         # Enhanced thinking pause logic
-        if _should_pause_while_typing(i, len(text)):
+        if _should_pause_while_typing(i, text):
             thinking_delay = _get_enhanced_typing_delay(1.2, 'thinking')
             await asyncio.sleep(thinking_delay)
         
@@ -432,21 +463,16 @@ def _create_typing_session(text):
     }
 
 
-def _should_pause_while_typing(position, text_length):
-    """Enhanced logic for thinking pauses during typing"""
-    # More pauses at sentence boundaries
+def _should_pause_while_typing(position, text):
+    """Enhanced logic for thinking pauses during typing using full text context"""
+    text_length = len(text)
     if position > 0 and position < text_length - 1:
-        # Pause after punctuation
-        if text[position - 1] in '.!?':
-            return random.random() < 0.7  # 70% chance
-        
-        # Pause after commas
-        if text[position - 1] in ',;:':
-            return random.random() < 0.3  # 30% chance
-        
-        # Random thinking pauses
-        return random.random() < 0.05  # 5% chance
-    
+        prev_char = text[position - 1]
+        if prev_char in '.!?':
+            return random.random() < 0.7
+        if prev_char in ',;:':
+            return random.random() < 0.3
+        return random.random() < 0.05
     return False
 
 

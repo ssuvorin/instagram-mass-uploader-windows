@@ -549,6 +549,11 @@ class InstagramSelectors:
         'div:has-text("Reel compartido")',
         'div:has-text("Sua publicação foi compartilhada")',
         'div:has-text("Reel compartilhado")',
+        'div:has-text("Seu reel foi compartilhado")',
+        'div:has-text("Seu reel foi compartilhado.")',
+        'div:has-text("Reels compartilhados")',
+        'div[role="dialog"][aria-label*="Post compartilhado" i]',
+        '[role="dialog"][aria-label*="Post compartilhado" i]',
         
         # XPath selectors for success messages
         '//div[contains(text(), "Ваша публикация опубликована")]',
@@ -556,6 +561,9 @@ class InstagramSelectors:
         '//div[contains(text(), "Видео опубликовано")]',
         '//div[contains(text(), "Your post has been shared")]',
         '//div[contains(text(), "Post shared")]',
+        '//div[contains(text(), "Seu reel foi compartilhado")]',
+        '//div[contains(text(), "Reels compartilhados")]',
+        '//*[@role="dialog" and contains(@aria-label, "Post compartilhado")]',
     ]
     
     # Error dialog selectors

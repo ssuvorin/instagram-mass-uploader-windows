@@ -28189,3 +28189,1041 @@ navigating to "https://habr.com/", waiting until "domcontentloaded"
 2025-09-14 10:25:30,831 - instagrapi - INFO - https://i.instagram.com/api/v1/users/mellstroy/usernameinfo/
 2025-09-14 10:59:10,960 - urllib3.connectionpool - WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'RemoteDisconnected('Remote end closed connection without response')': /rupload_igvideo/1757847550805_0_4234553634
 2025-09-14 10:59:11,866 - private_request - INFO - pavelmartynov857 [403] GET https://i.instagram.com/rupload_igvideo/1757847550805_0_4234553634 (269.0.0.18.75, samsung SM-G973F)
+2025-09-15 14:40:12,850 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 663094224...
+2025-09-15 14:40:12,850 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 663094224...
+2025-09-15 14:40:12,850 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-15 14:40:12,850 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-15 14:40:12,907 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 663094156...
+2025-09-15 14:40:12,907 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 663094156...
+2025-09-15 14:40:12,908 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-15 14:40:12,908 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-15 14:40:13,460 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 663094301...
+2025-09-15 14:40:13,460 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 663094301...
+2025-09-15 14:40:13,460 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-15 14:40:13,460 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-15 14:40:13,475 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-15 14:40:13,475 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-15 14:40:13,475 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-15 14:40:13,475 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-15 14:40:13,475 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094224 (headless=False)
+2025-09-15 14:40:13,475 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094224 (headless=False)
+2025-09-15 14:40:13,475 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:40:13,475 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:40:14,125 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-15 14:40:14,125 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-15 14:40:14,126 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-15 14:40:14,126 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-15 14:40:14,126 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094301 (headless=False)
+2025-09-15 14:40:14,126 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094301 (headless=False)
+2025-09-15 14:40:14,126 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:40:14,126 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:40:14,141 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:40:14,141 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:40:14,141 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094224
+2025-09-15 14:40:14,141 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094224
+2025-09-15 14:40:14,396 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-15 14:40:14,396 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-15 14:40:14,396 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-15 14:40:14,396 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-15 14:40:14,396 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094156 (headless=False)
+2025-09-15 14:40:14,396 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094156 (headless=False)
+2025-09-15 14:40:14,397 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:40:14,397 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:40:14,771 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:40:14,771 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:40:14,772 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094301
+2025-09-15 14:40:14,772 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094301
+2025-09-15 14:40:14,981 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:40:14,981 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:40:14,981 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094156
+2025-09-15 14:40:14,981 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094156
+2025-09-15 14:40:22,464 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:40:22,464 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:40:22,467 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-15 14:40:22,467 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-15 14:40:23,469 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094224 (headless=False)
+2025-09-15 14:40:23,469 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094224 (headless=False)
+2025-09-15 14:40:23,469 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:40:23,469 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:40:24,128 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:40:24,128 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:40:24,128 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094224
+2025-09-15 14:40:24,128 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094224
+2025-09-15 14:40:24,330 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:40:24,330 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:40:24,330 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-15 14:40:24,330 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-15 14:40:25,288 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:40:25,288 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:40:25,288 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-15 14:40:25,288 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-15 14:40:25,331 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094156 (headless=False)
+2025-09-15 14:40:25,331 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094156 (headless=False)
+2025-09-15 14:40:25,331 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:40:25,331 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:40:26,227 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:40:26,227 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:40:26,227 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094156
+2025-09-15 14:40:26,227 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094156
+2025-09-15 14:40:26,289 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094301 (headless=False)
+2025-09-15 14:40:26,289 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094301 (headless=False)
+2025-09-15 14:40:26,290 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:40:26,290 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:40:27,877 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:40:27,877 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:40:27,878 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094301
+2025-09-15 14:40:27,878 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094301
+2025-09-15 14:40:33,266 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:40:33,266 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:40:33,267 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-15 14:40:33,267 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-15 14:40:34,497 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:40:34,497 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:40:34,497 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-15 14:40:34,497 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-15 14:40:35,268 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094156 (headless=False)
+2025-09-15 14:40:35,268 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094156 (headless=False)
+2025-09-15 14:40:35,269 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:40:35,269 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:40:35,929 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:40:35,929 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:40:35,929 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094156
+2025-09-15 14:40:35,929 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094156
+2025-09-15 14:40:36,294 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:40:36,294 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:40:36,294 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-15 14:40:36,294 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-15 14:40:36,498 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094224 (headless=False)
+2025-09-15 14:40:36,498 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094224 (headless=False)
+2025-09-15 14:40:36,498 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:40:36,498 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:40:37,151 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:40:37,151 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:40:37,151 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094224
+2025-09-15 14:40:37,151 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094224
+2025-09-15 14:40:38,295 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094301 (headless=False)
+2025-09-15 14:40:38,295 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094301 (headless=False)
+2025-09-15 14:40:38,296 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:40:38,296 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:40:38,907 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:40:38,907 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:40:38,907 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094301
+2025-09-15 14:40:38,907 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094301
+2025-09-15 14:40:44,700 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:40:44,700 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:40:44,700 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-15 14:40:44,700 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-15 14:40:45,261 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:40:45,261 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:40:45,262 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-15 14:40:45,262 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-15 14:40:47,501 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:40:47,501 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:40:47,501 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-15 14:40:47,501 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-15 14:40:47,702 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 663094224 or get automation data
+2025-09-15 14:40:47,702 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 663094224 or get automation data
+2025-09-15 14:40:48,264 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 663094156 or get automation data
+2025-09-15 14:40:48,264 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 663094156 or get automation data
+2025-09-15 14:40:50,238 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 663094224...
+2025-09-15 14:40:50,238 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 663094224...
+2025-09-15 14:40:50,238 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-15 14:40:50,238 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-15 14:40:50,503 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 663094301 or get automation data
+2025-09-15 14:40:50,503 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 663094301 or get automation data
+2025-09-15 14:40:50,683 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 663094156...
+2025-09-15 14:40:50,683 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 663094156...
+2025-09-15 14:40:50,683 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-15 14:40:50,683 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-15 14:40:51,615 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-15 14:40:51,615 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-15 14:40:51,616 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-15 14:40:51,616 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-15 14:40:51,616 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094224 (headless=False)
+2025-09-15 14:40:51,616 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094224 (headless=False)
+2025-09-15 14:40:51,616 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:40:51,616 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:40:51,616 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-15 14:40:51,616 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-15 14:40:51,616 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-15 14:40:51,616 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-15 14:40:51,616 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094156 (headless=False)
+2025-09-15 14:40:51,616 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094156 (headless=False)
+2025-09-15 14:40:51,616 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:40:51,616 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:40:52,229 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:40:52,229 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:40:52,229 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094156
+2025-09-15 14:40:52,229 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094156
+2025-09-15 14:40:52,966 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:40:52,966 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:40:52,966 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094224
+2025-09-15 14:40:52,966 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094224
+2025-09-15 14:40:52,983 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 663094301...
+2025-09-15 14:40:52,983 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 663094301...
+2025-09-15 14:40:52,983 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-15 14:40:52,983 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-15 14:40:53,572 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-15 14:40:53,572 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-15 14:40:53,572 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-15 14:40:53,572 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-15 14:40:53,572 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094301 (headless=False)
+2025-09-15 14:40:53,572 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094301 (headless=False)
+2025-09-15 14:40:53,572 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:40:53,572 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:40:54,215 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:40:54,215 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:40:54,215 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094301
+2025-09-15 14:40:54,215 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094301
+2025-09-15 14:40:59,992 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:40:59,992 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:40:59,995 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-15 14:40:59,995 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-15 14:41:00,997 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094156 (headless=False)
+2025-09-15 14:41:00,997 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094156 (headless=False)
+2025-09-15 14:41:00,997 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:00,997 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:01,001 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:01,001 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:01,002 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-15 14:41:01,002 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-15 14:41:01,715 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:01,715 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:01,716 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094156
+2025-09-15 14:41:01,716 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094156
+2025-09-15 14:41:02,004 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094224 (headless=False)
+2025-09-15 14:41:02,004 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094224 (headless=False)
+2025-09-15 14:41:02,004 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:02,004 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:02,615 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:02,615 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:02,615 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094224
+2025-09-15 14:41:02,615 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094224
+2025-09-15 14:41:02,914 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:02,914 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:02,915 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-15 14:41:02,915 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-15 14:41:03,916 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094301 (headless=False)
+2025-09-15 14:41:03,916 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094301 (headless=False)
+2025-09-15 14:41:03,917 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:03,917 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:04,633 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:04,633 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:04,634 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094301
+2025-09-15 14:41:04,634 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094301
+2025-09-15 14:41:10,787 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:10,787 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:10,788 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-15 14:41:10,788 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-15 14:41:11,138 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:11,138 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:11,139 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-15 14:41:11,139 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-15 14:41:12,385 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:12,385 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:12,387 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-15 14:41:12,387 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-15 14:41:12,790 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094156 (headless=False)
+2025-09-15 14:41:12,790 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094156 (headless=False)
+2025-09-15 14:41:12,790 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:12,790 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:13,140 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094224 (headless=False)
+2025-09-15 14:41:13,140 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094224 (headless=False)
+2025-09-15 14:41:13,141 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:13,141 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:13,396 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:13,396 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:13,396 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094156
+2025-09-15 14:41:13,396 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094156
+2025-09-15 14:41:13,816 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:13,816 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:13,816 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094224
+2025-09-15 14:41:13,816 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094224
+2025-09-15 14:41:14,388 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094301 (headless=False)
+2025-09-15 14:41:14,388 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094301 (headless=False)
+2025-09-15 14:41:14,388 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:14,388 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:14,989 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:14,989 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:14,989 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094301
+2025-09-15 14:41:14,989 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094301
+2025-09-15 14:41:21,930 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:21,930 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:21,933 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-15 14:41:21,933 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-15 14:41:22,247 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:22,247 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:22,248 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-15 14:41:22,248 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-15 14:41:23,493 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:23,493 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:23,494 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-15 14:41:23,494 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-15 14:41:24,934 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 663094156 or get automation data
+2025-09-15 14:41:24,934 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 663094156 or get automation data
+2025-09-15 14:41:25,249 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 663094224 or get automation data
+2025-09-15 14:41:25,249 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 663094224 or get automation data
+2025-09-15 14:41:26,494 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 663094301 or get automation data
+2025-09-15 14:41:26,494 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 663094301 or get automation data
+2025-09-15 14:41:30,434 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 663094156...
+2025-09-15 14:41:30,434 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 663094156...
+2025-09-15 14:41:30,434 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-15 14:41:30,434 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-15 14:41:30,779 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 663094224...
+2025-09-15 14:41:30,779 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 663094224...
+2025-09-15 14:41:30,779 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-15 14:41:30,779 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-15 14:41:31,096 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-15 14:41:31,096 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-15 14:41:31,096 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-15 14:41:31,096 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-15 14:41:31,096 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094156 (headless=False)
+2025-09-15 14:41:31,096 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094156 (headless=False)
+2025-09-15 14:41:31,096 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:31,096 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:31,429 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-15 14:41:31,429 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-15 14:41:31,430 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-15 14:41:31,430 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-15 14:41:31,430 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094224 (headless=False)
+2025-09-15 14:41:31,430 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094224 (headless=False)
+2025-09-15 14:41:31,430 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:31,430 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:31,946 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 663094301...
+2025-09-15 14:41:31,946 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 663094301...
+2025-09-15 14:41:31,946 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-15 14:41:31,946 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-15 14:41:32,414 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:32,414 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:32,414 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094156
+2025-09-15 14:41:32,414 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094156
+2025-09-15 14:41:32,583 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-15 14:41:32,583 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-15 14:41:32,583 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-15 14:41:32,583 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-15 14:41:32,584 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094301 (headless=False)
+2025-09-15 14:41:32,584 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094301 (headless=False)
+2025-09-15 14:41:32,584 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:32,584 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:32,632 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:32,632 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:32,633 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094224
+2025-09-15 14:41:32,633 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094224
+2025-09-15 14:41:33,257 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:33,257 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:33,258 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094301
+2025-09-15 14:41:33,258 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094301
+2025-09-15 14:41:39,213 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:39,213 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:39,214 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-15 14:41:39,214 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-15 14:41:40,216 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094224 (headless=False)
+2025-09-15 14:41:40,216 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094224 (headless=False)
+2025-09-15 14:41:40,217 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:40,217 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:40,835 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:40,835 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:40,836 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094224
+2025-09-15 14:41:40,836 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094224
+2025-09-15 14:41:41,357 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:41,357 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:41,358 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-15 14:41:41,358 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-15 14:41:41,832 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:41,832 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:41,833 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-15 14:41:41,833 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: False, Data: None
+2025-09-15 14:41:42,360 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094156 (headless=False)
+2025-09-15 14:41:42,360 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094156 (headless=False)
+2025-09-15 14:41:42,361 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:42,361 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:42,835 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094301 (headless=False)
+2025-09-15 14:41:42,835 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094301 (headless=False)
+2025-09-15 14:41:42,836 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:42,836 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:42,980 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:42,980 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:42,981 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094156
+2025-09-15 14:41:42,981 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094156
+2025-09-15 14:41:43,482 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:43,482 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:43,482 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094301
+2025-09-15 14:41:43,482 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094301
+2025-09-15 14:41:49,689 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:49,689 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:49,689 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-15 14:41:49,689 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-15 14:41:51,691 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094224 (headless=False)
+2025-09-15 14:41:51,691 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094224 (headless=False)
+2025-09-15 14:41:51,692 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:51,692 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:51,845 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:51,845 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:51,845 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-15 14:41:51,845 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-15 14:41:52,361 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:52,361 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:41:52,362 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-15 14:41:52,362 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 2/3 - Success: False, Data: None
+2025-09-15 14:41:52,417 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:52,417 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:52,417 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094224
+2025-09-15 14:41:52,417 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094224
+2025-09-15 14:41:53,846 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094156 (headless=False)
+2025-09-15 14:41:53,846 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094156 (headless=False)
+2025-09-15 14:41:53,847 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:53,847 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:54,364 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094301 (headless=False)
+2025-09-15 14:41:54,364 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094301 (headless=False)
+2025-09-15 14:41:54,364 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:54,364 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 14:41:54,570 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:54,570 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:54,570 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094156
+2025-09-15 14:41:54,570 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094156
+2025-09-15 14:41:54,965 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:54,965 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 14:41:54,966 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094301
+2025-09-15 14:41:54,966 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094301
+2025-09-15 14:42:00,383 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:42:00,383 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:42:00,384 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-15 14:42:00,384 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-15 14:42:02,662 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:42:02,662 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:42:02,663 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-15 14:42:02,663 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-15 14:42:03,386 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 663094224 or get automation data
+2025-09-15 14:42:03,386 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 663094224 or get automation data
+2025-09-15 14:42:05,037 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:42:05,037 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Start profile failed with HTTP 500: {"success":false,"message":"initConnectionError","error":"E_PROXY_CHECK_ERROR"}
+2025-09-15 14:42:05,038 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-15 14:42:05,038 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 3/3 - Success: False, Data: None
+2025-09-15 14:42:05,665 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 663094301 or get automation data
+2025-09-15 14:42:05,665 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 663094301 or get automation data
+2025-09-15 14:42:08,040 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 663094156 or get automation data
+2025-09-15 14:42:08,040 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Could not start profile 663094156 or get automation data
+2025-09-15 15:24:54,106 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 663094224...
+2025-09-15 15:24:54,106 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 663094301...
+2025-09-15 15:24:54,106 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 663094224...
+2025-09-15 15:24:54,106 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 663094301...
+2025-09-15 15:24:54,106 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-15 15:24:54,106 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-15 15:24:54,106 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-15 15:24:54,106 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-15 15:24:54,704 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-15 15:24:54,704 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-15 15:24:54,704 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-15 15:24:54,704 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-15 15:24:54,704 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094301 (headless=True)
+2025-09-15 15:24:54,704 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094301 (headless=True)
+2025-09-15 15:24:54,704 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 15:24:54,704 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 15:24:54,708 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 663094156...
+2025-09-15 15:24:54,708 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Starting Dolphin profile 663094156...
+2025-09-15 15:24:54,709 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-15 15:24:54,709 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Checking Dolphin Anty application status...
+2025-09-15 15:24:54,715 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-15 15:24:54,715 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-15 15:24:54,715 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-15 15:24:54,715 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-15 15:24:54,715 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094224 (headless=True)
+2025-09-15 15:24:54,715 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094224 (headless=True)
+2025-09-15 15:24:54,715 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 15:24:54,715 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 15:24:55,345 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 15:24:55,345 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 15:24:55,346 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094301
+2025-09-15 15:24:55,346 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094301
+2025-09-15 15:24:55,377 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 15:24:55,377 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 15:24:55,377 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094224
+2025-09-15 15:24:55,377 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094224
+2025-09-15 15:24:55,388 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-15 15:24:55,388 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty application is running and responsive
+2025-09-15 15:24:55,388 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-15 15:24:55,388 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] Dolphin status before starting profile: {'app_running': True, 'local_api_available': True, 'authenticated': True, 'error': None}
+2025-09-15 15:24:55,388 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094156 (headless=True)
+2025-09-15 15:24:55,388 - bot.src.instagram_uploader.dolphin_anty - INFO - [START] Starting Dolphin profile 663094156 (headless=True)
+2025-09-15 15:24:55,388 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 15:24:55,388 - bot.src.instagram_uploader.dolphin_anty - INFO - [SEARCH] [Step 1/3] Checking Dolphin Anty local API availability...
+2025-09-15 15:24:56,123 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 15:24:56,123 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Dolphin Anty local API is responding and authenticated
+2025-09-15 15:24:56,124 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094156
+2025-09-15 15:24:56,124 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] [Step 2/3] Sending request to start profile 663094156
+2025-09-15 15:24:58,186 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] [Step 3/3] Profile 663094156 started successfully
+2025-09-15 15:24:58,186 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] [Step 3/3] Profile 663094156 started successfully
+2025-09-15 15:24:58,186 - bot.src.instagram_uploader.dolphin_anty - INFO - [LINK] Connection details: port=50401, wsEndpoint=/devtools/browser/26cc7143-7dae-42a6-8eff-cae43c07969b
+2025-09-15 15:24:58,186 - bot.src.instagram_uploader.dolphin_anty - INFO - [LINK] Connection details: port=50401, wsEndpoint=/devtools/browser/26cc7143-7dae-42a6-8eff-cae43c07969b
+2025-09-15 15:24:58,186 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: True, Data: {'port': 50401, 'wsEndpoint': '/devtools/browser/26cc7143-7dae-42a6-8eff-cae43c07969b'}
+2025-09-15 15:24:58,186 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: True, Data: {'port': 50401, 'wsEndpoint': '/devtools/browser/26cc7143-7dae-42a6-8eff-cae43c07969b'}
+2025-09-15 15:24:58,186 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Profile 663094156 started successfully
+2025-09-15 15:24:58,186 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Profile 663094156 started successfully
+2025-09-15 15:24:58,186 - bot.src.instagram_uploader.dolphin_anty - INFO - [LINK] Automation data: {'port': 50401, 'wsEndpoint': '/devtools/browser/26cc7143-7dae-42a6-8eff-cae43c07969b'}
+2025-09-15 15:24:58,186 - bot.src.instagram_uploader.dolphin_anty - INFO - [LINK] Automation data: {'port': 50401, 'wsEndpoint': '/devtools/browser/26cc7143-7dae-42a6-8eff-cae43c07969b'}
+2025-09-15 15:24:58,186 - bot.src.instagram_uploader.dolphin_anty - INFO - [WEB] Connecting to browser via: ws://127.0.0.1:50401/devtools/browser/26cc7143-7dae-42a6-8eff-cae43c07969b
+2025-09-15 15:24:58,186 - bot.src.instagram_uploader.dolphin_anty - INFO - [WEB] Connecting to browser via: ws://127.0.0.1:50401/devtools/browser/26cc7143-7dae-42a6-8eff-cae43c07969b
+2025-09-15 15:24:58,281 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] [Step 3/3] Profile 663094224 started successfully
+2025-09-15 15:24:58,281 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] [Step 3/3] Profile 663094224 started successfully
+2025-09-15 15:24:58,282 - bot.src.instagram_uploader.dolphin_anty - INFO - [LINK] Connection details: port=50400, wsEndpoint=/devtools/browser/8257d164-35cf-44ee-b811-7150b0753d89
+2025-09-15 15:24:58,282 - bot.src.instagram_uploader.dolphin_anty - INFO - [LINK] Connection details: port=50400, wsEndpoint=/devtools/browser/8257d164-35cf-44ee-b811-7150b0753d89
+2025-09-15 15:24:58,286 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: True, Data: {'port': 50400, 'wsEndpoint': '/devtools/browser/8257d164-35cf-44ee-b811-7150b0753d89'}
+2025-09-15 15:24:58,286 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: True, Data: {'port': 50400, 'wsEndpoint': '/devtools/browser/8257d164-35cf-44ee-b811-7150b0753d89'}
+2025-09-15 15:24:58,289 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Profile 663094224 started successfully
+2025-09-15 15:24:58,289 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Profile 663094224 started successfully
+2025-09-15 15:24:58,289 - bot.src.instagram_uploader.dolphin_anty - INFO - [LINK] Automation data: {'port': 50400, 'wsEndpoint': '/devtools/browser/8257d164-35cf-44ee-b811-7150b0753d89'}
+2025-09-15 15:24:58,289 - bot.src.instagram_uploader.dolphin_anty - INFO - [LINK] Automation data: {'port': 50400, 'wsEndpoint': '/devtools/browser/8257d164-35cf-44ee-b811-7150b0753d89'}
+2025-09-15 15:24:58,289 - bot.src.instagram_uploader.dolphin_anty - INFO - [WEB] Connecting to browser via: ws://127.0.0.1:50400/devtools/browser/8257d164-35cf-44ee-b811-7150b0753d89
+2025-09-15 15:24:58,289 - bot.src.instagram_uploader.dolphin_anty - INFO - [WEB] Connecting to browser via: ws://127.0.0.1:50400/devtools/browser/8257d164-35cf-44ee-b811-7150b0753d89
+2025-09-15 15:24:58,304 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] [Step 3/3] Profile 663094301 started successfully
+2025-09-15 15:24:58,304 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] [Step 3/3] Profile 663094301 started successfully
+2025-09-15 15:24:58,305 - bot.src.instagram_uploader.dolphin_anty - INFO - [LINK] Connection details: port=50399, wsEndpoint=/devtools/browser/8ec09063-9416-481e-a214-ea10c7ce7a50
+2025-09-15 15:24:58,305 - bot.src.instagram_uploader.dolphin_anty - INFO - [LINK] Connection details: port=50399, wsEndpoint=/devtools/browser/8ec09063-9416-481e-a214-ea10c7ce7a50
+2025-09-15 15:24:58,309 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: True, Data: {'port': 50399, 'wsEndpoint': '/devtools/browser/8ec09063-9416-481e-a214-ea10c7ce7a50'}
+2025-09-15 15:24:58,309 - bot.src.instagram_uploader.dolphin_anty - INFO - [PROCESS] Profile start attempt 1/3 - Success: True, Data: {'port': 50399, 'wsEndpoint': '/devtools/browser/8ec09063-9416-481e-a214-ea10c7ce7a50'}
+2025-09-15 15:24:58,310 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Profile 663094301 started successfully
+2025-09-15 15:24:58,310 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Profile 663094301 started successfully
+2025-09-15 15:24:58,310 - bot.src.instagram_uploader.dolphin_anty - INFO - [LINK] Automation data: {'port': 50399, 'wsEndpoint': '/devtools/browser/8ec09063-9416-481e-a214-ea10c7ce7a50'}
+2025-09-15 15:24:58,310 - bot.src.instagram_uploader.dolphin_anty - INFO - [LINK] Automation data: {'port': 50399, 'wsEndpoint': '/devtools/browser/8ec09063-9416-481e-a214-ea10c7ce7a50'}
+2025-09-15 15:24:58,311 - bot.src.instagram_uploader.dolphin_anty - INFO - [WEB] Connecting to browser via: ws://127.0.0.1:50399/devtools/browser/8ec09063-9416-481e-a214-ea10c7ce7a50
+2025-09-15 15:24:58,311 - bot.src.instagram_uploader.dolphin_anty - INFO - [WEB] Connecting to browser via: ws://127.0.0.1:50399/devtools/browser/8ec09063-9416-481e-a214-ea10c7ce7a50
+2025-09-15 15:24:58,726 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Successfully connected to Dolphin browser
+2025-09-15 15:24:58,726 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Successfully connected to Dolphin browser
+2025-09-15 15:24:58,726 - bot.src.instagram_uploader.dolphin_anty - INFO - [FILE] Using existing browser context
+2025-09-15 15:24:58,726 - bot.src.instagram_uploader.dolphin_anty - INFO - [FILE] Using existing browser context
+2025-09-15 15:24:58,726 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Successfully connected to Dolphin browser
+2025-09-15 15:24:58,726 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Successfully connected to Dolphin browser
+2025-09-15 15:24:58,726 - bot.src.instagram_uploader.dolphin_anty - INFO - [FILE] Using existing browser context
+2025-09-15 15:24:58,726 - bot.src.instagram_uploader.dolphin_anty - INFO - [FILE] Using existing browser context
+2025-09-15 15:24:58,726 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Successfully connected to Dolphin browser
+2025-09-15 15:24:58,726 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Successfully connected to Dolphin browser
+2025-09-15 15:24:58,726 - bot.src.instagram_uploader.dolphin_anty - INFO - [FILE] Using existing browser context
+2025-09-15 15:24:58,726 - bot.src.instagram_uploader.dolphin_anty - INFO - [FILE] Using existing browser context
+2025-09-15 15:25:06,231 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.7 seconds
+2025-09-15 15:25:06,231 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.7 seconds
+2025-09-15 15:25:13,919 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 9.9 seconds
+2025-09-15 15:25:13,919 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 9.9 seconds
+2025-09-15 15:25:15,017 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 8.8s
+2025-09-15 15:25:15,017 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 8.8s
+2025-09-15 15:25:15,017 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, hover_element: 1
+2025-09-15 15:25:15,017 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, hover_element: 1
+2025-09-15 15:25:15,663 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.9 seconds
+2025-09-15 15:25:15,663 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.9 seconds
+2025-09-15 15:25:23,541 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 7.9s
+2025-09-15 15:25:23,541 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 7.9s
+2025-09-15 15:25:23,542 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: smooth_scroll: 1, wait: 1
+2025-09-15 15:25:23,542 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: smooth_scroll: 1, wait: 1
+2025-09-15 15:25:25,102 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.3 seconds
+2025-09-15 15:25:25,102 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.3 seconds
+2025-09-15 15:25:25,276 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 11.4s
+2025-09-15 15:25:25,276 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 11.4s
+2025-09-15 15:25:25,276 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, scroll_up: 1, hover_element: 1
+2025-09-15 15:25:25,276 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, scroll_up: 1, hover_element: 1
+2025-09-15 15:25:25,368 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:25:25,368 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:25:25,485 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:25:25,485 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:25:29,356 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 9.0 seconds
+2025-09-15 15:25:29,356 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 9.0 seconds
+2025-09-15 15:25:33,679 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 8.6s
+2025-09-15 15:25:33,679 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 8.6s
+2025-09-15 15:25:33,680 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: random_click: 1, hover_element: 1, wait: 1
+2025-09-15 15:25:33,680 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: random_click: 1, hover_element: 1, wait: 1
+2025-09-15 15:25:33,903 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.5 seconds
+2025-09-15 15:25:33,903 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.5 seconds
+2025-09-15 15:25:38,186 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:25:38,186 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:25:38,285 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:25:38,285 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:25:38,404 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 9.0s
+2025-09-15 15:25:38,404 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 9.0s
+2025-09-15 15:25:38,404 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, double_click: 1
+2025-09-15 15:25:38,404 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, double_click: 1
+2025-09-15 15:25:41,299 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:25:41,299 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:25:41,401 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:25:41,401 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:25:41,424 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 7.5s
+2025-09-15 15:25:41,424 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 7.5s
+2025-09-15 15:25:41,424 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, random_click: 1
+2025-09-15 15:25:41,424 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, random_click: 1
+2025-09-15 15:25:45,550 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.1 seconds
+2025-09-15 15:25:45,550 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.1 seconds
+2025-09-15 15:25:46,781 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 9.0 seconds
+2025-09-15 15:25:46,781 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 9.0 seconds
+2025-09-15 15:25:54,927 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 9.4s
+2025-09-15 15:25:54,927 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 9.4s
+2025-09-15 15:25:54,929 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, hover_element: 1
+2025-09-15 15:25:54,929 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, hover_element: 1
+2025-09-15 15:25:56,950 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 10.2s
+2025-09-15 15:25:56,950 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 10.2s
+2025-09-15 15:25:56,950 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, random_click: 1
+2025-09-15 15:25:56,950 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, random_click: 1
+2025-09-15 15:25:56,986 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 9.5 seconds
+2025-09-15 15:25:56,986 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 9.5 seconds
+2025-09-15 15:26:05,458 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.4 seconds
+2025-09-15 15:26:05,458 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.4 seconds
+2025-09-15 15:26:06,467 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 9.5s
+2025-09-15 15:26:06,467 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 9.5s
+2025-09-15 15:26:06,467 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, smooth_scroll: 1, move_mouse: 1
+2025-09-15 15:26:06,467 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, smooth_scroll: 1, move_mouse: 1
+2025-09-15 15:26:07,191 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.7 seconds
+2025-09-15 15:26:07,191 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.7 seconds
+2025-09-15 15:26:09,074 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page was closed during sleep, stopping
+2025-09-15 15:26:09,074 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page was closed during sleep, stopping
+2025-09-15 15:26:09,075 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 0 actions in 3.6s
+2025-09-15 15:26:09,075 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 0 actions in 3.6s
+2025-09-15 15:26:09,075 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-15 15:26:09,075 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-15 15:26:09,210 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:26:09,210 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:26:11,657 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.4 seconds
+2025-09-15 15:26:11,657 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.4 seconds
+2025-09-15 15:26:16,745 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 9.6s
+2025-09-15 15:26:16,745 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 9.6s
+2025-09-15 15:26:16,745 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: hover_element: 1, select_text: 1
+2025-09-15 15:26:16,745 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: hover_element: 1, select_text: 1
+2025-09-15 15:26:17,135 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:26:17,135 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:26:17,208 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:26:17,208 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:26:18,604 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.4 seconds
+2025-09-15 15:26:18,604 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.4 seconds
+2025-09-15 15:26:20,105 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 8.4s
+2025-09-15 15:26:20,105 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 8.4s
+2025-09-15 15:26:20,105 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_up: 1, move_mouse: 1
+2025-09-15 15:26:20,105 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_up: 1, move_mouse: 1
+2025-09-15 15:26:24,189 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:26:24,189 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:26:24,260 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:26:24,260 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:26:25,351 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 6.7s
+2025-09-15 15:26:25,351 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 6.7s
+2025-09-15 15:26:25,352 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: smooth_scroll: 1, random_click: 1
+2025-09-15 15:26:25,352 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: smooth_scroll: 1, random_click: 1
+2025-09-15 15:26:27,896 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 10.0 seconds
+2025-09-15 15:26:27,896 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 10.0 seconds
+2025-09-15 15:26:38,595 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 10.7s
+2025-09-15 15:26:38,595 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 10.7s
+2025-09-15 15:26:38,596 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, random_click: 1
+2025-09-15 15:26:38,596 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, random_click: 1
+2025-09-15 15:26:39,035 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 9.7 seconds
+2025-09-15 15:26:39,035 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 9.7 seconds
+2025-09-15 15:26:41,081 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.8 seconds
+2025-09-15 15:26:41,081 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.8 seconds
+2025-09-15 15:26:49,063 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 10.0s
+2025-09-15 15:26:49,063 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 10.0s
+2025-09-15 15:26:49,064 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, hover_element: 1
+2025-09-15 15:26:49,064 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, hover_element: 1
+2025-09-15 15:26:50,104 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 9.0s
+2025-09-15 15:26:50,104 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 9.0s
+2025-09-15 15:26:50,105 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 2
+2025-09-15 15:26:50,105 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 2
+2025-09-15 15:26:56,870 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 9.7 seconds
+2025-09-15 15:26:56,870 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 9.7 seconds
+2025-09-15 15:27:03,622 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.9 seconds
+2025-09-15 15:27:03,622 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.9 seconds
+2025-09-15 15:27:07,048 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 10.2s
+2025-09-15 15:27:07,048 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 10.2s
+2025-09-15 15:27:07,049 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, wait: 2
+2025-09-15 15:27:07,049 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, wait: 2
+2025-09-15 15:27:11,560 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 7.9s
+2025-09-15 15:27:11,560 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 7.9s
+2025-09-15 15:27:11,561 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: random_click: 2
+2025-09-15 15:27:11,561 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: random_click: 2
+2025-09-15 15:27:11,828 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 10.1 seconds
+2025-09-15 15:27:11,828 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 10.1 seconds
+2025-09-15 15:27:14,593 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:27:14,593 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:27:14,674 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:27:14,674 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:27:16,572 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 9.6 seconds
+2025-09-15 15:27:16,572 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 9.6 seconds
+2025-09-15 15:27:19,699 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.7 seconds
+2025-09-15 15:27:19,699 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.7 seconds
+2025-09-15 15:27:21,923 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 10.1s
+2025-09-15 15:27:21,923 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 10.1s
+2025-09-15 15:27:21,924 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: smooth_scroll: 1, move_mouse: 1, hover_element: 1
+2025-09-15 15:27:21,924 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: smooth_scroll: 1, move_mouse: 1, hover_element: 1
+2025-09-15 15:27:28,138 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 11.6s
+2025-09-15 15:27:28,138 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 11.6s
+2025-09-15 15:27:28,139 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, random_click: 1
+2025-09-15 15:27:28,139 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, random_click: 1
+2025-09-15 15:27:29,856 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 10.2s
+2025-09-15 15:27:29,856 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 10.2s
+2025-09-15 15:27:29,856 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_up: 1, wait: 1
+2025-09-15 15:27:29,856 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_up: 1, wait: 1
+2025-09-15 15:27:32,068 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-15 15:27:32,068 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page is closed, creating new page
+2025-09-15 15:27:32,195 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:27:32,195 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:27:38,681 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.6 seconds
+2025-09-15 15:27:38,681 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.6 seconds
+2025-09-15 15:27:42,222 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 10.7 seconds
+2025-09-15 15:27:42,222 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 10.7 seconds
+2025-09-15 15:27:46,269 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 7.6s
+2025-09-15 15:27:46,269 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 7.6s
+2025-09-15 15:27:46,269 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, move_mouse: 1, random_click: 1
+2025-09-15 15:27:46,269 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, move_mouse: 1, random_click: 1
+2025-09-15 15:27:53,478 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 11.3s
+2025-09-15 15:27:53,478 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 11.3s
+2025-09-15 15:27:53,479 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_up: 1, move_mouse: 1, hover_element: 1
+2025-09-15 15:27:53,479 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_up: 1, move_mouse: 1, hover_element: 1
+2025-09-15 15:28:03,112 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 10.2 seconds
+2025-09-15 15:28:03,112 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 10.2 seconds
+2025-09-15 15:28:07,337 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.0 seconds
+2025-09-15 15:28:07,337 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.0 seconds
+2025-09-15 15:28:08,398 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 10.7 seconds
+2025-09-15 15:28:08,398 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 10.7 seconds
+2025-09-15 15:28:14,540 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 11.4s
+2025-09-15 15:28:14,540 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 11.4s
+2025-09-15 15:28:14,541 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_up: 1, wait: 2
+2025-09-15 15:28:14,541 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_up: 1, wait: 2
+2025-09-15 15:28:15,293 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:28:15,293 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:28:15,367 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 8.0s
+2025-09-15 15:28:15,367 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 8.0s
+2025-09-15 15:28:15,367 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, move_mouse: 1, random_click: 1
+2025-09-15 15:28:15,367 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, move_mouse: 1, random_click: 1
+2025-09-15 15:28:15,421 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:28:15,421 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:28:19,159 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 4 actions in 10.8s
+2025-09-15 15:28:19,159 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 4 actions in 10.8s
+2025-09-15 15:28:19,160 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, move_mouse: 1, random_click: 1, select_text: 1
+2025-09-15 15:28:19,160 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, move_mouse: 1, random_click: 1, select_text: 1
+2025-09-15 15:28:22,094 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.1 seconds
+2025-09-15 15:28:22,094 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.1 seconds
+2025-09-15 15:28:27,101 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:28:27,101 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:28:27,219 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:28:27,219 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:28:27,976 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:28:27,976 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:28:28,091 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:28:28,091 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:28:29,876 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:28:29,876 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:28:29,985 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:28:29,985 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:28:30,176 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 8.1s
+2025-09-15 15:28:30,176 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 8.1s
+2025-09-15 15:28:30,177 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: smooth_scroll: 1, wait: 1
+2025-09-15 15:28:30,177 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: smooth_scroll: 1, wait: 1
+2025-09-15 15:28:30,796 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 10.2 seconds
+2025-09-15 15:28:30,796 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 10.2 seconds
+2025-09-15 15:28:32,613 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:28:32,613 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:28:32,717 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:28:32,717 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:28:35,933 - bot.src.instagram_uploader.dolphin_anty - INFO - [EXPORT_COOKIES] Success! Got 11 cookies for profile 663094224
+2025-09-15 15:28:35,933 - bot.src.instagram_uploader.dolphin_anty - INFO - [EXPORT_COOKIES] Success! Got 11 cookies for profile 663094224
+2025-09-15 15:28:35,934 - bot.src.instagram_uploader.dolphin_anty - INFO - [GET_COOKIES] Success! Got 11 cookies for profile 663094224
+2025-09-15 15:28:35,934 - bot.src.instagram_uploader.dolphin_anty - INFO - [GET_COOKIES] Success! Got 11 cookies for profile 663094224
+2025-09-15 15:28:35,934 - bot.src.instagram_uploader.dolphin_anty - INFO - [COOKIES] [ASYNC_COOKIE_ROBOT] Exported 11 cookies for profile 663094224
+2025-09-15 15:28:35,934 - bot.src.instagram_uploader.dolphin_anty - INFO - [COOKIES] [ASYNC_COOKIE_ROBOT] Exported 11 cookies for profile 663094224
+2025-09-15 15:28:35,934 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping browser profile 663094224
+2025-09-15 15:28:35,934 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping browser profile 663094224
+2025-09-15 15:28:35,934 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping Dolphin profile: 663094224
+2025-09-15 15:28:35,934 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping Dolphin profile: 663094224
+2025-09-15 15:28:42,869 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 12.1s
+2025-09-15 15:28:42,869 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 12.1s
+2025-09-15 15:28:42,871 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: hover_element: 1, select_text: 1
+2025-09-15 15:28:42,871 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: hover_element: 1, select_text: 1
+2025-09-15 15:28:44,391 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:28:44,391 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:28:44,471 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:28:44,471 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:28:45,938 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Network error stopping profile 663094224: HTTPConnectionPool(host='localhost', port=3001): Read timed out. (read timeout=10)
+2025-09-15 15:28:45,938 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Network error stopping profile 663094224: HTTPConnectionPool(host='localhost', port=3001): Read timed out. (read timeout=10)
+2025-09-15 15:28:49,896 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.5 seconds
+2025-09-15 15:28:49,896 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.5 seconds
+2025-09-15 15:28:50,802 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 11.7 seconds
+2025-09-15 15:28:50,802 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 11.7 seconds
+2025-09-15 15:28:59,176 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 9.3s
+2025-09-15 15:28:59,176 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 9.3s
+2025-09-15 15:28:59,178 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, move_mouse: 1
+2025-09-15 15:28:59,178 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, move_mouse: 1
+2025-09-15 15:29:05,054 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 14.3s
+2025-09-15 15:29:05,054 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 14.3s
+2025-09-15 15:29:05,055 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, wait: 1
+2025-09-15 15:29:05,055 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, wait: 1
+2025-09-15 15:29:10,081 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.8 seconds
+2025-09-15 15:29:10,081 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.8 seconds
+2025-09-15 15:29:17,552 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 7.5s
+2025-09-15 15:29:17,552 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 7.5s
+2025-09-15 15:29:17,552 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, select_text: 1, wait: 1
+2025-09-15 15:29:17,552 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, select_text: 1, wait: 1
+2025-09-15 15:29:22,225 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:29:22,225 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:29:22,317 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:29:22,317 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:29:27,838 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.8 seconds
+2025-09-15 15:29:27,838 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.8 seconds
+2025-09-15 15:29:37,535 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 9.7s
+2025-09-15 15:29:37,535 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 9.7s
+2025-09-15 15:29:37,536 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_up: 1, hover_element: 1
+2025-09-15 15:29:37,536 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_up: 1, hover_element: 1
+2025-09-15 15:29:38,813 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 11.6 seconds
+2025-09-15 15:29:38,813 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 11.6 seconds
+2025-09-15 15:29:50,997 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 12.2s
+2025-09-15 15:29:50,997 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 12.2s
+2025-09-15 15:29:50,998 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, wait: 1
+2025-09-15 15:29:50,998 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, wait: 1
+2025-09-15 15:29:52,621 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.9 seconds
+2025-09-15 15:29:52,621 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.9 seconds
+2025-09-15 15:29:55,462 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:29:55,462 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:29:55,551 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:29:55,551 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:30:00,550 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 7.9s
+2025-09-15 15:30:00,550 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 7.9s
+2025-09-15 15:30:00,551 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, wait: 1
+2025-09-15 15:30:00,551 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, wait: 1
+2025-09-15 15:30:03,002 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.6 seconds
+2025-09-15 15:30:03,002 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.6 seconds
+2025-09-15 15:30:04,803 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.4 seconds
+2025-09-15 15:30:04,803 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.4 seconds
+2025-09-15 15:30:11,281 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 6.5s
+2025-09-15 15:30:11,281 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 6.5s
+2025-09-15 15:30:11,282 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_up: 1, random_click: 1
+2025-09-15 15:30:11,282 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_up: 1, random_click: 1
+2025-09-15 15:30:12,290 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 9.3s
+2025-09-15 15:30:12,290 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 9.3s
+2025-09-15 15:30:12,291 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, random_click: 1
+2025-09-15 15:30:12,291 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, random_click: 1
+2025-09-15 15:30:22,470 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 10.9 seconds
+2025-09-15 15:30:22,470 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 10.9 seconds
+2025-09-15 15:30:32,118 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 5.9 seconds
+2025-09-15 15:30:32,118 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 5.9 seconds
+2025-09-15 15:30:35,996 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 13.5s
+2025-09-15 15:30:35,996 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 13.5s
+2025-09-15 15:30:35,997 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, scroll_up: 1, hover_element: 1
+2025-09-15 15:30:35,997 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, scroll_up: 1, hover_element: 1
+2025-09-15 15:30:39,122 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 7.0s
+2025-09-15 15:30:39,122 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 7.0s
+2025-09-15 15:30:39,124 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: smooth_scroll: 1, wait: 1
+2025-09-15 15:30:39,124 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: smooth_scroll: 1, wait: 1
+2025-09-15 15:30:40,156 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:30:40,156 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:30:40,258 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:30:40,258 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:30:42,854 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 12.0 seconds
+2025-09-15 15:30:42,854 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 12.0 seconds
+2025-09-15 15:30:47,385 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.1 seconds
+2025-09-15 15:30:47,385 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.1 seconds
+2025-09-15 15:30:56,439 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 1 actions in 9.1s
+2025-09-15 15:30:56,439 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 1 actions in 9.1s
+2025-09-15 15:30:56,441 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: wait: 1
+2025-09-15 15:30:56,441 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: wait: 1
+2025-09-15 15:30:59,031 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 16.2s
+2025-09-15 15:30:59,031 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 16.2s
+2025-09-15 15:30:59,032 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: smooth_scroll: 1, move_mouse: 1, random_click: 1
+2025-09-15 15:30:59,032 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: smooth_scroll: 1, move_mouse: 1, random_click: 1
+2025-09-15 15:30:59,236 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:30:59,236 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:30:59,320 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:30:59,320 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:31:04,537 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.8 seconds
+2025-09-15 15:31:04,537 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.8 seconds
+2025-09-15 15:31:09,580 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.6 seconds
+2025-09-15 15:31:09,580 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.6 seconds
+2025-09-15 15:31:15,248 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 10.7s
+2025-09-15 15:31:15,248 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 10.7s
+2025-09-15 15:31:15,249 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: select_text: 1, wait: 1
+2025-09-15 15:31:15,249 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: select_text: 1, wait: 1
+2025-09-15 15:31:17,172 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 7.6s
+2025-09-15 15:31:17,172 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 7.6s
+2025-09-15 15:31:17,172 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: smooth_scroll: 1, random_click: 2
+2025-09-15 15:31:17,172 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: smooth_scroll: 1, random_click: 2
+2025-09-15 15:31:19,983 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:31:19,983 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:31:20,085 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:31:20,085 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:31:27,648 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 9.1 seconds
+2025-09-15 15:31:27,648 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 9.1 seconds
+2025-09-15 15:31:33,013 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 5.8 seconds
+2025-09-15 15:31:33,013 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 5.8 seconds
+2025-09-15 15:31:38,651 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 11.0s
+2025-09-15 15:31:38,651 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 11.0s
+2025-09-15 15:31:38,653 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: select_text: 2, wait: 1
+2025-09-15 15:31:38,653 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: select_text: 2, wait: 1
+2025-09-15 15:31:38,773 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 5.8s
+2025-09-15 15:31:38,773 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 5.8s
+2025-09-15 15:31:38,773 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, double_click: 1
+2025-09-15 15:31:38,773 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, double_click: 1
+2025-09-15 15:31:46,739 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 11.4 seconds
+2025-09-15 15:31:46,739 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 11.4 seconds
+2025-09-15 15:31:59,987 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 13.2s
+2025-09-15 15:31:59,987 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 13.2s
+2025-09-15 15:31:59,988 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, random_click: 1, hover_element: 1
+2025-09-15 15:31:59,988 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, random_click: 1, hover_element: 1
+2025-09-15 15:32:00,559 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:32:00,559 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:32:00,759 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:32:00,759 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:32:07,264 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.2 seconds
+2025-09-15 15:32:07,264 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.2 seconds
+2025-09-15 15:32:16,274 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 9.0s
+2025-09-15 15:32:16,274 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 9.0s
+2025-09-15 15:32:16,275 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, random_click: 1, double_click: 1
+2025-09-15 15:32:16,275 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, random_click: 1, double_click: 1
+2025-09-15 15:32:21,390 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 9.8 seconds
+2025-09-15 15:32:21,390 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 9.8 seconds
+2025-09-15 15:32:30,123 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.0 seconds
+2025-09-15 15:32:30,123 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.0 seconds
+2025-09-15 15:32:31,169 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 9.8s
+2025-09-15 15:32:31,169 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 9.8s
+2025-09-15 15:32:31,169 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 2, smooth_scroll: 1
+2025-09-15 15:32:31,169 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 2, smooth_scroll: 1
+2025-09-15 15:32:38,699 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 8.6s
+2025-09-15 15:32:38,699 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 8.6s
+2025-09-15 15:32:38,699 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, random_click: 1
+2025-09-15 15:32:38,699 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, random_click: 1
+2025-09-15 15:32:46,389 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 10.3 seconds
+2025-09-15 15:32:46,389 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 10.3 seconds
+2025-09-15 15:32:53,797 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.5 seconds
+2025-09-15 15:32:53,797 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.5 seconds
+2025-09-15 15:32:56,669 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 10.3s
+2025-09-15 15:32:56,669 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 10.3s
+2025-09-15 15:32:56,670 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_up: 1, move_mouse: 1, hover_element: 1
+2025-09-15 15:32:56,670 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_up: 1, move_mouse: 1, hover_element: 1
+2025-09-15 15:32:59,898 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 11.8 seconds
+2025-09-15 15:32:59,898 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 11.8 seconds
+2025-09-15 15:33:00,580 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 6.8s
+2025-09-15 15:33:00,580 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 6.8s
+2025-09-15 15:33:00,580 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 2
+2025-09-15 15:33:00,580 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 2
+2025-09-15 15:33:04,893 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.8 seconds
+2025-09-15 15:33:04,893 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.8 seconds
+2025-09-15 15:33:11,681 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 4 actions in 11.8s
+2025-09-15 15:33:11,681 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 4 actions in 11.8s
+2025-09-15 15:33:11,681 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 2, smooth_scroll: 1, double_click: 1
+2025-09-15 15:33:11,681 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 2, smooth_scroll: 1, double_click: 1
+2025-09-15 15:33:12,552 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 1 actions in 7.7s
+2025-09-15 15:33:12,552 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 1 actions in 7.7s
+2025-09-15 15:33:12,553 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: random_click: 1
+2025-09-15 15:33:12,553 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: random_click: 1
+2025-09-15 15:33:22,783 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.8 seconds
+2025-09-15 15:33:22,783 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.8 seconds
+2025-09-15 15:33:25,473 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.0 seconds
+2025-09-15 15:33:25,473 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.0 seconds
+2025-09-15 15:33:31,512 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 6.0s
+2025-09-15 15:33:31,512 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 6.0s
+2025-09-15 15:33:31,513 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, scroll_up: 1
+2025-09-15 15:33:31,513 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, scroll_up: 1
+2025-09-15 15:33:34,295 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 11.5s
+2025-09-15 15:33:34,295 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 3 actions in 11.5s
+2025-09-15 15:33:34,296 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_up: 1, smooth_scroll: 1, wait: 1
+2025-09-15 15:33:34,296 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_up: 1, smooth_scroll: 1, wait: 1
+2025-09-15 15:33:43,819 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.8 seconds
+2025-09-15 15:33:43,819 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.8 seconds
+2025-09-15 15:33:44,206 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.8 seconds
+2025-09-15 15:33:44,206 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.8 seconds
+2025-09-15 15:33:52,609 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 8.8s
+2025-09-15 15:33:52,609 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 8.8s
+2025-09-15 15:33:52,614 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, random_click: 1
+2025-09-15 15:33:52,614 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, random_click: 1
+2025-09-15 15:33:53,957 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 9.8s
+2025-09-15 15:33:53,957 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 9.8s
+2025-09-15 15:33:53,957 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_up: 1, wait: 1
+2025-09-15 15:33:53,957 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_up: 1, wait: 1
+2025-09-15 15:34:02,922 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.1 seconds
+2025-09-15 15:34:02,922 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.1 seconds
+2025-09-15 15:34:10,723 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 7.8s
+2025-09-15 15:34:10,723 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 7.8s
+2025-09-15 15:34:10,724 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, random_click: 1
+2025-09-15 15:34:10,724 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, random_click: 1
+2025-09-15 15:34:11,944 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 10.0 seconds
+2025-09-15 15:34:11,944 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 10.0 seconds
+2025-09-15 15:34:22,015 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 10.1s
+2025-09-15 15:34:22,015 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 10.1s
+2025-09-15 15:34:22,015 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_up: 1, hover_element: 1
+2025-09-15 15:34:22,015 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_up: 1, hover_element: 1
+2025-09-15 15:34:23,499 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:34:23,499 - bot.src.instagram_uploader.dolphin_anty - WARNING - [WARNING] Page evaluation failed, recreating page
+2025-09-15 15:34:23,591 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:34:23,591 - bot.src.instagram_uploader.dolphin_anty - INFO - [SUCCESS] Created new browser page
+2025-09-15 15:34:27,778 - bot.src.instagram_uploader.dolphin_anty - INFO - [EXPORT_COOKIES] Success! Got 11 cookies for profile 663094301
+2025-09-15 15:34:27,778 - bot.src.instagram_uploader.dolphin_anty - INFO - [EXPORT_COOKIES] Success! Got 11 cookies for profile 663094301
+2025-09-15 15:34:27,778 - bot.src.instagram_uploader.dolphin_anty - INFO - [GET_COOKIES] Success! Got 11 cookies for profile 663094301
+2025-09-15 15:34:27,778 - bot.src.instagram_uploader.dolphin_anty - INFO - [GET_COOKIES] Success! Got 11 cookies for profile 663094301
+2025-09-15 15:34:27,779 - bot.src.instagram_uploader.dolphin_anty - INFO - [COOKIES] [ASYNC_COOKIE_ROBOT] Exported 11 cookies for profile 663094301
+2025-09-15 15:34:27,779 - bot.src.instagram_uploader.dolphin_anty - INFO - [COOKIES] [ASYNC_COOKIE_ROBOT] Exported 11 cookies for profile 663094301
+2025-09-15 15:34:27,779 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping browser profile 663094301
+2025-09-15 15:34:27,779 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping browser profile 663094301
+2025-09-15 15:34:27,779 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping Dolphin profile: 663094301
+2025-09-15 15:34:27,779 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping Dolphin profile: 663094301
+2025-09-15 15:34:27,936 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.0 seconds
+2025-09-15 15:34:27,936 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.0 seconds
+2025-09-15 15:34:34,767 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 6.8s
+2025-09-15 15:34:34,767 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 6.8s
+2025-09-15 15:34:34,769 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: smooth_scroll: 1, select_text: 1
+2025-09-15 15:34:34,769 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: smooth_scroll: 1, select_text: 1
+2025-09-15 15:34:37,782 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Network error stopping profile 663094301: HTTPConnectionPool(host='localhost', port=3001): Read timed out. (read timeout=10)
+2025-09-15 15:34:37,782 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Network error stopping profile 663094301: HTTPConnectionPool(host='localhost', port=3001): Read timed out. (read timeout=10)
+2025-09-15 15:34:45,907 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.5 seconds
+2025-09-15 15:34:45,907 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 7.5 seconds
+2025-09-15 15:34:58,638 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 1 actions in 12.7s
+2025-09-15 15:34:58,638 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 1 actions in 12.7s
+2025-09-15 15:34:58,639 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, random_click: 1
+2025-09-15 15:34:58,639 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, random_click: 1
+2025-09-15 15:35:08,926 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.3 seconds
+2025-09-15 15:35:08,926 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.3 seconds
+2025-09-15 15:35:17,414 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 1 actions in 8.5s
+2025-09-15 15:35:17,414 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 1 actions in 8.5s
+2025-09-15 15:35:17,414 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: wait: 1
+2025-09-15 15:35:17,414 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: wait: 1
+2025-09-15 15:35:30,298 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.0 seconds
+2025-09-15 15:35:30,298 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.0 seconds
+2025-09-15 15:35:36,969 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 6.7s
+2025-09-15 15:35:36,969 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 6.7s
+2025-09-15 15:35:36,970 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, random_click: 1
+2025-09-15 15:35:36,970 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, random_click: 1
+2025-09-15 15:35:42,839 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.1 seconds
+2025-09-15 15:35:42,839 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.1 seconds
+2025-09-15 15:35:49,231 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 6.4s
+2025-09-15 15:35:49,231 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 6.4s
+2025-09-15 15:35:49,231 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, wait: 1
+2025-09-15 15:35:49,231 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, wait: 1
+2025-09-15 15:36:17,848 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.7 seconds
+2025-09-15 15:36:17,848 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.7 seconds
+2025-09-15 15:36:26,431 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 1 actions in 8.6s
+2025-09-15 15:36:26,431 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 1 actions in 8.6s
+2025-09-15 15:36:26,432 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: random_click: 1
+2025-09-15 15:36:26,432 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: random_click: 1
+2025-09-15 15:36:32,906 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.5 seconds
+2025-09-15 15:36:32,906 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 8.5 seconds
+2025-09-15 15:36:42,118 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 9.2s
+2025-09-15 15:36:42,118 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 9.2s
+2025-09-15 15:36:42,119 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, scroll_up: 1
+2025-09-15 15:36:42,119 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_down: 1, scroll_up: 1
+2025-09-15 15:36:48,602 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.4 seconds
+2025-09-15 15:36:48,602 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.4 seconds
+2025-09-15 15:36:55,035 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 6.4s
+2025-09-15 15:36:55,035 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 6.4s
+2025-09-15 15:36:55,037 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_up: 1, random_click: 1
+2025-09-15 15:36:55,037 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: scroll_up: 1, random_click: 1
+2025-09-15 15:36:59,764 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.3 seconds
+2025-09-15 15:36:59,764 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.3 seconds
+2025-09-15 15:37:06,308 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 6.5s
+2025-09-15 15:37:06,308 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 6.5s
+2025-09-15 15:37:06,309 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, wait: 1
+2025-09-15 15:37:06,309 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: move_mouse: 1, wait: 1
+2025-09-15 15:37:14,206 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.1 seconds
+2025-09-15 15:37:14,206 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Starting user activity simulation for 6.1 seconds
+2025-09-15 15:37:21,382 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 7.2s
+2025-09-15 15:37:21,382 - bot.src.instagram_uploader.dolphin_anty - INFO - [SIMULATION] Simulation complete! 2 actions in 7.2s
+2025-09-15 15:37:21,383 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: select_text: 1, wait: 1
+2025-09-15 15:37:21,383 - bot.src.instagram_uploader.dolphin_anty - INFO - [STATS] Main actions: select_text: 1, wait: 1
+2025-09-15 15:37:27,507 - bot.src.instagram_uploader.dolphin_anty - INFO - [EXPORT_COOKIES] Success! Got 11 cookies for profile 663094156
+2025-09-15 15:37:27,507 - bot.src.instagram_uploader.dolphin_anty - INFO - [EXPORT_COOKIES] Success! Got 11 cookies for profile 663094156
+2025-09-15 15:37:27,508 - bot.src.instagram_uploader.dolphin_anty - INFO - [GET_COOKIES] Success! Got 11 cookies for profile 663094156
+2025-09-15 15:37:27,508 - bot.src.instagram_uploader.dolphin_anty - INFO - [GET_COOKIES] Success! Got 11 cookies for profile 663094156
+2025-09-15 15:37:27,508 - bot.src.instagram_uploader.dolphin_anty - INFO - [COOKIES] [ASYNC_COOKIE_ROBOT] Exported 11 cookies for profile 663094156
+2025-09-15 15:37:27,508 - bot.src.instagram_uploader.dolphin_anty - INFO - [COOKIES] [ASYNC_COOKIE_ROBOT] Exported 11 cookies for profile 663094156
+2025-09-15 15:37:27,508 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping browser profile 663094156
+2025-09-15 15:37:27,508 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping browser profile 663094156
+2025-09-15 15:37:27,508 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping Dolphin profile: 663094156
+2025-09-15 15:37:27,508 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping Dolphin profile: 663094156
+2025-09-15 15:37:37,513 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Network error stopping profile 663094156: HTTPConnectionPool(host='localhost', port=3001): Read timed out. (read timeout=10)
+2025-09-15 15:37:37,513 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Network error stopping profile 663094156: HTTPConnectionPool(host='localhost', port=3001): Read timed out. (read timeout=10)

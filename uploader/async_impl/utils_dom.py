@@ -210,6 +210,68 @@ async def check_if_already_logged_in_async(page, selectors):
     log_info("[SEARCH] [ASYNC_LOGIN] No logged-in indicators found - user needs to login")
     return False
 
+async def handle_anti_automation_warning_async(page) -> bool:
+    """Detect and dismiss anti-automation warning banner/dialog (RU/EN/ES/PT)."""
+    try:
+        # Quick scan for known texts (non-fatal if missing)
+        warning_text_selectors = [
+            # Portuguese
+            'span:has-text("Suspeitamos que o comportamento da sua conta seja automatizado")',
+            'div:has-text("Suspeitamos que o comportamento da sua conta seja automatizado")',
+            # English
+            'div:has-text("We suspect your account behavior is automated")',
+            # Spanish
+            'div:has-text("Sospechamos que el comportamiento de tu cuenta es automatizado")',
+            # Russian
+            'div:has-text("Мы подозреваем автоматизированное поведение вашей учетной записи")',
+        ]
+        ignore_button_selectors = [
+            # PT/ES
+            'div[role="button"]:has-text("Ignorar")',
+            'button:has-text("Ignorar")',
+            # EN
+            'div[role="button"]:has-text("Ignore")',
+            'button:has-text("Ignore")',
+            # RU (варианты)
+            'div[role="button"]:has-text("Игнорировать")',
+            'div[role="button"]:has-text("Пропустить")',
+            'button:has-text("Игнорировать")',
+            'button:has-text("Пропустить")',
+        ]
+
+        found_warning = False
+        for sel in warning_text_selectors:
+            try:
+                el = await page.query_selector(sel)
+                if el and await el.is_visible():
+                    found_warning = True
+                    log_info(f"[ASYNC_UPLOAD] [WARN] Anti-automation warning detected: {sel}")
+                    break
+            except Exception:
+                continue
+
+        # If not found by text, still try clicking known ignore buttons (can appear without main text)
+        if not found_warning:
+            log_debug("[ASYNC_UPLOAD] [SEARCH] No explicit warning text; probing ignore buttons")
+
+        for sel in ignore_button_selectors:
+            try:
+                btn = await page.query_selector(sel)
+                if btn and await btn.is_visible():
+                    await btn.hover()
+                    await asyncio.sleep(random.uniform(0.2, 0.5))
+                    await btn.click()
+                    log_info(f"[ASYNC_UPLOAD] [OK] Dismissed anti-automation warning via: {sel}")
+                    await asyncio.sleep(random.uniform(0.6, 1.0))
+                    return True
+            except Exception:
+                continue
+
+        return False
+    except Exception as e:
+        log_info(f"[ASYNC_UPLOAD] [WARN] Error handling anti-automation warning: {str(e)}")
+        return False
+
 async def wait_for_page_ready_async(page, max_wait_time=30.0) -> bool:
     """Wait for page to be fully ready - OPTIMIZED VERSION"""
     try:
@@ -916,20 +978,37 @@ async def click_share_button_async(page, account=None):
         # Get multilingual share button selectors
         share_selectors = provider.get_share_button_selectors(locale)
         
-        # Add Instagram-specific dynamic selectors as fallback
+        # Restrict search inside stable upload container only
+        container_selectors = [
+            'div[role="dialog"]',
+        ]
+        
+        # Prefer text-based selectors for PT/RU/EN/ES
+        publish_text_variants = [
+            "Compartilhar", "Publicar", "Postar",  # PT
+            "Опубликовать", "Публикация",           # RU
+            "Share", "Post", "Publish",            # EN
+            "Compartir", "Publicación"              # ES
+        ]
+        for container in container_selectors:
+            for txt in publish_text_variants:
+                share_selectors.append(f'{container} [role="button"]:has-text("{txt}")')
+                share_selectors.append(f'{container} button:has-text("{txt}")')
+        
+        # XPath fallbacks inside dialog container
         share_selectors.extend([
-            'div[class*="x1i10hfl"][class*="x1xfsgkm"]',
-            'div[class*="x1i10hfl"][class*="xwib8y2"]',
-            'div[role="dialog"] div[role="button"]:last-child',
-            'div[role="dialog"] button:last-child',
-            'div[aria-label*="Создать"] div[role="button"]:last-child',
-            'div[aria-label*="Create"] div[role="button"]:last-child',
-            'div[aria-label*="Crear"] div[role="button"]:last-child',
-            'div[aria-label*="Criar"] div[role="button"]:last-child',
-            'div[data-testid="share-button"]',
-            'button[data-testid="share-button"]',
-            'div[role="button"]:last-child',
-            'button:last-child',
+            '//div[@role="dialog"]//div[@role="button" and (contains(., "Compartilhar") or contains(., "Publicar") or contains(., "Postar") or contains(., "Share") or contains(., "Publish") or contains(., "Опубликовать") or contains(., "Публикация") or contains(., "Compartir") or contains(., "Publicación"))]',
+            '//div[@role="dialog"]//button[(contains(., "Compartilhar") or contains(., "Publicar") or contains(., "Postar") or contains(., "Share") or contains(., "Publish") or contains(., "Опубликовать") or contains(., "Публикация") or contains(., "Compartir") or contains(., "Publicación"))]',
+        ])
+
+        # Remove unstable container '_ap97' from any residual selectors (safety)
+        share_selectors = [sel for sel in share_selectors if '_ap97' not in sel]
+        
+
+        # Dynamic context-aware XPath (no fixed container): verify ancestor has heading like "Novo reel" etc.
+        share_selectors.extend([
+            '//*[self::div[@role="button"] or self::button][(contains(normalize-space(.), "Compartilhar") or contains(normalize-space(.), "Publicar") or contains(normalize-space(.), "Postar") or contains(normalize-space(.), "Share") or contains(normalize-space(.), "Publish") or contains(normalize-space(.), "Опубликовать") or contains(normalize-space(.), "Публикация") or contains(normalize-space(.), "Compartir") or contains(normalize-space(.), "Publicación")) and ancestor::*[.//div[@role="heading" or self::h1][contains(., "Novo reel") or contains(., "New reel") or contains(., "Новый") or contains(., "Nuevo reel")]]]',
+            '//*[self::div[@role="button"] or self::button][(contains(normalize-space(.), "Compartilhar") or contains(normalize-space(.), "Publicar") or contains(normalize-space(.), "Postar") or contains(normalize-space(.), "Share") or contains(normalize-space(.), "Publish") or contains(normalize-space(.), "Опубликовать") or contains(normalize-space(.), "Публикация") or contains(normalize-space(.), "Compartir") or contains(normalize-space(.), "Publicación")) and ancestor::*[contains(., "Novo reel") or contains(., "New reel") or contains(., "Reel novo") or contains(., "Рилс") or contains(., "Nuevo reel")]]'
         ])
         
         share_button = None
@@ -946,19 +1025,49 @@ async def click_share_button_async(page, account=None):
                         # Проверяем что кнопка находится в диалоге загрузки
                         parent_dialog = await element.query_selector('xpath=ancestor::div[@role="dialog"]')
                         if parent_dialog:
-                            log_info(f"[ASYNC_UPLOAD] [OK] Found share button in upload dialog: {selector}")
-                            share_button = element
-                            break
+                            # Дополнительная проверка текста кнопки: публиковать, а не назад/отмена
+                            btn_text_raw = ""
+                            try:
+                                btn_text_raw = await element.text_content() or ""
+                            except Exception:
+                                btn_text_raw = ""
+                            btn_aria = await element.get_attribute('aria-label') or ""
+                            combined_text = (btn_text_raw + " " + btn_aria).strip().lower()
+                            publish_keywords = [
+                                'share', 'post', 'publish',
+                                'опубликовать', 'публикация',
+                                'compartilhar', 'publicar', 'postar',
+                                'compartir', 'publicación'
+                            ]
+                            negative_keywords = [
+                                'back', 'voltar', 'atrás', 'назад',
+                                'cancel', 'cancelar', 'отмена'
+                            ]
+                            if any(nk in combined_text for nk in negative_keywords):
+                                log_info(f"[ASYNC_UPLOAD] [WARN] Skipping non-publish button (likely back/cancel): '{combined_text[:40]}'")
+                                continue
+                            if combined_text and any(pk in combined_text for pk in publish_keywords):
+                                log_info(f"[ASYNC_UPLOAD] [OK] Found share/publish button in dialog: {selector}")
+                                share_button = element
+                                break
+                            else:
+                                # If no text is present (icon-only), keep as candidate last resort
+                                if not combined_text:
+                                    log_info(f"[ASYNC_UPLOAD] [OK] Found candidate button (no text), keeping as fallback: {selector}")
+                                    if share_button is None:
+                                        share_button = element
+                                    continue
+                                log_info(f"[ASYNC_UPLOAD] [SEARCH] Button text doesn't match publish keywords: '{combined_text[:50]}'")
+                                continue
                         else:
                             log_info(f"[ASYNC_UPLOAD] [WARN] Share button found but not in upload dialog: {selector}")
                             # Продолжаем поиск
                             continue
                     except Exception as context_error:
                         log_info(f"[ASYNC_UPLOAD] [WARN] Error checking button context: {str(context_error)}")
-                        # Если не можем проверить контекст, все равно используем кнопку
-                        log_info(f"[ASYNC_UPLOAD] [OK] Found share button (context check failed): {selector}")
-                        share_button = element
-                        break
+                        # Если не можем проверить контекст, не кликаем вслепую — продолжаем поиск
+                        log_info(f"[ASYNC_UPLOAD] [WARN] Context check failed; continuing search: {selector}")
+                        continue
             except Exception as e:
                 log_info(f"[ASYNC_UPLOAD] Selector {selector} failed: {str(e)}")
                 continue
