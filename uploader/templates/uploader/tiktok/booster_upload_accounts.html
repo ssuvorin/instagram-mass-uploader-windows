@@ -69,6 +69,70 @@ document.getElementById('api-server-select').addEventListener('change', async fu
   document.getElementById('server-url-input').value = base;
   try { await fetch('{% url "api_tiktok_set_active_server" %}', { method: 'POST', headers: {'X-Requested-With':'fetch'}, body: new URLSearchParams({server_url: base}) }); } catch (err) {}
 });
+
+// --- Accounts/Proxies ratio warning (threshold: 2) ---
+(function(){
+  const RATIO_LIMIT = 2;
+  const accountsFileInput = document.getElementById('accounts-file');
+  const form = document.getElementById('upload-accounts-form');
+  const responseBox = document.getElementById('upload-accounts-response');
+
+  function getStoredCounts(){
+    let acc = parseInt(localStorage.getItem('tiktok_booster_accounts_count') || '0', 10);
+    let prx = parseInt(localStorage.getItem('tiktok_booster_proxies_count') || '0', 10);
+    if (Number.isNaN(acc)) acc = 0;
+    if (Number.isNaN(prx)) prx = 0;
+    return { acc, prx };
+  }
+
+  function setAccountsCount(count){
+    localStorage.setItem('tiktok_booster_accounts_count', String(count));
+  }
+
+  function showWarning(message){
+    if (!responseBox) return;
+    responseBox.classList.remove('d-none', 'alert-success');
+    responseBox.classList.add('alert', 'alert-warning');
+    responseBox.textContent = message;
+  }
+
+  async function estimateAccountsCountFromFile(file){
+    if (!file) return 0;
+    try {
+      const text = await file.text();
+      // Count non-empty lines
+      return text.split(/\r?\n/).map(l => l.trim()).filter(Boolean).length;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  async function maybeWarn(){
+    const { acc, prx } = getStoredCounts();
+    if (prx > 0 && acc > prx * RATIO_LIMIT) {
+      showWarning(`Предупреждение: соотношение аккаунтов к прокси (${acc}/${prx}) больше ${RATIO_LIMIT}. Рекомендуется добавить прокси.`);
+    }
+  }
+
+  if (accountsFileInput) {
+    accountsFileInput.addEventListener('change', async function(){
+      const file = accountsFileInput.files && accountsFileInput.files[0];
+      const count = await estimateAccountsCountFromFile(file);
+      setAccountsCount(count);
+      // Re-check warning after new count
+      await maybeWarn();
+    });
+  }
+
+  if (form) {
+    form.addEventListener('submit', function(){
+      // Let backend handle upload; counts are stored for next step
+    });
+  }
+
+  // Initial check (in case proxies were uploaded earlier)
+  maybeWarn();
+})();
 </script>
 {% endblock %}
 
