@@ -39,6 +39,10 @@
         .navbar-nav .nav-link:hover { background-color: rgba(0,0,0,0.04); }
         .navbar-nav .bi { font-size: 0.95rem; }
 
+        /* Remove default gray border from outline buttons in navbar (until hover) */
+        .navbar .btn.btn-outline-primary,
+        .navbar .btn.btn-outline-secondary { border-color: transparent; }
+
         /* Light theme dropdown header */
         .dropdown-header { font-weight:600; font-size:.8rem; color:#6c757d; }
 
@@ -48,8 +52,8 @@
         .dark-theme .dropdown-item:hover { background-color: rgba(255,255,255,0.12); }
         .dark-theme .dropdown-header { color: rgba(255,255,255,0.55); }
         .dark-theme .navbar-nav .nav-link:hover { background-color: rgba(255,255,255,0.08); }
-        .navbar .nav-link.active { background-color: rgba(0,0,0,0.06); }
-        .dark-theme .navbar .nav-link.active { background-color: rgba(255,255,255,0.12); }
+        .navbar .nav-link.active { background-color: transparent; }
+        .dark-theme .navbar .nav-link.active { background-color: transparent; }
 
         @media (max-width: 1199px) {
             .scrollable-navbar { display:flex; flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; white-space:nowrap; padding-bottom:5px; margin-bottom:-5px; scrollbar-width:none; }
@@ -89,6 +93,7 @@
 </head>
 <body>
     <header>
+        {% block navbar %}
         <nav class="navbar navbar-expand-xl">
             <div class="container">
                 <a class="navbar-brand app-logo" href="{% url 'dashboard' %}">
@@ -101,10 +106,14 @@
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto scrollable-navbar">
                         {% if user.is_superuser %}
-                        <li class="nav-item">
-                            <a class="nav-link {% if active_tab == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle {% if active_tab == 'dashboard' or active_tab == 'tiktok_dashboard' %}active{% endif %}" href="#" id="dashDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="bi bi-grid"></i> Dashboard
                             </a>
+                            <ul class="dropdown-menu" aria-labelledby="dashDropdown">
+                                <li><a class="dropdown-item {% if active_tab == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}"><i class="bi bi-instagram me-2"></i>Instagram</a></li>
+                                <li><a class="dropdown-item {% if active_tab == 'tiktok_dashboard' %}active{% endif %}" href="{% url 'tiktok_dashboard' %}"><i class="bi bi-music-note-beamed me-2"></i>TikTok</a></li>
+                            </ul>
                         </li>
                         {% endif %}
 
@@ -176,10 +185,6 @@
                                 <li class="dropdown-header">Warmup</li>
                                 <li><a class="dropdown-item" href="{% url 'warmup_task_list' %}"><i class="bi bi-activity me-2"></i>Warmup Tasks</a></li>
                                 <li><a class="dropdown-item" href="{% url 'warmup_task_create' %}"><i class="bi bi-plus-square me-2"></i>Create Warmup Task</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li class="dropdown-header">TikTok</li>
-                                <li><a class="dropdown-item" href="{% url 'tiktok_dashboard' %}"><i class="bi bi-grid me-2"></i>TikTok Dashboard</a></li>
-                                <li><hr class="dropdown-divider"></li>
                                 <li class="dropdown-header">Instagram</li>
                                 <li><a class="dropdown-item" href="{% url 'hashtag_analyzer' %}"><i class="bi bi-hash me-2"></i>Hashtag Analyzer</a></li>
                             </ul>
@@ -228,6 +233,7 @@
                 </div>
             </div>
         </nav>
+        {% endblock %}
     </header>
 
     <main class="container py-4">

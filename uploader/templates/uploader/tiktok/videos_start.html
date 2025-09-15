@@ -1,7 +1,16 @@
-{% extends 'uploader/base.html' %}
+{% extends 'uploader/tiktok/base.html' %}
 {% load static %}
 
 {% block title %}TikTok Start Upload{% endblock %}
+
+{% block extra_css %}
+<style>
+    .btn-primary { background: linear-gradient(135deg, #ff0050 0%, #ff4081 100%); border: none; }
+    .btn-primary:hover { filter: brightness(1.05); }
+    .btn-outline-secondary:hover { background-color: rgba(0,0,0,0.04); }
+    .progress-bar { background: linear-gradient(90deg, #ff0050, #ff4081); }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="container-fluid">

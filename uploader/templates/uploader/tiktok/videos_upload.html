@@ -1,4 +1,4 @@
-{% extends 'uploader/base.html' %}
+{% extends 'uploader/tiktok/base.html' %}
 {% load static %}
 
 {% block title %}TikTok Video Upload{% endblock %}
@@ -7,7 +7,7 @@
 <style>
     /* Modern TikTok dashboard design matching app style */
     .tiktok-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #ff0050 0%, #ff4081 100%);
         color: white;
         padding: 2rem;
         border-radius: 16px;
@@ -56,7 +56,7 @@
         left: 0;
         right: 0;
         height: 4px;
-        background: linear-gradient(90deg, #667eea, #764ba2);
+        background: linear-gradient(90deg, #ff0050, #ff4081);
         z-index: 1;
     }
     
@@ -81,7 +81,7 @@
     
     .tiktok-card .card-header h5 i {
         margin-right: 0.75rem;
-        color: #667eea;
+        color: #ff0050;
     }
     
     .tiktok-card .card-body {
@@ -107,13 +107,13 @@
     }
     
     .form-control:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        border-color: #ff0050;
+        box-shadow: 0 0 0 0.2rem rgba(255, 0, 80, 0.25);
     }
     
     /* Button styling */
     .btn-tiktok {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #ff0050 0%, #ff4081 100%);
         border: none;
         border-radius: 8px;
         padding: 0.75rem 1.5rem;
@@ -142,12 +142,12 @@
     }
     
     .form-control-lg:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        border-color: #ff0050;
+        box-shadow: 0 0 0 0.2rem rgba(255, 0, 80, 0.25);
     }
     
     .form-control-lg:hover {
-        border-color: #667eea;
+        border-color: #ff0050;
     }
     
     /* Progress bars */
@@ -163,7 +163,7 @@
     }
     
     .progress-bar {
-        background: linear-gradient(90deg, #667eea, #764ba2);
+        background: linear-gradient(90deg, #ff0050, #ff4081);
         transition: width 0.3s ease;
     }
     

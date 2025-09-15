@@ -1,7 +1,15 @@
-{% extends 'uploader/base.html' %}
+{% extends 'uploader/tiktok/base.html' %}
 {% load static %}
 
 {% block title %}TikTok Upload Titles{% endblock %}
+
+{% block extra_css %}
+<style>
+    .btn-success { background: linear-gradient(135deg, #ff0050 0%, #ff4081 100%); border: none; }
+    .btn-success:hover { filter: brightness(1.05); }
+    .form-control:focus { border-color: #ff0050; box-shadow: 0 0 0 0.2rem rgba(255,0,80,0.2); }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="container-fluid">

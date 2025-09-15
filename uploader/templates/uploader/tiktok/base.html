@@ -1,0 +1,160 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ff0050">
+    <title>{% block title %}TikTok Automation{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{% static 'css/apple-style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/dark-theme.css' %}">
+    <link rel="icon" type="image/svg+xml" href="{% static 'css/logo.svg' %}">
+    <style>
+        /* Elevate navbar and dropdowns above banners */
+        .navbar { position: relative; z-index: 1100; }
+        .dropdown-menu { z-index: 1200; border-radius: 10px; box-shadow: 0 10px 24px rgba(0,0,0,0.12); border: 1px solid rgba(0,0,0,0.06); }
+
+        /* Navbar alignment & spacing */
+        .navbar .container { align-items: center; }
+        .navbar-brand { display: flex; align-items: center; font-weight: 700; }
+        .navbar-brand .dot { width:10px; height:10px; border-radius:50%; display:inline-block; margin:0 6px; background:#ff0050; box-shadow:0 0 8px rgba(255,0,80,.6); }
+        .navbar-nav { align-items: center; gap: .5rem; }
+        .navbar-nav .nav-item { display: flex; align-items: center; }
+        .navbar-nav .nav-link, .navbar .btn { display: flex; align-items: center; padding: .5rem .85rem; line-height: 1; border-radius: 8px; }
+        /* Remove default gray border from outline buttons in navbar (until hover) */
+        .navbar .btn.btn-outline-primary,
+        .navbar .btn.btn-outline-secondary { border-color: transparent; }
+        .navbar-nav .nav-link i { margin-right: .45rem; }
+        .navbar .dropdown-toggle::after { margin-left: .35rem; vertical-align: middle; }
+
+        /* Dropdown animation */
+        .dropdown-menu { opacity: 0; transform: translateY(8px) scale(0.98); transition: opacity .18s ease, transform .18s ease; will-change: opacity, transform; }
+        .dropdown-menu.show { opacity: 1; transform: translateY(0) scale(1); }
+
+        /* Dropdown items & icon spacing */
+        .dropdown-item { transition: background-color .12s ease, color .12s ease; border-radius: 6px; display: flex; align-items: center; }
+        .dropdown-item i { margin-right: .5rem; }
+        .dropdown-item:hover { background-color: rgba(0,0,0,0.06); }
+
+        /* Custom nav styles */
+        .navbar-nav .nav-link { transition: color .12s ease, background-color .12s ease; }
+        .navbar-nav .nav-link:hover { background-color: rgba(0,0,0,0.04); }
+        .navbar-nav .bi { font-size: 0.95rem; }
+
+        /* Light theme dropdown header */
+        .dropdown-header { font-weight:600; font-size:.8rem; color:#6c757d; }
+
+        /* Dark theme adjustments */
+        .dark-theme .dropdown-menu { background-color: #1f1f1f; border-color: rgba(255,255,255,0.08); box-shadow: 0 12px 28px rgba(0,0,0,0.4); }
+        .dark-theme .dropdown-item { color: rgba(255,255,255,0.9); }
+        .dark-theme .dropdown-item:hover { background-color: rgba(255,255,255,0.12); }
+        .dark-theme .dropdown-header { color: rgba(255,255,255,0.55); }
+        .dark-theme .navbar-nav .nav-link:hover { background-color: rgba(255,255,255,0.08); }
+        .navbar .nav-link.active { background-color: transparent; }
+        .dark-theme .navbar .nav-link.active { background-color: transparent; }
+
+        @media (max-width: 1199px) {
+            .scrollable-navbar { display:flex; flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; white-space:nowrap; padding-bottom:5px; margin-bottom:-5px; scrollbar-width:none; }
+            .scrollable-navbar::-webkit-scrollbar { display:none; }
+            .scrollable-navbar .nav-item { flex:0 0 auto; }
+        }
+
+        /* Ensure body uses correct background in dark theme immediately */
+        html, body { background-color: var(--apple-bg); }
+        body.dark-theme { background-color: #1c1c1e !important; }
+    </style>
+    {% block extra_css %}{% endblock %}
+    {% block head_extra %}{% endblock %}
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-xl">
+            <div class="container">
+                <a class="navbar-brand" href="{% url 'tiktok_dashboard' %}">
+                    <i class="bi bi-music-note-beamed me-2" style="color:#ff0050"></i>
+                    TikTok Tools
+                    <span class="dot"></span>
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarTikTok">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarTikTok">
+                    <ul class="navbar-nav ms-auto scrollable-navbar">
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle {% if active_tab in 'tiktok_dashboard tiktok' %}active{% endif %}" href="#" id="tiktokDashDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-grid"></i> Dashboard
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="tiktokDashDropdown">
+                                <li><a class="dropdown-item {% if active_tab == 'tiktok_dashboard' %}active{% endif %}" href="{% url 'tiktok_dashboard' %}"><i class="bi bi-music-note-beamed"></i>TikTok</a></li>
+                                <li><a class="dropdown-item" href="{% url 'dashboard' %}"><i class="bi bi-instagram"></i>Instagram</a></li>
+                            </ul>
+                        </li>
+
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle {% if active_tab in 'tiktok_booster' %}active{% endif %}" href="#" id="boosterDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-lightning"></i> Booster
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="boosterDropdown">
+                                <li><a class="dropdown-item" href="{% url 'tiktok_booster' %}"><i class="bi bi-speedometer2"></i>Overview</a></li>
+                                <li><a class="dropdown-item" href="{% url 'tiktok_booster_upload_accounts' %}"><i class="bi bi-person-lines-fill"></i>Upload Accounts</a></li>
+                                <li><a class="dropdown-item" href="{% url 'tiktok_booster_upload_proxies' %}"><i class="bi bi-hdd-network"></i>Upload Proxies</a></li>
+                                <li><a class="dropdown-item" href="{% url 'tiktok_booster_prepare' %}"><i class="bi bi-gear"></i>Prepare</a></li>
+                                <li><a class="dropdown-item" href="{% url 'tiktok_booster_start' %}"><i class="bi bi-play-fill"></i>Start</a></li>
+                            </ul>
+                        </li>
+
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle {% if active_tab in 'tiktok_videos' %}active{% endif %}" href="#" id="videosDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-film"></i> Videos
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="videosDropdown">
+                                <li><a class="dropdown-item" href="{% url 'tiktok_videos' %}"><i class="bi bi-collection"></i>Manager</a></li>
+                                <li><a class="dropdown-item" href="{% url 'tiktok_videos_upload' %}"><i class="bi bi-cloud-upload"></i>Upload</a></li>
+                                <li><a class="dropdown-item" href="{% url 'tiktok_videos_titles' %}"><i class="bi bi-card-text"></i>Titles</a></li>
+                                <li><a class="dropdown-item" href="{% url 'tiktok_videos_prepare' %}"><i class="bi bi-gear"></i>Prepare</a></li>
+                                <li><a class="dropdown-item" href="{% url 'tiktok_videos_start' %}"><i class="bi bi-play-fill"></i>Start</a></li>
+                            </ul>
+                        </li>
+
+                        <li class="nav-item">
+                            {% if user.is_authenticated %}
+                            <a class="nav-link btn btn-sm btn-outline-primary px-3" href="{% url 'logout' %}">
+                                <i class="bi bi-box-arrow-right"></i> Logout
+                            </a>
+                            {% else %}
+                            <a class="nav-link btn btn-sm btn-outline-primary px-3" href="{% url 'login' %}">
+                                <i class="bi bi-box-arrow-in-right"></i> Login
+                            </a>
+                            {% endif %}
+                        </li>
+                        <li class="nav-item">
+                            <button id="theme-switcher" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-moon-stars-fill"></i>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container py-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="py-3 mt-5">
+        <div class="container text-center">
+            <p class="text-muted mb-0">TikTok Tools &copy; {% now "Y" %}</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'js/apple-ui.js' %}"></script>
+    <script src="{% static 'js/theme-switcher.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
+
+
