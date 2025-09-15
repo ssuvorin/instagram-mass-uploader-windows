@@ -290,7 +290,7 @@
         <div class="card-body">
             <form id="prepare-accounts-form">
                 {% csrf_token %}
-                <input type="hidden" name="server_url" value="{{ api_base }}">
+                <input type="hidden" name="server_url" id="server-url-input-step0" value="{{ api_base }}">
                 <div class="row g-3 align-items-end">
                     <div class="col-sm-6 col-md-4">
                         <label for="count" class="form-label">Number of Accounts</label>
@@ -369,6 +369,8 @@ document.getElementById('api-server-select').addEventListener('change', function
     const selectedUrl = e.target.value;
     API_BASE = selectedUrl;
     document.getElementById('server-url-input').value = selectedUrl;
+    const step0Hidden = document.getElementById('server-url-input-step0');
+    if (step0Hidden) step0Hidden.value = selectedUrl;
     const linkElement = document.getElementById('current-server-link');
     linkElement.href = `${API_BASE}/docs`;
     linkElement.lastChild.textContent = API_BASE;
