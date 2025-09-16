@@ -784,20 +784,9 @@ async def add_video_caption_async(page, caption_text, account=None):
 
         # For contenteditable fields we ENFORCE strict char-by-char (avoid any paste/fill)
         if is_contenteditable == 'true':
-            log_info("[ASYNC_UPLOAD] [CONTENTEDITABLE] Enforcing strict char-by-char typing")
-            # Platform-aware select all
-            try:
-                is_mac = await page.evaluate("navigator.platform.toLowerCase().includes('mac')")
-            except Exception:
-                is_mac = False
-            combo = 'Meta+a' if is_mac else 'Control+a'
-            await page.keyboard.press(combo)
-            await asyncio.sleep(random.uniform(0.2, 0.4))
-            await page.keyboard.press('Backspace')
-            await asyncio.sleep(random.uniform(0.3, 0.6))
-            for char in caption_text:
-                await page.keyboard.type(char)
-                await asyncio.sleep(random.uniform(0.02, 0.08))
+            log_info("[ASYNC_UPLOAD] [CONTENTEDITABLE] Humanized typing mode")
+            from .human import _type_human_contenteditable
+            await _type_human_contenteditable(page, caption_field, caption_text)
         else:
             # Non-contenteditable inputs: prefer advanced behavior, else our human typing
             if human_behavior:

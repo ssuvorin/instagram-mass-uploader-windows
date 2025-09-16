@@ -986,7 +986,7 @@ async def click_share_button_async(page, account=None):
         # Prefer text-based selectors for PT/RU/EN/ES
         publish_text_variants = [
             "Compartilhar", "Publicar", "Postar",  # PT
-            "Опубликовать", "Публикация",           # RU
+            "Опубликовать", "Публикация", "Поделиться",  # RU
             "Share", "Post", "Publish",            # EN
             "Compartir", "Publicación"              # ES
         ]
@@ -997,8 +997,8 @@ async def click_share_button_async(page, account=None):
         
         # XPath fallbacks inside dialog container
         share_selectors.extend([
-            '//div[@role="dialog"]//div[@role="button" and (contains(., "Compartilhar") or contains(., "Publicar") or contains(., "Postar") or contains(., "Share") or contains(., "Publish") or contains(., "Опубликовать") or contains(., "Публикация") or contains(., "Compartir") or contains(., "Publicación"))]',
-            '//div[@role="dialog"]//button[(contains(., "Compartilhar") or contains(., "Publicar") or contains(., "Postar") or contains(., "Share") or contains(., "Publish") or contains(., "Опубликовать") or contains(., "Публикация") or contains(., "Compartir") or contains(., "Publicación"))]',
+            '//div[@role="dialog"]//div[@role="button" and (contains(., "Compartilhar") or contains(., "Publicar") or contains(., "Postar") or contains(., "Share") or contains(., "Publish") or contains(., "Опубликовать") or contains(., "Публикация") or contains(., "Поделиться") or contains(., "Compartir") or contains(., "Publicación"))]',
+            '//div[@role="dialog"]//button[(contains(., "Compartilhar") or contains(., "Publicar") or contains(., "Postar") or contains(., "Share") or contains(., "Publish") or contains(., "Опубликовать") or contains(., "Публикация") or contains(., "Поделиться") or contains(., "Compartir") or contains(., "Publicación"))]',
         ])
 
         # Remove unstable container '_ap97' from any residual selectors (safety)
@@ -1007,8 +1007,8 @@ async def click_share_button_async(page, account=None):
 
         # Dynamic context-aware XPath (no fixed container): verify ancestor has heading like "Novo reel" etc.
         share_selectors.extend([
-            '//*[self::div[@role="button"] or self::button][(contains(normalize-space(.), "Compartilhar") or contains(normalize-space(.), "Publicar") or contains(normalize-space(.), "Postar") or contains(normalize-space(.), "Share") or contains(normalize-space(.), "Publish") or contains(normalize-space(.), "Опубликовать") or contains(normalize-space(.), "Публикация") or contains(normalize-space(.), "Compartir") or contains(normalize-space(.), "Publicación")) and ancestor::*[.//div[@role="heading" or self::h1][contains(., "Novo reel") or contains(., "New reel") or contains(., "Новый") or contains(., "Nuevo reel")]]]',
-            '//*[self::div[@role="button"] or self::button][(contains(normalize-space(.), "Compartilhar") or contains(normalize-space(.), "Publicar") or contains(normalize-space(.), "Postar") or contains(normalize-space(.), "Share") or contains(normalize-space(.), "Publish") or contains(normalize-space(.), "Опубликовать") or contains(normalize-space(.), "Публикация") or contains(normalize-space(.), "Compartir") or contains(normalize-space(.), "Publicación")) and ancestor::*[contains(., "Novo reel") or contains(., "New reel") or contains(., "Reel novo") or contains(., "Рилс") or contains(., "Nuevo reel")]]'
+            '//*[self::div[@role="button"] or self::button][(contains(normalize-space(.), "Compartilhar") or contains(normalize-space(.), "Publicar") or contains(normalize-space(.), "Postar") or contains(normalize-space(.), "Share") or contains(normalize-space(.), "Publish") or contains(normalize-space(.), "Опубликовать") or contains(normalize-space(.), "Публикация") or contains(normalize-space(.), "Поделиться") or contains(normalize-space(.), "Compartir") or contains(normalize-space(.), "Publicación")) and ancestor::*[.//div[@role="heading" or self::h1][contains(., "Novo reel") or contains(., "New reel") or contains(., "Новый") or contains(., "Nuevo reel")]]]',
+            '//*[self::div[@role="button"] or self::button][(contains(normalize-space(.), "Compartilhar") or contains(normalize-space(.), "Publicar") or contains(normalize-space(.), "Postar") or contains(normalize-space(.), "Share") or contains(normalize-space(.), "Publish") or contains(normalize-space(.), "Опубликовать") or contains(normalize-space(.), "Публикация") or contains(normalize-space(.), "Поделиться") or contains(normalize-space(.), "Compartir") or contains(normalize-space(.), "Publicación")) and ancestor::*[contains(., "Novo reel") or contains(., "New reel") or contains(., "Reel novo") or contains(., "Рилс") or contains(., "Nuevo reel")]]'
         ])
         
         share_button = None
@@ -1035,13 +1035,13 @@ async def click_share_button_async(page, account=None):
                             combined_text = (btn_text_raw + " " + btn_aria).strip().lower()
                             publish_keywords = [
                                 'share', 'post', 'publish',
-                                'опубликовать', 'публикация',
+                                'опубликовать', 'публикация', 'поделиться',
                                 'compartilhar', 'publicar', 'postar',
                                 'compartir', 'publicación'
                             ]
                             negative_keywords = [
                                 'back', 'voltar', 'atrás', 'назад',
-                                'cancel', 'cancelar', 'отмена'
+                                'cancel', 'cancelar', 'отмена', 'закрыть', 'close'
                             ]
                             if any(nk in combined_text for nk in negative_keywords):
                                 log_info(f"[ASYNC_UPLOAD] [WARN] Skipping non-publish button (likely back/cancel): '{combined_text[:40]}'")
@@ -1107,7 +1107,6 @@ async def click_share_button_async(page, account=None):
             return True
         else:
             log_info("[ASYNC_UPLOAD] [FAIL] Share button not found")
-            
             # КРИТИЧЕСКОЕ ДОБАВЛЕНИЕ: Расширенная отладка
             try:
                 # Показываем все кнопки на странице

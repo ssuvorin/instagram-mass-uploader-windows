@@ -387,6 +387,83 @@ async def _simple_type_char_by_char(page, element, text):
             pass
 
 
+async def _type_human_contenteditable(page, element, text):
+    """
+    Humanized typing for contenteditable fields with realistic behavior:
+    - Platform-aware clear
+    - Variable speed per character
+    - Occasional short thinking pauses after punctuation and long words
+    - Rare, small typos with immediate correction
+    - Slight slowdown on emojis, hashtags, mentions
+    - Respect newlines in text (\n -> Enter)
+    """
+    try:
+        await element.click()
+        # Clear existing content
+        try:
+            is_mac = await page.evaluate("navigator.platform.toLowerCase().includes('mac')")
+        except Exception:
+            is_mac = False
+        combo = 'Meta+a' if is_mac else 'Control+a'
+        await page.keyboard.press(combo)
+        await asyncio.sleep(random.uniform(0.08, 0.16))
+        await page.keyboard.press('Backspace')
+        await asyncio.sleep(random.uniform(0.12, 0.22))
+
+        # Session parameters
+        base_cps = random.uniform(8.0, 14.0)  # characters per second baseline
+        error_rate = random.uniform(0.01, 0.03)  # 1-3%
+        last_pause_idx = -10
+
+        i = 0
+        while i < len(text):
+            ch = text[i]
+
+            # Convert explicit newline to Enter
+            if ch == '\n':
+                await element.press('Enter')
+                await asyncio.sleep(random.uniform(0.08, 0.16))
+                i += 1
+                continue
+
+            # Type character
+            await page.keyboard.type(ch)
+
+            # Character-specific speed adjustments
+            speed_multiplier = 1.0
+            if ch in '.!?':
+                speed_multiplier *= random.uniform(1.6, 2.4)
+            elif ch in ',;:':
+                speed_multiplier *= random.uniform(1.2, 1.8)
+            elif ch in '#@':
+                speed_multiplier *= random.uniform(1.1, 1.5)
+            elif ord(ch) > 0x1F000:  # emojis range rough check
+                speed_multiplier *= random.uniform(1.2, 1.8)
+
+            delay = (1.0 / base_cps) * speed_multiplier
+            delay = max(0.02, delay + random.uniform(-0.01, 0.03))
+            await asyncio.sleep(delay)
+
+            # Occasional thinking pause after word/punctuation
+            if i - last_pause_idx > random.randint(10, 25):
+                if ch in ' .,!?;:' or (i > 0 and text[i-1] in '.,!?;:'):
+                    await asyncio.sleep(random.uniform(0.15, 0.4))
+                    last_pause_idx = i
+
+            # Rare small typo with immediate correction (skip on spaces/newlines)
+            if ch not in [' ', '\n'] and random.random() < error_rate:
+                await page.keyboard.type(random.choice(['q','w','e','r','t','y','u','i','o','p']))
+                await asyncio.sleep(random.uniform(0.05, 0.12))
+                await page.keyboard.press('Backspace')
+                await asyncio.sleep(random.uniform(0.04, 0.10))
+
+            i += 1
+
+    except Exception:
+        # Fallback to simple char-by-char
+        await _simple_type_char_by_char(page, element, text)
+
+
 async def _enhanced_human_typing(page, element, text):
     """
     Enhanced human typing with improved error and correction patterns
