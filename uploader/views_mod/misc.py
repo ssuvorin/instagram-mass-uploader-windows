@@ -1796,19 +1796,16 @@ def tiktok_booster_proxy_upload_accounts(request):
         # Read file content once for validation and forwarding
         content_bytes = file.read()
 
-        # --- Local validation and normalization of accounts format ---
-        def _validate_lines(payload: bytes) -> tuple[bool, list[str], bytes]:
+        # --- Local validation of accounts format ---
+        def _validate_lines(payload: bytes) -> tuple[bool, list[str]]:
             errors: list[str] = []
             try:
                 text = payload.decode('utf-8', errors='replace')
             except Exception:
-                return False, ['Unable to decode file as UTF-8'], payload
-            raw_lines = text.splitlines()
-            lines = [l.strip() for l in raw_lines]
-            normalized_lines: list[str] = []
+                return False, ['Unable to decode file as UTF-8']
+            lines = [l.strip() for l in text.splitlines()]
             for idx, line in enumerate(lines, start=1):
                 if not line:
-                    normalized_lines.append('')
                     continue
                 # Try format B: username:password:email:same_password:[json_cookies_array]
                 ok = False
@@ -1820,60 +1817,17 @@ def tiktok_booster_proxy_upload_accounts(request):
                             errors.append(f'Line {idx}: username/password/email must be non-empty')
                         else:
                             json_str = json_part.strip()
+                            # Relaxed check: only ensure it looks like a JSON array; do not parse/validate contents here
                             if not (json_str.startswith('[') and json_str.endswith(']')):
-                                errors.append(f'Line {idx}: cookies must be JSON array like [{{...}}]')
+                                errors.append(f'Line {idx}: cookies must be a bracketed array like [{{...}}]')
                             else:
-                                # Be tolerant: if bracketed, consider valid; attempt to parse only for sanity
-                                try:
-                                    arr = _json.loads(json_str)
-                                    if isinstance(arr, list):
-                                        # Normalize cookies
-                                        normalized = []
-                                        for c in arr:
-                                            if not isinstance(c, dict):
-                                                continue
-                                            name = c.get('name')
-                                            value = c.get('value')
-                                            if not name or value is None:
-                                                continue
-                                            domain = c.get('domain') or '.tiktok.com'
-                                            path = c.get('path') or '/'
-                                            http_only = bool(c.get('httpOnly', False))
-                                            secure = bool(c.get('secure', True))
-                                            session = bool(c.get('session', True))
-                                            same_site = (c.get('sameSite') or '').lower()
-                                            if same_site in ('', 'unspecified'):
-                                                same_site = 'no_restriction'
-                                            elif same_site not in ('no_restriction', 'lax', 'strict'):
-                                                same_site = 'no_restriction'
-                                            normalized.append({
-                                                'domain': str(domain),
-                                                'name': str(name),
-                                                'value': str(value),
-                                                'path': str(path),
-                                                'httpOnly': http_only,
-                                                'secure': secure,
-                                                'session': session,
-                                                'sameSite': same_site,
-                                            })
-                                        json_norm = _json.dumps(normalized, ensure_ascii=False)
-                                        normalized_lines.append(f"{username}:{password}:{email}:{fourth_field}:{json_norm}")
-                                        ok = True
-                                    else:
-                                        # Not a list but bracketed -> keep as is
-                                        normalized_lines.append(line)
-                                        ok = True
-                                except Exception:
-                                    # Accept bracketed content; keep original
-                                    normalized_lines.append(line)
-                                    ok = True
+                                ok = True
                 if not ok:
                     # Try format A: username:password:email_username:email_password
                     parts4 = line.split(':', 3)
                     if len(parts4) == 4:
                         u, p, eu, ep = parts4
                         if u and p and eu and ep:
-                            normalized_lines.append(line)
                             ok = True
                         else:
                             errors.append(f'Line {idx}: fields must be non-empty')
@@ -1881,14 +1835,13 @@ def tiktok_booster_proxy_upload_accounts(request):
                         errors.append(
                             f'Line {idx}: unsupported format. Expected either "username:password:email_username:email_password" '
                             f'or "username:password:email:same_password:[json_cookies_array]"')
-            normalized_text = "\n".join(normalized_lines)
-            return (len(errors) == 0), errors, normalized_text.encode('utf-8')
+            return (len(errors) == 0), errors
 
-        is_valid, validation_errors, normalized_bytes = _validate_lines(content_bytes)
+        is_valid, validation_errors = _validate_lines(content_bytes)
         if not is_valid:
             return _json_response({'ok': False, 'detail': 'Validation failed', 'errors': validation_errors}, status=400)
 
-        files = {'file': (file.name, normalized_bytes)}
+        files = {'file': (file.name, content_bytes)}
         resp = requests.post(f"{api_base}/booster/upload_accounts", files=files, timeout=30)
         try:
             data = resp.json()
