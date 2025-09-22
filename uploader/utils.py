@@ -70,8 +70,10 @@ def validate_proxy(host, port, username=None, password=None, timeout=10, proxy_t
                     try:
                         ip_data = response.json()
                         proxy_ip = ip_data.get('origin', '').split(',')[0].strip()
-                        if proxy_ip and proxy_ip != host:
+                        if proxy_ip:
                             logger.info(f"Proxy {host}:{port} working, external IP: {proxy_ip}")
+                            # Store external IP in geo_info for saving to database
+                            geo_info['external_ip'] = proxy_ip
                     except Exception:
                         pass
                 break
@@ -93,7 +95,8 @@ def validate_proxy(host, port, username=None, password=None, timeout=10, proxy_t
     try:
         ip_info = get_proxy_location(host, username)
         if ip_info:
-            geo_info = ip_info
+            # Merge location info with existing geo_info (preserve external_ip)
+            geo_info.update(ip_info)
             return True, f"Proxy is working correctly ({geo_info.get('country', 'Unknown')})", geo_info
     except Exception as e:
         logger.error(f"Error getting proxy location: {str(e)}")

@@ -97,7 +97,11 @@
                         <div class="mb-3">
                             <label class="form-label">Accounts .txt</label>
                             <input type="file" class="form-control" id="accounts-file" name="file" accept=".txt" required>
-                            <div class="form-text">Format: username:password:email_username:email_password (one per line)</div>
+                            <div class="form-text">
+                                Formats (one per line):
+                                <br>1) <code>username:password:email_username:email_password</code>
+                                <br>2) <code>username:password:email:same_password:[json_cookies_array]</code>
+                            </div>
                         </div>
                         <input type="hidden" name="server_url" id="server-url-input" value="{{ api_base }}">
                         <button type="submit" class="btn tiktok-btn-modern"><i class="bi bi-upload"></i> Upload</button>

@@ -69,12 +69,14 @@ def create_proxy(request):
             proxy.status = 'active' if is_valid else 'inactive'
             proxy.is_active = is_valid
             
-            # Update country and city information if available
+            # Update country, city, and external IP information if available
             if geo_info:
                 if geo_info.get('country'):
                     proxy.country = geo_info.get('country')
                 if geo_info.get('city'):
                     proxy.city = geo_info.get('city')
+                if geo_info.get('external_ip'):
+                    proxy.external_ip = geo_info.get('external_ip')
             
             # Set verification timestamps
             proxy.last_verified = timezone.now()
@@ -139,12 +141,14 @@ def edit_proxy(request, proxy_id):
                 updated_proxy.last_verified = timezone.now()
                 updated_proxy.last_checked = timezone.now()
                 
-                # Update country and city information if available
+                # Update country, city, and external IP information if available
                 if geo_info:
                     if geo_info.get('country'):
                         updated_proxy.country = geo_info.get('country')
                     if geo_info.get('city'):
                         updated_proxy.city = geo_info.get('city')
+                    if geo_info.get('external_ip'):
+                        updated_proxy.external_ip = geo_info.get('external_ip')
             
             # Save the valid proxy
             updated_proxy.save()
@@ -187,12 +191,14 @@ def test_proxy(request, proxy_id):
         proxy.status = 'inactive'
         proxy.is_active = False
     
-    # Update country and city information if available
+    # Update country, city, and external IP information if available
     if geo_info and is_valid:
         if geo_info.get('country'):
             proxy.country = geo_info.get('country')
         if geo_info.get('city'):
             proxy.city = geo_info.get('city')
+        if geo_info.get('external_ip'):
+            proxy.external_ip = geo_info.get('external_ip')
     
     proxy.save()
     
@@ -223,8 +229,22 @@ def import_proxies(request):
                 continue  # Skip empty lines
             
             try:
-                # Parse line in format host:port:username:password
-                parts = line.strip().split(':')
+                # Parse line in format host:port:username:password[url] or host:port:username:password
+                line_stripped = line.strip()
+                ip_change_url = None
+                
+                # Check if line contains IP change URL in brackets
+                if '[' in line_stripped and ']' in line_stripped:
+                    # Extract URL from brackets
+                    url_start = line_stripped.find('[')
+                    url_end = line_stripped.find(']')
+                    if url_start != -1 and url_end != -1 and url_end > url_start:
+                        ip_change_url = line_stripped[url_start+1:url_end]
+                        # Remove URL part from line for parsing
+                        line_stripped = line_stripped[:url_start].strip()
+                
+                # Parse remaining line in format host:port:username:password
+                parts = line_stripped.split(':')
                 
                 if len(parts) < 2:
                     messages.warning(request, f'Line {line_num}: Invalid format. Expected at least host:port')
@@ -232,6 +252,10 @@ def import_proxies(request):
                     continue
                 
                 host = parts[0]
+                # Remove subnet mask if present (e.g., 192.168.1.1/32 -> 192.168.1.1)
+                if '/' in host:
+                    host = host.split('/')[0]
+                
                 port = parts[1]
                 username = parts[2] if len(parts) > 2 else None
                 password = parts[3] if len(parts) > 3 else None
@@ -267,12 +291,18 @@ def import_proxies(request):
                     identical_proxy.last_verified = timezone.now()
                     identical_proxy.last_checked = timezone.now()
                     
-                    # Update country and city information if available
+                    # Update IP change URL if provided
+                    if ip_change_url:
+                        identical_proxy.ip_change_url = ip_change_url
+                    
+                    # Update country, city, and external IP information if available
                     if geo_info:
                         if geo_info.get('country'):
                             identical_proxy.country = geo_info.get('country')
                         if geo_info.get('city'):
                             identical_proxy.city = geo_info.get('city')
+                        if geo_info.get('external_ip'):
+                            identical_proxy.external_ip = geo_info.get('external_ip')
                     
                     identical_proxy.save()
                     updated_count += 1
@@ -286,15 +316,18 @@ def import_proxies(request):
                         status='active' if is_valid else 'inactive',
                         is_active=is_valid,
                         last_verified=timezone.now(),
-                        last_checked=timezone.now()
+                        last_checked=timezone.now(),
+                        ip_change_url=ip_change_url
                     )
                     
-                    # Add country and city information if available
+                    # Add country, city, and external IP information if available
                     if geo_info:
                         if geo_info.get('country'):
                             new_proxy.country = geo_info.get('country')
                         if geo_info.get('city'):
                             new_proxy.city = geo_info.get('city')
+                        if geo_info.get('external_ip'):
+                            new_proxy.external_ip = geo_info.get('external_ip')
                     
                     new_proxy.save()
                     created_count += 1
@@ -403,12 +436,14 @@ def _validate_proxies_background(proxies, user_id):
         proxy.status = 'active' if is_valid else 'inactive'
         proxy.is_active = is_valid
         
-        # Update country and city information if available
+        # Update country, city, and external IP information if available
         if geo_info and is_valid:
             if geo_info.get('country'):
                 proxy.country = geo_info.get('country')
             if geo_info.get('city'):
                 proxy.city = geo_info.get('city')
+            if geo_info.get('external_ip'):
+                proxy.external_ip = geo_info.get('external_ip')
         
         proxy.save()
         
@@ -438,6 +473,51 @@ def _validate_proxies_background(proxies, user_id):
                 conn.close()
     except Exception:
         pass
+
+
+def change_proxy_ip(request, proxy_id):
+    """Change proxy IP address via API request"""
+    proxy = get_object_or_404(Proxy, id=proxy_id)
+    
+    if not proxy.ip_change_url:
+        messages.error(request, f'Proxy {proxy.host}:{proxy.port} does not have an IP change URL configured.')
+        return redirect('proxy_list')
+    
+    try:
+        import requests
+        
+        # Make request to change IP
+        response = requests.get(proxy.ip_change_url, timeout=30)
+        
+        if response.status_code == 200:
+            messages.success(request, f'IP change request sent for proxy {proxy.host}:{proxy.port}. Please wait a few moments for the change to take effect.')
+            
+            # Optionally re-validate the proxy after IP change
+            # You can uncomment the following lines if you want to automatically re-validate
+            # is_valid, message, geo_info = validate_proxy(
+            #     host=proxy.host,
+            #     port=proxy.port,
+            #     username=proxy.username,
+            #     password=proxy.password,
+            #     timeout=15,
+            #     proxy_type=proxy.proxy_type
+            # )
+            # if geo_info and geo_info.get('external_ip'):
+            #     proxy.external_ip = geo_info.get('external_ip')
+            #     proxy.last_verified = timezone.now()
+            #     proxy.save()
+        else:
+            messages.error(request, f'Failed to change IP for proxy {proxy.host}:{proxy.port}. Server returned status {response.status_code}.')
+            
+    except requests.exceptions.Timeout:
+        messages.error(request, f'Timeout while changing IP for proxy {proxy.host}:{proxy.port}. The request may have been sent, but no response was received.')
+    except requests.exceptions.RequestException as e:
+        messages.error(request, f'Error changing IP for proxy {proxy.host}:{proxy.port}: {str(e)}')
+    except Exception as e:
+        logger.error(f"Unexpected error changing IP for proxy {proxy_id}: {str(e)}")
+        messages.error(request, f'Unexpected error while changing IP: {str(e)}')
+    
+    return redirect('proxy_list')
 
 
 def delete_proxy(request, proxy_id):

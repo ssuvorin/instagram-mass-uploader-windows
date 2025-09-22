@@ -29227,3 +29227,153 @@ navigating to "https://habr.com/", waiting until "domcontentloaded"
 2025-09-15 15:37:27,508 - bot.src.instagram_uploader.dolphin_anty - INFO - [STOP] Stopping Dolphin profile: 663094156
 2025-09-15 15:37:37,513 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Network error stopping profile 663094156: HTTPConnectionPool(host='localhost', port=3001): Read timed out. (read timeout=10)
 2025-09-15 15:37:37,513 - bot.src.instagram_uploader.dolphin_anty - ERROR - [ERROR] Network error stopping profile 663094156: HTTPConnectionPool(host='localhost', port=3001): Read timed out. (read timeout=10)
+2025-09-21 10:43:19,433 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-21 10:43:19,435 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-21 10:43:19,435 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-21 10:43:25,680 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-21 10:43:25,680 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-21 10:43:25,681 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-21 10:43:30,863 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-21 10:43:30,864 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-21 10:43:30,865 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-21 10:43:34,699 - instagrapi - INFO - https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/
+2025-09-21 10:43:37,510 - private_request - INFO - None [403] GET https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-21 10:43:46,639 - public_request - DEBUG - public_request 201: https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-21 10:43:46,639 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-21 10:43:46,640 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/mellstroy/?__a=1&__d=dis) >>> 
+2025-09-21 10:43:52,188 - public_request - DEBUG - public_request 201: https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-21 10:43:52,188 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-21 10:43:52,188 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/mellstroy/?__a=1&__d=dis) >>> 
+2025-09-21 10:43:58,958 - public_request - DEBUG - public_request 201: https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-21 10:43:58,958 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-21 10:43:58,959 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/mellstroy/?__a=1&__d=dis) >>> 
+2025-09-21 10:44:02,366 - instagrapi - INFO - https://i.instagram.com/api/v1/users/mellstroy/usernameinfo/
+2025-09-21 10:44:03,761 - private_request - INFO - pavelmartynov857 [403] GET https://i.instagram.com/api/v1/users/mellstroy/usernameinfo/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-21 10:44:47,618 - public_request - DEBUG - public_request 201: https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-21 10:44:47,618 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-21 10:44:47,619 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/mellstroy/?__a=1&__d=dis) >>> 
+2025-09-21 10:44:54,161 - public_request - DEBUG - public_request 201: https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-21 10:44:54,161 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-21 10:44:54,161 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/mellstroy/?__a=1&__d=dis) >>> 
+2025-09-21 10:45:01,339 - public_request - DEBUG - public_request 201: https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-21 10:45:01,340 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-21 10:45:01,340 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/mellstroy/?__a=1&__d=dis) >>> 
+2025-09-21 10:45:03,982 - instagrapi - INFO - https://i.instagram.com/api/v1/users/mellstroy/usernameinfo/
+2025-09-21 10:45:04,693 - private_request - INFO - pavelmartynov857 [403] GET https://i.instagram.com/api/v1/users/mellstroy/usernameinfo/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-21 11:00:55,728 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-21 11:00:55,730 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-21 11:00:55,731 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-21 11:01:01,680 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-21 11:01:01,680 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-21 11:01:01,681 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-21 11:01:07,618 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-21 11:01:07,618 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-21 11:01:07,618 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-21 11:01:10,351 - instagrapi - INFO - https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/
+2025-09-21 11:01:12,216 - private_request - INFO - None [403] GET https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-21 11:07:34,313 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-21 11:07:34,314 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-21 11:07:34,314 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-21 11:07:40,743 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-21 11:07:40,743 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-21 11:07:40,743 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-21 11:07:45,752 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-21 11:07:45,753 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-21 11:07:45,753 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-21 11:07:48,209 - instagrapi - INFO - https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/
+2025-09-21 11:07:50,098 - private_request - INFO - None [403] GET https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-22 15:35:13,063 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 15:35:13,065 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 15:35:13,065 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-22 15:35:19,258 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 15:35:19,258 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 15:35:19,259 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-22 15:35:25,730 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 15:35:25,731 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 15:35:25,731 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-22 15:35:28,407 - instagrapi - INFO - https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/
+2025-09-22 15:35:30,524 - private_request - INFO - None [403] GET https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-22 15:43:49,482 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 15:43:49,483 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 15:43:49,483 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-22 15:43:55,658 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 15:43:55,658 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 15:43:55,658 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-22 15:44:01,517 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 15:44:01,517 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 15:44:01,518 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-22 15:44:04,885 - instagrapi - INFO - https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/
+2025-09-22 15:44:07,198 - instagrapi - DEBUG - private_request 403: https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/ ({"message":"login_required","error_title":"You've Been Logged Out","error_body":"Please log back in.","logout_reason":8,"status":"fail"})
+2025-09-22 15:44:07,199 - private_request - INFO - None [403] GET https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-22 15:50:10,083 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 15:50:10,085 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 15:50:10,086 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-22 15:50:16,434 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 15:50:16,444 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 15:50:16,444 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-22 15:50:21,655 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 15:50:21,655 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 15:50:21,656 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-22 15:50:24,269 - instagrapi - INFO - https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/
+2025-09-22 15:50:26,349 - instagrapi - DEBUG - private_request 403: https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/ ({"message":"login_required","error_title":"You've Been Logged Out","error_body":"Please log back in.","logout_reason":8,"status":"fail"})
+2025-09-22 15:50:26,349 - private_request - INFO - None [403] GET https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-22 16:48:01,617 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 16:48:01,618 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 16:48:01,618 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-22 16:48:08,589 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 16:48:08,589 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 16:48:08,590 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-22 16:48:14,258 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 16:48:14,259 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 16:48:14,259 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-22 16:48:17,067 - instagrapi - INFO - https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/
+2025-09-22 16:48:19,042 - instagrapi - DEBUG - private_request 403: https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/ ({"message":"login_required","error_title":"You've Been Logged Out","error_body":"Please log back in.","logout_reason":8,"status":"fail"})
+2025-09-22 16:48:19,043 - private_request - INFO - None [403] GET https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-22 16:52:50,228 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 16:52:50,229 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 16:52:50,229 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-22 16:52:55,880 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 16:52:55,881 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 16:52:55,881 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-22 16:53:01,445 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 16:53:01,445 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 16:53:01,445 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-22 16:53:05,307 - instagrapi - INFO - https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/
+2025-09-22 16:53:07,752 - instagrapi - DEBUG - private_request 403: https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/ ({"message":"login_required","error_title":"You've Been Logged Out","error_body":"Please log back in.","logout_reason":8,"status":"fail"})
+2025-09-22 16:53:07,752 - private_request - INFO - None [403] GET https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-22 16:58:31,853 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 16:58:31,854 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 16:58:31,855 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-22 16:58:38,249 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 16:58:38,249 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 16:58:38,250 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-22 16:58:44,741 - public_request - DEBUG - public_request 201: https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 16:58:44,742 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis
+2025-09-22 16:58:44,742 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/pavelmartynov857/?__a=1&__d=dis) >>> 
+2025-09-22 16:58:47,497 - instagrapi - INFO - https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/
+2025-09-22 16:58:49,508 - instagrapi - DEBUG - private_request 403: https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/ ({"message":"login_required","error_title":"You've Been Logged Out","error_body":"Please log back in.","logout_reason":8,"status":"fail"})
+2025-09-22 16:58:49,508 - private_request - INFO - None [403] GET https://i.instagram.com/api/v1/users/pavelmartynov857/usernameinfo/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-22 16:59:03,607 - public_request - DEBUG - public_request 201: https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-22 16:59:03,607 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-22 16:59:03,608 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/mellstroy/?__a=1&__d=dis) >>> 
+2025-09-22 16:59:10,152 - public_request - DEBUG - public_request 201: https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-22 16:59:10,153 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-22 16:59:10,154 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/mellstroy/?__a=1&__d=dis) >>> 
+2025-09-22 16:59:15,497 - public_request - DEBUG - public_request 201: https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-22 16:59:15,498 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-22 16:59:15,499 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/mellstroy/?__a=1&__d=dis) >>> 
+2025-09-22 16:59:19,000 - instagrapi - INFO - https://i.instagram.com/api/v1/users/mellstroy/usernameinfo/
+2025-09-22 16:59:19,959 - instagrapi - DEBUG - private_request 403: https://i.instagram.com/api/v1/users/mellstroy/usernameinfo/ ({"message":"login_required","error_title":"You've Been Logged Out","error_body":"Please log back in.","logout_reason":8,"status":"fail"})
+2025-09-22 16:59:19,961 - private_request - INFO - pavelmartynov857 [403] GET https://i.instagram.com/api/v1/users/mellstroy/usernameinfo/ (269.0.0.18.75, samsung SM-G973F)
+2025-09-22 17:00:05,174 - public_request - DEBUG - public_request 201: https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-22 17:00:05,176 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-22 17:00:05,176 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/mellstroy/?__a=1&__d=dis) >>> 
+2025-09-22 17:00:11,368 - public_request - DEBUG - public_request 201: https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-22 17:00:11,368 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-22 17:00:11,368 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/mellstroy/?__a=1&__d=dis) >>> 
+2025-09-22 17:00:17,893 - public_request - DEBUG - public_request 201: https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-22 17:00:17,894 - public_request - INFO - [http://dak7BY:Dyt4AG5BYmNu@185.234.59.17:15626] [201] GET https://www.instagram.com/mellstroy/?__a=1&__d=dis
+2025-09-22 17:00:17,894 - public_request - ERROR - Status 201: JSONDecodeError in public_request (url=https://www.instagram.com/mellstroy/?__a=1&__d=dis) >>> 
+2025-09-22 17:00:21,839 - instagrapi - INFO - https://i.instagram.com/api/v1/users/mellstroy/usernameinfo/
+2025-09-22 17:00:22,804 - instagrapi - DEBUG - private_request 403: https://i.instagram.com/api/v1/users/mellstroy/usernameinfo/ ({"message":"login_required","error_title":"You've Been Logged Out","error_body":"Please log back in.","logout_reason":8,"status":"fail"})
+2025-09-22 17:00:22,805 - private_request - INFO - pavelmartynov857 [403] GET https://i.instagram.com/api/v1/users/mellstroy/usernameinfo/ (269.0.0.18.75, samsung SM-G973F)

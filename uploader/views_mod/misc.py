@@ -1785,6 +1785,7 @@ def _json_response(data: dict, status: int = 200):
 def tiktok_booster_proxy_upload_accounts(request):
     """Proxy: upload accounts file to external TikTok API from server side."""
     import requests
+    import json as _json
     if request.method != 'POST':
         return _json_response({'detail': 'Method not allowed'}, status=405)
     api_base = _get_tiktok_api_base(request)
@@ -1792,7 +1793,60 @@ def tiktok_booster_proxy_upload_accounts(request):
         file = request.FILES.get('file')
         if not file:
             return _json_response({'detail': 'No file provided'}, status=400)
-        files = {'file': (file.name, file.read())}
+        # Read file content once for validation and forwarding
+        content_bytes = file.read()
+
+        # --- Local validation of accounts format ---
+        def _validate_lines(payload: bytes) -> tuple[bool, list[str]]:
+            errors: list[str] = []
+            try:
+                text = payload.decode('utf-8', errors='replace')
+            except Exception:
+                return False, ['Unable to decode file as UTF-8']
+            lines = [l.strip() for l in text.splitlines()]
+            for idx, line in enumerate(lines, start=1):
+                if not line:
+                    continue
+                # Try format B: username:password:email:same_password:[json_cookies_array]
+                ok = False
+                parts5 = line.split(':', 4)
+                if len(parts5) == 5 and parts5[3].strip().lower() == 'same_password':
+                    username, password, email, _flag, json_part = parts5
+                    if not username or not password or not email:
+                        errors.append(f'Line {idx}: username/password/email must be non-empty')
+                    else:
+                        json_str = json_part.strip()
+                        if not (json_str.startswith('[') and json_str.endswith(']')):
+                            errors.append(f'Line {idx}: cookies must be JSON array like [{{...}}]')
+                        else:
+                            try:
+                                arr = _json.loads(json_str)
+                                if not isinstance(arr, list):
+                                    errors.append(f'Line {idx}: cookies JSON must be an array')
+                                else:
+                                    ok = True
+                            except Exception as e:
+                                errors.append(f'Line {idx}: cookies JSON parse error: {e}')
+                if not ok:
+                    # Try format A: username:password:email_username:email_password
+                    parts4 = line.split(':', 3)
+                    if len(parts4) == 4:
+                        u, p, eu, ep = parts4
+                        if u and p and eu and ep:
+                            ok = True
+                        else:
+                            errors.append(f'Line {idx}: fields must be non-empty')
+                    else:
+                        errors.append(
+                            f'Line {idx}: unsupported format. Expected either "username:password:email_username:email_password" '
+                            f'or "username:password:email:same_password:[json_cookies_array]"')
+            return (len(errors) == 0), errors
+
+        is_valid, validation_errors = _validate_lines(content_bytes)
+        if not is_valid:
+            return _json_response({'ok': False, 'detail': 'Validation failed', 'errors': validation_errors}, status=400)
+
+        files = {'file': (file.name, content_bytes)}
         resp = requests.post(f"{api_base}/booster/upload_accounts", files=files, timeout=30)
         try:
             data = resp.json()

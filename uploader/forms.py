@@ -59,17 +59,34 @@ class MultipleFileField(forms.FileField):
 class ProxyForm(forms.ModelForm):
     class Meta:
         model = Proxy
-        fields = ['host', 'port', 'proxy_type', 'username', 'password', 'is_active', 'notes']
+        fields = ['host', 'port', 'proxy_type', 'username', 'password', 'is_active', 'notes', 'ip_change_url']
         widgets = {
             'password': forms.PasswordInput(render_value=True),
             'notes': forms.Textarea(attrs={'rows': 3}),
             'proxy_type': forms.Select(attrs={'class': 'form-select'}),
+            'ip_change_url': forms.URLInput(attrs={'placeholder': 'https://example.com/change-ip'}),
         }
         help_texts = {
             'proxy_type': 'Select the type of proxy server',
             'username': 'Leave empty if proxy does not require authentication',
             'password': 'Leave empty if proxy does not require authentication',
+            'ip_change_url': 'Optional URL for changing proxy IP address',
         }
+    
+    def clean_host(self):
+        host = self.cleaned_data.get('host')
+        if host:
+            # Remove subnet mask if present (e.g., 192.168.1.1/32 -> 192.168.1.1)
+            if '/' in host:
+                host = host.split('/')[0]
+            # Basic validation for IP or domain
+            import re
+            ip_pattern = r'^(\d{1,3}\.){3}\d{1,3}$'
+            domain_pattern = r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$'
+            
+            if not (re.match(ip_pattern, host) or re.match(domain_pattern, host)):
+                raise forms.ValidationError('Please enter a valid IP address or domain name.')
+        return host
 
 
 class InstagramAccountForm(forms.ModelForm):
@@ -418,6 +435,50 @@ class BioLinkChangeTaskForm(forms.ModelForm):
     class Meta:
         model = BioLinkChangeTask
         fields = ['link_url', 'delay_min_sec', 'delay_max_sec', 'concurrency']
+
+    def clean(self):
+        data = super().clean()
+        min_d = data.get('delay_min_sec')
+        max_d = data.get('delay_max_sec')
+        if min_d and max_d and min_d > max_d:
+            raise forms.ValidationError('Min delay must be <= Max delay')
+        return data
+
+
+# New: Photo post form
+class PhotoPostForm(forms.Form):
+    selected_accounts = forms.ModelMultipleChoiceField(
+        queryset=InstagramAccount.objects.all().order_by('-created_at'),
+        widget=forms.CheckboxSelectMultiple,
+        required=True,
+        label="Select accounts"
+    )
+    photo = forms.FileField(
+        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png'])],
+        required=True,
+        label="Photo (JPG/PNG)",
+        help_text="Single image to post",
+        widget=forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': '.jpg,.jpeg,.png'})
+    )
+    caption = forms.CharField(
+        widget=forms.Textarea(attrs={'rows': 4, 'class': 'form-control', 'placeholder': 'Post caption'}),
+        required=False,
+        label='Caption'
+    )
+    mentions = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'rows': 3, 'class': 'form-control', 'placeholder': '@username1\n@username2'}),
+        label='Mentions',
+        help_text='One per line, or space-separated with @ prefixes'
+    )
+    location = forms.CharField(
+        max_length=200,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '55.75,37.62 | Moscow or just Moscow, Russia'}),
+        label='Location'
+    )
+    delay_min_sec = forms.IntegerField(initial=10, min_value=1, label='Min delay (sec)', widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'e.g. 10'}))
+    delay_max_sec = forms.IntegerField(initial=25, min_value=1, label='Max delay (sec)', widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'e.g. 25'}))
 
     def clean(self):
         data = super().clean()

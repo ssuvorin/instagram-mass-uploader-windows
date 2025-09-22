@@ -18,6 +18,7 @@ _async_loop = None  # type: ignore
 
 # Console silence flag
 SILENT_CONSOLE = os.getenv('SILENT_CONSOLE_LOGS') == '1'
+RAW_LOG_OUTPUT = os.getenv('RAW_LOG_OUTPUT') == '1'
 
 def is_console_enabled():
     return os.getenv('SILENT_CONSOLE_LOGS') != '1'
@@ -46,6 +47,8 @@ def _get_web_logger_safe():
 
 def safe_encode_message(message):
     """Safely encode message for Windows console compatibility (cp1252, etc.)."""
+    if RAW_LOG_OUTPUT:
+        return message
     try:
         # On Windows consoles (often cp1252), strip to ASCII to avoid UnicodeEncodeError
         if os.name == 'nt':
@@ -98,7 +101,10 @@ def log_info(message: str, category: Optional[str] = None):
     _mirror_to_async_logger('INFO', safe_message, category)
     logger.info(safe_message)
     if not SILENT_CONSOLE:
-        print(f"[BULK TASK] {safe_message}")
+        if RAW_LOG_OUTPUT:
+            print(message)
+        else:
+            print(f"[BULK TASK] {safe_message}")
 
 
 def log_success(message: str, category: Optional[str] = None):
@@ -113,7 +119,10 @@ def log_success(message: str, category: Optional[str] = None):
     _mirror_to_async_logger('SUCCESS', safe_message, category)
     logger.info(safe_message)
     if not SILENT_CONSOLE:
-        print(f"[BULK TASK SUCCESS] {safe_message}")
+        if RAW_LOG_OUTPUT:
+            print(message)
+        else:
+            print(f"[BULK TASK SUCCESS] {safe_message}")
 
 
 def log_error(message: str, category: Optional[str] = None):
@@ -128,7 +137,10 @@ def log_error(message: str, category: Optional[str] = None):
     _mirror_to_async_logger('ERROR', safe_message, category)
     logger.error(safe_message)
     if not SILENT_CONSOLE:
-        print(f"[BULK TASK ERROR] {safe_message}")
+        if RAW_LOG_OUTPUT:
+            print(message)
+        else:
+            print(f"[BULK TASK ERROR] {safe_message}")
 
 
 def log_debug(message: str, category: Optional[str] = None):
@@ -143,7 +155,10 @@ def log_debug(message: str, category: Optional[str] = None):
     _mirror_to_async_logger('DEBUG', safe_message, category)
     logger.debug(safe_message)
     if not SILENT_CONSOLE:
-        print(f"[BULK TASK DEBUG] {safe_message}")
+        if RAW_LOG_OUTPUT:
+            print(message)
+        else:
+            print(f"[BULK TASK DEBUG] {safe_message}")
 
 
 def log_warning(message: str, category: Optional[str] = None):
@@ -158,7 +173,10 @@ def log_warning(message: str, category: Optional[str] = None):
     _mirror_to_async_logger('WARNING', safe_message, category)
     logger.warning(safe_message)
     if not SILENT_CONSOLE:
-        print(f"[BULK TASK WARNING] {safe_message}")
+        if RAW_LOG_OUTPUT:
+            print(message)
+        else:
+            print(f"[BULK TASK WARNING] {safe_message}")
 
 
 # ---- Instagrapi → Web UI bridge ----

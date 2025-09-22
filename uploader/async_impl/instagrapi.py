@@ -11,10 +11,14 @@ from uploader.logging_utils import log_info, log_error, log_success, attach_inst
 try:
 	from instagrapi import Client  # type: ignore
 	from instagrapi.types import Usertag, Location  # type: ignore
+	from instagrapi.exceptions import LoginRequired, RateLimitError, ChallengeError  # type: ignore
 except Exception:
 	Client = None  # type: ignore
 	Usertag = None  # type: ignore
 	Location = None  # type: ignore
+	LoginRequired = Exception  # type: ignore
+	RateLimitError = Exception  # type: ignore
+	ChallengeError = Exception  # type: ignore
 
 # typing-time aliases to satisfy Pylance
 if TYPE_CHECKING:
@@ -69,7 +73,7 @@ def _extract_mentions(mentions_text: Optional[str]) -> List[str]:
 	return result
 
 
-def _build_usertags(cl: 'IGClient', usernames: List[str]) -> List['IGUsertag']:
+def _build_usertags(cl: 'IGClient', usernames: List[str], reauth_cb: Optional[Callable[[], bool]] = None) -> List['IGUsertag']:
 	user_tags: List['IGUsertag'] = []
 	if not usernames:
 		return user_tags
@@ -128,6 +132,22 @@ def _build_usertags(cl: 'IGClient', usernames: List[str]) -> List['IGUsertag']:
 				elif error_category == 'challenge':
 					log_warning(f"[USERS] Challenge required for @{uname}, skipping...")
 					break  # Don't retry for challenges
+				elif 'login_required' in error_msg.lower() or isinstance(e, LoginRequired):
+					log_warning(f"[USERS] login_required while resolving @{uname}")
+					if callable(reauth_cb):
+						ok = False
+						try:
+							ok = bool(reauth_cb())
+						except Exception:
+							ok = False
+						if ok:
+							log_info(f"[USERS] re-auth ok, retrying @{uname}...")
+							# do not increment retry_count for successful reauth; continue loop to retry
+							continue
+					# backoff after failed/no reauth
+					wait_time = RateLimitingConfig.get_retry_delay(retry_count, 'user_resolution')
+					log_info(f"[USERS] Waiting {wait_time:.1f}s before retry for @{uname}...")
+					time.sleep(wait_time)
 				else:
 					log_warning(f"[USERS] Failed to resolve @{uname} (attempt {retry_count}/{max_retries}): {e}")
 					# Use retry delay for other errors
@@ -317,8 +337,8 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 					dev.save(update_fields=updates)
 		except Exception:
 			pass
-	except Exception:
-		pass
+	except Exception as e:
+		log_debug(f"[API] failed to save session settings: {e}")
 
 		# Upload loop with enhanced error handling
 	completed = 0
@@ -329,8 +349,29 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 		retry_count = 0
 		upload_success = False
 		
+		# Add delay between videos (except first one)
+		if idx > 0:
+			inter_video_delay = random.uniform(30, 60)  # 30-60 seconds between videos
+			log_info(f"[UPLOAD] Waiting {inter_video_delay:.1f}s between videos...")
+			if on_log:
+				on_log(f"Waiting {inter_video_delay:.1f}s between videos...")
+			time.sleep(inter_video_delay)
+		
 		while retry_count < max_retries and not upload_success:
 			try:
+				# Check authentication before each upload attempt
+				if retry_count > 0:
+					log_info(f"[AUTH_CHECK] Re-checking authentication after retry {retry_count}")
+					if on_log:
+						on_log(f"Re-checking authentication after retry {retry_count}")
+					
+					# Re-authenticate if needed
+					if not auth.ensure_logged_in(cl, username, password, on_log=on_log):
+						log_error(f"[AUTH_FAIL] Authentication failed during retry {retry_count}")
+						if on_log:
+							on_log(f"Authentication failed during retry {retry_count}")
+						break
+				
 				caption = ""
 				try:
 					caption = str(videos[idx].title or "")
@@ -346,7 +387,13 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 				mention_names = _extract_mentions(mentions_text)
 				usertags: List['IGUsertag'] = []
 				if mention_names:
-					usertags = _build_usertags(cl, mention_names)
+					def _reauth() -> bool:
+						provider = CompositeProvider([
+							TOTPProvider(tfa_secret or None),
+							AutoIMAPEmailProvider(email_login, email_password, on_log=on_log),
+						])
+						return IGAuthService(provider).ensure_logged_in(cl, username, password, on_log=on_log)
+					usertags = _build_usertags(cl, mention_names, reauth_cb=_reauth)
 
 				# Location optional
 				location_obj: Optional['IGLocation'] = None
@@ -414,37 +461,91 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 				
 			except Exception as e:
 				retry_count += 1
-				error_msg = str(e)
+				error_msg = str(e).lower()
 				
-				# Check for specific error types using error handler
-				error_category = InstagramAPIErrorHandler.get_error_category(e)
+				# Enhanced error categorization and handling
+				log_warning(f"[ERROR] Upload attempt {retry_count} failed: {e}")
+				if on_log:
+					on_log(f"Upload attempt {retry_count} failed: {e}")
 				
-				if error_category == 'rate_limit':
+				# Check for authentication errors first (using proper exception types)
+				if isinstance(e, LoginRequired) or "login_required" in error_msg or "403" in error_msg or "unauthorized" in error_msg:
+					log_error(f"[AUTH_ERROR] Authentication error detected: {e}")
+					if on_log:
+						on_log(f"Authentication error: {e}")
+					
+					# Try to re-authenticate
+					if retry_count < max_retries:
+						log_info(f"[AUTH_RETRY] Attempting to re-authenticate...")
+						if on_log:
+							on_log("Attempting to re-authenticate...")
+						
+						auth_delay = random.uniform(5.0, 15.0)
+						time.sleep(auth_delay)
+						
+						if auth.ensure_logged_in(cl, username, password, on_log=on_log):
+							log_info(f"[AUTH_SUCCESS] Re-authentication successful, retrying upload...")
+							if on_log:
+								on_log("Re-authentication successful, retrying upload...")
+							continue  # Retry upload with fresh auth
+						else:
+							log_error(f"[AUTH_FAIL] Re-authentication failed, stopping retries")
+							if on_log:
+								on_log("Re-authentication failed, stopping retries")
+							break
+					else:
+						break
+				
+				# Check for rate limiting (using proper exception types)
+				elif isinstance(e, RateLimitError) or "rate limit" in error_msg or "too many requests" in error_msg:
 					log_warning(f"[RATE_LIMIT] Rate limit detected, waiting longer... (attempt {retry_count}/{max_retries})")
-					wait_time = RateLimitingConfig.get_delay('upload_attempt', is_retry=True, is_rate_limited=True)
+					if on_log:
+						on_log(f"Rate limit detected, waiting longer...")
+					
+					# Exponential backoff for rate limits
+					wait_time = min(300, 30 * (2 ** retry_count))  # Max 5 minutes
 					log_info(f"[RATE_LIMIT] Waiting {wait_time:.1f}s before retry...")
 					time.sleep(wait_time)
-				elif error_category == 'challenge':
+				
+				# Check for challenges (using proper exception types)
+				elif isinstance(e, ChallengeError) or "challenge" in error_msg or "checkpoint" in error_msg:
 					log_error(f"[CHALLENGE] Challenge required: {e}")
 					if on_log:
 						on_log(f"Challenge required: {e}")
 					break  # Don't retry challenges
-				else:
-					log_warning(f"[RETRY] Upload attempt {retry_count} failed: {e}")
+				
+				# Check for network/connection errors
+				elif any(keyword in error_msg for keyword in ["connection", "timeout", "network", "dns"]):
+					log_warning(f"[NETWORK] Network error detected: {e}")
 					if on_log:
-						on_log(f"Upload attempt {retry_count} failed: {e}")
-					# Use retry delay for other errors
-					wait_time = RateLimitingConfig.get_retry_delay(retry_count, 'upload_attempt')
+						on_log(f"Network error: {e}")
+					
+					wait_time = random.uniform(10.0, 30.0)
+					log_info(f"[NETWORK] Waiting {wait_time:.1f}s before retry...")
+					time.sleep(wait_time)
+				
+				# Generic retry for other errors
+				else:
+					log_warning(f"[RETRY] Generic error, retrying... (attempt {retry_count}/{max_retries})")
+					if on_log:
+						on_log(f"Generic error, retrying...")
+					
+					# Exponential backoff with jitter
+					wait_time = min(60, 5 * (2 ** retry_count)) + random.uniform(1.0, 5.0)
 					log_info(f"[RETRY] Waiting {wait_time:.1f}s before retry...")
 					time.sleep(wait_time)
 				
+				# Final check if we've exhausted retries
 				if retry_count >= max_retries:
 					failed += 1
-					log_error(f"[FAIL] clip upload error after {max_retries} attempts: {e}")
+					log_error(f"[FAIL] Upload failed after {max_retries} attempts: {e}")
 					if on_log:
 						on_log(f"Upload failed after {max_retries} attempts: {e}")
+					
 					# Final backoff after all retries failed
-					time.sleep(random.uniform(10.0, 30.0))
+					final_delay = random.uniform(15.0, 45.0)
+					log_info(f"[FINAL_BACKOFF] Waiting {final_delay:.1f}s before next video...")
+					time.sleep(final_delay)
 
 	return ("success" if completed > 0 else "failed", completed, failed)
 
@@ -460,3 +561,262 @@ async def run_instagrapi_upload_async(account_details: Dict, videos: List, video
 		account_task_id,
 		on_log,
 	) 
+
+
+# =========================
+# Photo upload implementation
+# =========================
+
+def _sync_photo_upload_impl(account_details: Dict, photo_files_to_upload: List[str], captions: Optional[List[str]], mentions_list: Optional[List[Optional[str]]], locations_list: Optional[List[Optional[str]]], on_log: Optional[Callable[[str], None]] = None) -> Tuple[str, int, int]:
+	if Client is None:
+		log_error("[API] instagrapi not available")
+		return ("failed", 0, 1)
+
+	# Attach bridge so instagrapi/public/private logs appear in UI
+	attach_instagrapi_web_bridge()
+
+	username = account_details.get('username')
+	password = account_details.get('password')
+	tfa_secret = (account_details.get('tfa_secret') or '')
+	email_login = (account_details.get('email_login') or account_details.get('email') or '')
+	email_password = (account_details.get('email_password') or '')
+	proxy_dict = account_details.get('proxy') or {}
+	proxy_url = build_proxy_url(proxy_dict)
+
+	log_info(f"[API] Starting instagrapi photo upload for {username}")
+	if on_log:
+		on_log(f"Starting instagrapi photo upload for {username}")
+
+	# Load persisted device + session if available
+	session_store = DjangoDeviceSessionStore()
+	persisted_settings = session_store.load(username) or None
+
+	# Ensure per-account persistent device (from DB/session or generate once)
+	device_settings, ua_hint = ensure_persistent_device(username, persisted_settings)
+
+	# Build client
+	try:
+		cl: 'IGClient' = IGClientFactory.create_client(
+			device_config={
+				"cpu": device_settings.get("cpu", "exynos9820"),
+				"dpi": device_settings.get("dpi", "640dpi"),
+				"model": device_settings.get("model", "SM-G973F"),
+				"device": device_settings.get("device", "beyond1"),
+				"resolution": device_settings.get("resolution", "1440x3040"),
+				"app_version": device_settings.get("app_version", "269.0.0.18.75"),
+				"manufacturer": device_settings.get("manufacturer", "samsung"),
+				"version_code": device_settings.get("version_code", "314665256"),
+				"android_release": device_settings.get("android_release", "10"),
+				"android_version": device_settings.get("android_version", 29),
+				"uuid": device_settings.get("uuid"),
+				"android_device_id": device_settings.get("android_device_id"),
+				"phone_id": device_settings.get("phone_id"),
+				"client_session_id": device_settings.get("client_session_id"),
+			},
+			proxy_url=proxy_url,
+			session_settings=persisted_settings,
+			user_agent=(device_settings.get("user_agent") or ua_hint),
+			country=device_settings.get("country"),
+			locale=device_settings.get("locale"),
+			proxy_dict=proxy_dict,
+		)
+		try:
+			cl.delay_range = [1, 3]  # type: ignore[attr-defined]
+		except Exception:
+			pass
+	except Exception as e:
+		log_error(f"[API] failed to create client: {e}")
+		if on_log:
+			on_log(f"Failed to create client: {e}")
+		return ("failed", 0, 1)
+
+	# Auth: prefer existing session; fallback to login with TOTP/email
+	provider = CompositeProvider([
+		TOTPProvider(tfa_secret or None),
+		AutoIMAPEmailProvider(email_login, email_password, on_log=on_log),
+	])
+	auth = IGAuthService(provider)
+	if not auth.ensure_logged_in(cl, username, password, on_log=on_log):
+		if on_log:
+			on_log("Authentication failed")
+		return ("failed", 0, 1)
+
+	# Save refreshed session after auth
+	try:
+		settings = cl.get_settings()  # type: ignore[attr-defined]
+		session_store.save(username, settings)
+		log_info("[API] session saved")
+		if on_log:
+			on_log("Session saved")
+	except Exception:
+		pass
+
+	completed = 0
+	failure = 0
+
+	for idx, path in enumerate(photo_files_to_upload):
+		max_retries = 3
+		retry_count = 0
+		upload_success = False
+
+		# Inter-photo human delay (skip for first)
+		if idx > 0:
+			inter_delay = random.uniform(15.0, 35.0)
+			log_info(f"[UPLOAD] Waiting {inter_delay:.1f}s between photos...")
+			if on_log:
+				on_log(f"Waiting {inter_delay:.1f}s between photos...")
+			time.sleep(inter_delay)
+
+		while retry_count < max_retries and not upload_success:
+			try:
+				# On retries, re-check auth
+				if retry_count > 0:
+					log_info(f"[AUTH_CHECK] Re-checking authentication after retry {retry_count}")
+					if on_log:
+						on_log(f"Re-checking authentication after retry {retry_count}")
+					if not auth.ensure_logged_in(cl, username, password, on_log=on_log):
+						log_error("[AUTH_FAIL] Authentication failed during retry")
+						if on_log:
+							on_log("Authentication failed during retry")
+						break
+
+				caption = ""
+				if captions and idx < len(captions):
+					try:
+						caption = str(captions[idx] or "")
+					except Exception:
+						caption = ""
+
+				mention_text = None
+				if mentions_list and idx < len(mentions_list):
+					mention_text = mentions_list[idx]
+				mention_names = _extract_mentions(mention_text or "")
+				usertags: List['IGUsertag'] = []
+				if mention_names:
+					usertags = _build_usertags(cl, mention_names)
+
+				location_obj: Optional['IGLocation'] = None
+				if locations_list and idx < len(locations_list):
+					try:
+						location_obj = _resolve_location(cl, locations_list[idx])
+					except Exception:
+						location_obj = None
+
+				log_info(f"[UPLOAD] Photo {idx+1}/{len(photo_files_to_upload)}: {os.path.basename(path)} (attempt {retry_count + 1}/{max_retries})")
+				if on_log:
+					on_log(f"Starting photo upload {idx+1}/{len(photo_files_to_upload)}: {os.path.basename(path)} (attempt {retry_count + 1}/{max_retries})")
+
+				# Human-like pause before upload
+				pre_delay = random.uniform(2.0, 6.0) if retry_count == 0 else min(20.0, 4.0 * (2 ** retry_count))
+				log_info(f"[UPLOAD] Waiting {pre_delay:.1f}s before upload...")
+				time.sleep(pre_delay)
+
+				# Debug: dump request context if available
+				try:
+					lj = getattr(cl, 'last_json', None)
+					if lj:
+						log_debug(f"[API] last_json before photo_upload: {lj}")
+				except Exception:
+					pass
+
+				media = cl.photo_upload(  # type: ignore[attr-defined]
+					path=path,
+					caption=caption,
+					usertags=usertags or None,
+					location=location_obj,
+				)
+
+				if media is None:
+					raise Exception("photo_upload returned None - no response from Instagram API")
+
+				code = getattr(media, 'code', None)
+				media_id = getattr(media, 'id', None)
+				if not code and not media_id:
+					raise Exception(f"Invalid response from Instagram API: {media}")
+
+				upload_success = True
+				completed += 1
+				if code:
+					log_success(f"[OK] Published: https://www.instagram.com/p/{code}/")
+					if on_log:
+						on_log(f"Upload successful: https://www.instagram.com/p/{code}/")
+				else:
+					log_success(f"[OK] Published a photo (ID: {media_id})")
+					if on_log:
+						on_log(f"Upload successful (ID: {media_id})")
+
+				# brief pause after success
+				time.sleep(random.uniform(2.0, 5.0))
+
+			except Exception as e:
+				retry_count += 1
+				error_msg = str(e).lower()
+				log_warning(f"[ERROR] Photo upload attempt {retry_count} failed: {e}")
+				if on_log:
+					on_log(f"Photo upload attempt {retry_count} failed: {e}")
+				# Dump last response JSON/text for diagnostics
+				try:
+					lj = getattr(cl, 'last_json', None)
+					if lj:
+						log_debug(f"[API] last_json on error: {lj}")
+					lr = getattr(getattr(cl, 'private', None), 'last_response', None)
+					if lr is not None:
+						try:
+							log_debug(f"[API] last_response.status: {getattr(lr, 'status_code', '?')}")
+							log_debug(f"[API] last_response.text: {getattr(lr, 'text', '')[:2000]}")
+						except Exception:
+							pass
+				except Exception:
+					pass
+
+				if isinstance(e, LoginRequired) or "login_required" in error_msg or "403" in error_msg or "unauthorized" in error_msg:
+					log_error(f"[AUTH_ERROR] Authentication error detected: {e}")
+					if on_log:
+						on_log(f"Authentication error: {e}")
+					if retry_count < max_retries and auth.ensure_logged_in(cl, username, password, on_log=on_log):
+						continue
+					else:
+						break
+				elif isinstance(e, RateLimitError) or "rate limit" in error_msg or "too many requests" in error_msg:
+					wait_time = min(180, 20 * (2 ** retry_count))
+					log_warning(f"[RATE_LIMIT] Waiting {wait_time:.1f}s before retry...")
+					time.sleep(wait_time)
+				elif isinstance(e, ChallengeError) or "challenge" in error_msg or "checkpoint" in error_msg:
+					log_error(f"[CHALLENGE] Challenge required: {e}")
+					break
+				elif any(k in error_msg for k in ["connection", "timeout", "network", "dns"]):
+					wait_time = random.uniform(8.0, 20.0)
+					log_warning(f"[NETWORK] Waiting {wait_time:.1f}s before retry...")
+					time.sleep(wait_time)
+				else:
+					wait_time = min(60, 5 * (2 ** retry_count)) + random.uniform(1.0, 4.0)
+					log_warning(f"[RETRY] Waiting {wait_time:.1f}s before retry...")
+					time.sleep(wait_time)
+
+				if retry_count >= max_retries:
+					failure += 1
+					log_error(f"[FAIL] Photo upload failed after {max_retries} attempts: {e}")
+					if on_log:
+						on_log(f"Photo upload failed after {max_retries} attempts: {e}")
+					final_delay = random.uniform(10.0, 25.0)
+					log_info(f"[FINAL_BACKOFF] Waiting {final_delay:.1f}s before next photo...")
+					time.sleep(final_delay)
+
+	return ("success" if completed > 0 else "failed", completed, failure)
+
+
+async def run_instagrapi_photo_upload_async(account_details: Dict, photo_files_to_upload: List[str], captions: Optional[List[str]] = None, mentions_list: Optional[List[Optional[str]]] = None, locations_list: Optional[List[Optional[str]]] = None, on_log: Optional[Callable[[str], None]] = None) -> Tuple[str, int, int]:
+	"""Async wrapper for photo upload implementation.
+
+	Arguments lengths align by index: each photo can have its own caption, mentions text, and location text.
+	Missing entries default to empty/None.
+	"""
+	return await asyncio.to_thread(
+		_sync_photo_upload_impl,
+		account_details,
+		photo_files_to_upload,
+		captions,
+		mentions_list,
+		locations_list,
+		on_log,
+	)

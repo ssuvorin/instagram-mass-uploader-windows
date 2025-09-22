@@ -2,6 +2,7 @@ from typing import Optional, Dict
 from instagrapi import Client
 from instagrapi.exceptions import ChallengeRequired, TwoFactorRequired  # type: ignore
 from .geo import resolve_geo
+import logging
 
 # Apply SSL fixes for proxy compatibility
 try:
@@ -32,6 +33,17 @@ class IGClientFactory:
         proxy_dict: Optional[Dict] = None,
     ) -> Client:
         cl = Client()
+
+        # Verbose logging: enable instagrapi debug output (safe best-effort)
+        try:
+            logger = logging.getLogger('instagrapi')
+            logger.setLevel(logging.DEBUG)
+            if hasattr(cl, 'set_logger'):
+                cl.set_logger(logger)  # type: ignore[attr-defined]
+            if hasattr(cl, 'set_log_level'):
+                cl.set_log_level(logging.DEBUG)  # type: ignore[attr-defined]
+        except Exception:
+            pass
 
         # SSL Configuration - disable SSL verification for problematic proxies
         try:

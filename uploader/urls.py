@@ -3,8 +3,10 @@ from . import views
 from . import views_avatar
 from . import views_follow
 from .views_mod import views_bio
+from .views_mod import views_photo
 from .views_mod import misc
 from .views_mod import hashtag
+from .views_mod import proxies
 
 urlpatterns = [
     # Dashboard
@@ -32,13 +34,14 @@ urlpatterns = [
     path('accounts/refresh-dolphin-proxies/', views.refresh_dolphin_proxies, name='refresh_dolphin_proxies'),
     
     # Proxies
-    path('proxies/', views.proxy_list, name='proxy_list'),
-    path('proxies/create/', views.create_proxy, name='create_proxy'),
-    path('proxies/<int:proxy_id>/edit/', views.edit_proxy, name='edit_proxy'),
-    path('proxies/<int:proxy_id>/test/', views.test_proxy, name='test_proxy'),
-    path('proxies/<int:proxy_id>/delete/', views.delete_proxy, name='delete_proxy'),
-    path('proxies/import/', views.import_proxies, name='import_proxies'),
-    path('proxies/validate-all/', views.validate_all_proxies, name='validate_all_proxies'),
+    path('proxies/', proxies.proxy_list, name='proxy_list'),
+    path('proxies/create/', proxies.create_proxy, name='create_proxy'),
+    path('proxies/<int:proxy_id>/edit/', proxies.edit_proxy, name='edit_proxy'),
+    path('proxies/<int:proxy_id>/test/', proxies.test_proxy, name='test_proxy'),
+    path('proxies/<int:proxy_id>/change-ip/', proxies.change_proxy_ip, name='change_proxy_ip'),
+    path('proxies/<int:proxy_id>/delete/', proxies.delete_proxy, name='delete_proxy'),
+    path('proxies/import/', proxies.import_proxies, name='import_proxies'),
+    path('proxies/validate-all/', proxies.validate_all_proxies, name='validate_all_proxies'),
     path('proxies/cleanup-inactive/', views.cleanup_inactive_proxies, name='cleanup_inactive_proxies'),
     
     # Bulk Upload
@@ -130,6 +133,9 @@ urlpatterns += [
     path('avatars/<int:task_id>/', views_avatar.avatar_task_detail, name='avatar_task_detail'),
     path('avatars/<int:task_id>/start/', views_avatar.start_avatar_task, name='start_avatar_task'),
     path('avatars/<int:task_id>/logs/', views_avatar.get_avatar_task_logs, name='avatar_task_logs'),
+    
+    # Photo post
+    path('photos/create/', views_photo.create_photo_post, name='create_photo_post'),
     
     # Bio link change
     path('bio/', views_bio.bio_task_list, name='bio_task_list'),

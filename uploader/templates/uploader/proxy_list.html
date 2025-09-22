@@ -126,8 +126,13 @@
                 <tbody>
                     {% for proxy in proxies %}
                     <tr>
-                        <td>{{ proxy.host }}:{{ proxy.port }}</td>
-                        <td>
+                        <td title="Host: {{ proxy.host }}:{{ proxy.port }}{% if proxy.external_ip %} | External IP: {{ proxy.external_ip }}{% endif %}">
+                            {{ proxy.host }}:{{ proxy.port }}
+                            {% if proxy.external_ip %}
+                            <br><small class="text-muted">External: {{ proxy.external_ip }}</small>
+                            {% endif %}
+                        </td>
+                        <td title="{% if proxy.country %}Country: {{ proxy.country }}{% if proxy.city %}, City: {{ proxy.city }}{% endif %}{% else %}Location: Unknown{% endif %}">
                             {% if proxy.country %}
                             <span class="badge bg-info text-dark">{{ proxy.country }}</span>
                             {% if proxy.city %}
@@ -146,15 +151,15 @@
                             <span class="text-muted">None</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td title="Status: {% if proxy.is_active %}Active{% else %}Inactive{% endif %}{% if proxy.last_verified %} (Last verified: {{ proxy.last_verified|date:'Y-m-d H:i' }}){% endif %}">
                             {% if proxy.is_active %}
                             <span class="badge badge-active">Active</span>
                             {% else %}
                             <span class="badge badge-inactive">Inactive</span>
                             {% endif %}
                         </td>
-                        <td>{{ proxy.accounts.count }}</td>
-                        <td>
+                        <td title="Number of accounts using this proxy: {{ proxy.accounts.count }}">{{ proxy.accounts.count }}</td>
+                        <td title="{% if proxy.last_verified %}Last verified: {{ proxy.last_verified|date:'Y-m-d H:i:s' }}{% else %}Never verified{% endif %}">
                             {% if proxy.last_verified %}
                             {{ proxy.last_verified|date:"Y-m-d H:i" }}
                             {% else %}
@@ -168,6 +173,11 @@
                             <a href="{% url 'test_proxy' proxy_id=proxy.id %}" class="btn btn-sm btn-warning" title="Test Proxy">
                                 <i class="bi bi-lightning"></i>
                             </a>
+                            {% if proxy.ip_change_url %}
+                            <a href="{% url 'change_proxy_ip' proxy_id=proxy.id %}" class="btn btn-sm btn-success change-ip-btn" title="Change IP" data-proxy-id="{{ proxy.id }}" data-proxy-name="{{ proxy }}" onclick="return confirmChangeIP(this, '{{ proxy }}');">
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </a>
+                            {% endif %}
                             <button type="button" class="btn btn-sm btn-danger delete-proxy-btn" title="Delete Proxy" data-proxy-id="{{ proxy.id }}" data-proxy-name="{{ proxy }}">
                                 <i class="bi bi-trash"></i>
                             </button>
@@ -260,6 +270,20 @@
         // Get all delete buttons
         const deleteButtons = document.querySelectorAll('.delete-proxy-btn');
         
+        // Function to confirm IP change
+        window.confirmChangeIP = function(element, proxyName) {
+            if (confirm(`Are you sure you want to change IP for proxy ${proxyName}?\n\nThis will send a request to the proxy provider to change the IP address.`)) {
+                // Show loading state
+                const originalHTML = element.innerHTML;
+                element.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+                element.classList.add('disabled');
+                
+                // The form will submit normally after confirmation
+                return true;
+            }
+            return false;
+        };
+        
         // Function to close modal
         function closeModal() {
             modal.style.display = 'none';
@@ -309,6 +333,7 @@
             // Redirect to the delete URL directly
             window.location.href = url;
         });
+        
         
         // Close modal on clicking outside
         window.addEventListener('click', function(event) {

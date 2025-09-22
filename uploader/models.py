@@ -19,7 +19,7 @@ class Proxy(models.Model):
         ('checking', 'Checking')
     ]
     
-    host = models.GenericIPAddressField()
+    host = models.CharField(max_length=255, help_text="Proxy host (IP address or domain name)")
     port = models.IntegerField()
     username = models.CharField(max_length=200, null=True, blank=True)
     password = models.CharField(max_length=200, null=True, blank=True)
@@ -35,6 +35,10 @@ class Proxy(models.Model):
     notes = models.TextField(blank=True, default="")
     country = models.CharField(max_length=50, null=True, blank=True)
     city = models.CharField(max_length=100, null=True, blank=True)
+    # Link for IP change functionality
+    ip_change_url = models.URLField(max_length=500, null=True, blank=True, help_text="URL for changing proxy IP address")
+    # External IP address (resolved from proxy)
+    external_ip = models.GenericIPAddressField(null=True, blank=True, help_text="External IP address when using this proxy")
     
     class Meta:
         verbose_name = "Proxy"
