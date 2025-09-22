@@ -1013,41 +1013,40 @@
                         // Support two formats:
                         // 1) username:password:email:email_password:[cookies]
                         // 2) username:password:[cookies]
-                        // JS split's 2nd arg is a max-length, not max splits. Split all and re-join cookies.
-                        const parts = trimmed.split(':');
-                        if (parts.length >= 5) {
-                            const username = parts[0];
-                            const password = parts[1];
-                            const email = parts[2];
-                            const emailPassword = parts[3];
-                            const cookiesPart = parts.slice(4).join(':');
-
-                            if (username && password && email && emailPassword) {
-                                const cp = (cookiesPart || '').trim();
-                                if (cp.startsWith('[') && cp.endsWith(']')) {
+                        // Determine format by inspecting the remainder after the second colon
+                        const firstColon = trimmed.indexOf(':');
+                        const secondColon = firstColon >= 0 ? trimmed.indexOf(':', firstColon + 1) : -1;
+                        if (firstColon > 0 && secondColon > firstColon) {
+                            const username = trimmed.slice(0, firstColon);
+                            const password = trimmed.slice(firstColon + 1, secondColon);
+                            const remainder = trimmed.slice(secondColon + 1).trim();
+                            if (remainder.startsWith('[')) {
+                                // Legacy cookies format
+                                const cp = remainder;
+                                if (username && password && cp.endsWith(']')) {
                                     isValid = true;
                                 } else {
                                     errors.push(`Line ${index + 1}: Cookies must be a bracketed array like [ {...} ]`);
                                 }
                             } else {
-                                errors.push(`Line ${index + 1}: Empty username/password/email/email_password`);
-                            }
-                        } else if (parts.length >= 3) {
-                            const username = parts[0];
-                            const password = parts[1];
-                            const cookiesPart = parts.slice(2).join(':');
-                            if (username && password) {
-                                const cp = (cookiesPart || '').trim();
-                                if (cp.startsWith('[') && cp.endsWith(']')) {
-                                    isValid = true;
+                                // Extended format: expect email and email_password before cookies
+                                const parts = trimmed.split(':');
+                                if (parts.length >= 5) {
+                                    const email = parts[2];
+                                    const emailPassword = parts[3];
+                                    const cookiesPart = parts.slice(4).join(':');
+                                    const cp = (cookiesPart || '').trim();
+                                    if (username && password && email && emailPassword && cp.startsWith('[') && cp.endsWith(']')) {
+                                        isValid = true;
+                                    } else {
+                                        errors.push(`Line ${index + 1}: Invalid format - need username:password:email:email_password:[cookies]`);
+                                    }
                                 } else {
-                                    errors.push(`Line ${index + 1}: Cookies must be a bracketed array like [ {...} ]`);
+                                    errors.push(`Line ${index + 1}: Invalid format - need username:password:email:email_password:[cookies]`);
                                 }
-                            } else {
-                                errors.push(`Line ${index + 1}: Empty username or password`);
                             }
                         } else {
-                            errors.push(`Line ${index + 1}: Invalid format - need username:password:[cookies] or username:password:email:email_password:[cookies]`);
+                            errors.push(`Line ${index + 1}: Invalid format`);
                         }
                     } else {
                         hasEmailPass++;
