@@ -1822,18 +1822,33 @@ def tiktok_booster_proxy_upload_accounts(request):
                         else:
                             ok = True
                 if not ok:
-                    # Try format A: username:password:email_username:email_password
-                    parts4 = line.split(':', 3)
-                    if len(parts4) == 4:
-                        u, p, eu, ep = parts4
-                        if u and p and eu and ep:
-                            ok = True
+                    # Try legacy with cookies: username:password:[json_cookies_array]
+                    parts3 = line.split(':', 2)
+                    if len(parts3) == 3:
+                        u, p, json_part = parts3
+                        if u and p:
+                            jp = (json_part or '').strip()
+                            if jp.startswith('[') and jp.endswith(']'):
+                                ok = True
+                            else:
+                                errors.append(f'Line {idx}: cookies must be a bracketed array like [{{...}}]')
                         else:
-                            errors.append(f'Line {idx}: fields must be non-empty')
+                            errors.append(f'Line {idx}: username/password must be non-empty')
                     else:
-                        errors.append(
-                            f'Line {idx}: unsupported format. Expected either "username:password:email_username:email_password" '
-                            f'or "username:password:email:email_password:[json_cookies_array]"')
+                        # Try format A: username:password:email_username:email_password
+                        parts4 = line.split(':', 3)
+                        if len(parts4) == 4:
+                            u, p, eu, ep = parts4
+                            if u and p and eu and ep:
+                                ok = True
+                            else:
+                                errors.append(f'Line {idx}: fields must be non-empty')
+                        else:
+                            errors.append(
+                                f'Line {idx}: unsupported format. Expected one of: '
+                                f'"username:password:email_username:email_password", '
+                                f'"username:password:email:email_password:[json_cookies_array]", '
+                                f'"username:password:[json_cookies_array]"')
             return (len(errors) == 0), errors
 
         is_valid, validation_errors = _validate_lines(content_bytes)
