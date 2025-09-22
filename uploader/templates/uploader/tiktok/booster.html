@@ -1007,36 +1007,34 @@
                     
                     let isValid = false;
                     
-                    // Check if line contains cookies (JSON format)
+                    // Check if line contains cookies array (only bracket check, no JSON parsing)
                     if (trimmed.includes('[') && trimmed.includes(']')) {
                         hasCookies++;
-                        // Format: username:password:cookies_json
-                        // @ is just a character in password, not a separator
-                        
-                        const parts = trimmed.split(':');
-                        if (parts.length >= 3) {
+                        // Expected format: username:password:email:email_password:[cookies]
+                        const parts = trimmed.split(':', 4);
+                        if (parts.length === 5) {
                             const username = parts[0];
                             const password = parts[1];
-                            const cookiesPart = parts.slice(2).join(':'); // Join remaining parts in case password contains ':'
-                            
-                            // Check if username and password are not empty
-                            if (username && password) {
-                                // Check if cookies part is valid JSON
-                                try {
-                                    JSON.parse(cookiesPart);
+                            const email = parts[2];
+                            const emailPassword = parts[3];
+                            const cookiesPart = parts[4];
+
+                            if (username && password && email && emailPassword) {
+                                const cp = (cookiesPart || '').trim();
+                                if (cp.startsWith('[') && cp.endsWith(']')) {
                                     isValid = true;
-                                } catch {
-                                    errors.push(`Line ${index + 1}: Invalid JSON cookies`);
+                                } else {
+                                    errors.push(`Line ${index + 1}: Cookies must be a bracketed array like [ {...} ]`);
                                 }
                             } else {
-                                errors.push(`Line ${index + 1}: Empty username or password`);
+                                errors.push(`Line ${index + 1}: Empty username/password/email/email_password`);
                             }
                         } else {
-                            errors.push(`Line ${index + 1}: Invalid format - need username:password:cookies`);
+                            errors.push(`Line ${index + 1}: Invalid format - need username:password:email:email_password:[cookies]`);
                         }
                     } else {
                         hasEmailPass++;
-                        // Format: username:password:email:2fa
+                        // Format: username:password:email:email_password
                         const format = /^[^:]+:[^:]+:[^:]+:[^:]+$/;
                         if (format.test(trimmed)) {
                             isValid = true;
