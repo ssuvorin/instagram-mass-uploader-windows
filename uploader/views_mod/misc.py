@@ -1810,23 +1810,24 @@ def tiktok_booster_proxy_upload_accounts(request):
                 # Try format B: username:password:email:same_password:[json_cookies_array]
                 ok = False
                 parts5 = line.split(':', 4)
-                if len(parts5) == 5 and parts5[3].strip().lower() == 'same_password':
-                    username, password, email, _flag, json_part = parts5
-                    if not username or not password or not email:
-                        errors.append(f'Line {idx}: username/password/email must be non-empty')
-                    else:
-                        json_str = json_part.strip()
-                        if not (json_str.startswith('[') and json_str.endswith(']')):
-                            errors.append(f'Line {idx}: cookies must be JSON array like [{{...}}]')
+                if len(parts5) == 5:
+                    username, password, email, fourth_field, json_part = parts5
+                    if fourth_field.strip().lower() == 'same_password' or fourth_field == password:
+                        if not username or not password or not email:
+                            errors.append(f'Line {idx}: username/password/email must be non-empty')
                         else:
-                            try:
-                                arr = _json.loads(json_str)
-                                if not isinstance(arr, list):
-                                    errors.append(f'Line {idx}: cookies JSON must be an array')
-                                else:
-                                    ok = True
-                            except Exception as e:
-                                errors.append(f'Line {idx}: cookies JSON parse error: {e}')
+                            json_str = json_part.strip()
+                            if not (json_str.startswith('[') and json_str.endswith(']')):
+                                errors.append(f'Line {idx}: cookies must be JSON array like [{{...}}]')
+                            else:
+                                try:
+                                    arr = _json.loads(json_str)
+                                    if not isinstance(arr, list):
+                                        errors.append(f'Line {idx}: cookies JSON must be an array')
+                                    else:
+                                        ok = True
+                                except Exception as e:
+                                    errors.append(f'Line {idx}: cookies JSON parse error: {e}')
                 if not ok:
                     # Try format A: username:password:email_username:email_password
                     parts4 = line.split(':', 3)
