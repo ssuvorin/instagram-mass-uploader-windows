@@ -1841,7 +1841,7 @@ def tiktok_booster_proxy_upload_accounts(request):
         if not is_valid:
             return _json_response({'ok': False, 'detail': 'Validation failed', 'errors': validation_errors}, status=400)
 
-        # --- Optional normalization: compact JSON arrays if present ---
+        # --- Optional normalization: compact and sanitize cookies JSON arrays if present ---
         try:
             text = content_bytes.decode('utf-8', errors='replace')
             normalized_lines: list[str] = []
@@ -1859,7 +1859,33 @@ def tiktok_booster_proxy_upload_accounts(request):
                             try:
                                 arr = _json.loads(jp)
                                 if isinstance(arr, list) and all(isinstance(el, dict) for el in arr):
-                                    compact = _json.dumps(arr, ensure_ascii=False, separators=(',', ':'))
+                                    sanitized: list[dict] = []
+                                    for c in arr:
+                                        name = c.get('name')
+                                        value = c.get('value')
+                                        if not name or value is None:
+                                            continue
+                                        domain = c.get('domain') or '.tiktok.com'
+                                        path = c.get('path') or '/'
+                                        http_only = bool(c.get('httpOnly', False))
+                                        secure = bool(c.get('secure', True))
+                                        session = bool(c.get('session', True))
+                                        same_site = (c.get('sameSite') or '').lower()
+                                        if same_site in ('', 'unspecified'):
+                                            same_site = 'no_restriction'
+                                        elif same_site not in ('no_restriction', 'lax', 'strict'):
+                                            same_site = 'no_restriction'
+                                        sanitized.append({
+                                            'domain': str(domain),
+                                            'name': str(name),
+                                            'value': str(value),
+                                            'path': str(path),
+                                            'httpOnly': http_only,
+                                            'secure': secure,
+                                            'session': session,
+                                            'sameSite': same_site,
+                                        })
+                                    compact = _json.dumps(sanitized, ensure_ascii=False, separators=(',', ':'))
                                     normalized_lines.append(f"{username}:{password}:{email}:{fourth_field}:{compact}")
                                     continue
                             except Exception:
