@@ -1841,7 +1841,37 @@ def tiktok_booster_proxy_upload_accounts(request):
         if not is_valid:
             return _json_response({'ok': False, 'detail': 'Validation failed', 'errors': validation_errors}, status=400)
 
-        files = {'file': (file.name, content_bytes)}
+        # --- Optional normalization: compact JSON arrays if present ---
+        try:
+            text = content_bytes.decode('utf-8', errors='replace')
+            normalized_lines: list[str] = []
+            for line in text.splitlines():
+                raw = line.rstrip('\n').rstrip('\r')
+                if not raw.strip():
+                    normalized_lines.append(raw)
+                    continue
+                parts5 = raw.split(':', 4)
+                if len(parts5) == 5:
+                    username, password, email, fourth_field, json_part = parts5
+                    if fourth_field.strip().lower() == 'same_password' or fourth_field == password:
+                        jp = (json_part or '').strip()
+                        if jp.startswith('[') and jp.endswith(']'):
+                            try:
+                                arr = _json.loads(jp)
+                                if isinstance(arr, list) and all(isinstance(el, dict) for el in arr):
+                                    compact = _json.dumps(arr, ensure_ascii=False, separators=(',', ':'))
+                                    normalized_lines.append(f"{username}:{password}:{email}:{fourth_field}:{compact}")
+                                    continue
+                            except Exception:
+                                pass
+                # fallback: keep original
+                normalized_lines.append(raw)
+            normalized_text = "\n".join(normalized_lines)
+            normalized_bytes = normalized_text.encode('utf-8')
+        except Exception:
+            normalized_bytes = content_bytes
+
+        files = {'file': (file.name, normalized_bytes)}
         resp = requests.post(f"{api_base}/booster/upload_accounts", files=files, timeout=30)
         try:
             data = resp.json()
