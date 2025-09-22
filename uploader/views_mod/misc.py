@@ -1807,21 +1807,20 @@ def tiktok_booster_proxy_upload_accounts(request):
             for idx, line in enumerate(lines, start=1):
                 if not line:
                     continue
-                # Try format B: username:password:email:same_password:[json_cookies_array]
+                # Try format B: username:password:email:email_password:[json_cookies_array]
                 ok = False
                 parts5 = line.split(':', 4)
                 if len(parts5) == 5:
-                    username, password, email, fourth_field, json_part = parts5
-                    if fourth_field.strip().lower() == 'same_password' or fourth_field == password:
-                        if not username or not password or not email:
-                            errors.append(f'Line {idx}: username/password/email must be non-empty')
+                    username, password, email, email_password, json_part = parts5
+                    if not username or not password or not email or not email_password:
+                        errors.append(f'Line {idx}: username/password/email/email_password must be non-empty')
+                    else:
+                        json_str = json_part.strip()
+                        # Relaxed check: only ensure it looks like a JSON array; do not parse/validate contents here
+                        if not (json_str.startswith('[') and json_str.endswith(']')):
+                            errors.append(f'Line {idx}: cookies must be a bracketed array like [{{...}}]')
                         else:
-                            json_str = json_part.strip()
-                            # Relaxed check: only ensure it looks like a JSON array; do not parse/validate contents here
-                            if not (json_str.startswith('[') and json_str.endswith(']')):
-                                errors.append(f'Line {idx}: cookies must be a bracketed array like [{{...}}]')
-                            else:
-                                ok = True
+                            ok = True
                 if not ok:
                     # Try format A: username:password:email_username:email_password
                     parts4 = line.split(':', 3)
@@ -1834,14 +1833,14 @@ def tiktok_booster_proxy_upload_accounts(request):
                     else:
                         errors.append(
                             f'Line {idx}: unsupported format. Expected either "username:password:email_username:email_password" '
-                            f'or "username:password:email:same_password:[json_cookies_array]"')
+                            f'or "username:password:email:email_password:[json_cookies_array]"')
             return (len(errors) == 0), errors
 
         is_valid, validation_errors = _validate_lines(content_bytes)
         if not is_valid:
             return _json_response({'ok': False, 'detail': 'Validation failed', 'errors': validation_errors}, status=400)
 
-        # --- Optional normalization: compact and sanitize cookies JSON arrays if present ---
+        # --- Optional normalization: compact JSON arrays if present ---
         try:
             text = content_bytes.decode('utf-8', errors='replace')
             normalized_lines: list[str] = []
@@ -1859,33 +1858,7 @@ def tiktok_booster_proxy_upload_accounts(request):
                             try:
                                 arr = _json.loads(jp)
                                 if isinstance(arr, list) and all(isinstance(el, dict) for el in arr):
-                                    sanitized: list[dict] = []
-                                    for c in arr:
-                                        name = c.get('name')
-                                        value = c.get('value')
-                                        if not name or value is None:
-                                            continue
-                                        domain = c.get('domain') or '.tiktok.com'
-                                        path = c.get('path') or '/'
-                                        http_only = bool(c.get('httpOnly', False))
-                                        secure = bool(c.get('secure', True))
-                                        session = bool(c.get('session', True))
-                                        same_site = (c.get('sameSite') or '').lower()
-                                        if same_site in ('', 'unspecified'):
-                                            same_site = 'no_restriction'
-                                        elif same_site not in ('no_restriction', 'lax', 'strict'):
-                                            same_site = 'no_restriction'
-                                        sanitized.append({
-                                            'domain': str(domain),
-                                            'name': str(name),
-                                            'value': str(value),
-                                            'path': str(path),
-                                            'httpOnly': http_only,
-                                            'secure': secure,
-                                            'session': session,
-                                            'sameSite': same_site,
-                                        })
-                                    compact = _json.dumps(sanitized, ensure_ascii=False, separators=(',', ':'))
+                                    compact = _json.dumps(arr, ensure_ascii=False, separators=(',', ':'))
                                     normalized_lines.append(f"{username}:{password}:{email}:{fourth_field}:{compact}")
                                     continue
                             except Exception:
