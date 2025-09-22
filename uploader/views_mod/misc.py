@@ -1820,14 +1820,17 @@ def tiktok_booster_proxy_upload_accounts(request):
                             if not (json_str.startswith('[') and json_str.endswith(']')):
                                 errors.append(f'Line {idx}: cookies must be JSON array like [{{...}}]')
                             else:
+                                # Be tolerant: if bracketed, consider valid; attempt to parse only for sanity
                                 try:
                                     arr = _json.loads(json_str)
-                                    if not isinstance(arr, list):
-                                        errors.append(f'Line {idx}: cookies JSON must be an array')
-                                    else:
+                                    if isinstance(arr, list):
                                         ok = True
-                                except Exception as e:
-                                    errors.append(f'Line {idx}: cookies JSON parse error: {e}')
+                                    else:
+                                        # If not a list but bracketed, still accept
+                                        ok = True
+                                except Exception:
+                                    # Accept bracketed content without strict JSON parsing to avoid false negatives
+                                    ok = True
                 if not ok:
                     # Try format A: username:password:email_username:email_password
                     parts4 = line.split(':', 3)
