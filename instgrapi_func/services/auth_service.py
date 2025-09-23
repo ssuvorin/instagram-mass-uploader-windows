@@ -34,6 +34,40 @@ class IGAuthService:
         self.provider = provider or NullTwoFactorProvider()
         self.auth_attempts = {}  # Track auth attempts per username
         self.last_auth_time = {}  # Track last successful auth per username
+        # Ensure auth operations for a given client are serialized
+        try:
+            import threading
+            self._client_lock = threading.RLock()
+        except Exception:
+            self._client_lock = None
+
+    def _get_user_info_v1(self, cl: Client):
+        """Fetch user info via private v1 endpoint only (no GQL/public fallbacks)."""
+        try:
+            uid = getattr(cl, 'user_id', None)
+        except Exception:
+            uid = None
+        if not uid:
+            return None
+        # Prefer direct private_request to avoid library fallbacks
+        try:
+            result = cl.private_request(f"users/{uid}/info/")  # type: ignore[attr-defined]
+            return result.get('user') if isinstance(result, dict) else result
+        except Exception:
+            return None
+
+    def _get_username(self, info) -> Optional[str]:
+        try:
+            if info is None:
+                return None
+            uname = getattr(info, 'username', None)
+            if uname:
+                return str(uname)
+            if isinstance(info, dict):
+                return str(info.get('username') or '') or None
+        except Exception:
+            return None
+        return None
 
     def _get_human_delay(self, context: str = 'auth', base_delay: float = 1.0) -> float:
         """Generate human-like delays based on context and time"""
@@ -96,7 +130,14 @@ class IGAuthService:
         log.debug("Ensure logged in for %s", username)
         if on_log:
             on_log(f"auth: ensure session for {username}")
-        
+
+        # Serialize precheck/login/verify for this client to avoid concurrent calls using a simple flag on client
+        # Busy-wait briefly if another auth is in progress for this client
+        wait_start = time.time()
+        while getattr(cl, '_auth_in_progress', False) and time.time() - wait_start < 30:
+            time.sleep(0.1)
+        setattr(cl, '_auth_in_progress', True)
+
         # Check for rate limiting
         if self._is_rate_limited(username):
             delay = self._get_human_delay('error_recovery')
@@ -120,67 +161,105 @@ class IGAuthService:
                 # Record attempt
                 self._record_auth_attempt(username)
                 
-                # First, try to check if already authenticated
+                # Strict authentication check with timeout protection
                 try:
                     # Add delay before session check
                     delay = self._get_human_delay('session_check')
                     time.sleep(delay)
                     
-                    cl.user_id_from_username(username)
-                    log.debug("Already authenticated as %s", username)
-                    if on_log:
-                        on_log("auth: already authenticated")
+                    # Use threading.Timer for timeout in worker threads
+                    import threading
+                    import queue
                     
-                    # Record successful auth
-                    self._record_auth_attempt(username, success=True)
-                    return True
+                    result_queue = queue.Queue()
+                    timeout_occurred = threading.Event()
                     
-                except LoginRequired as e:
-                    log.debug("LoginRequired for %s: %s", username, e)
-                    if on_log:
-                        on_log(f"auth: precheck failed: {e}")
-                    # Diagnostics: dump last_json and raw last_response if available
+                    def call_account_info():
+                        try:
+                            # Use ONLY account_info() - the most reliable endpoint for session validation
+                            # This calls accounts/current_user/?edit=true internally and is the gold standard
+                            account_info = cl.account_info()  # type: ignore[attr-defined]
+                            if not timeout_occurred.is_set():
+                                result_queue.put(('success', account_info))
+                        except Exception as e:
+                            if not timeout_occurred.is_set():
+                                result_queue.put(('error', e))
+                    
+                    # Start the account_info call in a separate thread
+                    thread = threading.Thread(target=call_account_info)
+                    thread.daemon = True
+                    thread.start()
+                    
+                    # Wait for result with timeout
                     try:
-                        lj = getattr(cl, 'last_json', None)
-                        if lj:
-                            log.debug("[AUTH] last_json on precheck: %s", lj)
-                        lr = getattr(getattr(cl, 'private', None), 'last_response', None)
-                        if lr is not None:
-                            try:
-                                status = getattr(lr, 'status_code', None)
-                                text = getattr(lr, 'text', '')
-                                log.debug("[AUTH] last_response.status: %s", status)
-                                log.debug("[AUTH] last_response.text: %s", text[:2000])
-                            except Exception:
-                                pass
-                    except Exception:
-                        pass
-                    
-                    # Proceed to login attempt in the same iteration (no break)
-                    # Small human-like pause before immediate relogin
-                    try:
-                        delay = self._get_human_delay('auth')
+                        result_type, result_data = result_queue.get(timeout=15)  # 15 second timeout
+                        
+                        if result_type == 'success':
+                            account_info = result_data
+                            if account_info and hasattr(account_info, 'username'):
+                                log.debug("Session validated via account_info for %s", account_info.username)
+                                if on_log:
+                                    on_log("auth: session validated")
+                                
+                                # Record successful auth
+                                self._record_auth_attempt(username, success=True)
+                                return True
+                            else:
+                                raise LoginRequired("account_info() returned invalid response")
+                        else:
+                            # Re-raise the exception from account_info
+                            raise result_data
+                            
+                    except queue.Empty:
+                        # Timeout occurred
+                        timeout_occurred.set()
+                        log.warning("account_info() timed out after 15s for %s", username)
                         if on_log:
-                            on_log(f"auth: session expired, trying relogin after {delay}s")
-                        time.sleep(delay)
-                    except Exception:
-                        pass
+                            on_log("auth: session check timeout, proceeding to login")
+                        raise LoginRequired("Session check timeout - proceeding to login")
+                        
+                except Exception as e:
+                    # Any failure in account_info() means we need to login
+                    log.debug("Session validation failed via account_info: %s", e)
+                    if on_log:
+                        on_log(f"auth: session check failed: {e}")
+                    
+                    # Check if this is already a LoginRequired exception
+                    if isinstance(e, LoginRequired):
+                        log.debug("LoginRequired for %s: %s", username, e)
+                        if on_log:
+                            on_log(f"auth: precheck failed: {e}")
+                        # Diagnostics: log only status codes, not full JSON responses
+                        try:
+                            lr = getattr(getattr(cl, 'private', None), 'last_response', None)
+                            if lr is not None:
+                                try:
+                                    status = getattr(lr, 'status_code', None)
+                                    log.debug("[AUTH] last_response.status: %s", status)
+                                    # Skip logging full response text to avoid huge JSON dumps
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+                        # Break out of the loop to proceed to login
+                        break
+                    else:
+                        # Convert other exceptions to LoginRequired and break to login
+                        log.debug("Converting exception to LoginRequired: %s", e)
+                        if on_log:
+                            on_log(f"auth: session validation failed, proceeding to login")
+                        break
                     
                 except (ClientForbiddenError, ClientUnauthorizedError) as e:
                     log.debug("Authentication error for %s: %s", username, e)
                     if on_log:
                         on_log(f"auth: authentication error: {e}")
                     
-                    # These errors usually mean we need to re-login
-                    delay = self._get_human_delay('retry')
-                    if attempt < max_retries - 1:
-                        log.info(f"Auth error for {username}, retrying in {delay}s (attempt {attempt + 1}/{max_retries})")
-                        if on_log:
-                            on_log(f"auth: retrying in {delay}s")
-                        time.sleep(delay)
-                        continue
-                    else:
-                        return False
+                    # These errors usually mean we need to re-login - break to login block
+                    log.debug("Auth error detected, proceeding to login")
+                    if on_log:
+                        on_log(f"auth: proceeding to login due to auth error")
+                    break
                         
                 except (ClientConnectionError, ClientRequestTimeout) as e:
                     log.debug("Network error for %s: %s", username, e)
@@ -196,11 +275,19 @@ class IGAuthService:
                         time.sleep(delay)
                         continue
                     else:
-                        return False
+                        break  # даём коду дойти до логина
                         
                 except Exception as e:
                     error_str = str(e).lower()
                     log.debug("Auth check failed for %s: %s", username, e)
+                    
+                    # Handle 429 errors specifically - treat as signal to proceed to login
+                    if "429" in error_str or "too many" in error_str or "rate limit" in error_str:
+                        log.warning(f"Rate limit (429) during precheck for {username}, proceeding to login")
+                        if on_log:
+                            on_log(f"auth: rate limit during precheck, proceeding to login")
+                        # Don't retry precheck, proceed directly to login attempt
+                        break
                     
                     # Handle generic errors
                     if attempt < max_retries - 1:
@@ -213,110 +300,9 @@ class IGAuthService:
                     else:
                         if on_log:
                             on_log(f"auth: precheck failed: {e}")
-                        return False
+                        break  # переходим к логину
                 
-                # Attempt login
-                try:
-                    delay = self._get_human_delay('auth')
-                    time.sleep(delay)
-                    
-                    log.debug("Login attempt for %s (attempt %d/%d)", username, attempt + 1, max_retries)
-                    if on_log:
-                        on_log("auth: login")
-                    
-                    cl.login(username, password)
-                    log.debug("Login success for %s", username)
-                    if on_log:
-                        on_log("auth: login ok")
-                    
-                    # Record successful auth
-                    self._record_auth_attempt(username, success=True)
-                    return True
-                    
-                except TwoFactorRequired:
-                    return self._handle_two_factor_auth(cl, username, password, on_log)
-                    
-                except ChallengeRequired:
-                    return self._handle_challenge_auth(cl, username, password, on_log)
-                    
-                except RateLimitError as e:
-                    log.debug("RateLimitError during login for %s: %s", username, e)
-                    if on_log:
-                        on_log(f"auth: rate limited during login: {e}")
-                    
-                    delay = self._get_human_delay('error_recovery')
-                    log.warning(f"Rate limited during login for {username}, waiting {delay}s")
-                    if on_log:
-                        on_log(f"auth: rate limited during login, waiting {delay}s")
-                    time.sleep(delay)
-                    
-                    if attempt < max_retries - 1:
-                        continue
-                    return False
-                    
-                except ChallengeError as e:
-                    log.debug("ChallengeError during login for %s: %s", username, e)
-                    if on_log:
-                        on_log(f"auth: challenge during login: {e}")
-                    
-                    # Try challenge resolution
-                    return self._handle_challenge_auth(cl, username, password, on_log)
-                    
-                except ProxyAddressIsBlocked as e:
-                    log.error("ProxyAddressIsBlocked for %s: %s", username, e)
-                    if on_log:
-                        on_log(f"auth: proxy blocked: {e}")
-                    
-                    # Don't retry - proxy is blocked
-                    return False
-                    
-                except (ClientConnectionError, ClientRequestTimeout) as e:
-                    log.debug("Network error during login for %s: %s", username, e)
-                    if on_log:
-                        on_log(f"auth: network error during login: {e}")
-                    
-                    delay = self._get_human_delay('error_recovery')
-                    if attempt < max_retries - 1:
-                        log.warning(f"Network error during login for {username}, retrying in {delay}s")
-                        if on_log:
-                            on_log(f"auth: network error, retrying in {delay}s")
-                        time.sleep(delay)
-                        continue
-                    return False
-                    
-                except Exception as e:
-                    error_str = str(e).lower()
-                    log.debug("Login failed for %s: %s", username, e)
-                    
-                    if on_log:
-                        on_log(f"auth: login failed: {e}")
-                    # Diagnostics on login failure
-                    try:
-                        lj = getattr(cl, 'last_json', None)
-                        if lj:
-                            log.debug("[AUTH] last_json on login failure: %s", lj)
-                        lr = getattr(getattr(cl, 'private', None), 'last_response', None)
-                        if lr is not None:
-                            try:
-                                status = getattr(lr, 'status_code', None)
-                                text = getattr(lr, 'text', '')
-                                log.debug("[AUTH] last_response.status: %s", status)
-                                log.debug("[AUTH] last_response.text: %s", text[:2000])
-                            except Exception:
-                                pass
-                    except Exception:
-                        pass
-                    
-                    # Handle generic errors with exponential backoff
-                    if attempt < max_retries - 1:
-                        delay = self._get_human_delay('retry') * (2 ** attempt)
-                        log.info(f"Login failed for {username}, retrying in {delay}s (attempt {attempt + 1}/{max_retries})")
-                        if on_log:
-                            on_log(f"auth: retrying in {delay}s")
-                        time.sleep(delay)
-                        continue
-                    
-                    return False
+                # Login block moved outside the loop - will be executed after breaking from the loop
                     
             except Exception as e:
                 log.error(f"Unexpected error during auth for {username}: {e}")
@@ -329,6 +315,179 @@ class IGAuthService:
                     continue
                 
                 return False
+        
+        # If we reach here, it means we broke out of the loop due to LoginRequired or auth errors
+        # Now attempt login
+        try:
+            delay = self._get_human_delay('auth')
+            time.sleep(delay)
+            
+            log.debug("Login attempt for %s after session check failure", username)
+            if on_log:
+                on_log("auth: login")
+            
+            cl.login(username, password)
+            # Validate session info immediately before logging completion
+            info = None
+            try:
+                # Prefer account_info; if unstable, verify via private v1 users/{uid}/info/
+                try:
+                    # Avoid noisy account_info if previously marked unstable
+                    if getattr(cl, '_skip_account_info', False):
+                        raise Exception('skip account_info')
+                    info = cl.account_info()  # type: ignore[attr-defined]
+                except Exception:
+                    info = self._get_user_info_v1(cl)
+                uname = self._get_username(info)
+                if uname:
+                    log.debug("Login account info for %s: %s", username, uname)
+                    if on_log:
+                        on_log(f"auth: account_info: {uname}")
+                else:
+                    # Mark to skip future account_info attempts this session
+                    try:
+                        setattr(cl, '_skip_account_info', True)
+                    except Exception:
+                        pass
+            except Exception:
+                info = None
+            log.debug("Login completed for %s", username)
+            if on_log:
+                on_log("auth: login completed")
+            
+            # CRITICAL: Verify login was actually successful with strict check and timeout
+            try:
+                delay = self._get_human_delay('session_check')
+                time.sleep(delay)
+                
+                # Use threading.Timer for timeout in worker threads
+                import threading
+                import queue
+                
+                result_queue = queue.Queue()
+                timeout_occurred = threading.Event()
+                
+                def call_account_info():
+                    try:
+                        # Verify login success: prefer account_info(); fallback to private v1 users/{uid}/info/
+                        try:
+                            if getattr(cl, '_skip_account_info', False):
+                                raise Exception('skip account_info')
+                            account_info = cl.account_info()  # type: ignore[attr-defined]
+                        except Exception:
+                            account_info = self._get_user_info_v1(cl)
+                        if not timeout_occurred.is_set():
+                            result_queue.put(('success', account_info))
+                    except Exception as e:
+                        if not timeout_occurred.is_set():
+                            result_queue.put(('error', e))
+                
+                # Start the account_info call in a separate thread
+                thread = threading.Thread(target=call_account_info)
+                thread.daemon = True
+                thread.start()
+                
+                # Wait for result with timeout
+                try:
+                    result_type, result_data = result_queue.get(timeout=15)  # 15 second timeout
+                    
+                    if result_type == 'success':
+                        account_info = result_data
+                        uname2 = self._get_username(account_info)
+                        if account_info and (uname2 is not None):
+                            if uname2:
+                                log.debug("Login verified for %s", uname2)
+                            else:
+                                log.debug("Login verified")
+                            if on_log:
+                                on_log("auth: login verified")
+                            try:
+                                setattr(cl, '_skip_account_info', True)
+                            except Exception:
+                                pass
+                            
+                            # Record successful auth
+                            self._record_auth_attempt(username, success=True)
+                            return True
+                        else:
+                            raise Exception("session verify failed after login")
+                    else:
+                        # Re-raise the exception from account_info
+                        raise result_data
+                        
+                except queue.Empty:
+                    # Timeout occurred
+                    timeout_occurred.set()
+                    log.warning("Login verification timed out after 15s for %s", username)
+                    if on_log:
+                        on_log("auth: login verification timeout")
+                    raise Exception("Login verification timeout")
+                    
+            except Exception as verify_e:
+                log.warning("Login verification failed for %s: %s", username, verify_e)
+                if on_log:
+                    on_log(f"auth: login verification failed: {verify_e}")
+                # Don't return True if verification failed
+                raise Exception(f"Login verification failed: {verify_e}")
+            
+        except TwoFactorRequired:
+            return self._handle_two_factor_auth(cl, username, password, on_log)
+            
+        except ChallengeRequired:
+            return self._handle_challenge_auth(cl, username, password, on_log)
+            
+        except RateLimitError as e:
+            log.debug("RateLimitError during login for %s: %s", username, e)
+            if on_log:
+                on_log(f"auth: rate limited during login: {e}")
+            
+            # For 429 errors, wait longer and try login again
+            delay = random.uniform(60, 120)  # 60-120 seconds as requested
+            log.warning(f"Rate limited during login for {username}, waiting {delay:.1f}s before retry")
+            if on_log:
+                on_log(f"auth: rate limited, waiting {delay:.1f}s before retry")
+            time.sleep(delay)
+            
+            # Try login one more time after rate limit delay
+            try:
+                cl.login(username, password)
+                log.debug("Login completed after rate limit delay for %s", username)
+                if on_log:
+                    on_log("auth: login completed after rate limit delay")
+                
+                # Verify login success
+                delay = self._get_human_delay('session_check')
+                time.sleep(delay)
+                account_info = cl.account_info()  # type: ignore[attr-defined]
+                if account_info and hasattr(account_info, 'username'):
+                    log.debug("Login verified after rate limit delay for %s", account_info.username)
+                    if on_log:
+                        on_log("auth: login verified after rate limit delay")
+                    self._record_auth_attempt(username, success=True)
+                    return True
+                else:
+                    raise Exception("account_info() failed after rate limit delay login")
+            except Exception as retry_e:
+                log.warning("Login retry after rate limit failed for %s: %s", username, retry_e)
+                if on_log:
+                    on_log(f"auth: login retry failed: {retry_e}")
+                return False
+                
+        except Exception as e:
+            error_str = str(e).lower()
+            log.debug("Login failed for %s: %s", username, e)
+            
+            if on_log:
+                on_log(f"auth: login failed: {e}")
+            
+            # Handle 429 errors during login
+            if "429" in error_str or "too many" in error_str or "rate limit" in error_str:
+                log.warning(f"Rate limit (429) during login for {username}")
+                if on_log:
+                    on_log(f"auth: rate limit during login")
+                return False
+            
+            return False
         
         return False
 
@@ -351,12 +510,68 @@ class IGAuthService:
             time.sleep(delay)
             
             cl.login(username, password, verification_code=totp)
-            log.debug("2FA login success for %s", username)
+            log.debug("2FA login completed for %s", username)
             if on_log:
-                on_log("auth: 2fa ok")
+                on_log("auth: 2fa completed")
             
-            self._record_auth_attempt(username, success=True)
-            return True
+            # Verify 2FA login success with timeout
+            try:
+                delay = self._get_human_delay('session_check')
+                time.sleep(delay)
+                
+                # Use threading.Timer for timeout in worker threads
+                import threading
+                import queue
+                
+                result_queue = queue.Queue()
+                timeout_occurred = threading.Event()
+                
+                def call_account_info():
+                    try:
+                        account_info = cl.account_info()  # type: ignore[attr-defined]
+                        if not timeout_occurred.is_set():
+                            result_queue.put(('success', account_info))
+                    except Exception as e:
+                        if not timeout_occurred.is_set():
+                            result_queue.put(('error', e))
+                
+                # Start the account_info call in a separate thread
+                thread = threading.Thread(target=call_account_info)
+                thread.daemon = True
+                thread.start()
+                
+                # Wait for result with timeout
+                try:
+                    result_type, result_data = result_queue.get(timeout=15)  # 15 second timeout
+                    
+                    if result_type == 'success':
+                        account_info = result_data
+                        if account_info and hasattr(account_info, 'username'):
+                            log.debug("2FA login verified for %s", account_info.username)
+                            if on_log:
+                                on_log("auth: 2fa verified")
+                            
+                            self._record_auth_attempt(username, success=True)
+                            return True
+                        else:
+                            raise Exception("account_info() failed after 2FA login")
+                    else:
+                        # Re-raise the exception from account_info
+                        raise result_data
+                        
+                except queue.Empty:
+                    # Timeout occurred
+                    timeout_occurred.set()
+                    log.warning("2FA verification timed out after 15s for %s", username)
+                    if on_log:
+                        on_log("auth: 2fa verification timeout")
+                    raise Exception("2FA verification timeout")
+                    
+            except Exception as verify_e:
+                log.warning("2FA login verification failed for %s: %s", username, verify_e)
+                if on_log:
+                    on_log(f"auth: 2fa verification failed: {verify_e}")
+                raise Exception(f"2FA login verification failed: {verify_e}")
             
         except Exception as e:
             log.debug("2FA login failed for %s: %s", username, e)
@@ -397,10 +612,66 @@ class IGAuthService:
                     try:
                         cl.login(username, password, relogin=True)
                         if on_log:
-                            on_log("auth: login ok (post-challenge)")
+                            on_log("auth: login completed (post-challenge)")
                         
-                        self._record_auth_attempt(username, success=True)
-                        return True
+                        # Verify post-challenge login success with timeout
+                        try:
+                            delay = self._get_human_delay('session_check')
+                            time.sleep(delay)
+                            
+                            # Use threading.Timer for timeout in worker threads
+                            import threading
+                            import queue
+                            
+                            result_queue = queue.Queue()
+                            timeout_occurred = threading.Event()
+                            
+                            def call_account_info():
+                                try:
+                                    account_info = cl.account_info()  # type: ignore[attr-defined]
+                                    if not timeout_occurred.is_set():
+                                        result_queue.put(('success', account_info))
+                                except Exception as e:
+                                    if not timeout_occurred.is_set():
+                                        result_queue.put(('error', e))
+                            
+                            # Start the account_info call in a separate thread
+                            thread = threading.Thread(target=call_account_info)
+                            thread.daemon = True
+                            thread.start()
+                            
+                            # Wait for result with timeout
+                            try:
+                                result_type, result_data = result_queue.get(timeout=15)  # 15 second timeout
+                                
+                                if result_type == 'success':
+                                    account_info = result_data
+                                    if account_info and hasattr(account_info, 'username'):
+                                        log.debug("Post-challenge login verified for %s", account_info.username)
+                                        if on_log:
+                                            on_log("auth: post-challenge login verified")
+                                        
+                                        self._record_auth_attempt(username, success=True)
+                                        return True
+                                    else:
+                                        raise Exception("account_info() failed after post-challenge login")
+                                else:
+                                    # Re-raise the exception from account_info
+                                    raise result_data
+                                    
+                            except queue.Empty:
+                                # Timeout occurred
+                                timeout_occurred.set()
+                                log.warning("Post-challenge verification timed out after 15s for %s", username)
+                                if on_log:
+                                    on_log("auth: post-challenge verification timeout")
+                                return False
+                                
+                        except Exception as verify_e:
+                            log.warning("Post-challenge login verification failed for %s: %s", username, verify_e)
+                            if on_log:
+                                on_log(f"auth: post-challenge verification failed: {verify_e}")
+                            return False
                         
                     except Exception as relog_err:
                         log.debug("Post-challenge login failed for %s: %s", username, relog_err)
@@ -427,15 +698,71 @@ class IGAuthService:
                     try:
                         cl.login(username, password, relogin=True)
                         if on_log:
-                            on_log("auth: login ok (post-challenge)")
+                            on_log("auth: login completed (post-challenge-simple)")
                         
-                        self._record_auth_attempt(username, success=True)
-                        return True
+                        # Verify post-challenge-simple login success with timeout
+                        try:
+                            delay = self._get_human_delay('session_check')
+                            time.sleep(delay)
+                            
+                            # Use threading.Timer for timeout in worker threads
+                            import threading
+                            import queue
+                            
+                            result_queue = queue.Queue()
+                            timeout_occurred = threading.Event()
+                            
+                            def call_account_info():
+                                try:
+                                    account_info = cl.account_info()  # type: ignore[attr-defined]
+                                    if not timeout_occurred.is_set():
+                                        result_queue.put(('success', account_info))
+                                except Exception as e:
+                                    if not timeout_occurred.is_set():
+                                        result_queue.put(('error', e))
+                            
+                            # Start the account_info call in a separate thread
+                            thread = threading.Thread(target=call_account_info)
+                            thread.daemon = True
+                            thread.start()
+                            
+                            # Wait for result with timeout
+                            try:
+                                result_type, result_data = result_queue.get(timeout=15)  # 15 second timeout
+                                
+                                if result_type == 'success':
+                                    account_info = result_data
+                                    if account_info and hasattr(account_info, 'username'):
+                                        log.debug("Post-challenge-simple login verified for %s", account_info.username)
+                                        if on_log:
+                                            on_log("auth: post-challenge-simple login verified")
+                                        
+                                        self._record_auth_attempt(username, success=True)
+                                        return True
+                                    else:
+                                        raise Exception("account_info() failed after post-challenge-simple login")
+                                else:
+                                    # Re-raise the exception from account_info
+                                    raise result_data
+                                    
+                            except queue.Empty:
+                                # Timeout occurred
+                                timeout_occurred.set()
+                                log.warning("Post-challenge-simple verification timed out after 15s for %s", username)
+                                if on_log:
+                                    on_log("auth: post-challenge-simple verification timeout")
+                                return False
+                                
+                        except Exception as verify_e:
+                            log.warning("Post-challenge-simple login verification failed for %s: %s", username, verify_e)
+                            if on_log:
+                                on_log(f"auth: post-challenge-simple verification failed: {verify_e}")
+                            return False
                         
                     except Exception as relog2_err:
-                        log.debug("Post-challenge login failed for %s: %s", username, relog2_err)
+                        log.debug("Post-challenge-simple login failed for %s: %s", username, relog2_err)
                         if on_log:
-                            on_log(f"auth: post-challenge login failed: {relog2_err}")
+                            on_log(f"auth: post-challenge-simple login failed: {relog2_err}")
                         return False
 
             if on_log:

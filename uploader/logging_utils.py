@@ -211,12 +211,12 @@ class _WebUIForwardHandler(logging.Handler):
 def attach_instagrapi_web_bridge() -> None:
     """Attach a handler to instagrapi/public/private loggers to forward messages to Web UI.
     Levels can be tuned with env:
-      - INSTAGRAPI_LOG_LEVEL (default INFO)
+      - INSTAGRAPI_LOG_LEVEL (default WARNING to avoid huge JSON dumps)
       - IG_HTTP_LOG_LEVEL (default WARNING)
       - FORWARD_IG_HTTP_TO_WEBUI (default 0)  # if 1, also forward HTTP logs
     """
     try:
-        ig_level = os.getenv('INSTAGRAPI_LOG_LEVEL', 'INFO').upper()
+        ig_level = os.getenv('INSTAGRAPI_LOG_LEVEL', 'WARNING').upper()  # Changed default to WARNING
         http_level = os.getenv('IG_HTTP_LOG_LEVEL', 'WARNING').upper()
         forward_http = os.getenv('FORWARD_IG_HTTP_TO_WEBUI', '0') == '1'
 

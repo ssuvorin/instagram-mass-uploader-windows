@@ -288,10 +288,10 @@ LOGGING = {
             'level': os.getenv('BULK_LOG_LEVEL', 'INFO'),
             'propagate': False,
         },
-        # Instagrapi and HTTP request loggers
+        # Instagrapi and HTTP request loggers - reduced verbosity to avoid huge JSON dumps
         'instagrapi': {
             'handlers': ['console'],
-            'level': os.getenv('INSTAGRAPI_LOG_LEVEL', 'INFO'),
+            'level': os.getenv('INSTAGRAPI_LOG_LEVEL', 'WARNING'),
             'propagate': False,
         },
         'public_request': {

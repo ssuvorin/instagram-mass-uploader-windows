@@ -296,9 +296,17 @@ def run_cookie_robot_task(task_id):
             task.log += log_message + "\n"
             logger.info(log_message)
             
-            response_json = json.dumps(result.get('data', {}), indent=2)
-            task.log += response_json + "\n"
-            logger.info(f"Response JSON: {response_json}")
+            # Skip logging large JSON responses to avoid console spam
+            response_data = result.get('data', {})
+            if isinstance(response_data, dict) and len(str(response_data)) < 500:
+                # Only log small responses
+                response_json = json.dumps(response_data, indent=2)
+                task.log += response_json + "\n"
+                logger.info(f"Response JSON: {response_json}")
+            else:
+                # Log summary for large responses
+                task.log += "Response received (large JSON response, details skipped)\n"
+                logger.info("Response received (large JSON response, details skipped)")
         else:
             task.status = 'FAILED'
             error_details = result.get('error', 'Unknown error')
@@ -306,11 +314,15 @@ def run_cookie_robot_task(task_id):
             task.log += log_message + "\n"
             logger.error(log_message)
             
-            # Add full error details if available
+            # Add full error details if available (but limit size)
             if isinstance(error_details, dict):
-                error_json = json.dumps(error_details, indent=2)
-                task.log += f"Full error details:\n{error_json}\n"
-                logger.error(f"Full API error: {error_json}")
+                if len(str(error_details)) < 500:
+                    error_json = json.dumps(error_details, indent=2)
+                    task.log += f"Full error details:\n{error_json}\n"
+                    logger.error(f"Full API error: {error_json}")
+                else:
+                    task.log += "Full error details available but too large to display\n"
+                    logger.error("Full API error available but too large to display")
         
         # Save cookies from Dolphin profile after robot execution
         try:

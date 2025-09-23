@@ -79,8 +79,8 @@ from .captcha_solver import solve_recaptcha_if_present, detect_recaptcha_on_page
 logging.getLogger('playwright').setLevel(logging.ERROR)
 logging.getLogger('playwright._impl').setLevel(logging.ERROR)
 
-# Suppress other verbose loggers
-for logger_name in ['urllib3', 'requests', 'asyncio']:
+# Suppress other verbose loggers including instagrapi to avoid huge JSON dumps
+for logger_name in ['urllib3', 'requests', 'asyncio', 'instagrapi', 'public_request', 'private_request']:
     logging.getLogger(logger_name).setLevel(logging.WARNING)
 
 # Apply browser environment configuration

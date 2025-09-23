@@ -61,6 +61,13 @@ class IGClientFactory:
         except Exception:
             pass
 
+        # Set request timeout to prevent hanging requests
+        try:
+            if hasattr(cl, 'private') and hasattr(cl.private, 'session'):
+                cl.private.session.timeout = 15  # 15 second timeout for all requests
+        except Exception:
+            pass
+
         # Proxy
         if proxy_url:
             try:

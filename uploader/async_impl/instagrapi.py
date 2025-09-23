@@ -97,7 +97,32 @@ def _build_usertags(cl: 'IGClient', usernames: List[str], reauth_cb: Optional[Ca
 					delay = RateLimitingConfig.get_delay('user_resolution')
 					time.sleep(delay)
 				
-				user = cl.user_info_by_username(uname)  # type: ignore[attr-defined]
+				# Use strictly private API: resolve username → info via v1 endpoint only (disable public/GQL fallbacks)
+				user_pk = None
+				user = None
+				# Force v1 for specific problematic usernames
+				user_info_v1 = getattr(cl, 'user_info_by_username_v1', None)
+				if callable(user_info_v1):
+					info_obj = user_info_v1(uname)  # type: ignore[misc]
+					user_pk = getattr(info_obj, 'pk', None)
+					user = info_obj
+				else:
+					# Fallback to id then user_info
+					user_pk = cl.user_id_from_username(uname)  # type: ignore[attr-defined]
+				user_info_call = getattr(cl, 'user_info', None)
+				if callable(user_info_call):
+					try:
+						user = user_info_call(user_pk)  # type: ignore[misc]
+					except Exception:
+						pass
+				else:
+					# As a last resort, construct a minimal user object without public/GQL fallbacks
+					try:
+						from instagrapi.types import UserShort  # type: ignore
+						if user_pk:
+							user = UserShort(pk=user_pk, username=uname)  # type: ignore
+					except Exception:
+						user = None
 				
 				# Some instagrapi versions require UserShort; attempt to adapt
 				try:
@@ -133,7 +158,7 @@ def _build_usertags(cl: 'IGClient', usernames: List[str], reauth_cb: Optional[Ca
 					log_warning(f"[USERS] Challenge required for @{uname}, skipping...")
 					break  # Don't retry for challenges
 				elif 'login_required' in error_msg.lower() or isinstance(e, LoginRequired):
-					log_warning(f"[USERS] login_required while resolving @{uname}")
+					log_warning(f"[USERS] LoginRequired while resolving @{uname} - session lost during mention resolution")
 					if callable(reauth_cb):
 						ok = False
 						try:
@@ -141,13 +166,15 @@ def _build_usertags(cl: 'IGClient', usernames: List[str], reauth_cb: Optional[Ca
 						except Exception:
 							ok = False
 						if ok:
-							log_info(f"[USERS] re-auth ok, retrying @{uname}...")
+							log_info(f"[USERS] re-auth successful, retrying @{uname}...")
 							# do not increment retry_count for successful reauth; continue loop to retry
 							continue
-					# backoff after failed/no reauth
-					wait_time = RateLimitingConfig.get_retry_delay(retry_count, 'user_resolution')
-					log_info(f"[USERS] Waiting {wait_time:.1f}s before retry for @{uname}...")
-					time.sleep(wait_time)
+						else:
+							log_error(f"[USERS] re-auth failed for @{uname}, skipping mention resolution")
+							break  # Skip this user if reauth fails
+					else:
+						log_error(f"[USERS] No reauth callback for @{uname}, skipping mention resolution")
+						break  # Skip this user if no reauth callback
 				else:
 					log_warning(f"[USERS] Failed to resolve @{uname} (attempt {retry_count}/{max_retries}): {e}")
 					# Use retry delay for other errors
@@ -163,14 +190,15 @@ def _build_usertags(cl: 'IGClient', usernames: List[str], reauth_cb: Optional[Ca
 
 
 def _resolve_location(cl: 'IGClient', location_text: Optional[str]) -> Optional['IGLocation']:
-	"""Best-effort location resolver by text. If not found, return None.
-	Avoids external geocoding; tries instagrapi search endpoints when available.
+	"""Best-effort location resolver by text using Instagram's private API.
+	Prioritizes fbsearch_places for better results.
 	"""
 	if not location_text:
 		return None
 	query = (location_text or '').strip()
 	if not query:
 		return None
+	
 	# Accept "lat,lng | Name" direct format
 	try:
 		parts = [p.strip() for p in query.split('|', 1)]
@@ -183,9 +211,40 @@ def _resolve_location(cl: 'IGClient', location_text: Optional[str]) -> Optional[
 			return Location(name=str(name_v), lat=lat_v, lng=lng_v)  # type: ignore
 	except Exception:
 		pass
-	# Try a couple of known methods guarded by try/except, degrade to None
+	
+	# Try Instagram's private location search first (most reliable)
 	try:
-		# Some instagrapi builds expose .locations_search or .location_search
+		# Add delay before location search to avoid rate limits
+		delay = RateLimitingConfig.get_delay('location_search')
+		time.sleep(delay)
+		
+		# Use private fbsearch_places API for better results
+		places = cl.fbsearch_places(query)  # type: ignore[attr-defined]
+		if places and isinstance(places, list) and len(places) > 0:
+			# Take the first/best match
+			place = places[0]
+			lat = getattr(place, 'lat', None) or getattr(place, 'latitude', None)
+			lng = getattr(place, 'lng', None) or getattr(place, 'longitude', None)
+			name = getattr(place, 'name', None) or getattr(place, 'title', None) or query
+			
+			if lat is not None and lng is not None:
+				log_info(f"[LOCATION] fbsearch_places resolved '{query}' → ({lat},{lng}) :: {name}")
+				return Location(name=str(name), lat=float(lat), lng=float(lng))  # type: ignore
+			else:
+				log_debug(f"[LOCATION] fbsearch_places found place '{name}' but missing coordinates")
+		else:
+			log_debug(f"[LOCATION] fbsearch_places returned no results for '{query}'")
+	except Exception as e:
+		error_category = InstagramAPIErrorHandler.get_error_category(e)
+		if error_category == 'rate_limit':
+			log_warning(f"[LOCATION] [RATE_LIMIT] Rate limit for fbsearch_places '{query}', trying fallback...")
+		elif 'login_required' in str(e).lower() or isinstance(e, LoginRequired):
+			log_warning(f"[LOCATION] Login required for fbsearch_places '{query}', trying fallback...")
+		else:
+			log_debug(f"[LOCATION] fbsearch_places failed for '{query}': {e}")
+	
+	# Fallback: try other instagrapi location search methods
+	try:
 		search_methods = [
 			getattr(cl, 'locations_search', None),
 			getattr(cl, 'location_search', None),
@@ -211,29 +270,31 @@ def _resolve_location(cl: 'IGClient', location_text: Optional[str]) -> Optional[
 					lng = getattr(cand, 'lng', None) or getattr(cand, 'longitude', None)
 					name = getattr(cand, 'name', None) or query
 					if lat is not None and lng is not None:
-						log_info(f"[LOCATION] resolved '{query}' → ({lat},{lng}) :: {name}")
+						log_info(f"[LOCATION] fallback method resolved '{query}' → ({lat},{lng}) :: {name}")
 						return Location(name=str(name), lat=float(lat), lng=float(lng))  # runtime type
 			except Exception as e:
 				error_category = InstagramAPIErrorHandler.get_error_category(e)
 				if error_category == 'rate_limit':
-					log_warning(f"[LOCATION] [RATE_LIMIT] Rate limit for location search '{query}', skipping...")
+					log_warning(f"[LOCATION] [RATE_LIMIT] Rate limit for fallback search '{query}', skipping...")
 					break  # Don't try other methods if rate limited
 				else:
-					log_debug(f"[LOCATION] Location search method failed for '{query}': {e}")
+					log_debug(f"[LOCATION] Fallback search method failed for '{query}': {e}")
 					continue
-		# Fallback: try our geocoder (Nominatim + dictionary)
-		try:
-			coords = resolve_location_coordinates(query)
-			if coords:
-				name2, lat2, lon2 = coords
-				log_info(f"[LOCATION] geocoded '{query}' → ({lat2},{lon2}) :: {name2}")
-				return Location(name=str(name2), lat=float(lat2), lng=float(lon2))  # type: ignore
-		except Exception:
-			pass
-		# Else give up gracefully
-		log_error(f"[LOCATION] could not resolve '{query}' to coordinates; skipping API location")
 	except Exception:
-		return None
+		pass
+	
+	# Final fallback: try our geocoder (Nominatim + dictionary)
+	try:
+		coords = resolve_location_coordinates(query)
+		if coords:
+			name2, lat2, lon2 = coords
+			log_info(f"[LOCATION] geocoded '{query}' → ({lat2},{lon2}) :: {name2}")
+			return Location(name=str(name2), lat=float(lat2), lng=float(lon2))  # type: ignore
+	except Exception:
+		pass
+	
+	# Give up gracefully
+	log_warning(f"[LOCATION] could not resolve '{query}' to coordinates; skipping location")
 	return None
 
 
@@ -302,6 +363,62 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 			on_log(f"Failed to create client: {e}")
 		return ("failed", 0, 1)
 
+	# CRITICAL: Lock proxy and device before any authentication
+	# Ensure the same proxy and device are used throughout the entire session
+	try:
+		log_info(f"[LOCK] Locking proxy and device for {username}")
+		
+		# Lock proxy - ensure it's set and won't change
+		if proxy_url:
+			cl.set_proxy(proxy_url)
+			log_info(f"[LOCK] Proxy locked: {proxy_url}")
+		
+		# Lock device settings - ensure they won't change during session
+		device_cfg = {
+			"cpu": device_settings.get("cpu", "exynos9820"),
+			"dpi": device_settings.get("dpi", "640dpi"),
+			"model": device_settings.get("model", "SM-G973F"),
+			"device": device_settings.get("device", "beyond1"),
+			"resolution": device_settings.get("resolution", "1440x3040"),
+			"app_version": device_settings.get("app_version", "269.0.0.18.75"),
+			"manufacturer": device_settings.get("manufacturer", "samsung"),
+			"version_code": device_settings.get("version_code", "314665256"),
+			"android_release": device_settings.get("android_release", "10"),
+			"android_version": device_settings.get("android_version", 29),
+			"uuid": device_settings.get("uuid"),
+			"android_device_id": device_settings.get("android_device_id"),
+			"phone_id": device_settings.get("phone_id"),
+			"client_session_id": device_settings.get("client_session_id"),
+			"country": device_settings.get("country"),
+			"locale": device_settings.get("locale"),
+		}
+		cl.set_device(device_cfg)
+		log_info(f"[LOCK] Device locked: {device_cfg.get('model')} {device_cfg.get('manufacturer')}")
+		
+		# Lock user agent if available
+		if device_settings.get("user_agent") or ua_hint:
+			user_agent = device_settings.get("user_agent") or ua_hint
+			# Set user agent in device config as well
+			device_cfg["user_agent"] = user_agent
+			cl.set_device(device_cfg)
+			log_info(f"[LOCK] User agent locked: {user_agent[:50]}...")
+		
+		# Load persisted session settings if available (dict only)
+		if persisted_settings:
+			try:
+				cl.set_settings(persisted_settings)  # type: ignore[attr-defined]
+				log_info(f"[LOCK] Session settings loaded from persistence")
+			except Exception as load_e:
+				log_warning(f"[LOCK] Failed to load persisted settings: {load_e}")
+		
+		log_info(f"[LOCK] Proxy and device locked successfully for {username}")
+			
+	except Exception as lock_e:
+		log_error(f"[LOCK] Failed to lock proxy/device for {username}: {lock_e}")
+		if on_log:
+			on_log(f"Failed to lock proxy/device: {lock_e}")
+		return ("failed", 0, 1)
+
 	# Auth: prefer existing session; fallback to login with TOTP/email
 	provider = CompositeProvider([
 		TOTPProvider(tfa_secret or None),
@@ -312,6 +429,12 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 		if on_log:
 			on_log("Authentication failed")
 		return ("failed", 0, 1)
+	
+	# Ensure we're logged in before any API calls (mentions, locations, uploads)
+	# Authentication was verified via account_info() - the gold standard
+	log_info("[API] Authentication verified via account_info(), proceeding with uploads")
+	if on_log:
+		on_log("Authentication verified via account_info(), proceeding with uploads")
 
 	# Save refreshed session after auth and backfill device/user_agent if missing
 	try:
@@ -320,6 +443,16 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 		log_info("[API] session saved")
 		if on_log:
 			on_log("Session saved")
+		# Best-effort warmup to reduce rupload 403 after login
+		try:
+			launcher_sync = getattr(cl, 'launcher_sync', None)
+			if callable(launcher_sync):
+				launcher_sync()  # type: ignore[misc]
+			qe_expose = getattr(cl, 'qe_expose', None)
+			if callable(qe_expose):
+				qe_expose()  # type: ignore[misc]
+		except Exception:
+			pass
 		# backfill user_agent into device if empty
 		try:
 			from uploader.models import InstagramAccount
@@ -640,6 +773,12 @@ def _sync_photo_upload_impl(account_details: Dict, photo_files_to_upload: List[s
 		if on_log:
 			on_log("Authentication failed")
 		return ("failed", 0, 1)
+	
+	# Ensure we're logged in before any API calls (mentions, locations, uploads)
+	# Authentication was verified via account_info() - the gold standard
+	log_info("[API] Authentication verified via account_info(), proceeding with photo uploads")
+	if on_log:
+		on_log("Authentication verified via account_info(), proceeding with photo uploads")
 
 	# Save refreshed session after auth
 	try:
@@ -711,11 +850,10 @@ def _sync_photo_upload_impl(account_details: Dict, photo_files_to_upload: List[s
 				log_info(f"[UPLOAD] Waiting {pre_delay:.1f}s before upload...")
 				time.sleep(pre_delay)
 
-				# Debug: dump request context if available
+				# Debug: log only basic info, not full JSON responses
 				try:
-					lj = getattr(cl, 'last_json', None)
-					if lj:
-						log_debug(f"[API] last_json before photo_upload: {lj}")
+					# Skip logging full JSON to avoid console spam
+					pass
 				except Exception:
 					pass
 
@@ -754,16 +892,14 @@ def _sync_photo_upload_impl(account_details: Dict, photo_files_to_upload: List[s
 				log_warning(f"[ERROR] Photo upload attempt {retry_count} failed: {e}")
 				if on_log:
 					on_log(f"Photo upload attempt {retry_count} failed: {e}")
-				# Dump last response JSON/text for diagnostics
+				# Log only status codes for diagnostics, not full JSON responses
 				try:
-					lj = getattr(cl, 'last_json', None)
-					if lj:
-						log_debug(f"[API] last_json on error: {lj}")
 					lr = getattr(getattr(cl, 'private', None), 'last_response', None)
 					if lr is not None:
 						try:
-							log_debug(f"[API] last_response.status: {getattr(lr, 'status_code', '?')}")
-							log_debug(f"[API] last_response.text: {getattr(lr, 'text', '')[:2000]}")
+							status = getattr(lr, 'status_code', '?')
+							log_debug(f"[API] last_response.status: {status}")
+							# Skip logging full response text to avoid huge JSON dumps
 						except Exception:
 							pass
 				except Exception:

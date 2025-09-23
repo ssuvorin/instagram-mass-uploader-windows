@@ -328,8 +328,8 @@ class DolphinAnty:
                 "screen":        screen
             }
 
-        # отладочный лог
-        logger.error(f"[FAIL] WebGL parsing failed, payload was: {json.dumps(payload)}")
+        # отладочный лог (без полного payload чтобы избежать спама)
+        logger.error(f"[FAIL] WebGL parsing failed, payload size: {len(str(payload))} chars")
         return None
 
     def create_profile(

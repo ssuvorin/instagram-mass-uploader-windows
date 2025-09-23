@@ -584,14 +584,11 @@ class AsyncAccountProcessor:
     def _create_log_callback(self):
         """Create a synchronous log callback that bridges to async logger"""
         def log_callback(message: str):
-            # Use asyncio.run_coroutine_threadsafe to bridge sync to async
+            # Use asyncio.create_task to properly handle the coroutine
             try:
                 import asyncio
-                future = asyncio.run_coroutine_threadsafe(
-                    self.logger.log('INFO', f"[API] {message}"),
-                    asyncio.get_event_loop()
-                )
-                # Don't wait for completion to avoid blocking
+                # Create a task to properly handle the coroutine
+                asyncio.create_task(self.logger.log('INFO', f"[API] {message}"))
             except Exception:
                 # Fallback to simple print if async bridge fails
                 print(f"[API] {message}")
