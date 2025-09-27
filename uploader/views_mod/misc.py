@@ -3523,6 +3523,9 @@ def tiktok_proxy_validate(request):
         except Exception:
             payload = {}
         
+        # Логируем запрос для отладки
+        print(f"Django received proxy validation request: {payload}")
+        
         resp = requests.post(
             f"{api_base}/proxy/validate",
             json=payload,

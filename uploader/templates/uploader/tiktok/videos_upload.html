@@ -640,6 +640,8 @@ document.getElementById('validate-proxy-btn').addEventListener('click', async fu
         const clientOption = document.getElementById('client_id').options[document.getElementById('client_id').selectedIndex];
         const clientName = clientOption.textContent;
         
+        console.log('Sending proxy validation request for client:', clientName);
+        
         // Validate proxies for selected client
         const response = await fetch('{% url "api_tiktok_proxy_validate" %}', {
             method: 'POST',

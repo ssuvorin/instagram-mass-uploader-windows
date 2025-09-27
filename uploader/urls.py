@@ -117,13 +117,13 @@ urlpatterns = [
     path('api/tiktok/videos/pipeline/', misc.tiktok_videos_proxy_pipeline, name='api_tiktok_videos_pipeline'),
     path('api/tiktok/videos/release-accounts/', misc.tiktok_videos_proxy_release_accounts, name='api_tiktok_videos_release_accounts'),
     
-    # TikTok Proxy Validation endpoints
-    path('api/tiktok/proxy/validate/', misc.tiktok_proxy_validate, name='api_tiktok_proxy_validate'),
-    path('api/tiktok/proxy/status/<str:client>/', misc.tiktok_proxy_status, name='api_tiktok_proxy_status'),
-    path('api/tiktok/proxy/invalid-countries/<str:client>/', misc.tiktok_proxy_invalid_countries, name='api_tiktok_proxy_invalid_countries'),
-    path('api/tiktok/proxy/replace-invalid/', misc.tiktok_proxy_replace_invalid, name='api_tiktok_proxy_replace_invalid'),
-    path('api/tiktok/proxy/upload-and-validate/', misc.tiktok_proxy_upload_and_validate, name='api_tiktok_proxy_upload_and_validate'),
-    path('api/tiktok/proxy/replace-with-uploaded/', misc.tiktok_proxy_replace_with_uploaded, name='api_tiktok_proxy_replace_with_uploaded'),
+        # TikTok Proxy Validation endpoints
+        path('api/tiktok/proxy/validate/', misc.tiktok_proxy_validate, name='api_tiktok_proxy_validate'),
+        path('api/tiktok/proxy/status/<str:client>/', misc.tiktok_proxy_status, name='api_tiktok_proxy_status'),
+        path('api/tiktok/proxy/invalid-countries/<str:client>/', misc.tiktok_proxy_invalid_countries, name='api_tiktok_proxy_invalid_countries'),
+        path('api/tiktok/proxy/replace-invalid/', misc.tiktok_proxy_replace_invalid, name='api_tiktok_proxy_replace_invalid'),
+        path('api/tiktok/proxy/upload-and-validate/', misc.tiktok_proxy_upload_and_validate, name='api_tiktok_proxy_upload_and_validate'),
+        path('api/tiktok/proxy/replace-with-uploaded/', misc.tiktok_proxy_replace_with_uploaded, name='api_tiktok_proxy_replace_with_uploaded'),
     path('api/tiktok/booster/release-accounts/', misc.tiktok_booster_proxy_release_accounts, name='api_tiktok_booster_release_accounts'),
     path('api/tiktok/stats/', misc.tiktok_stats_proxy, name='api_tiktok_stats'),
     path('api/tiktok/maintenance/', misc.tiktok_maintenance_proxy, name='api_tiktok_maintenance'),
