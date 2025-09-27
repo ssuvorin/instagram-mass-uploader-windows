@@ -1014,11 +1014,12 @@ document.getElementById('replacement-proxies-form').addEventListener('submit', a
         
         if (uploadData.auto_match_summary) {
             const summary = uploadData.auto_match_summary;
-            analysisHtml += `<p><strong>Total invalid accounts:</strong> ${summary.total_invalid_accounts}</p>`;
+            analysisHtml += `<p><strong>Total accounts:</strong> ${summary.total_accounts}</p>`;
+            analysisHtml += `<p><strong>Max replaceable accounts:</strong> ${summary.max_replaceable_accounts} (20 proxies × 2 accounts each)</p>`;
             analysisHtml += `<p><strong>Can replace all:</strong> ${summary.can_replace_all ? 'Yes' : 'No'}</p>`;
             
-            if (summary.total_invalid_accounts === 0) {
-                analysisHtml += '<p class="text-warning"><strong>No invalid accounts found for this client.</strong> All proxies are already valid.</p>';
+            if (summary.total_accounts === 0) {
+                analysisHtml += '<p class="text-warning"><strong>No accounts found for this client.</strong></p>';
             } else if (uploadData.replacement_analysis && Object.keys(uploadData.replacement_analysis).length > 0) {
                 analysisHtml += '<h6>Country Analysis:</h6><ul>';
                 Object.entries(uploadData.replacement_analysis).forEach(([country, analysis]) => {
