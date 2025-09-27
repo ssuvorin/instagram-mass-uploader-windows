@@ -1017,7 +1017,9 @@ document.getElementById('replacement-proxies-form').addEventListener('submit', a
             analysisHtml += `<p><strong>Total invalid accounts:</strong> ${summary.total_invalid_accounts}</p>`;
             analysisHtml += `<p><strong>Can replace all:</strong> ${summary.can_replace_all ? 'Yes' : 'No'}</p>`;
             
-            if (uploadData.replacement_analysis) {
+            if (summary.total_invalid_accounts === 0) {
+                analysisHtml += '<p class="text-warning"><strong>No invalid accounts found for this client.</strong> All proxies are already valid.</p>';
+            } else if (uploadData.replacement_analysis && Object.keys(uploadData.replacement_analysis).length > 0) {
                 analysisHtml += '<h6>Country Analysis:</h6><ul>';
                 Object.entries(uploadData.replacement_analysis).forEach(([country, analysis]) => {
                     const status = analysis.can_replace ? '✅' : '❌';
@@ -1083,7 +1085,7 @@ document.getElementById('replacement-proxies-form').addEventListener('submit', a
 });
 
 // Function to proceed with replacement after warnings
-async function proceedWithReplacement(clientName, targetCountries, validatedProxies) {
+async function proceedWithReplacement(clientName, validatedProxies) {
     const clientId = document.getElementById('client_id').value;
     if (!clientId) {
         alert('Please select a client first to proceed with replacement');
@@ -1093,7 +1095,7 @@ async function proceedWithReplacement(clientName, targetCountries, validatedProx
     // Store validated proxies globally for use in replacement
     window.validatedProxiesForReplacement = validatedProxies;
     
-    await performProxyReplacement(clientName, targetCountries);
+    await performProxyReplacement(clientName);
 }
 
 // Function to proceed with replacement from warning dialog
@@ -1160,7 +1162,6 @@ async function performProxyReplacement(clientName) {
                 <div class="alert alert-success">
                     <h6><i class="bi bi-check-circle me-2"></i>Proxy Replacement Successful</h6>
                     <p class="mb-1"><strong>Client:</strong> ${clientName}</p>
-                    <p class="mb-1"><strong>Target Countries:</strong> ${targetCountries}</p>
                     <p class="mb-1"><strong>Proxies Uploaded:</strong> ${validatedProxies.length}</p>
                     <p class="mb-0"><strong>Accounts Updated:</strong> ${data.updated_accounts || 'Unknown'}</p>
                 </div>
@@ -1168,7 +1169,6 @@ async function performProxyReplacement(clientName) {
             
             // Clear form
             document.getElementById('replacement-proxies-file').value = '';
-            document.getElementById('target-countries').value = '';
             
         } else {
             throw new Error(data.detail || `HTTP ${response.status}`);
