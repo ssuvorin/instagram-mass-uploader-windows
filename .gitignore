@@ -19,6 +19,7 @@ instagrapi-master_SOURCE
 *.env
 windows_deployment.env
 modules FOR INSTAUPLOAD
+DBalancer
 
 # Virtual environment
 venv/
