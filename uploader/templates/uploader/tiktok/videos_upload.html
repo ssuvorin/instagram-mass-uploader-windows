@@ -369,7 +369,15 @@
                     <div class="mb-3">
                         <label for="replacement-proxies-file" class="form-label">Select Proxies File:</label>
                         <input type="file" class="form-control" id="replacement-proxies-file" name="file" accept=".txt,.csv" required>
-                        <div class="form-text">Upload a text or CSV file with proxy data. Format: host:port:username:password or host:port</div>
+                        <div class="form-text">
+                            Upload a text or CSV file with proxy data. Supported formats:<br>
+                            • <code>host:port</code> - basic format<br>
+                            • <code>host:port:username:password</code> - with auth<br>
+                            • <code>host:port:username:password:type</code> - with type (HTTP/SOCKS5/HTTPS)<br>
+                            • <code>type://username:password@host:port</code> - URL format with auth<br>
+                            • <code>type://host:port</code> - URL format without auth<br>
+                            • Comments starting with # are ignored
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label for="target-countries" class="form-label">Target Countries:</label>
@@ -808,8 +816,17 @@ async function showInvalidCountries(clientName) {
                             
                             <div class="alert alert-warning">
                                 <h6><i class="bi bi-exclamation-triangle me-2"></i>Instructions</h6>
-                                <p class="mb-1">1. Upload a file with proxy data in format: <code>host:port:username:password</code> or <code>host:port</code></p>
+                                <p class="mb-1">1. Upload a file with proxy data in supported formats:</p>
+                                <ul class="mb-2">
+                                    <li><code>host:port</code> - basic format</li>
+                                    <li><code>host:port:username:password</code> - with auth</li>
+                                    <li><code>host:port:username:password:type</code> - with type (HTTP/SOCKS5/HTTPS)</li>
+                                    <li><code>type://username:password@host:port</code> - URL format with auth</li>
+                                    <li><code>type://host:port</code> - URL format without auth</li>
+                                </ul>
                                 <p class="mb-0">2. Make sure you have enough proxies for each country (see counts above)</p>
+                                <p class="mb-0">3. One proxy can be used by maximum 2 accounts</p>
+                                <p class="mb-0">4. Comments starting with # are ignored</p>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -872,7 +889,7 @@ function uploadProxiesForCountry(clientName, country, requiredCount) {
     
     // Add hint about required count
     const formText = targetCountriesInput.parentNode.querySelector('.form-text');
-    formText.innerHTML = `Required: ${requiredCount} proxies for ${country}. Upload format: host:port:username:password or host:port`;
+    formText.innerHTML = `Required: ${requiredCount} proxies for ${country}. Use any supported format from the file input instructions above.`;
 }
 
 // Handle replacement proxies form submission
@@ -968,9 +985,12 @@ document.getElementById('replacement-proxies-form').addEventListener('submit', a
             });
             warningHtml += '</ul><p class="mb-0"><strong>Do you want to proceed anyway?</strong></p></div>';
             
+            // Store validated proxies globally for use in proceed function
+            window.validatedProxiesForReplacement = uploadData.validated_proxies;
+            
             resultsDiv.innerHTML = warningHtml + `
                 <div class="mt-3">
-                    <button class="btn btn-warning me-2" onclick="proceedWithReplacement('${clientName}', '${targetCountries}', ${JSON.stringify(uploadData.validated_proxies).replace(/"/g, '&quot;')})">
+                    <button class="btn btn-warning me-2" onclick="proceedWithReplacementFromWarning('${clientName}', '${targetCountries}')">
                         <i class="bi bi-check me-1"></i>Proceed Anyway
                     </button>
                     <button class="btn btn-secondary" onclick="cancelReplacement()">
@@ -984,8 +1004,11 @@ document.getElementById('replacement-proxies-form').addEventListener('submit', a
             return;
         }
         
+        // Store validated proxies globally for use in replacement
+        window.validatedProxiesForReplacement = uploadData.validated_proxies;
+        
         // Proceed with replacement
-        await performProxyReplacement(clientName, targetCountries, uploadData.validated_proxies);
+        await performProxyReplacement(clientName, targetCountries);
         
     } catch (error) {
         progressBar.style.width = '100%';
@@ -1017,7 +1040,25 @@ async function proceedWithReplacement(clientName, targetCountries, validatedProx
         return;
     }
     
-    await performProxyReplacement(clientName, targetCountries, validatedProxies);
+    // Store validated proxies globally for use in replacement
+    window.validatedProxiesForReplacement = validatedProxies;
+    
+    await performProxyReplacement(clientName, targetCountries);
+}
+
+// Function to proceed with replacement from warning dialog
+async function proceedWithReplacementFromWarning(clientName, targetCountries) {
+    const clientId = document.getElementById('client_id').value;
+    if (!clientId) {
+        alert('Please select a client first to proceed with replacement');
+        return;
+    }
+    
+    // Clear the warning dialog
+    document.getElementById('proxy-upload-results').innerHTML = '';
+    
+    // Proceed with replacement using stored validated proxies
+    await performProxyReplacement(clientName, targetCountries);
 }
 
 // Function to cancel replacement
@@ -1028,7 +1069,7 @@ function cancelReplacement() {
 }
 
 // Function to perform actual proxy replacement
-async function performProxyReplacement(clientName, targetCountries, validatedProxies) {
+async function performProxyReplacement(clientName, targetCountries) {
     const clientId = document.getElementById('client_id').value;
     if (!clientId) {
         alert('Please select a client first to perform proxy replacement');
@@ -1038,6 +1079,9 @@ async function performProxyReplacement(clientName, targetCountries, validatedPro
     const progressBar = document.getElementById('proxy-upload-progress').querySelector('.progress-bar');
     const progressText = document.getElementById('proxy-upload-progress-text');
     const resultsDiv = document.getElementById('proxy-upload-results');
+    
+    // Get validated proxies from global storage
+    const validatedProxies = window.validatedProxiesForReplacement || [];
     
     try {
         progressBar.style.width = '90%';
