@@ -720,8 +720,24 @@ document.getElementById('validate-proxy-btn').addEventListener('click', async fu
             if (hasInvalid) {
                 showCountriesBtn.style.display = 'block';
                 uploadBtn.style.display = 'block';
-                showCountriesBtn.onclick = () => showInvalidCountries(clientName);
-                uploadBtn.onclick = () => showReplacementUpload(clientName);
+                
+                // Remove existing event listeners to avoid duplicates
+                showCountriesBtn.replaceWith(showCountriesBtn.cloneNode(true));
+                uploadBtn.replaceWith(uploadBtn.cloneNode(true));
+                
+                // Re-get elements after cloning
+                const newShowCountriesBtn = document.getElementById('show-invalid-countries-btn');
+                const newUploadBtn = document.getElementById('upload-replacement-proxies-btn');
+                
+                // Add event listeners
+                newShowCountriesBtn.addEventListener('click', () => {
+                    console.log('Show Invalid Countries button clicked');
+                    showInvalidCountries(clientName);
+                });
+                newUploadBtn.addEventListener('click', () => {
+                    console.log('Upload Replacement Proxies button clicked');
+                    showReplacementUpload(clientName);
+                });
             } else {
                 showCountriesBtn.style.display = 'none';
                 uploadBtn.style.display = 'none';
@@ -853,6 +869,8 @@ async function showInvalidCountries(clientName) {
 
 // Function to show replacement upload interface
 function showReplacementUpload(clientName) {
+    console.log('showReplacementUpload called with client:', clientName);
+    
     const clientId = document.getElementById('client_id').value;
     if (!clientId) {
         alert('Please select a client first to upload replacement proxies');
@@ -862,18 +880,28 @@ function showReplacementUpload(clientName) {
     const uploadSection = document.getElementById('proxy-replacement-upload');
     const targetCountriesInput = document.getElementById('target-countries');
     
+    console.log('uploadSection found:', uploadSection);
+    console.log('targetCountriesInput found:', targetCountriesInput);
+    
     // Pre-fill target countries based on invalid proxies
+    uploadSection.classList.remove('d-none');  // Remove Bootstrap's d-none class
     uploadSection.style.display = 'block';
     uploadSection.scrollIntoView({ behavior: 'smooth' });
+    
+    console.log('Upload section should now be visible');
 }
 
 // Function to close replacement upload
 document.getElementById('close-replacement-upload-btn').addEventListener('click', function() {
-    document.getElementById('proxy-replacement-upload').style.display = 'none';
+    const uploadSection = document.getElementById('proxy-replacement-upload');
+    uploadSection.classList.add('d-none');  // Add Bootstrap's d-none class
+    uploadSection.style.display = 'none';
 });
 
 // Function to upload proxies for specific country
 function uploadProxiesForCountry(clientName, country, requiredCount) {
+    console.log('uploadProxiesForCountry called with:', clientName, country, requiredCount);
+    
     const clientId = document.getElementById('client_id').value;
     if (!clientId) {
         alert('Please select a client first to upload replacement proxies');
@@ -883,13 +911,19 @@ function uploadProxiesForCountry(clientName, country, requiredCount) {
     const uploadSection = document.getElementById('proxy-replacement-upload');
     const targetCountriesInput = document.getElementById('target-countries');
     
+    console.log('uploadSection found:', uploadSection);
+    console.log('targetCountriesInput found:', targetCountriesInput);
+    
     targetCountriesInput.value = country;
+    uploadSection.classList.remove('d-none');  // Remove Bootstrap's d-none class
     uploadSection.style.display = 'block';
     uploadSection.scrollIntoView({ behavior: 'smooth' });
     
     // Add hint about required count
     const formText = targetCountriesInput.parentNode.querySelector('.form-text');
     formText.innerHTML = `Required: ${requiredCount} proxies for ${country}. Use any supported format from the file input instructions above.`;
+    
+    console.log('Upload section should now be visible for country:', country);
 }
 
 // Handle replacement proxies form submission
