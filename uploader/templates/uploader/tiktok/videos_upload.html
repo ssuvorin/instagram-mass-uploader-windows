@@ -379,10 +379,9 @@
                             • Comments starting with # are ignored
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="target-countries" class="form-label">Target Countries:</label>
-                        <input type="text" class="form-control" id="target-countries" name="target_countries" placeholder="US,GB,DE" required>
-                        <div class="form-text">Comma-separated list of countries to replace proxies for</div>
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-info-circle me-2"></i>Automatic Geo Matching</h6>
+                        <p class="mb-0">The system will automatically match uploaded proxies to invalid accounts based on their geo location. Unknown geo accounts can be replaced with any valid proxy.</p>
                     </div>
                     <button type="submit" class="btn btn-primary" id="upload-proxies-btn">
                         <i class="bi bi-upload me-2"></i>Upload and Replace
@@ -878,12 +877,10 @@ function showReplacementUpload(clientName) {
     }
     
     const uploadSection = document.getElementById('proxy-replacement-upload');
-    const targetCountriesInput = document.getElementById('target-countries');
     
     console.log('uploadSection found:', uploadSection);
-    console.log('targetCountriesInput found:', targetCountriesInput);
     
-    // Pre-fill target countries based on invalid proxies
+    // Show upload section for automatic geo matching
     uploadSection.classList.remove('d-none');  // Remove Bootstrap's d-none class
     uploadSection.style.display = 'block';
     uploadSection.scrollIntoView({ behavior: 'smooth' });
@@ -909,21 +906,26 @@ function uploadProxiesForCountry(clientName, country, requiredCount) {
     }
     
     const uploadSection = document.getElementById('proxy-replacement-upload');
-    const targetCountriesInput = document.getElementById('target-countries');
     
     console.log('uploadSection found:', uploadSection);
-    console.log('targetCountriesInput found:', targetCountriesInput);
     
-    targetCountriesInput.value = country;
+    // Show upload section with automatic geo matching
     uploadSection.classList.remove('d-none');  // Remove Bootstrap's d-none class
     uploadSection.style.display = 'block';
     uploadSection.scrollIntoView({ behavior: 'smooth' });
     
-    // Add hint about required count
-    const formText = targetCountriesInput.parentNode.querySelector('.form-text');
-    formText.innerHTML = `Required: ${requiredCount} proxies for ${country}. Use any supported format from the file input instructions above.`;
+    // Show hint about automatic matching
+    const alertInfo = uploadSection.querySelector('.alert-info');
+    if (alertInfo) {
+        alertInfo.innerHTML = `
+            <h6><i class="bi bi-info-circle me-2"></i>Automatic Geo Matching</h6>
+            <p class="mb-0">The system will automatically match uploaded proxies to invalid accounts based on their geo location. 
+            <strong>Hint:</strong> You need at least ${requiredCount} proxies for ${country} (and any other countries with invalid proxies). 
+            Unknown geo accounts can be replaced with any valid proxy.</p>
+        `;
+    }
     
-    console.log('Upload section should now be visible for country:', country);
+    console.log('Upload section should now be visible for automatic geo matching');
 }
 
 // Handle replacement proxies form submission
@@ -932,7 +934,6 @@ document.getElementById('replacement-proxies-form').addEventListener('submit', a
     
     const clientId = document.getElementById('client_id').value;
     const fileInput = document.getElementById('replacement-proxies-file');
-    const targetCountries = document.getElementById('target-countries').value;
     const uploadBtn = document.getElementById('upload-proxies-btn');
     const progressDiv = document.getElementById('proxy-upload-progress');
     const progressBar = progressDiv.querySelector('.progress-bar');
@@ -964,7 +965,6 @@ document.getElementById('replacement-proxies-form').addEventListener('submit', a
         const formData = new FormData();
         formData.append('file', fileInput.files[0]);
         formData.append('client', clientName);
-        formData.append('target_countries', targetCountries);
         
         // Step 1: Upload and validate proxies
         progressBar.style.width = '25%';
@@ -1000,32 +1000,51 @@ document.getElementById('replacement-proxies-form').addEventListener('submit', a
             return;
         }
         
-        // Check country matching
+        // Check automatic geo matching results
         progressBar.style.width = '75%';
-        progressText.textContent = 'Checking country requirements...';
+        progressText.textContent = 'Analyzing geo matching...';
         
-        const countries = targetCountries.split(',').map(c => c.trim());
         let countryWarnings = [];
-        
         if (uploadData.country_mismatch && uploadData.country_mismatch.length > 0) {
             countryWarnings = uploadData.country_mismatch;
         }
         
+        // Show analysis results
+        let analysisHtml = '<div class="alert alert-info"><h6><i class="bi bi-info-circle me-2"></i>Automatic Geo Analysis</h6>';
+        
+        if (uploadData.auto_match_summary) {
+            const summary = uploadData.auto_match_summary;
+            analysisHtml += `<p><strong>Total invalid accounts:</strong> ${summary.total_invalid_accounts}</p>`;
+            analysisHtml += `<p><strong>Can replace all:</strong> ${summary.can_replace_all ? 'Yes' : 'No'}</p>`;
+            
+            if (uploadData.replacement_analysis) {
+                analysisHtml += '<h6>Country Analysis:</h6><ul>';
+                Object.entries(uploadData.replacement_analysis).forEach(([country, analysis]) => {
+                    const status = analysis.can_replace ? '✅' : '❌';
+                    analysisHtml += `<li>${status} ${country}: need ${analysis.required}, got ${analysis.available}</li>`;
+                });
+                analysisHtml += '</ul>';
+            }
+        }
+        analysisHtml += '</div>';
+        
         if (countryWarnings.length > 0) {
-            // Show country warnings but allow user to proceed
-            let warningHtml = '<div class="alert alert-warning"><h6><i class="bi bi-exclamation-triangle me-2"></i>Country Mismatch Warnings</h6><ul>';
+            analysisHtml += '<div class="alert alert-warning"><h6><i class="bi bi-exclamation-triangle me-2"></i>Partial Replacement</h6><ul>';
             countryWarnings.forEach(warning => {
-                warningHtml += `<li>${warning}</li>`;
+                analysisHtml += `<li>${warning}</li>`;
             });
-            warningHtml += '</ul><p class="mb-0"><strong>Do you want to proceed anyway?</strong></p></div>';
-            
-            // Store validated proxies globally for use in proceed function
-            window.validatedProxiesForReplacement = uploadData.validated_proxies;
-            
-            resultsDiv.innerHTML = warningHtml + `
+            analysisHtml += '</ul><p class="mb-0"><strong>Some accounts cannot be replaced. Proceed with partial replacement?</strong></p></div>';
+        }
+        
+        // Store validated proxies globally for use in replacement
+        window.validatedProxiesForReplacement = uploadData.validated_proxies;
+        
+        if (countryWarnings.length > 0) {
+            // Show warnings and ask user to proceed
+            resultsDiv.innerHTML = analysisHtml + `
                 <div class="mt-3">
-                    <button class="btn btn-warning me-2" onclick="proceedWithReplacementFromWarning('${clientName}', '${targetCountries}')">
-                        <i class="bi bi-check me-1"></i>Proceed Anyway
+                    <button class="btn btn-warning me-2" onclick="proceedWithReplacementFromWarning('${clientName}')">
+                        <i class="bi bi-check me-1"></i>Proceed with Partial Replacement
                     </button>
                     <button class="btn btn-secondary" onclick="cancelReplacement()">
                         <i class="bi bi-x me-1"></i>Cancel
@@ -1038,11 +1057,8 @@ document.getElementById('replacement-proxies-form').addEventListener('submit', a
             return;
         }
         
-        // Store validated proxies globally for use in replacement
-        window.validatedProxiesForReplacement = uploadData.validated_proxies;
-        
-        // Proceed with replacement
-        await performProxyReplacement(clientName, targetCountries);
+        // Proceed with full replacement
+        await performProxyReplacement(clientName);
         
     } catch (error) {
         progressBar.style.width = '100%';
@@ -1081,7 +1097,7 @@ async function proceedWithReplacement(clientName, targetCountries, validatedProx
 }
 
 // Function to proceed with replacement from warning dialog
-async function proceedWithReplacementFromWarning(clientName, targetCountries) {
+async function proceedWithReplacementFromWarning(clientName) {
     const clientId = document.getElementById('client_id').value;
     if (!clientId) {
         alert('Please select a client first to proceed with replacement');
@@ -1092,7 +1108,7 @@ async function proceedWithReplacementFromWarning(clientName, targetCountries) {
     document.getElementById('proxy-upload-results').innerHTML = '';
     
     // Proceed with replacement using stored validated proxies
-    await performProxyReplacement(clientName, targetCountries);
+    await performProxyReplacement(clientName);
 }
 
 // Function to cancel replacement
@@ -1103,7 +1119,7 @@ function cancelReplacement() {
 }
 
 // Function to perform actual proxy replacement
-async function performProxyReplacement(clientName, targetCountries) {
+async function performProxyReplacement(clientName) {
     const clientId = document.getElementById('client_id').value;
     if (!clientId) {
         alert('Please select a client first to perform proxy replacement');
@@ -1119,7 +1135,7 @@ async function performProxyReplacement(clientName, targetCountries) {
     
     try {
         progressBar.style.width = '90%';
-        progressText.textContent = 'Replacing proxies...';
+        progressText.textContent = 'Replacing proxies with automatic geo matching...';
         
         const response = await fetch('{% url "api_tiktok_proxy_replace_with_uploaded" %}', {
             method: 'POST',
@@ -1129,7 +1145,6 @@ async function performProxyReplacement(clientName, targetCountries) {
             },
             body: JSON.stringify({
                 client: clientName,
-                target_countries: targetCountries.split(',').map(c => c.trim()),
                 validated_proxies: validatedProxies
             })
         });
