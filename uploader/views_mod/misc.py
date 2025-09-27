@@ -1835,9 +1835,12 @@ def tiktok_booster_proxy_upload_accounts(request):
 
                 # 3) Try legacy with cookies: username:password:[json_cookies_array] (exactly 3 parts)
                 if not ok:
-                    raw_parts = line.split(':')
-                    if len(raw_parts) == 3:
-                        u, p, json_part = raw_parts
+                    # Use regex to properly split by ':' but not inside JSON brackets
+                    import re
+                    # Pattern: username:password:...rest (where rest starts with [)
+                    legacy_match = re.match(r'^([^:]+):([^:]+):(.+)$', line)
+                    if legacy_match:
+                        u, p, json_part = legacy_match.groups()
                         if u and p:
                             jp = (json_part or '').strip()
                             if jp.startswith('[') and jp.endswith(']'):
@@ -1869,6 +1872,7 @@ def tiktok_booster_proxy_upload_accounts(request):
                 if not raw.strip():
                     normalized_lines.append(raw)
                     continue
+                # For format B: split into exactly 5 parts (email format with cookies)
                 parts5 = raw.split(':', 4)
                 if len(parts5) == 5:
                     username, password, email, fourth_field, json_part = parts5
@@ -1905,6 +1909,75 @@ def tiktok_booster_proxy_upload_accounts(request):
 
 @csrf_exempt
 @login_required
+def tiktok_proxy_upload_and_validate(request):
+    """Proxy: upload and validate proxy file for TikTok accounts."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        # Prepare multipart data
+        files = {}
+        data = {}
+        
+        if 'file' in request.FILES:
+            files['file'] = request.FILES['file']
+        
+        # Add other form data
+        for key, value in request.POST.items():
+            data[key] = value
+        
+        resp = requests.post(
+            f"{api_base}/proxy/upload-and-validate",
+            files=files,
+            data=data,
+            timeout=300  # Longer timeout for file processing
+        )
+        
+        try:
+            response_data = resp.json()
+        except Exception:
+            response_data = {'detail': resp.text}
+        
+        return _json_response(response_data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_replace_with_uploaded(request):
+    """Proxy: replace proxies with uploaded and validated proxies."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        try:
+            payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+        except Exception:
+            payload = {}
+        
+        resp = requests.post(
+            f"{api_base}/proxy/replace-with-uploaded",
+            json=payload,
+            timeout=120
+        )
+        
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
 def tiktok_booster_proxy_upload_proxies(request):
     """Proxy: upload proxies file to external TikTok API from server side."""
     import requests
@@ -1923,6 +1996,75 @@ def tiktok_booster_proxy_upload_proxies(request):
             data = {'detail': resp.text}
         if resp.ok:
             return _json_response(data, status=resp.status_code)
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_upload_and_validate(request):
+    """Proxy: upload and validate proxy file for TikTok accounts."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        # Prepare multipart data
+        files = {}
+        data = {}
+        
+        if 'file' in request.FILES:
+            files['file'] = request.FILES['file']
+        
+        # Add other form data
+        for key, value in request.POST.items():
+            data[key] = value
+        
+        resp = requests.post(
+            f"{api_base}/proxy/upload-and-validate",
+            files=files,
+            data=data,
+            timeout=300  # Longer timeout for file processing
+        )
+        
+        try:
+            response_data = resp.json()
+        except Exception:
+            response_data = {'detail': resp.text}
+        
+        return _json_response(response_data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_replace_with_uploaded(request):
+    """Proxy: replace proxies with uploaded and validated proxies."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        try:
+            payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+        except Exception:
+            payload = {}
+        
+        resp = requests.post(
+            f"{api_base}/proxy/replace-with-uploaded",
+            json=payload,
+            timeout=120
+        )
+        
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        
         return _json_response(data, status=resp.status_code)
     except requests.exceptions.RequestException as e:
         return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
@@ -1995,6 +2137,75 @@ def tiktok_booster_proxy_prepare_accounts(request):
 
 @csrf_exempt
 @login_required
+def tiktok_proxy_upload_and_validate(request):
+    """Proxy: upload and validate proxy file for TikTok accounts."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        # Prepare multipart data
+        files = {}
+        data = {}
+        
+        if 'file' in request.FILES:
+            files['file'] = request.FILES['file']
+        
+        # Add other form data
+        for key, value in request.POST.items():
+            data[key] = value
+        
+        resp = requests.post(
+            f"{api_base}/proxy/upload-and-validate",
+            files=files,
+            data=data,
+            timeout=300  # Longer timeout for file processing
+        )
+        
+        try:
+            response_data = resp.json()
+        except Exception:
+            response_data = {'detail': resp.text}
+        
+        return _json_response(response_data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_replace_with_uploaded(request):
+    """Proxy: replace proxies with uploaded and validated proxies."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        try:
+            payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+        except Exception:
+            payload = {}
+        
+        resp = requests.post(
+            f"{api_base}/proxy/replace-with-uploaded",
+            json=payload,
+            timeout=120
+        )
+        
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
 def tiktok_booster_proxy_start(request):
     """Proxy: start booster."""
     import requests
@@ -2025,6 +2236,75 @@ def tiktok_booster_proxy_start(request):
             data = {'detail': resp.text}
         if resp.ok:
             return _json_response(data, status=resp.status_code)
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_upload_and_validate(request):
+    """Proxy: upload and validate proxy file for TikTok accounts."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        # Prepare multipart data
+        files = {}
+        data = {}
+        
+        if 'file' in request.FILES:
+            files['file'] = request.FILES['file']
+        
+        # Add other form data
+        for key, value in request.POST.items():
+            data[key] = value
+        
+        resp = requests.post(
+            f"{api_base}/proxy/upload-and-validate",
+            files=files,
+            data=data,
+            timeout=300  # Longer timeout for file processing
+        )
+        
+        try:
+            response_data = resp.json()
+        except Exception:
+            response_data = {'detail': resp.text}
+        
+        return _json_response(response_data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_replace_with_uploaded(request):
+    """Proxy: replace proxies with uploaded and validated proxies."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        try:
+            payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+        except Exception:
+            payload = {}
+        
+        resp = requests.post(
+            f"{api_base}/proxy/replace-with-uploaded",
+            json=payload,
+            timeout=120
+        )
+        
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        
         return _json_response(data, status=resp.status_code)
     except requests.exceptions.RequestException as e:
         return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
@@ -2318,6 +2598,75 @@ def tiktok_videos_proxy_upload(request):
     except requests.exceptions.RequestException as e:
         return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
 
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_upload_and_validate(request):
+    """Proxy: upload and validate proxy file for TikTok accounts."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        # Prepare multipart data
+        files = {}
+        data = {}
+        
+        if 'file' in request.FILES:
+            files['file'] = request.FILES['file']
+        
+        # Add other form data
+        for key, value in request.POST.items():
+            data[key] = value
+        
+        resp = requests.post(
+            f"{api_base}/proxy/upload-and-validate",
+            files=files,
+            data=data,
+            timeout=300  # Longer timeout for file processing
+        )
+        
+        try:
+            response_data = resp.json()
+        except Exception:
+            response_data = {'detail': resp.text}
+        
+        return _json_response(response_data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_replace_with_uploaded(request):
+    """Proxy: replace proxies with uploaded and validated proxies."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        try:
+            payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+        except Exception:
+            payload = {}
+        
+        resp = requests.post(
+            f"{api_base}/proxy/replace-with-uploaded",
+            json=payload,
+            timeout=120
+        )
+        
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
 @login_required
 def tiktok_videos_titles(request):
     context = _tiktok_api_context(request)
@@ -2343,6 +2692,75 @@ def tiktok_videos_proxy_upload_titles(request):
             data = {'detail': resp.text}
         if resp.ok:
             return _json_response(data, status=resp.status_code)
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_upload_and_validate(request):
+    """Proxy: upload and validate proxy file for TikTok accounts."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        # Prepare multipart data
+        files = {}
+        data = {}
+        
+        if 'file' in request.FILES:
+            files['file'] = request.FILES['file']
+        
+        # Add other form data
+        for key, value in request.POST.items():
+            data[key] = value
+        
+        resp = requests.post(
+            f"{api_base}/proxy/upload-and-validate",
+            files=files,
+            data=data,
+            timeout=300  # Longer timeout for file processing
+        )
+        
+        try:
+            response_data = resp.json()
+        except Exception:
+            response_data = {'detail': resp.text}
+        
+        return _json_response(response_data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_replace_with_uploaded(request):
+    """Proxy: replace proxies with uploaded and validated proxies."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        try:
+            payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+        except Exception:
+            payload = {}
+        
+        resp = requests.post(
+            f"{api_base}/proxy/replace-with-uploaded",
+            json=payload,
+            timeout=120
+        )
+        
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        
         return _json_response(data, status=resp.status_code)
     except requests.exceptions.RequestException as e:
         return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
@@ -2386,6 +2804,75 @@ def tiktok_videos_proxy_prepare_config(request):
     except requests.exceptions.RequestException as e:
         return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
 
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_upload_and_validate(request):
+    """Proxy: upload and validate proxy file for TikTok accounts."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        # Prepare multipart data
+        files = {}
+        data = {}
+        
+        if 'file' in request.FILES:
+            files['file'] = request.FILES['file']
+        
+        # Add other form data
+        for key, value in request.POST.items():
+            data[key] = value
+        
+        resp = requests.post(
+            f"{api_base}/proxy/upload-and-validate",
+            files=files,
+            data=data,
+            timeout=300  # Longer timeout for file processing
+        )
+        
+        try:
+            response_data = resp.json()
+        except Exception:
+            response_data = {'detail': resp.text}
+        
+        return _json_response(response_data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_replace_with_uploaded(request):
+    """Proxy: replace proxies with uploaded and validated proxies."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        try:
+            payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+        except Exception:
+            payload = {}
+        
+        resp = requests.post(
+            f"{api_base}/proxy/replace-with-uploaded",
+            json=payload,
+            timeout=120
+        )
+        
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
 @login_required
 def tiktok_videos_start(request):
     context = _tiktok_api_context(request)
@@ -2407,6 +2894,75 @@ def tiktok_videos_proxy_start_upload(request):
             data = {'detail': resp.text}
         if resp.ok:
             return _json_response(data, status=resp.status_code)
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_upload_and_validate(request):
+    """Proxy: upload and validate proxy file for TikTok accounts."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        # Prepare multipart data
+        files = {}
+        data = {}
+        
+        if 'file' in request.FILES:
+            files['file'] = request.FILES['file']
+        
+        # Add other form data
+        for key, value in request.POST.items():
+            data[key] = value
+        
+        resp = requests.post(
+            f"{api_base}/proxy/upload-and-validate",
+            files=files,
+            data=data,
+            timeout=300  # Longer timeout for file processing
+        )
+        
+        try:
+            response_data = resp.json()
+        except Exception:
+            response_data = {'detail': resp.text}
+        
+        return _json_response(response_data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_replace_with_uploaded(request):
+    """Proxy: replace proxies with uploaded and validated proxies."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        try:
+            payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+        except Exception:
+            payload = {}
+        
+        resp = requests.post(
+            f"{api_base}/proxy/replace-with-uploaded",
+            json=payload,
+            timeout=120
+        )
+        
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        
         return _json_response(data, status=resp.status_code)
     except requests.exceptions.RequestException as e:
         return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
@@ -2436,6 +2992,75 @@ def tiktok_videos_proxy_release_accounts(request):
 
 @csrf_exempt
 @login_required
+def tiktok_proxy_upload_and_validate(request):
+    """Proxy: upload and validate proxy file for TikTok accounts."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        # Prepare multipart data
+        files = {}
+        data = {}
+        
+        if 'file' in request.FILES:
+            files['file'] = request.FILES['file']
+        
+        # Add other form data
+        for key, value in request.POST.items():
+            data[key] = value
+        
+        resp = requests.post(
+            f"{api_base}/proxy/upload-and-validate",
+            files=files,
+            data=data,
+            timeout=300  # Longer timeout for file processing
+        )
+        
+        try:
+            response_data = resp.json()
+        except Exception:
+            response_data = {'detail': resp.text}
+        
+        return _json_response(response_data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_replace_with_uploaded(request):
+    """Proxy: replace proxies with uploaded and validated proxies."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        try:
+            payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+        except Exception:
+            payload = {}
+        
+        resp = requests.post(
+            f"{api_base}/proxy/replace-with-uploaded",
+            json=payload,
+            timeout=120
+        )
+        
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
 def tiktok_booster_proxy_release_accounts(request):
     """Proxy: add warmed accounts to DB on upstream server (if supported)."""
     import requests
@@ -2451,6 +3076,75 @@ def tiktok_booster_proxy_release_accounts(request):
             data = {'detail': resp.text}
         if resp.ok:
             return _json_response(data, status=resp.status_code)
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_upload_and_validate(request):
+    """Proxy: upload and validate proxy file for TikTok accounts."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        # Prepare multipart data
+        files = {}
+        data = {}
+        
+        if 'file' in request.FILES:
+            files['file'] = request.FILES['file']
+        
+        # Add other form data
+        for key, value in request.POST.items():
+            data[key] = value
+        
+        resp = requests.post(
+            f"{api_base}/proxy/upload-and-validate",
+            files=files,
+            data=data,
+            timeout=300  # Longer timeout for file processing
+        )
+        
+        try:
+            response_data = resp.json()
+        except Exception:
+            response_data = {'detail': resp.text}
+        
+        return _json_response(response_data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_replace_with_uploaded(request):
+    """Proxy: replace proxies with uploaded and validated proxies."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        try:
+            payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+        except Exception:
+            payload = {}
+        
+        resp = requests.post(
+            f"{api_base}/proxy/replace-with-uploaded",
+            json=payload,
+            timeout=120
+        )
+        
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        
         return _json_response(data, status=resp.status_code)
     except requests.exceptions.RequestException as e:
         return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
@@ -2529,6 +3223,75 @@ def tiktok_maintenance_proxy(request):
         return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
 
 
+@csrf_exempt
+@login_required
+def tiktok_proxy_upload_and_validate(request):
+    """Proxy: upload and validate proxy file for TikTok accounts."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        # Prepare multipart data
+        files = {}
+        data = {}
+        
+        if 'file' in request.FILES:
+            files['file'] = request.FILES['file']
+        
+        # Add other form data
+        for key, value in request.POST.items():
+            data[key] = value
+        
+        resp = requests.post(
+            f"{api_base}/proxy/upload-and-validate",
+            files=files,
+            data=data,
+            timeout=300  # Longer timeout for file processing
+        )
+        
+        try:
+            response_data = resp.json()
+        except Exception:
+            response_data = {'detail': resp.text}
+        
+        return _json_response(response_data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_replace_with_uploaded(request):
+    """Proxy: replace proxies with uploaded and validated proxies."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        try:
+            payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+        except Exception:
+            payload = {}
+        
+        resp = requests.post(
+            f"{api_base}/proxy/replace-with-uploaded",
+            json=payload,
+            timeout=120
+        )
+        
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
 
 
 @csrf_exempt
@@ -2583,6 +3346,75 @@ def tiktok_videos_proxy_prepare_accounts(request):
             data = {'detail': resp.text}
         if resp.ok:
             return _json_response(data, status=resp.status_code)
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_upload_and_validate(request):
+    """Proxy: upload and validate proxy file for TikTok accounts."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        # Prepare multipart data
+        files = {}
+        data = {}
+        
+        if 'file' in request.FILES:
+            files['file'] = request.FILES['file']
+        
+        # Add other form data
+        for key, value in request.POST.items():
+            data[key] = value
+        
+        resp = requests.post(
+            f"{api_base}/proxy/upload-and-validate",
+            files=files,
+            data=data,
+            timeout=300  # Longer timeout for file processing
+        )
+        
+        try:
+            response_data = resp.json()
+        except Exception:
+            response_data = {'detail': resp.text}
+        
+        return _json_response(response_data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_replace_with_uploaded(request):
+    """Proxy: replace proxies with uploaded and validated proxies."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        try:
+            payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+        except Exception:
+            payload = {}
+        
+        resp = requests.post(
+            f"{api_base}/proxy/replace-with-uploaded",
+            json=payload,
+            timeout=120
+        )
+        
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        
         return _json_response(data, status=resp.status_code)
     except requests.exceptions.RequestException as e:
         return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
@@ -2670,5 +3502,395 @@ def tiktok_videos_proxy_pipeline(request):
                 'start_upload': data_s,
             }
         })
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+# ===== TikTok Proxy Validation Endpoints =====
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_validate(request):
+    """Proxy: validate proxies for TikTok accounts."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        try:
+            payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+        except Exception:
+            payload = {}
+        
+        resp = requests.post(
+            f"{api_base}/proxy/validate",
+            json=payload,
+            timeout=120
+        )
+        
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_upload_and_validate(request):
+    """Proxy: upload and validate proxy file for TikTok accounts."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        # Prepare multipart data
+        files = {}
+        data = {}
+        
+        if 'file' in request.FILES:
+            files['file'] = request.FILES['file']
+        
+        # Add other form data
+        for key, value in request.POST.items():
+            data[key] = value
+        
+        resp = requests.post(
+            f"{api_base}/proxy/upload-and-validate",
+            files=files,
+            data=data,
+            timeout=300  # Longer timeout for file processing
+        )
+        
+        try:
+            response_data = resp.json()
+        except Exception:
+            response_data = {'detail': resp.text}
+        
+        return _json_response(response_data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_replace_with_uploaded(request):
+    """Proxy: replace proxies with uploaded and validated proxies."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        try:
+            payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+        except Exception:
+            payload = {}
+        
+        resp = requests.post(
+            f"{api_base}/proxy/replace-with-uploaded",
+            json=payload,
+            timeout=120
+        )
+        
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_status(request, client):
+    """Proxy: get proxy status for TikTok accounts by client."""
+    import requests
+    if request.method != 'GET':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        resp = requests.get(
+            f"{api_base}/proxy/status/{client}",
+            timeout=30
+        )
+        
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_upload_and_validate(request):
+    """Proxy: upload and validate proxy file for TikTok accounts."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        # Prepare multipart data
+        files = {}
+        data = {}
+        
+        if 'file' in request.FILES:
+            files['file'] = request.FILES['file']
+        
+        # Add other form data
+        for key, value in request.POST.items():
+            data[key] = value
+        
+        resp = requests.post(
+            f"{api_base}/proxy/upload-and-validate",
+            files=files,
+            data=data,
+            timeout=300  # Longer timeout for file processing
+        )
+        
+        try:
+            response_data = resp.json()
+        except Exception:
+            response_data = {'detail': resp.text}
+        
+        return _json_response(response_data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_replace_with_uploaded(request):
+    """Proxy: replace proxies with uploaded and validated proxies."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        try:
+            payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+        except Exception:
+            payload = {}
+        
+        resp = requests.post(
+            f"{api_base}/proxy/replace-with-uploaded",
+            json=payload,
+            timeout=120
+        )
+        
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_invalid_countries(request, client):
+    """Proxy: get invalid proxy countries for TikTok accounts by client."""
+    import requests
+    if request.method != 'GET':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        resp = requests.get(
+            f"{api_base}/proxy/invalid-countries/{client}",
+            timeout=30
+        )
+        
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_upload_and_validate(request):
+    """Proxy: upload and validate proxy file for TikTok accounts."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        # Prepare multipart data
+        files = {}
+        data = {}
+        
+        if 'file' in request.FILES:
+            files['file'] = request.FILES['file']
+        
+        # Add other form data
+        for key, value in request.POST.items():
+            data[key] = value
+        
+        resp = requests.post(
+            f"{api_base}/proxy/upload-and-validate",
+            files=files,
+            data=data,
+            timeout=300  # Longer timeout for file processing
+        )
+        
+        try:
+            response_data = resp.json()
+        except Exception:
+            response_data = {'detail': resp.text}
+        
+        return _json_response(response_data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_replace_with_uploaded(request):
+    """Proxy: replace proxies with uploaded and validated proxies."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        try:
+            payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+        except Exception:
+            payload = {}
+        
+        resp = requests.post(
+            f"{api_base}/proxy/replace-with-uploaded",
+            json=payload,
+            timeout=120
+        )
+        
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_replace_invalid(request):
+    """Proxy: replace invalid proxies for TikTok accounts."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        try:
+            payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+        except Exception:
+            payload = {}
+        
+        resp = requests.post(
+            f"{api_base}/proxy/replace-invalid",
+            json=payload,
+            timeout=60
+        )
+        
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        
+        return _json_response(data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_upload_and_validate(request):
+    """Proxy: upload and validate proxy file for TikTok accounts."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        # Prepare multipart data
+        files = {}
+        data = {}
+        
+        if 'file' in request.FILES:
+            files['file'] = request.FILES['file']
+        
+        # Add other form data
+        for key, value in request.POST.items():
+            data[key] = value
+        
+        resp = requests.post(
+            f"{api_base}/proxy/upload-and-validate",
+            files=files,
+            data=data,
+            timeout=300  # Longer timeout for file processing
+        )
+        
+        try:
+            response_data = resp.json()
+        except Exception:
+            response_data = {'detail': resp.text}
+        
+        return _json_response(response_data, status=resp.status_code)
+    except requests.exceptions.RequestException as e:
+        return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)
+
+
+@csrf_exempt
+@login_required
+def tiktok_proxy_replace_with_uploaded(request):
+    """Proxy: replace proxies with uploaded and validated proxies."""
+    import requests
+    if request.method != 'POST':
+        return _json_response({'detail': 'Method not allowed'}, status=405)
+    
+    api_base = _get_tiktok_api_base(request)
+    try:
+        try:
+            payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+        except Exception:
+            payload = {}
+        
+        resp = requests.post(
+            f"{api_base}/proxy/replace-with-uploaded",
+            json=payload,
+            timeout=120
+        )
+        
+        try:
+            data = resp.json()
+        except Exception:
+            data = {'detail': resp.text}
+        
+        return _json_response(data, status=resp.status_code)
     except requests.exceptions.RequestException as e:
         return _json_response({'detail': f'Upstream error: {str(e)}'}, status=502)

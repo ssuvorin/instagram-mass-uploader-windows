@@ -183,6 +183,13 @@ def log_warning(message: str, category: Optional[str] = None):
 class _WebUIForwardHandler(logging.Handler):
     """Logging handler that forwards external logger records to Web UI logs."""
     def emit(self, record: logging.LogRecord) -> None:  # noqa: D401
+        # Suppress non-problematic instagrapi output: forward only warnings/errors
+        try:
+            if record.levelno < logging.WARNING:
+                return
+        except Exception:
+            # If anything odd with record, be conservative and continue
+            pass
         try:
             message = self.format(record)
         except Exception:
@@ -227,13 +234,15 @@ def attach_instagrapi_web_bridge() -> None:
         ig_logger = logging.getLogger('instagrapi')
         ig_logger.setLevel(getattr(logging, ig_level, logging.INFO))
         ig_logger.addHandler(handler)
-        ig_logger.propagate = True  # keep console/file per Django settings
+        # If console is silenced, do not propagate to root handlers (avoids console spam)
+        ig_logger.propagate = is_console_enabled()
 
         # HTTP request loggers used by instagrapi
         for name in ('public_request', 'private_request'):
             lgr = logging.getLogger(name)
             lgr.setLevel(getattr(logging, http_level, logging.WARNING))
-            lgr.propagate = True
+            # Respect console silence flag for HTTP request loggers as well
+            lgr.propagate = is_console_enabled()
             if forward_http:
                 lgr.addHandler(handler)
     except Exception:

@@ -182,6 +182,19 @@
         line-height: 1.4;
     }
     
+    /* Disabled button styles */
+    .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+    
+    .btn-outline-secondary:disabled {
+        background-color: #6c757d;
+        border-color: #6c757d;
+        color: #fff;
+    }
+    
     /* Dark theme support */
     .dark-theme .tiktok-card {
         background: #2d3748;
@@ -318,9 +331,63 @@
                             <i class="bi bi-people-fill me-2"></i>Prepare Accounts
                         </button>
                     </div>
+                    <div class="col-auto">
+                        <button type="button" class="btn btn-outline-warning" id="validate-proxy-btn" title="Select a client first to validate proxies">
+                            <i class="bi bi-shield-check me-2"></i>Validate Proxies
+                        </button>
+                    </div>
                 </div>
             </form>
             <div id="prepare-accounts-result" class="response-container d-none"></div>
+            
+            <!-- Proxy Validation Results -->
+            <div id="proxy-validation-result" class="response-container d-none mt-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0"><i class="bi bi-shield-check me-2"></i>Proxy Validation Results</h6>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary me-2" id="show-invalid-countries-btn" style="display: none;">
+                            <i class="bi bi-globe me-1"></i>Show Invalid Countries
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="upload-replacement-proxies-btn" style="display: none;" title="Select a client first to upload replacement proxies">
+                            <i class="bi bi-upload me-1"></i>Upload Replacement Proxies
+                        </button>
+                    </div>
+                </div>
+                <div id="proxy-validation-content"></div>
+            </div>
+            
+            <!-- Proxy Replacement Upload -->
+            <div id="proxy-replacement-upload" class="response-container d-none mt-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0"><i class="bi bi-upload me-2"></i>Upload Replacement Proxies</h6>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="close-replacement-upload-btn">
+                        <i class="bi bi-x me-1"></i>Close
+                    </button>
+                </div>
+                <form id="replacement-proxies-form" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="replacement-proxies-file" class="form-label">Select Proxies File:</label>
+                        <input type="file" class="form-control" id="replacement-proxies-file" name="file" accept=".txt,.csv" required>
+                        <div class="form-text">Upload a text or CSV file with proxy data. Format: host:port:username:password or host:port</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="target-countries" class="form-label">Target Countries:</label>
+                        <input type="text" class="form-control" id="target-countries" name="target_countries" placeholder="US,GB,DE" required>
+                        <div class="form-text">Comma-separated list of countries to replace proxies for</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="upload-proxies-btn">
+                        <i class="bi bi-upload me-2"></i>Upload and Replace
+                    </button>
+                </form>
+                <div id="proxy-upload-progress" class="mt-3" style="display: none;">
+                    <div class="progress mb-2">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <small class="text-muted" id="proxy-upload-progress-text">Processing...</small>
+                </div>
+                <div id="proxy-upload-results" class="mt-3"></div>
+            </div>
         </div>
     </div>
 
@@ -412,7 +479,46 @@ async function checkApiStatus() {
 
 document.addEventListener('DOMContentLoaded', function() {
     checkApiStatus();
+    updateProxyValidationButtons();
 });
+
+// Function to update proxy validation buttons state based on client selection
+function updateProxyValidationButtons() {
+    const clientSelect = document.getElementById('client_id');
+    const validateBtn = document.getElementById('validate-proxy-btn');
+    const uploadBtn = document.getElementById('upload-replacement-proxies-btn');
+    
+    function toggleButtons() {
+        const hasClient = clientSelect.value && clientSelect.value !== '';
+        
+        validateBtn.disabled = !hasClient;
+        uploadBtn.disabled = !hasClient;
+        
+        if (hasClient) {
+            validateBtn.classList.remove('btn-outline-secondary');
+            validateBtn.classList.add('btn-outline-warning');
+            validateBtn.title = 'Validate proxies for selected client';
+            
+            uploadBtn.classList.remove('btn-outline-secondary');
+            uploadBtn.classList.add('btn-outline-primary');
+            uploadBtn.title = 'Upload replacement proxies for selected client';
+        } else {
+            validateBtn.classList.remove('btn-outline-warning');
+            validateBtn.classList.add('btn-outline-secondary');
+            validateBtn.title = 'Select a client first to validate proxies';
+            
+            uploadBtn.classList.remove('btn-outline-primary');
+            uploadBtn.classList.add('btn-outline-secondary');
+            uploadBtn.title = 'Select a client first to upload replacement proxies';
+        }
+    }
+    
+    // Initial state
+    toggleButtons();
+    
+    // Update on client selection change
+    clientSelect.addEventListener('change', toggleButtons);
+}
 
 // Handle form submission (step 1 - only videos)
 document.getElementById('video-upload-form').addEventListener('submit', async function(e) {
@@ -508,5 +614,517 @@ document.getElementById('prepare-accounts-form').addEventListener('submit', asyn
         btn.innerHTML = original;
     }
 });
+
+// Proxy validation functionality
+document.getElementById('validate-proxy-btn').addEventListener('click', async function(e) {
+    e.preventDefault();
+    
+    const clientId = document.getElementById('client_id').value;
+    if (!clientId) {
+        alert('Please select a client first to validate proxies');
+        return;
+    }
+    
+    const btn = this;
+    const original = btn.innerHTML;
+    const resultBox = document.getElementById('proxy-validation-result');
+    const contentBox = document.getElementById('proxy-validation-content');
+    const showCountriesBtn = document.getElementById('show-invalid-countries-btn');
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Validating...';
+    resultBox.classList.add('d-none');
+    
+    try {
+        // First get client name
+        const clientOption = document.getElementById('client_id').options[document.getElementById('client_id').selectedIndex];
+        const clientName = clientOption.textContent;
+        
+        // Validate proxies for selected client
+        const response = await fetch('{% url "api_tiktok_proxy_validate" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                client: clientName
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            // Display validation results
+            let html = `<div class="alert alert-info">
+                <h6><i class="bi bi-info-circle me-2"></i>Validation Summary</h6>
+                <p class="mb-2"><strong>Total Accounts:</strong> ${data.results.length}</p>
+                <p class="mb-0"><strong>Updated:</strong> ${data.updated_count}</p>
+            </div>`;
+            
+            // Group results by status
+            const statusGroups = {};
+            data.results.forEach(result => {
+                if (!statusGroups[result.proxy_status]) {
+                    statusGroups[result.proxy_status] = [];
+                }
+                statusGroups[result.proxy_status].push(result);
+            });
+            
+            // Display results by status
+            Object.keys(statusGroups).forEach(status => {
+                const accounts = statusGroups[status];
+                let statusClass = 'secondary';
+                let statusIcon = 'bi-question-circle';
+                
+                if (status === 'valid') {
+                    statusClass = 'success';
+                    statusIcon = 'bi-check-circle';
+                } else if (status === 'invalid' || status === 'error') {
+                    statusClass = 'danger';
+                    statusIcon = 'bi-x-circle';
+                } else if (status === 'no_proxy') {
+                    statusClass = 'warning';
+                    statusIcon = 'bi-exclamation-triangle';
+                }
+                
+                html += `<div class="alert alert-${statusClass}">
+                    <h6><i class="bi ${statusIcon} me-2"></i>${status.toUpperCase()} (${accounts.length})</h6>
+                    <div class="small">
+                        ${accounts.map(acc => 
+                            `<div class="d-flex justify-content-between">
+                                <span><strong>${acc.username}</strong></span>
+                                <span>${acc.geo_info.country ? acc.geo_info.country : 'Unknown'}</span>
+                            </div>`
+                        ).join('')}
+                    </div>
+                </div>`;
+            });
+            
+            contentBox.innerHTML = html;
+            
+            // Show buttons if there are invalid proxies
+            const hasInvalid = statusGroups['invalid'] || statusGroups['error'];
+            const uploadBtn = document.getElementById('upload-replacement-proxies-btn');
+            
+            if (hasInvalid) {
+                showCountriesBtn.style.display = 'block';
+                uploadBtn.style.display = 'block';
+                showCountriesBtn.onclick = () => showInvalidCountries(clientName);
+                uploadBtn.onclick = () => showReplacementUpload(clientName);
+            } else {
+                showCountriesBtn.style.display = 'none';
+                uploadBtn.style.display = 'none';
+            }
+            
+        } else {
+            throw new Error(data.detail || `HTTP ${response.status}`);
+        }
+        
+        resultBox.classList.remove('d-none');
+        
+    } catch (err) {
+        contentBox.innerHTML = `
+            <div class="alert alert-danger">
+                <h6><i class="bi bi-exclamation-triangle me-2"></i>Validation Failed</h6>
+                <p class="mb-0">${err.message}</p>
+            </div>
+        `;
+        resultBox.classList.remove('d-none');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = original;
+    }
+});
+
+// Function to show invalid countries with detailed counts
+async function showInvalidCountries(clientName) {
+    const clientId = document.getElementById('client_id').value;
+    if (!clientId) {
+        alert('Please select a client first to view invalid countries');
+        return;
+    }
+    
+    try {
+        // Get detailed proxy status
+        const statusResponse = await fetch(`{% url "api_tiktok_proxy_status" "PLACEHOLDER" %}`.replace('PLACEHOLDER', clientName));
+        const statusData = await statusResponse.json();
+        
+        if (statusResponse.ok && statusData.accounts) {
+            // Count invalid proxies by country
+            const countryStats = {};
+            statusData.accounts.forEach(account => {
+                if (account.proxy_status === 'invalid' || account.proxy_status === 'error') {
+                    const country = account.proxy_country || 'Unknown';
+                    if (!countryStats[country]) {
+                        countryStats[country] = 0;
+                    }
+                    countryStats[country]++;
+                }
+            });
+            
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.innerHTML = `
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title"><i class="bi bi-globe me-2"></i>Invalid Proxy Countries - ${clientName}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-info">
+                                <h6><i class="bi bi-info-circle me-2"></i>Summary</h6>
+                                <p class="mb-0">Total invalid accounts: <strong>${statusData.accounts.filter(a => a.proxy_status === 'invalid' || a.proxy_status === 'error').length}</strong></p>
+                            </div>
+                            
+                            <h6>Countries with invalid proxies:</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Country</th>
+                                            <th>Invalid Count</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${Object.entries(countryStats).map(([country, count]) => 
+                                            `<tr>
+                                                <td><i class="bi bi-flag me-2"></i>${country}</td>
+                                                <td><span class="badge bg-danger">${count}</span></td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-outline-primary" onclick="uploadProxiesForCountry('${clientName}', '${country}', ${count})">
+                                                        <i class="bi bi-upload me-1"></i>Upload ${count} proxies
+                                                    </button>
+                                                </td>
+                                            </tr>`
+                                        ).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="alert alert-warning">
+                                <h6><i class="bi bi-exclamation-triangle me-2"></i>Instructions</h6>
+                                <p class="mb-1">1. Upload a file with proxy data in format: <code>host:port:username:password</code> or <code>host:port</code></p>
+                                <p class="mb-0">2. Make sure you have enough proxies for each country (see counts above)</p>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+            
+            modal.addEventListener('hidden.bs.modal', () => {
+                document.body.removeChild(modal);
+            });
+        } else {
+            alert('No invalid proxy data found');
+        }
+    } catch (err) {
+        alert(`Error fetching invalid countries: ${err.message}`);
+    }
+}
+
+// Function to show replacement upload interface
+function showReplacementUpload(clientName) {
+    const clientId = document.getElementById('client_id').value;
+    if (!clientId) {
+        alert('Please select a client first to upload replacement proxies');
+        return;
+    }
+    
+    const uploadSection = document.getElementById('proxy-replacement-upload');
+    const targetCountriesInput = document.getElementById('target-countries');
+    
+    // Pre-fill target countries based on invalid proxies
+    uploadSection.style.display = 'block';
+    uploadSection.scrollIntoView({ behavior: 'smooth' });
+}
+
+// Function to close replacement upload
+document.getElementById('close-replacement-upload-btn').addEventListener('click', function() {
+    document.getElementById('proxy-replacement-upload').style.display = 'none';
+});
+
+// Function to upload proxies for specific country
+function uploadProxiesForCountry(clientName, country, requiredCount) {
+    const clientId = document.getElementById('client_id').value;
+    if (!clientId) {
+        alert('Please select a client first to upload replacement proxies');
+        return;
+    }
+    
+    const uploadSection = document.getElementById('proxy-replacement-upload');
+    const targetCountriesInput = document.getElementById('target-countries');
+    
+    targetCountriesInput.value = country;
+    uploadSection.style.display = 'block';
+    uploadSection.scrollIntoView({ behavior: 'smooth' });
+    
+    // Add hint about required count
+    const formText = targetCountriesInput.parentNode.querySelector('.form-text');
+    formText.innerHTML = `Required: ${requiredCount} proxies for ${country}. Upload format: host:port:username:password or host:port`;
+}
+
+// Handle replacement proxies form submission
+document.getElementById('replacement-proxies-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const clientId = document.getElementById('client_id').value;
+    const fileInput = document.getElementById('replacement-proxies-file');
+    const targetCountries = document.getElementById('target-countries').value;
+    const uploadBtn = document.getElementById('upload-proxies-btn');
+    const progressDiv = document.getElementById('proxy-upload-progress');
+    const progressBar = progressDiv.querySelector('.progress-bar');
+    const progressText = document.getElementById('proxy-upload-progress-text');
+    const resultsDiv = document.getElementById('proxy-upload-results');
+    
+    if (!clientId) {
+        alert('Please select a client first');
+        return;
+    }
+    
+    if (!fileInput.files[0]) {
+        alert('Please select a proxy file');
+        return;
+    }
+    
+    // Get client name
+    const clientOption = document.getElementById('client_id').options[document.getElementById('client_id').selectedIndex];
+    const clientName = clientOption.textContent;
+    
+    // Disable form and show progress
+    uploadBtn.disabled = true;
+    progressDiv.style.display = 'block';
+    progressBar.style.width = '0%';
+    progressText.textContent = 'Processing proxy file...';
+    resultsDiv.innerHTML = '';
+    
+    try {
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        formData.append('client', clientName);
+        formData.append('target_countries', targetCountries);
+        
+        // Step 1: Upload and validate proxies
+        progressBar.style.width = '25%';
+        progressText.textContent = 'Uploading and validating proxies...';
+        
+        const uploadResponse = await fetch('{% url "api_tiktok_proxy_upload_and_validate" %}', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const uploadData = await uploadResponse.json();
+        
+        if (!uploadResponse.ok) {
+            throw new Error(uploadData.detail || `HTTP ${uploadResponse.status}`);
+        }
+        
+        // Check if validation passed
+        progressBar.style.width = '50%';
+        progressText.textContent = 'Checking proxy validation results...';
+        
+        if (uploadData.validation_errors && uploadData.validation_errors.length > 0) {
+            // Show validation errors
+            let errorHtml = '<div class="alert alert-danger"><h6><i class="bi bi-exclamation-triangle me-2"></i>Validation Errors</h6><ul>';
+            uploadData.validation_errors.forEach(error => {
+                errorHtml += `<li>${error}</li>`;
+            });
+            errorHtml += '</ul></div>';
+            
+            resultsDiv.innerHTML = errorHtml;
+            progressBar.style.width = '100%';
+            progressText.textContent = 'Validation failed';
+            progressBar.className = 'progress-bar bg-danger';
+            return;
+        }
+        
+        // Check country matching
+        progressBar.style.width = '75%';
+        progressText.textContent = 'Checking country requirements...';
+        
+        const countries = targetCountries.split(',').map(c => c.trim());
+        let countryWarnings = [];
+        
+        if (uploadData.country_mismatch && uploadData.country_mismatch.length > 0) {
+            countryWarnings = uploadData.country_mismatch;
+        }
+        
+        if (countryWarnings.length > 0) {
+            // Show country warnings but allow user to proceed
+            let warningHtml = '<div class="alert alert-warning"><h6><i class="bi bi-exclamation-triangle me-2"></i>Country Mismatch Warnings</h6><ul>';
+            countryWarnings.forEach(warning => {
+                warningHtml += `<li>${warning}</li>`;
+            });
+            warningHtml += '</ul><p class="mb-0"><strong>Do you want to proceed anyway?</strong></p></div>';
+            
+            resultsDiv.innerHTML = warningHtml + `
+                <div class="mt-3">
+                    <button class="btn btn-warning me-2" onclick="proceedWithReplacement('${clientName}', '${targetCountries}', ${JSON.stringify(uploadData.validated_proxies).replace(/"/g, '&quot;')})">
+                        <i class="bi bi-check me-1"></i>Proceed Anyway
+                    </button>
+                    <button class="btn btn-secondary" onclick="cancelReplacement()">
+                        <i class="bi bi-x me-1"></i>Cancel
+                    </button>
+                </div>
+            `;
+            progressBar.style.width = '100%';
+            progressText.textContent = 'Waiting for user decision';
+            progressBar.className = 'progress-bar bg-warning';
+            return;
+        }
+        
+        // Proceed with replacement
+        await performProxyReplacement(clientName, targetCountries, uploadData.validated_proxies);
+        
+    } catch (error) {
+        progressBar.style.width = '100%';
+        progressText.textContent = 'Upload failed!';
+        progressBar.className = 'progress-bar bg-danger';
+        
+        resultsDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <h6><i class="bi bi-exclamation-triangle me-2"></i>Upload Failed</h6>
+                <p class="mb-0">${error.message}</p>
+            </div>
+        `;
+    } finally {
+        uploadBtn.disabled = false;
+        setTimeout(() => {
+            if (progressBar.className.includes('bg-success')) {
+                progressDiv.style.display = 'none';
+                progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated';
+            }
+        }, 3000);
+    }
+});
+
+// Function to proceed with replacement after warnings
+async function proceedWithReplacement(clientName, targetCountries, validatedProxies) {
+    const clientId = document.getElementById('client_id').value;
+    if (!clientId) {
+        alert('Please select a client first to proceed with replacement');
+        return;
+    }
+    
+    await performProxyReplacement(clientName, targetCountries, validatedProxies);
+}
+
+// Function to cancel replacement
+function cancelReplacement() {
+    document.getElementById('proxy-upload-results').innerHTML = '';
+    document.getElementById('proxy-upload-progress').style.display = 'none';
+    document.getElementById('proxy-upload-progress').querySelector('.progress-bar').className = 'progress-bar progress-bar-striped progress-bar-animated';
+}
+
+// Function to perform actual proxy replacement
+async function performProxyReplacement(clientName, targetCountries, validatedProxies) {
+    const clientId = document.getElementById('client_id').value;
+    if (!clientId) {
+        alert('Please select a client first to perform proxy replacement');
+        return;
+    }
+    
+    const progressBar = document.getElementById('proxy-upload-progress').querySelector('.progress-bar');
+    const progressText = document.getElementById('proxy-upload-progress-text');
+    const resultsDiv = document.getElementById('proxy-upload-results');
+    
+    try {
+        progressBar.style.width = '90%';
+        progressText.textContent = 'Replacing proxies...';
+        
+        const response = await fetch('{% url "api_tiktok_proxy_replace_with_uploaded" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                client: clientName,
+                target_countries: targetCountries.split(',').map(c => c.trim()),
+                validated_proxies: validatedProxies
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            progressBar.style.width = '100%';
+            progressText.textContent = 'Replacement completed successfully!';
+            progressBar.className = 'progress-bar bg-success';
+            
+            resultsDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <h6><i class="bi bi-check-circle me-2"></i>Proxy Replacement Successful</h6>
+                    <p class="mb-1"><strong>Client:</strong> ${clientName}</p>
+                    <p class="mb-1"><strong>Target Countries:</strong> ${targetCountries}</p>
+                    <p class="mb-1"><strong>Proxies Uploaded:</strong> ${validatedProxies.length}</p>
+                    <p class="mb-0"><strong>Accounts Updated:</strong> ${data.updated_accounts || 'Unknown'}</p>
+                </div>
+            `;
+            
+            // Clear form
+            document.getElementById('replacement-proxies-file').value = '';
+            document.getElementById('target-countries').value = '';
+            
+        } else {
+            throw new Error(data.detail || `HTTP ${response.status}`);
+        }
+        
+    } catch (error) {
+        progressBar.style.width = '100%';
+        progressText.textContent = 'Replacement failed!';
+        progressBar.className = 'progress-bar bg-danger';
+        
+        resultsDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <h6><i class="bi bi-exclamation-triangle me-2"></i>Replacement Failed</h6>
+                <p class="mb-0">${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+// Function to replace proxies for specific country (legacy)
+async function replaceProxiesForCountry(clientName, country) {
+    const clientId = document.getElementById('client_id').value;
+    if (!clientId) {
+        alert('Please select a client first to replace proxies');
+        return;
+    }
+    
+    try {
+        const response = await fetch('{% url "api_tiktok_proxy_replace_invalid" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                client: clientName,
+                invalid_proxy_countries: [country],
+                replacement_count: 1
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            alert(`Proxy replacement initiated for ${country}. ${data.message}`);
+        } else {
+            throw new Error(data.detail || `HTTP ${response.status}`);
+        }
+    } catch (err) {
+        alert(`Error replacing proxies: ${err.message}`);
+    }
+}
 </script>
 {% endblock %}
