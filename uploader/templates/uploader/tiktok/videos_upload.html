@@ -1014,12 +1014,11 @@ document.getElementById('replacement-proxies-form').addEventListener('submit', a
         
         if (uploadData.auto_match_summary) {
             const summary = uploadData.auto_match_summary;
-            analysisHtml += `<p><strong>Total accounts:</strong> ${summary.total_accounts}</p>`;
-            analysisHtml += `<p><strong>Max replaceable accounts:</strong> ${summary.max_replaceable_accounts} (20 proxies × 2 accounts each)</p>`;
+            analysisHtml += `<p><strong>Total invalid accounts:</strong> ${summary.total_invalid_accounts}</p>`;
             analysisHtml += `<p><strong>Can replace all:</strong> ${summary.can_replace_all ? 'Yes' : 'No'}</p>`;
             
-            if (summary.total_accounts === 0) {
-                analysisHtml += '<p class="text-warning"><strong>No accounts found for this client.</strong></p>';
+            if (summary.total_invalid_accounts === 0) {
+                analysisHtml += '<p class="text-warning"><strong>No invalid accounts found for this client.</strong> All proxies are already valid.</p>';
             } else if (uploadData.replacement_analysis && Object.keys(uploadData.replacement_analysis).length > 0) {
                 analysisHtml += '<h6>Country Analysis:</h6><ul>';
                 Object.entries(uploadData.replacement_analysis).forEach(([country, analysis]) => {
@@ -1159,14 +1158,30 @@ async function performProxyReplacement(clientName) {
             progressText.textContent = 'Replacement completed successfully!';
             progressBar.className = 'progress-bar bg-success';
             
-            resultsDiv.innerHTML = `
+            // Build detailed success message
+            let successHtml = `
                 <div class="alert alert-success">
                     <h6><i class="bi bi-check-circle me-2"></i>Proxy Replacement Successful</h6>
                     <p class="mb-1"><strong>Client:</strong> ${clientName}</p>
                     <p class="mb-1"><strong>Proxies Uploaded:</strong> ${validatedProxies.length}</p>
-                    <p class="mb-0"><strong>Accounts Updated:</strong> ${data.updated_accounts || 'Unknown'}</p>
-                </div>
+                    <p class="mb-1"><strong>Accounts Updated:</strong> ${data.updated_accounts || 'Unknown'}</p>
+                    <p class="mb-1"><strong>Total Invalid Found:</strong> ${data.total_invalid_found || 'Unknown'}</p>
             `;
+            
+            // Add efficiency information if available
+            if (data.efficiency) {
+                const eff = data.efficiency;
+                successHtml += `
+                    <hr>
+                    <h6>Efficiency Report:</h6>
+                    <p class="mb-1"><strong>Proxy Usage:</strong> ${eff.proxy_usage}/${eff.max_possible_usage} (${eff.efficiency_percentage}%)</p>
+                    <p class="mb-0"><strong>Coverage:</strong> ${eff.accounts_updated}/${eff.total_invalid} accounts replaced</p>
+                `;
+            }
+            
+            successHtml += '</div>';
+            
+            resultsDiv.innerHTML = successHtml;
             
             // Clear form
             document.getElementById('replacement-proxies-file').value = '';
