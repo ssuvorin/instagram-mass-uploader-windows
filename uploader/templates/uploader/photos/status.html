@@ -1,0 +1,33 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}Photo Post Status{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <a href="{% url 'create_photo_post' %}" class="text-decoration-none"><i class="bi bi-arrow-left"></i> Back to Photo Post</a>
+    <h2 class="mb-0 mt-2">Photo Post Status</h2>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <h5 class="mb-0"><i class="bi bi-activity"></i> Recent Logs</h5>
+    <a href="" class="btn btn-sm btn-outline-secondary" onclick="location.reload(); return false;">
+      <i class="bi bi-arrow-clockwise"></i> Refresh
+    </a>
+  </div>
+  <div class="card-body">
+    {% if log_lines %}
+    <pre class="small" style="max-height: 60vh; overflow: auto; white-space: pre-wrap; word-break: break-word;">{% for line in log_lines %}{{ line }}{% endfor %}</pre>
+    {% else %}
+    <div class="text-muted">No recent logs found.</div>
+    {% endif %}
+  </div>
+  <div class="card-footer text-muted small">
+    This page shows the tail of bot/log.txt. Logs are appended during the upload.
+  </div>
+</div>
+{% endblock %}
+
+

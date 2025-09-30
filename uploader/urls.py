@@ -144,6 +144,7 @@ urlpatterns += [
     
     # Photo post
     path('photos/create/', views_photo.create_photo_post, name='create_photo_post'),
+    path('photos/status/', views_photo.photo_post_status, name='photo_post_status'),
     
     # Bio link change
     path('bio/', views_bio.bio_task_list, name='bio_task_list'),

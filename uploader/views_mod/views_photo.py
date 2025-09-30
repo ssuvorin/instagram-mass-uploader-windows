@@ -90,7 +90,11 @@ def create_photo_post(request):
             t.start()
 
             messages.success(request, f"Photo posting started for {len(accounts)} accounts")
-            return redirect('dashboard')
+            # Redirect to photo post status page to view logs
+            try:
+                return redirect('photo_post_status')
+            except Exception:
+                return redirect('dashboard')
         else:
             messages.error(request, 'Please fix the errors in the form and try again.')
     else:
@@ -101,4 +105,23 @@ def create_photo_post(request):
         'active_tab': 'avatars',  # keep in Content group; could be 'photos'
     })
 
+
+@login_required
+def photo_post_status(request):
+    """Simple status page showing recent log lines for photo posting activity."""
+    log_lines = []
+    try:
+        # Tail last 300 lines from bot/log.txt if exists
+        log_path = default_storage.path('bot/log.txt') if hasattr(default_storage, 'path') else os.path.join(os.getcwd(), 'bot', 'log.txt')
+        if os.path.exists(log_path):
+            with open(log_path, 'r', encoding='utf-8', errors='ignore') as f:
+                lines = f.readlines()
+                log_lines = lines[-300:]
+    except Exception:
+        log_lines = []
+
+    return render(request, 'uploader/photos/status.html', {
+        'log_lines': log_lines,
+        'active_tab': 'avatars',
+    })
 
