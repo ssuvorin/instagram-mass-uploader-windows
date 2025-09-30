@@ -99,6 +99,15 @@
 								<p class="small text-muted mt-1">Use this for standard browser cookies (e.g., csrftoken, sessionid, ds_user_id). Device info is not required.</p>
 								<p class="small text-info mt-1"><i class="bi bi-info-circle"></i> Alternatively, you can also use <code>username:password|||cookie1=value1; ...</code> to explicitly indicate no device info.</p>
 							</div>
+							<div class="mt-3">
+								<h6 class="fw-bold">Format 7: Email + JSON cookies array</h6>
+								<code>username:password:email:email_password:[{ "name": "sessionid", "value": "...", "domain": ".instagram.com" }, ...]</code>
+								<p class="small text-muted mt-1">Paste a JSON array of cookie objects as the last segment. Colons inside JSON are supported; they won’t break parsing.</p>
+								<ul class="small text-muted mt-1 mb-0">
+									<li><strong>Required cookie fields</strong>: <code>name</code>, <code>value</code>. Optional: <code>domain</code>, <code>path</code>, <code>httpOnly</code>, <code>secure</code>.</li>
+									<li>Cookies are treated as <strong>web cookies</strong> and will be saved and imported into Dolphin profile (when created).</li>
+								</ul>
+							</div>
 						</div>
 					</div>
 				</div>

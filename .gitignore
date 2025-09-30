@@ -26,7 +26,8 @@ venv/
 env/
 ENV/
 .venv/
-TiktokUploadCaptcha-master/
+.TiktokUploadCaptcha-master/
+
 # IDE
 .vscode/
 .idea/

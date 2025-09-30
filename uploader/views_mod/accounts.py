@@ -644,7 +644,13 @@ def import_accounts(request):
                     except Exception:
                         cookies_raw = None
                 else:
-                    parts = raw_line.split(':')
+                    # Default split by ':'; but if the line ends with a JSON cookies array
+                    # username:password:email:email_pass:[json_cookies_array]
+                    # we must not split inside JSON (which may contain ':').
+                    if ('[' in raw_line and raw_line.rstrip().endswith(']')):
+                        parts = raw_line.split(':', 4)
+                    else:
+                        parts = raw_line.split(':')
                  
                 if len(parts) < 2:
                     logger.warning(f"[ERROR] Line {line_num}: Invalid format. Expected at least username:password")
@@ -690,12 +696,52 @@ def import_accounts(request):
                     logger.info(f"[INFO] Account {username} identified as email verification account")
                  
                 elif len(parts) == 5:
-                    # This is a TFA account (username:password:email:email_password:tfa_secret)
+                    # Either TFA or JSON cookies array in 5th segment
                     email_username = parts[2]
                     email_password = parts[3]
-                    import re
-                    tfa_secret = re.sub(r'\s+', '', parts[4])  # Remove all whitespace from 2FA key
-                    logger.info(f"[INFO] Account {username} identified as TFA account with email")
+                    tail = (parts[4] or '').strip()
+                    if tail.startswith('[') and tail.endswith(']'):
+                        # Parse JSON cookies array
+                        try:
+                            import json
+                            cookies_json = json.loads(tail)
+                            if isinstance(cookies_json, list):
+                                parsed_cookies_list = []
+                                for c in cookies_json:
+                                    try:
+                                        # Normalize common cookie dict formats
+                                        name = (c.get('name') if isinstance(c, dict) else None) or ''
+                                        value = (c.get('value') if isinstance(c, dict) else None) or ''
+                                        domain = (c.get('domain') if isinstance(c, dict) else None) or '.instagram.com'
+                                        path = (c.get('path') if isinstance(c, dict) else None) or '/'
+                                        http_only = bool((c.get('httpOnly') if isinstance(c, dict) else c.get('http_only')) if isinstance(c, dict) else False)
+                                        secure = bool(c.get('secure')) if isinstance(c, dict) else True
+                                        if name:
+                                            parsed_cookies_list.append({
+                                                'domain': domain,
+                                                'name': name,
+                                                'value': value,
+                                                'path': path,
+                                                'httpOnly': http_only,
+                                                'secure': secure,
+                                                'session': True,
+                                                'sameSite': 'no_restriction',
+                                            })
+                                    except Exception:
+                                        # Skip malformed cookie objects
+                                        continue
+                                # Treat JSON cookies array as WEB cookies
+                                is_mobile_cookies = False
+                                logger.info(f"[INFO] Account {username} provided JSON cookies array with {len(parsed_cookies_list)} items")
+                            else:
+                                logger.warning(f"[COOKIES] JSON in 5th segment is not a list for {username}")
+                        except Exception as je:
+                            logger.warning(f"[COOKIES] Failed to parse JSON cookies array for {username}: {je}")
+                    else:
+                        # TFA secret in 5th segment
+                        import re
+                        tfa_secret = re.sub(r'\s+', '', tail)  # Remove all whitespace from 2FA key
+                        logger.info(f"[INFO] Account {username} identified as TFA account with email")
                  
                 elif len(parts) > 5:
                     # Extended format with additional fields

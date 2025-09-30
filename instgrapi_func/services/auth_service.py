@@ -18,6 +18,8 @@ import logging
 import time
 import random
 from datetime import datetime
+import secrets
+import string
 
 # Import proxy manager
 try:
@@ -40,6 +42,24 @@ class IGAuthService:
             self._client_lock = threading.RLock()
         except Exception:
             self._client_lock = None
+
+    def _generate_strong_password(self, length: int = 16) -> str:
+        """Generate strong password with upper/lower/digits/symbols."""
+        alphabet_lower = string.ascii_lowercase
+        alphabet_upper = string.ascii_uppercase
+        digits = string.digits
+        symbols = "!@#$%^&*()-_=+[]{};:,.?"  # safe set
+        # Ensure at least one of each class
+        base = [
+            secrets.choice(alphabet_lower),
+            secrets.choice(alphabet_upper),
+            secrets.choice(digits),
+            secrets.choice(symbols),
+        ]
+        pool = alphabet_lower + alphabet_upper + digits + symbols
+        base += [secrets.choice(pool) for _ in range(max(8, length) - len(base))]
+        secrets.SystemRandom().shuffle(base)
+        return "".join(base)[:max(8, length)]
 
     def _get_user_info_v1(self, cl: Client):
         """Fetch user info via private v1 endpoint only (no GQL/public fallbacks)."""
@@ -155,6 +175,29 @@ class IGAuthService:
         except Exception:
             pass
         
+        # Install password change handler: generate new password and persist to DB
+        try:
+            from uploader.models import InstagramAccount  # local import to avoid circulars
+            def _change_password_handler(_username: str) -> Optional[str]:
+                try:
+                    new_pwd = self._generate_strong_password()
+                    # Persist in DB
+                    acc = InstagramAccount.objects.filter(username=username).first()
+                    if acc:
+                        acc.password = new_pwd
+                        acc.save(update_fields=['password', 'updated_at'])
+                    # store on client for subsequent relogin
+                    try:
+                        setattr(cl, '_new_password', new_pwd)
+                    except Exception:
+                        pass
+                    return new_pwd
+                except Exception:
+                    return None
+            cl.change_password_handler = _change_password_handler  # type: ignore[attr-defined]
+        except Exception:
+            pass
+        
         max_retries = 3
         for attempt in range(max_retries):
             try:
@@ -176,11 +219,10 @@ class IGAuthService:
                     
                     def call_account_info():
                         try:
-                            # Use ONLY account_info() - the most reliable endpoint for session validation
-                            # This calls accounts/current_user/?edit=true internally and is the gold standard
-                            account_info = cl.account_info()  # type: ignore[attr-defined]
+                            # Prefer stable private v1 endpoint to avoid flaky 403 from accounts/current_user
+                            v1_info = self._get_user_info_v1(cl)
                             if not timeout_occurred.is_set():
-                                result_queue.put(('success', account_info))
+                                result_queue.put(('success', v1_info))
                         except Exception as e:
                             if not timeout_occurred.is_set():
                                 result_queue.put(('error', e))
@@ -196,16 +238,16 @@ class IGAuthService:
                         
                         if result_type == 'success':
                             account_info = result_data
-                            if account_info and hasattr(account_info, 'username'):
-                                log.debug("Session validated via account_info for %s", account_info.username)
+                            # Accept dict with user or object with username
+                            uname = self._get_username(account_info)
+                            if uname:
+                                log.debug("Session validated via users/{uid}/info for %s", uname)
                                 if on_log:
                                     on_log("auth: session validated")
-                                
-                                # Record successful auth
                                 self._record_auth_attempt(username, success=True)
                                 return True
                             else:
-                                raise LoginRequired("account_info() returned invalid response")
+                                raise LoginRequired("v1 user info returned invalid response")
                         else:
                             # Re-raise the exception from account_info
                             raise result_data
@@ -330,25 +372,15 @@ class IGAuthService:
             # Validate session info immediately before logging completion
             info = None
             try:
-                # Prefer account_info; if unstable, verify via private v1 users/{uid}/info/
-                try:
-                    # Avoid noisy account_info if previously marked unstable
-                    if getattr(cl, '_skip_account_info', False):
-                        raise Exception('skip account_info')
-                    info = cl.account_info()  # type: ignore[attr-defined]
-                except Exception:
-                    info = self._get_user_info_v1(cl)
+                # Verify via private v1 users/{uid}/info/ only (avoid accounts/current_user)
+                info = self._get_user_info_v1(cl)
                 uname = self._get_username(info)
                 if uname:
                     log.debug("Login account info for %s: %s", username, uname)
                     if on_log:
                         on_log(f"auth: account_info: {uname}")
                 else:
-                    # Mark to skip future account_info attempts this session
-                    try:
-                        setattr(cl, '_skip_account_info', True)
-                    except Exception:
-                        pass
+                    pass
             except Exception:
                 info = None
             log.debug("Login completed for %s", username)
@@ -369,13 +401,8 @@ class IGAuthService:
                 
                 def call_account_info():
                     try:
-                        # Verify login success: prefer account_info(); fallback to private v1 users/{uid}/info/
-                        try:
-                            if getattr(cl, '_skip_account_info', False):
-                                raise Exception('skip account_info')
-                            account_info = cl.account_info()  # type: ignore[attr-defined]
-                        except Exception:
-                            account_info = self._get_user_info_v1(cl)
+                        # Verify login success via private v1 only
+                        account_info = self._get_user_info_v1(cl)
                         if not timeout_occurred.is_set():
                             result_queue.put(('success', account_info))
                     except Exception as e:
@@ -394,23 +421,15 @@ class IGAuthService:
                     if result_type == 'success':
                         account_info = result_data
                         uname2 = self._get_username(account_info)
-                        if account_info and (uname2 is not None):
-                            if uname2:
-                                log.debug("Login verified for %s", uname2)
-                            else:
-                                log.debug("Login verified")
+                        if uname2:
+                            log.debug("Login verified for %s", uname2)
                             if on_log:
                                 on_log("auth: login verified")
-                            try:
-                                setattr(cl, '_skip_account_info', True)
-                            except Exception:
-                                pass
-                            
                             # Record successful auth
                             self._record_auth_attempt(username, success=True)
                             return True
                         else:
-                            raise Exception("session verify failed after login")
+                            raise Exception("session verify failed after login (v1)")
                     else:
                         # Re-raise the exception from account_info
                         raise result_data
@@ -458,15 +477,16 @@ class IGAuthService:
                 # Verify login success
                 delay = self._get_human_delay('session_check')
                 time.sleep(delay)
-                account_info = cl.account_info()  # type: ignore[attr-defined]
-                if account_info and hasattr(account_info, 'username'):
-                    log.debug("Login verified after rate limit delay for %s", account_info.username)
+                account_info = self._get_user_info_v1(cl)
+                uname_rl = self._get_username(account_info)
+                if uname_rl:
+                    log.debug("Login verified after rate limit delay for %s", uname_rl)
                     if on_log:
                         on_log("auth: login verified after rate limit delay")
                     self._record_auth_attempt(username, success=True)
                     return True
                 else:
-                    raise Exception("account_info() failed after rate limit delay login")
+                    raise Exception("v1 info failed after rate limit delay login")
             except Exception as retry_e:
                 log.warning("Login retry after rate limit failed for %s: %s", username, retry_e)
                 if on_log:
@@ -586,6 +606,12 @@ class IGAuthService:
             on_log("auth: challenge required (email)")
         
         try:
+            # Ensure we will NOT change password inside resolver
+            try:
+                cl.change_password_handler = lambda _username: None  # type: ignore[attr-defined]
+            except Exception:
+                pass
+
             # Provide code handler
             def _handler(_username, _choice):
                 return self.provider.get_challenge_code(username, method="email") or ""
@@ -610,6 +636,13 @@ class IGAuthService:
                     time.sleep(delay)
                     
                     try:
+                        # Use new password if it was generated by change_password_handler
+                        try:
+                            new_pwd = getattr(cl, '_new_password', None)
+                            if new_pwd:
+                                password = new_pwd  # type: ignore[assignment]
+                        except Exception:
+                            pass
                         cl.login(username, password, relogin=True)
                         if on_log:
                             on_log("auth: login completed (post-challenge)")
@@ -696,6 +729,13 @@ class IGAuthService:
                     time.sleep(delay)
                     
                     try:
+                        # Use new password if it was generated by change_password_handler
+                        try:
+                            new_pwd = getattr(cl, '_new_password', None)
+                            if new_pwd:
+                                password = new_pwd  # type: ignore[assignment]
+                        except Exception:
+                            pass
                         cl.login(username, password, relogin=True)
                         if on_log:
                             on_log("auth: login completed (post-challenge-simple)")
