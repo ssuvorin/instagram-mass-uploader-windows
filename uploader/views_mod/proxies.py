@@ -410,8 +410,21 @@ def _validate_proxies_background(proxies, user_id):
     valid_count = 0
     invalid_count = 0
     
-    # Use multiple threads to validate proxies in parallel
-    thread_count = min(10, proxies.count())  # Max 10 threads
+    # Use multiple threads to validate proxies in parallel (configurable)
+    try:
+        # URL param takes precedence; otherwise env; default 20
+        req_workers = int(request.GET.get('workers', 0) or 0)
+    except Exception:
+        req_workers = 0
+    import os
+    env_workers = 0
+    try:
+        env_workers = int(os.environ.get('PROXY_VALIDATION_WORKERS', '0') or '0')
+    except Exception:
+        env_workers = 0
+    configured = req_workers or env_workers
+    thread_count = configured if configured > 0 else 20
+    thread_count = min(thread_count, max(1, proxies.count()))
     
     if thread_count <= 0:
         return

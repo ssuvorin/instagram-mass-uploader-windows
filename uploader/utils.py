@@ -31,10 +31,9 @@ def validate_proxy(host, port, username=None, password=None, timeout=10, proxy_t
         return False, "Invalid port number", {"country": None, "city": None}
     
     # HTTPS targets must pass for the proxy to be considered valid
+    # Use a single lightweight HTTPS endpoint that returns external IP
     https_test_urls = [
-        "https://httpbin.org/ip",
-        "https://www.google.com",
-        "https://www.instagram.com"
+        "https://httpbin.org/ip"
     ]
     # Optional HTTP endpoint used only for IP info retrieval; not used to decide validity
     http_info_url = "http://httpbin.org/ip"
