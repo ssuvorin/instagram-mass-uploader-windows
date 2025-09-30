@@ -187,6 +187,15 @@
 							Только страна локали (если не хватает подходящих прокси — прервать импорт)
 						</label>
 					</div>
+
+					<div class="mb-4">
+						<label for="profile_mode" class="form-label">Profile Mode</label>
+						<select class="form-select" id="profile_mode" name="profile_mode">
+							<option value="create_profiles" selected>Создавать Dolphin веб‑профили</option>
+							<option value="api_only">Только через API (без профилей)</option>
+						</select>
+						<div class="form-text">Выберите, создавать ли браузерные профили Dolphin. Режим API‑only пропускает создание профилей и импорт cookies в них.</div>
+					</div>
 					
 					<div class="d-grid gap-2">
 						<button type="submit" class="btn btn-primary" id="submitBtn">

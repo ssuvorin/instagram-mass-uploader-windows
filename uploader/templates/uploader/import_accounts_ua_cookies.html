@@ -85,6 +85,15 @@
 						</label>
 					</div>
 
+					<div class="mb-4">
+						<label for="profile_mode" class="form-label">Profile Mode</label>
+						<select class="form-select" id="profile_mode" name="profile_mode">
+							<option value="create_profiles" selected>Создавать Dolphin веб‑профили</option>
+							<option value="api_only">Только через API (без профилей)</option>
+						</select>
+						<div class="form-text">В режиме API‑only Dolphin профили не создаются, cookies не импортируются в них.</div>
+					</div>
+
 					<div class="d-grid gap-2">
 						<button type="submit" class="btn btn-primary" id="submitBtn">
 							<i class="bi bi-cloud-upload"></i> Import

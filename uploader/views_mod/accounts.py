@@ -481,6 +481,7 @@ def import_accounts(request):
         # UI params
         proxy_selection = request.POST.get('proxy_selection', 'locale_only')
         proxy_locale_strict = request.POST.get('proxy_locale_strict') == '1'
+        profile_mode = request.POST.get('profile_mode', 'create_profiles')
         # Locale: support ru_BY, en_IN, es_CL, es_MX, pt_BR
         selected_locale = request.POST.get('profile_locale', 'ru_BY')
         allowed_locales = ['ru_BY', 'en_IN', 'es_CL', 'es_MX', 'pt_BR']
@@ -908,8 +909,8 @@ def import_accounts(request):
                     assigned_proxy.save()
                     logger.info(f"[INFO] Updated proxy assignment for account {username}")
                  
-                # Create Dolphin profile if API is available
-                if dolphin_available and (created or not account.dolphin_profile_id):
+                # Create Dolphin profile if API is available and profile_mode requires it
+                if profile_mode == 'create_profiles' and dolphin_available and (created or not account.dolphin_profile_id):
                     try:
                         # Create profile name with account username and random suffix
                         random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
@@ -1235,6 +1236,7 @@ def import_accounts_ua_cookies(request):
 		# UI params (reuse existing semantics)
 		proxy_selection = request.POST.get('proxy_selection', 'locale_only')
 		proxy_locale_strict = request.POST.get('proxy_locale_strict') == '1'
+		profile_mode = request.POST.get('profile_mode', 'create_profiles')
 		selected_locale = request.POST.get('profile_locale', 'ru_BY')
 		allowed_locales = ['ru_BY', 'en_IN', 'es_CL', 'es_MX', 'pt_BR']
 		if selected_locale not in allowed_locales:
@@ -1496,8 +1498,8 @@ def import_accounts_ua_cookies(request):
 					assigned_proxy.assigned_account = account
 					assigned_proxy.save()
 
-				# Create Dolphin profile and import cookies (always as WEB cookies)
-				if dolphin_available and (created or not account.dolphin_profile_id):
+				# Create Dolphin profile and import cookies (always as WEB cookies) if requested
+				if profile_mode == 'create_profiles' and dolphin_available and (created or not account.dolphin_profile_id):
 					try:
 						# Throttle between profile creations
 						if dolphin_created_count > 0:
