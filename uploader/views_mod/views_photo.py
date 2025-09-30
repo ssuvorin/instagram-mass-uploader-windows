@@ -46,8 +46,19 @@ def create_photo_post(request):
                             continue
 
                         def on_log(line: str):
-                            # Simple stdout log; could be extended to per-account logs
+                            # Forward to centralized logger
                             log_info(f"[PHOTO_POST] {acc.username} | {line}")
+                            # Also append to bot/log.txt so /photos/status/ can tail it
+                            try:
+                                base_dir = os.path.dirname(default_storage.path('bot/log.txt'))
+                                os.makedirs(base_dir, exist_ok=True)
+                                log_path = default_storage.path('bot/log.txt')
+                                from datetime import datetime
+                                ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                                with open(log_path, 'a', encoding='utf-8', errors='ignore') as f:
+                                    f.write(f"[{ts}] [PHOTO_POST] {acc.username} | {line}\n")
+                            except Exception:
+                                pass
 
                         account_details = {
                             'username': acc.username,
