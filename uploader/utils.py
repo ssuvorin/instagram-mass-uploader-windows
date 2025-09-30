@@ -74,6 +74,16 @@ def validate_proxy(host, port, username=None, password=None, timeout=10, proxy_t
                             logger.info(f"Proxy {host}:{port} working, external IP: {proxy_ip}")
                             # Store external IP in geo_info for saving to database
                             geo_info['external_ip'] = proxy_ip
+                            # Enrich GEO using external IP (not internal host)
+                            try:
+                                ext_geo = get_ip_location(proxy_ip)
+                                if ext_geo:
+                                    # Preserve already set external_ip
+                                    for k, v in ext_geo.items():
+                                        if v is not None:
+                                            geo_info[k] = v
+                            except Exception:
+                                pass
                     except Exception:
                         pass
                 break
@@ -93,6 +103,7 @@ def validate_proxy(host, port, username=None, password=None, timeout=10, proxy_t
     
     # Optionally attempt to enrich geo info (best-effort; does not affect validity)
     try:
+        # If we already have external_ip, location likely filled; otherwise fallback to host-derived GEO
         ip_info = get_proxy_location(host, username)
         if ip_info:
             # Merge location info with existing geo_info (preserve external_ip)
@@ -197,3 +208,22 @@ def get_proxy_location(host, username=None):
             logger.error(f"Error getting proxy location from API: {str(e)}")
     
     return geo_info 
+
+
+def get_ip_location(ip: str) -> dict:
+    """
+    Get GEO by explicit IP address (external IP as seen by remote service).
+    Returns dict with keys: country (countryCode), city.
+    """
+    try:
+        resp = requests.get(f"http://ip-api.com/json/{ip}", timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            if data.get("status") == "success":
+                return {
+                    "country": data.get("countryCode"),
+                    "city": data.get("city"),
+                }
+    except Exception as e:
+        logger.error(f"Error getting location for IP {ip}: {str(e)}")
+    return {}
