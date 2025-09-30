@@ -260,7 +260,7 @@ def import_proxies(request):
                 username = parts[2] if len(parts) > 2 else None
                 password = parts[3] if len(parts) > 3 else None
                 
-                # Validate the proxy before importing
+                # Validate the proxy before importing (normalizing host)
                 is_valid, validation_message, geo_info = validate_proxy(
                     host=host,
                     port=port,

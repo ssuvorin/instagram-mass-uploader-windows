@@ -6,6 +6,15 @@ import socks
 
 logger = logging.getLogger(__name__)
 
+def normalize_proxy_host(host: str) -> str:
+    try:
+        s = (host or '').strip()
+        if '/' in s:
+            s = s.split('/', 1)[0]
+        return s
+    except Exception:
+        return host
+
 def validate_proxy(host, port, username=None, password=None, timeout=10, proxy_type='HTTP'):
     """
     Validate if a proxy is working by attempting to connect to external HTTPS services.
@@ -24,6 +33,8 @@ def validate_proxy(host, port, username=None, password=None, timeout=10, proxy_t
     Returns:
         tuple: (bool, str, dict) - (is_valid, message, geo_info)
     """
+    # Normalize host and convert port
+    host = normalize_proxy_host(host)
     # Convert port to int if it's a string
     try:
         port = int(port)
@@ -170,6 +181,7 @@ def get_proxy_location(host, username=None):
         dict: Location information including country and city
     """
     geo_info = {"country": None, "city": None}
+    host = normalize_proxy_host(host)
     
     # Try to extract country from username if it follows a pattern
     if username and '-country-' in username:
