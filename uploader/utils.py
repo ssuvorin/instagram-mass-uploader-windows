@@ -42,9 +42,11 @@ def validate_proxy(host, port, username=None, password=None, timeout=10, proxy_t
         return False, "Invalid port number", {"country": None, "city": None}
     
     # HTTPS targets must pass for the proxy to be considered valid
-    # Use a single lightweight HTTPS endpoint that returns external IP
-    https_test_urls = [
-        "https://httpbin.org/ip"
+    # Use multiple lightweight HTTPS endpoints (some providers may block specific ones)
+    https_test_endpoints = [
+        ("https://httpbin.org/ip", "json_ip"),              # returns { origin }
+        ("https://api.ipify.org?format=json", "json_ip"),   # returns { ip }
+        ("https://ifconfig.me/ip", "plain_ip"),             # returns plain text IP
     ]
     # Optional HTTP endpoint used only for IP info retrieval; not used to decide validity
     http_info_url = "http://httpbin.org/ip"
@@ -69,33 +71,49 @@ def validate_proxy(host, port, username=None, password=None, timeout=10, proxy_t
     https_ok = False
     
     # First, require HTTPS connectivity
-    for test_url in https_test_urls:
+    for test_url, mode in https_test_endpoints:
         try:
             logger.debug(f"Testing proxy {host}:{port} with URL: {test_url}")
             response = requests.get(test_url, proxies=proxies, timeout=timeout)
             if response.status_code == 200:
                 https_ok = True
-                # If successful against httpbin HTTPS endpoint, try to log external IP
-                if "httpbin.org/ip" in test_url:
+                # Try to parse external IP from the response
+                proxy_ip = None
+                if mode == "json_ip":
                     try:
                         ip_data = response.json()
-                        proxy_ip = ip_data.get('origin', '').split(',')[0].strip()
-                        if proxy_ip:
-                            logger.info(f"Proxy {host}:{port} working, external IP: {proxy_ip}")
-                            # Store external IP in geo_info for saving to database
-                            geo_info['external_ip'] = proxy_ip
-                            # Enrich GEO using external IP (not internal host)
-                            try:
-                                ext_geo = get_ip_location(proxy_ip)
-                                if ext_geo:
-                                    # Preserve already set external_ip
-                                    for k, v in ext_geo.items():
-                                        if v is not None:
-                                            geo_info[k] = v
-                            except Exception:
-                                pass
+                        # httpbin: origin; ipify: ip
+                        candidate = ip_data.get('origin') or ip_data.get('ip')
+                        proxy_ip = (candidate or '').split(',')[0].strip() if candidate else None
                     except Exception:
                         pass
+                elif mode == "plain_ip":
+                    try:
+                        proxy_ip = (response.text or '').strip().split()[0]
+                    except Exception:
+                        proxy_ip = None
+
+                if proxy_ip:
+                    logger.info(f"Proxy {host}:{port} working, external IP: {proxy_ip}")
+                    geo_info['external_ip'] = proxy_ip
+                    # Prefer RIPE Database GEO; fallback to ip-api
+                    try:
+                        ripe_geo = get_geo_via_ripe(proxy_ip)
+                    except Exception:
+                        ripe_geo = {}
+                    if ripe_geo:
+                        for k, v in ripe_geo.items():
+                            if v is not None:
+                                geo_info[k] = v
+                    else:
+                        try:
+                            ext_geo = get_ip_location(proxy_ip)
+                            if ext_geo:
+                                for k, v in ext_geo.items():
+                                    if v is not None:
+                                        geo_info[k] = v
+                        except Exception:
+                            pass
                 break
             else:
                 logger.warning(f"Proxy {host}:{port} returned status {response.status_code} for {test_url}")
@@ -237,4 +255,32 @@ def get_ip_location(ip: str) -> dict:
                 }
     except Exception as e:
         logger.error(f"Error getting location for IP {ip}: {str(e)}")
+    return {}
+
+
+def get_geo_via_ripe(ip: str) -> dict:
+    """
+    Query RIPE Database for IP assignment and parse country code.
+    Uses the public REST endpoint. Best-effort.
+    """
+    try:
+        url = f"https://rest.db.ripe.net/search.json?query-string={ip}&type-filter=inetnum&flags=no-filtering"
+        resp = requests.get(url, timeout=6)
+        if resp.status_code != 200:
+            return {}
+        data = resp.json()
+        objs = (data.get('objects') or {}).get('object') or []
+        for obj in objs:
+            attrs = obj.get('attributes', {}).get('attribute', [])
+            country = None
+            for a in attrs:
+                if a.get('name', '').lower() == 'country':
+                    cval = (a.get('value') or '').strip().upper()
+                    if len(cval) == 2:
+                        country = cval
+                        break
+            if country:
+                return {"country": country}
+    except Exception as e:
+        logger.error(f"Error querying RIPE for IP {ip}: {str(e)}")
     return {}
