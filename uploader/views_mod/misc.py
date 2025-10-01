@@ -1989,7 +1989,7 @@ def tiktok_booster_proxy_upload_proxies(request):
         if not file:
             return _json_response({'detail': 'No file provided'}, status=400)
         files = {'file': (file.name, file.read())}
-        resp = requests.post(f"{api_base}/booster/upload_proxies", files=files, timeout=90)
+        resp = requests.post(f"{api_base}/booster/upload_proxies", files=files, timeout=180)
         try:
             data = resp.json()
         except Exception:
@@ -2361,7 +2361,7 @@ def tiktok_booster_proxy_pipeline(request):
         if not proxies_file:
             return _json_response({'detail': 'Proxies file is required'}, status=400)
         files_prx = {'file': (proxies_file.name, proxies_file.read())}
-        resp_prx = requests.post(f"{api_base}/booster/upload_proxies", files=files_prx, timeout=120)
+        resp_prx = requests.post(f"{api_base}/booster/upload_proxies", files=files_prx, timeout=160)
         try:
             data_prx = resp_prx.json()
         except Exception:
@@ -2383,7 +2383,7 @@ def tiktok_booster_proxy_pipeline(request):
             return _json_response({'step': 'upload_accounts', 'detail': data_acc.get('detail') or data_acc}, status=resp_acc.status_code)
 
         # 3) Prepare accounts
-        resp_prep = requests.post(f"{api_base}/booster/prepare_accounts", timeout=60)
+        resp_prep = requests.post(f"{api_base}/booster/prepare_accounts", timeout=120)
         try:
             data_prep = resp_prep.json()
         except Exception:
