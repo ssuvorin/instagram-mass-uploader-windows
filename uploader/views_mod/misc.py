@@ -1989,7 +1989,7 @@ def tiktok_booster_proxy_upload_proxies(request):
         if not file:
             return _json_response({'detail': 'No file provided'}, status=400)
         files = {'file': (file.name, file.read())}
-        resp = requests.post(f"{api_base}/booster/upload_proxies", files=files, timeout=30)
+        resp = requests.post(f"{api_base}/booster/upload_proxies", files=files, timeout=90)
         try:
             data = resp.json()
         except Exception:
