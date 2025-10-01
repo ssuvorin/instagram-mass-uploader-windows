@@ -700,12 +700,23 @@ document.getElementById('validate-proxy-btn').addEventListener('click', async fu
                 html += `<div class="alert alert-${statusClass}">
                     <h6><i class="bi ${statusIcon} me-2"></i>${status.toUpperCase()} (${accounts.length})</h6>
                     <div class="small">
-                        ${accounts.map(acc => 
-                            `<div class="d-flex justify-content-between">
-                                <span><strong>${acc.username}</strong></span>
+                        ${accounts.map(acc => {
+                            // Извлекаем IP адрес прокси из данных аккаунта
+                            let proxyIP = 'No proxy';
+                            if (acc.proxy) {
+                                try {
+                                    const proxyData = typeof acc.proxy === 'string' ? JSON.parse(acc.proxy) : acc.proxy;
+                                    proxyIP = `${proxyData.host}:${proxyData.port}`;
+                                } catch (e) {
+                                    proxyIP = 'Invalid proxy format';
+                                }
+                            }
+                            
+                            return `<div class="d-flex justify-content-between">
+                                <span><strong>${acc.username}</strong> <small class="text-muted">(${proxyIP})</small></span>
                                 <span>${acc.geo_info.country ? acc.geo_info.country : 'Unknown'}</span>
-                            </div>`
-                        ).join('')}
+                            </div>`;
+                        }).join('')}
                     </div>
                 </div>`;
             });
