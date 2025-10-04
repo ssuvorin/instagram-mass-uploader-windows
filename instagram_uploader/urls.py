@@ -42,8 +42,9 @@ import sys
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('uploader.urls')),
+    path('tiktok/', include('tiktok_uploader.urls')),  # TikTok automation routes (MUST be before uploader.urls)
     path('cabinet/', include('cabinet.urls')),
+    path('', include('uploader.urls')),  # Instagram routes (includes old tiktok paths, but new app has priority)
     path('login/', auth_views.LoginView.as_view(template_name='uploader/login.html', redirect_authenticated_user=True), name='login'),
     path('post-login/', login_required(post_login_redirect), name='post_login'),
     path('logout/', logout_view, name='logout'),

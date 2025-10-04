@@ -1,0 +1,148 @@
+{% extends "tiktok_uploader/base.html" %}
+
+{% block title %}Cookie Management - TikTok Uploader{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Хлебные крошки -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'tiktok_uploader:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item active">Cookie Management</li>
+        </ol>
+    </nav>
+
+    <!-- Заголовок -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-cookie me-2"></i>
+            Cookie Management
+        </h2>
+        <div class="btn-group" role="group">
+            <button class="btn btn-warning">
+                <i class="bi bi-arrow-clockwise"></i> Refresh All
+            </button>
+            <button class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> New Task
+            </button>
+        </div>
+    </div>
+
+    <!-- Статистика -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="bi bi-people fs-1 text-primary"></i>
+                    <h3 class="mt-2">{{ total_accounts|default:0 }}</h3>
+                    <p class="text-muted mb-0">Total Accounts</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="bi bi-check-circle fs-1 text-success"></i>
+                    <h3 class="mt-2">{{ accounts_with_cookies|default:0 }}</h3>
+                    <p class="text-muted mb-0">With Cookies</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="bi bi-x-circle fs-1 text-danger"></i>
+                    <h3 class="mt-2">{{ accounts_without_cookies|default:0 }}</h3>
+                    <p class="text-muted mb-0">Without Cookies</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="bi bi-exclamation-triangle fs-1 text-warning"></i>
+                    <h3 class="mt-2">{{ accounts_need_refresh|default:0 }}</h3>
+                    <p class="text-muted mb-0">Need Refresh</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Недавние задачи -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-list-task me-2"></i>
+                Recent Cookie Tasks
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if recent_tasks %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Status</th>
+                                <th>Accounts</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for task in recent_tasks %}
+                            <tr>
+                                <td>#{{ task.id }}</td>
+                                <td>{{ task.name|default:"Cookie Task" }}</td>
+                                <td>
+                                    {% if task.status == 'COMPLETED' %}
+                                        <span class="badge bg-success">Completed</span>
+                                    {% elif task.status == 'RUNNING' %}
+                                        <span class="badge bg-primary">Running</span>
+                                    {% elif task.status == 'FAILED' %}
+                                        <span class="badge bg-danger">Failed</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ task.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ task.accounts.count|default:0 }}</td>
+                                <td>{{ task.created_at|date:"d M Y H:i" }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i> View
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+                    <p>No cookie tasks yet</p>
+                    <button class="btn btn-primary btn-sm">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        Create First Task
+                    </button>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Информационный блок -->
+    <div class="card mt-4">
+        <div class="card-body">
+            <h6><i class="bi bi-info-circle me-2"></i>About Cookie Management:</h6>
+            <ul class="mb-0">
+                <li>Cookies store authentication state for TikTok accounts</li>
+                <li>Refresh cookies regularly to maintain account access</li>
+                <li>Cookies older than 7 days should be refreshed</li>
+                <li>Use Cookie Robot tasks to automate cookie management</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

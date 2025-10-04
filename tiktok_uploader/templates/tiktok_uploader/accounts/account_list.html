@@ -1,0 +1,209 @@
+{% extends "tiktok_uploader/base.html" %}
+
+{% block title %}TikTok Accounts - TikTok Uploader{% endblock %}
+
+{% block extra_css %}
+<style>
+    .account-card {
+        border: 2px solid #f1f1f2;
+        border-radius: 16px;
+        transition: all 0.3s ease;
+        background: white;
+    }
+    .account-card:hover {
+        border-color: #FE2C55;
+        box-shadow: 0 10px 30px rgba(254, 44, 85, 0.15);
+        transform: translateY(-3px);
+    }
+    .badge-tiktok {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+    }
+    .table-tiktok thead th {
+        background: linear-gradient(135deg, #FE2C55, #FF0050);
+        color: white;
+        font-weight: 700;
+        border: none;
+    }
+    .table-tiktok tbody tr:hover {
+        background: rgba(254, 44, 85, 0.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h2 class="fw-bold">
+            <i class="bi bi-person-circle" style="color: #FE2C55;"></i>
+            TikTok Accounts
+        </h2>
+        <p class="text-muted">Manage your TikTok automation accounts</p>
+    </div>
+    <div class="col-md-6 text-end">
+        <div class="btn-group me-2" role="group">
+            <a href="{% url 'tiktok_uploader:bulk_change_proxy' %}" class="btn btn-outline-warning">
+                <i class="bi bi-shield-lock"></i> Bulk Proxy
+            </a>
+            <a href="{% url 'tiktok_uploader:refresh_dolphin_proxies' %}" class="btn btn-outline-info">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </a>
+        </div>
+        <div class="btn-group" role="group">
+            <a href="{% url 'tiktok_uploader:import_accounts' %}" class="btn btn-outline-dark">
+                <i class="bi bi-file-earmark-arrow-up"></i> Import
+            </a>
+            <a href="{% url 'tiktok_uploader:create_account' %}" class="btn btn-tiktok">
+                <i class="bi bi-plus-circle"></i> New Account
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card account-card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center bg-transparent">
+        <h5 class="mb-0"><i class="bi bi-funnel"></i> Filters</h5>
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+            <i class="bi bi-sliders"></i>
+        </button>
+    </div>
+    <div class="collapse" id="filterCollapse">
+        <div class="card-body">
+            <form method="get" action="{% url 'tiktok_uploader:account_list' %}">
+                <div class="row">
+                    <div class="col-md-5 mb-3">
+                        <label for="search" class="form-label">Search</label>
+                        <input type="text" name="q" id="search" class="form-control" value="{{ search_query }}" placeholder="Search by username or email">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select name="status" id="status" class="form-select">
+                            <option value="">All Statuses</option>
+                            <option value="ACTIVE" {% if status_filter == 'ACTIVE' %}selected{% endif %}>Active</option>
+                            <option value="BLOCKED" {% if status_filter == 'BLOCKED' %}selected{% endif %}>Blocked</option>
+                            <option value="LIMITED" {% if status_filter == 'LIMITED' %}selected{% endif %}>Limited</option>
+                            <option value="INACTIVE" {% if status_filter == 'INACTIVE' %}selected{% endif %}>Inactive</option>
+                            <option value="PHONE_VERIFICATION_REQUIRED" {% if status_filter == 'PHONE_VERIFICATION_REQUIRED' %}selected{% endif %}>Phone Verification Required</option>
+                            <option value="CAPTCHA_REQUIRED" {% if status_filter == 'CAPTCHA_REQUIRED' %}selected{% endif %}>Captcha Required</option>
+                            <option value="SUSPENDED" {% if status_filter == 'SUSPENDED' %}selected{% endif %}>Suspended</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-tiktok w-100">Apply Filters</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Accounts Table -->
+<div class="card account-card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-tiktok mb-0">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Status</th>
+                        <th>Dolphin Profile</th>
+                        <th>Proxy</th>
+                        <th>Phone</th>
+                        <th>Last Used</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for account in accounts %}
+                    <tr>
+                        <td>
+                            <strong>@{{ account.username }}</strong>
+                            {% if account.email %}
+                            <br><small class="text-muted">{{ account.email }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if account.status == 'ACTIVE' %}
+                            <span class="badge-tiktok" style="background: #4CAF50; color: white;">Active</span>
+                            {% elif account.status == 'BLOCKED' %}
+                            <span class="badge-tiktok" style="background: #FE2C55; color: white;">Blocked</span>
+                            {% elif account.status == 'LIMITED' %}
+                            <span class="badge-tiktok" style="background: #ffc107; color: #000;">Limited</span>
+                            {% else %}
+                            <span class="badge-tiktok" style="background: #6c757d; color: white;">{{ account.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if account.dolphin_profile_id %}
+                            <span class="badge bg-success"><i class="bi bi-check-circle"></i> Yes</span>
+                            {% else %}
+                            <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if account.current_proxy or account.proxy %}
+                            <span class="badge bg-primary">
+                                <i class="bi bi-shield-check"></i> 
+                                {{ account.current_proxy.host|default:account.proxy.host|truncatechars:15 }}
+                            </span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">No Proxy</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if account.phone_number %}
+                            <small>{{ account.phone_number }}</small>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if account.last_used %}
+                            <small>{{ account.last_used|date:"M d, H:i" }}</small>
+                            {% else %}
+                            <span class="text-muted">Never</span>
+                            {% endif %}
+                        </td>
+                        <td><small>{{ account.created_at|date:"M d, Y" }}</small></td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{% url 'tiktok_uploader:account_detail' account.id %}" 
+                                   class="btn btn-outline-primary" title="View">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'tiktok_uploader:edit_account' account.id %}" 
+                                   class="btn btn-outline-secondary" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{% url 'tiktok_uploader:delete_account' account.id %}" 
+                                   class="btn btn-outline-danger" title="Delete"
+                                   onclick="return confirm('Delete account @{{ account.username }}?')">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <i class="bi bi-person-x" style="font-size: 3rem; color: #ccc;"></i>
+                            <p class="text-muted mt-3">No TikTok accounts found.</p>
+                            <a href="{% url 'tiktok_uploader:create_account' %}" class="btn btn-tiktok">
+                                <i class="bi bi-plus-circle"></i> Add First Account
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

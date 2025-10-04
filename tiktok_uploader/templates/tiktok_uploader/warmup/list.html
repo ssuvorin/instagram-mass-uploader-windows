@@ -1,0 +1,181 @@
+{% extends "tiktok_uploader/base.html" %}
+
+{% block title %}Warmup Tasks - TikTok Uploader{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Хлебные крошки -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'tiktok_uploader:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item active">Warmup Tasks</li>
+        </ol>
+    </nav>
+
+    <!-- Заголовок -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-fire me-2"></i>
+            Warmup Tasks
+        </h2>
+        <a href="{% url 'tiktok_uploader:warmup_task_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>
+            New Warmup Task
+        </a>
+    </div>
+
+    <!-- Статистика -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="bi bi-clock-history fs-1 text-warning"></i>
+                    <h3 class="mt-2">{{ pending_count|default:0 }}</h3>
+                    <p class="text-muted mb-0">Pending</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="bi bi-play-circle fs-1 text-primary"></i>
+                    <h3 class="mt-2">{{ running_count|default:0 }}</h3>
+                    <p class="text-muted mb-0">Running</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="bi bi-check-circle fs-1 text-success"></i>
+                    <h3 class="mt-2">{{ completed_count|default:0 }}</h3>
+                    <p class="text-muted mb-0">Completed</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="bi bi-x-circle fs-1 text-danger"></i>
+                    <h3 class="mt-2">{{ failed_count|default:0 }}</h3>
+                    <p class="text-muted mb-0">Failed</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Фильтры -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <select class="form-select" name="status">
+                        <option value="">All Statuses</option>
+                        <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending</option>
+                        <option value="RUNNING" {% if status_filter == 'RUNNING' %}selected{% endif %}>Running</option>
+                        <option value="COMPLETED" {% if status_filter == 'COMPLETED' %}selected{% endif %}>Completed</option>
+                        <option value="FAILED" {% if status_filter == 'FAILED' %}selected{% endif %}>Failed</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <input type="text" class="form-control" name="search" placeholder="Search tasks..." value="{{ search_query }}">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-funnel"></i> Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Таблица задач -->
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Status</th>
+                            <th>Accounts</th>
+                            <th>Progress</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if tasks %}
+                            {% for task in tasks %}
+                            <tr>
+                                <td>#{{ task.id }}</td>
+                                <td>{{ task.name|default:"Warmup Task" }}</td>
+                                <td>
+                                    {% if task.status == 'RUNNING' %}
+                                        <span class="badge bg-primary">Running</span>
+                                    {% elif task.status == 'COMPLETED' %}
+                                        <span class="badge bg-success">Completed</span>
+                                    {% elif task.status == 'FAILED' %}
+                                        <span class="badge bg-danger">Failed</span>
+                                    {% elif task.status == 'PENDING' %}
+                                        <span class="badge bg-warning">Pending</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ task.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <i class="bi bi-people me-1"></i>
+                                    {{ task.accounts.count|default:0 }}
+                                </td>
+                                <td>
+                                    <div class="progress" style="width: 100px;">
+                                        <div class="progress-bar" style="width: 0%"></div>
+                                    </div>
+                                    <small class="text-muted">0%</small>
+                                </td>
+                                <td>{{ task.created_at|date:"d M Y H:i" }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="{% url 'tiktok_uploader:warmup_task_detail' task.id %}" class="btn btn-outline-primary" title="View Details">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        {% if task.status == 'PENDING' or task.status == 'PAUSED' %}
+                                        <button class="btn btn-outline-success" title="Start Task">
+                                            <i class="bi bi-play-fill"></i>
+                                        </button>
+                                        {% endif %}
+                                        {% if task.status == 'RUNNING' %}
+                                        <button class="btn btn-outline-warning" title="Pause Task">
+                                            <i class="bi bi-pause-fill"></i>
+                                        </button>
+                                        {% endif %}
+                                        <button class="btn btn-outline-danger" title="Delete">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted">
+                                    <div class="py-5">
+                                        <i class="bi bi-fire fs-1 d-block mb-3"></i>
+                                        <p>No warmup tasks found</p>
+                                        <a href="{% url 'tiktok_uploader:warmup_task_create' %}" class="btn btn-primary btn-sm">
+                                            <i class="bi bi-plus-circle me-2"></i>
+                                            Create First Warmup Task
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

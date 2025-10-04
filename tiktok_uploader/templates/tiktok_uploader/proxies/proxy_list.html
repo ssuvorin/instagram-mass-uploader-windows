@@ -1,0 +1,250 @@
+{% extends "tiktok_uploader/base.html" %}
+
+{% block title %}Proxies - TikTok Uploader{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Хлебные крошки -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'tiktok_uploader:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item active">Proxies</li>
+        </ol>
+    </nav>
+
+    <!-- Заголовок -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-hdd-network me-2"></i>
+            Proxy Servers
+        </h2>
+        <div class="btn-group" role="group">
+            <button class="btn btn-outline-warning" title="Validate All Proxies">
+                <i class="bi bi-lightning"></i> Validate All
+            </button>
+            <a href="{% url 'tiktok_uploader:import_proxies' %}" class="btn btn-warning">
+                <i class="bi bi-file-earmark-arrow-up"></i> Import
+            </a>
+            <a href="{% url 'tiktok_uploader:create_proxy' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> New Proxy
+            </a>
+        </div>
+    </div>
+
+    <!-- Статистика -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="mb-0">{{ total_proxies|default:0 }}</h4>
+                            <p class="text-muted mb-0">Total Proxies</p>
+                        </div>
+                        <i class="bi bi-hdd-network fs-1 text-primary"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="mb-0 text-success">{{ active_proxies|default:0 }}</h4>
+                            <p class="text-muted mb-0">Active</p>
+                        </div>
+                        <i class="bi bi-check-circle fs-1 text-success"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="mb-0 text-warning">{{ inactive_proxies|default:0 }}</h4>
+                            <p class="text-muted mb-0">Inactive</p>
+                        </div>
+                        <i class="bi bi-exclamation-triangle fs-1 text-warning"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="mb-0 text-danger">{{ banned_proxies|default:0 }}</h4>
+                            <p class="text-muted mb-0">Banned</p>
+                        </div>
+                        <i class="bi bi-x-octagon fs-1 text-danger"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Фильтры -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-funnel"></i> Filters
+            </h5>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+                <i class="bi bi-sliders"></i> Toggle
+            </button>
+        </div>
+        <div class="collapse" id="filterCollapse">
+            <div class="card-body">
+                <form method="get">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="search" class="form-label">Search</label>
+                            <input type="text" name="q" id="search" class="form-control" value="{{ search_query }}" placeholder="Search by host or username">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="status" class="form-label">Status</label>
+                            <select name="status" id="status" class="form-select">
+                                <option value="">All Statuses</option>
+                                <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                                <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+                                <option value="banned" {% if status_filter == 'banned' %}selected{% endif %}>Banned</option>
+                                <option value="checking" {% if status_filter == 'checking' %}selected{% endif %}>Checking</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="proxy_type" class="form-label">Type</label>
+                            <select name="proxy_type" id="proxy_type" class="form-select">
+                                <option value="">All Types</option>
+                                <option value="HTTP" {% if type_filter == 'HTTP' %}selected{% endif %}>HTTP</option>
+                                <option value="HTTPS" {% if type_filter == 'HTTPS' %}selected{% endif %}>HTTPS</option>
+                                <option value="SOCKS5" {% if type_filter == 'SOCKS5' %}selected{% endif %}>SOCKS5</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">Apply</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Таблица прокси -->
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Host:Port</th>
+                            <th>Type</th>
+                            <th>Country</th>
+                            <th>Authentication</th>
+                            <th>Status</th>
+                            <th>Accounts</th>
+                            <th>Last Verified</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if proxies %}
+                            {% for proxy in proxies %}
+                            <tr>
+                                <td>
+                                    <strong>{{ proxy.host }}:{{ proxy.port }}</strong>
+                                    {% if proxy.external_ip %}
+                                    <br><small class="text-muted">External: {{ proxy.external_ip }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ proxy.proxy_type|default:"HTTP" }}</span>
+                                </td>
+                                <td>
+                                    {% if proxy.country %}
+                                        <span class="badge bg-info text-dark">{{ proxy.country }}</span>
+                                        {% if proxy.city %}
+                                        <br><small class="text-muted">{{ proxy.city }}</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">Unknown</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if proxy.username %}
+                                        <span class="text-truncate d-inline-block" style="max-width: 150px;" title="{{ proxy.username }}">
+                                            {{ proxy.username }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">None</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if proxy.status == 'active' %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% elif proxy.status == 'inactive' %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    {% elif proxy.status == 'banned' %}
+                                        <span class="badge bg-danger">Banned</span>
+                                    {% elif proxy.status == 'checking' %}
+                                        <span class="badge bg-warning">Checking</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ proxy.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <i class="bi bi-people me-1"></i>
+                                    {{ proxy.accounts.count|default:0 }}
+                                </td>
+                                <td>
+                                    {% if proxy.last_verified %}
+                                        {{ proxy.last_verified|date:"d M Y H:i" }}
+                                    {% else %}
+                                        <span class="text-muted">Never</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button class="btn btn-outline-primary" title="Edit Proxy">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-outline-warning" title="Test Proxy">
+                                            <i class="bi bi-lightning"></i>
+                                        </button>
+                                        {% if proxy.ip_change_url %}
+                                        <button class="btn btn-outline-success" title="Change IP">
+                                            <i class="bi bi-arrow-clockwise"></i>
+                                        </button>
+                                        {% endif %}
+                                        <button class="btn btn-outline-danger" title="Delete" data-proxy-id="{{ proxy.id }}" data-proxy-name="{{ proxy.host }}:{{ proxy.port }}">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="8" class="text-center text-muted">
+                                    <div class="py-5">
+                                        <i class="bi bi-hdd-network fs-1 d-block mb-3"></i>
+                                        <p>No proxies found</p>
+                                        <a href="{% url 'tiktok_uploader:create_proxy' %}" class="btn btn-primary btn-sm">
+                                            <i class="bi bi-plus-circle me-2"></i>
+                                            Add First Proxy
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

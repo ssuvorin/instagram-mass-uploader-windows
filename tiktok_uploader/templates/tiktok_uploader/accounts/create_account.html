@@ -1,0 +1,184 @@
+{% extends "tiktok_uploader/base.html" %}
+
+{% block title %}Create New Account{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Хлебные крошки -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'tiktok_uploader:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'tiktok_uploader:account_list' %}">Accounts</a></li>
+            <li class="breadcrumb-item active">Create New</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-person-plus me-2"></i>
+                        Create New TikTok Account
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Основные данные -->
+                        <h6 class="mb-3">Basic Information</h6>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.username.id_for_label }}" class="form-label">Username *</label>
+                            {{ form.username }}
+                            {% if form.username.errors %}
+                                <div class="invalid-feedback d-block">{{ form.username.errors.0 }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">TikTok username without @</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.password.id_for_label }}" class="form-label">Password *</label>
+                            {{ form.password }}
+                            {% if form.password.errors %}
+                                <div class="invalid-feedback d-block">{{ form.password.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <div class="invalid-feedback d-block">{{ form.email.errors.0 }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">Required for receiving verification codes</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.email_password.id_for_label }}" class="form-label">Email Password</label>
+                            {{ form.email_password }}
+                            {% if form.email_password.errors %}
+                                <div class="invalid-feedback d-block">{{ form.email_password.errors.0 }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">Password for email account (needed to get verification codes)</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.phone_number.id_for_label }}" class="form-label">Phone Number</label>
+                            {{ form.phone_number }}
+                            {% if form.phone_number.errors %}
+                                <div class="invalid-feedback d-block">{{ form.phone_number.errors.0 }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">Format: +1234567890</small>
+                        </div>
+
+                        <hr>
+
+                        <!-- Настройки прокси и профиля -->
+                        <h6 class="mb-3">Technical Settings</h6>
+
+                        <div class="mb-3">
+                            <label for="{{ form.proxy.id_for_label }}" class="form-label">Proxy</label>
+                            <select class="form-select" id="{{ form.proxy.id_for_label }}" name="proxy">
+                                <option value="">-- Select Proxy --</option>
+                                {% for proxy in proxies %}
+                                    <option value="{{ proxy.id }}">{{ proxy }} - {{ proxy.country|default:"Unknown" }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if form.proxy.errors %}
+                                <div class="invalid-feedback d-block">{{ form.proxy.errors.0 }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                <a href="{% url 'tiktok_uploader:create_proxy' %}" target="_blank">Create new proxy</a>
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.locale.id_for_label }}" class="form-label">Locale</label>
+                            {{ form.locale }}
+                            {% if form.locale.errors %}
+                                <div class="invalid-feedback d-block">{{ form.locale.errors.0 }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">Language and region for the account</small>
+                        </div>
+
+                        {% if clients %}
+                        <div class="mb-3">
+                            <label for="{{ form.client.id_for_label }}" class="form-label">Client</label>
+                            <select class="form-select" id="{{ form.client.id_for_label }}" name="client">
+                                <option value="">-- No Client --</option>
+                                {% for client in clients %}
+                                    <option value="{{ client.id }}">{{ client.name }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if form.client.errors %}
+                                <div class="invalid-feedback d-block">{{ form.client.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="create_dolphin" name="create_dolphin_profile" checked>
+                            <label class="form-check-label" for="create_dolphin">
+                                <strong>Create Dolphin Anty profile automatically</strong>
+                            </label>
+                            <div>
+                                <small class="form-text text-muted">
+                                    Creates a browser profile with realistic fingerprints. Requires proxy to be selected.
+                                </small>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Дополнительная информация -->
+                        <h6 class="mb-3">Additional Information</h6>
+
+                        <div class="mb-3">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">Notes</label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                                <div class="invalid-feedback d-block">{{ form.notes.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'tiktok_uploader:account_list' %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg"></i> Create Account
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Информационный блок -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h6><i class="bi bi-info-circle me-2"></i>Important Notes:</h6>
+                    <ul class="mb-0">
+                        <li>Make sure the username is correct and exists on TikTok</li>
+                        <li>Password should be the current password for the account</li>
+                        <li>Email and phone are optional but recommended for recovery</li>
+                        <li>Dolphin profile will be created automatically if checkbox is selected</li>
+                        <li>You can assign or change proxy later</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

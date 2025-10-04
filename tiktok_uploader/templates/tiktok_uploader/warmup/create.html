@@ -1,0 +1,259 @@
+{% extends "tiktok_uploader/base.html" %}
+
+{% block title %}Create Warmup Task - TikTok Uploader{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Хлебные крошки -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'tiktok_uploader:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'tiktok_uploader:warmup_task_list' %}">Warmup</a></li>
+            <li class="breadcrumb-item active">Create New</li>
+        </ol>
+    </nav>
+
+    <h2 class="fw-bold mb-4">
+        <i class="bi bi-plus-circle me-2"></i>
+        Create Warmup Task
+    </h2>
+
+    <form method="post" id="warmupForm">
+        {% csrf_token %}
+
+        <!-- Выбор аккаунтов -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-people me-2"></i>
+                    Select Accounts
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <input type="text" class="form-control" id="accountSearch" placeholder="Search accounts...">
+                </div>
+
+                <div class="d-flex justify-content-between mb-3">
+                    <div>
+                        <span class="badge bg-info me-2" id="selectedCount">0 selected</span>
+                        <span class="text-muted">of {{ accounts.count|default:0 }} accounts</span>
+                    </div>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-secondary" id="selectAll">Select All</button>
+                        <button type="button" class="btn btn-outline-secondary" id="selectNone">Clear</button>
+                        <button type="button" class="btn btn-outline-secondary" id="selectActive">Active Only</button>
+                    </div>
+                </div>
+
+                <div class="row" id="accountsContainer">
+                    {% for account in accounts %}
+                    <div class="col-md-6 mb-2 account-item" data-username="{{ account.username|lower }}" data-status="{{ account.status|lower }}">
+                        <div class="form-check">
+                            <input class="form-check-input account-checkbox" type="checkbox" name="account_ids" value="{{ account.id }}" id="account_{{ account.id }}">
+                            <label class="form-check-label w-100" for="account_{{ account.id }}">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ account.username }}</strong>
+                                        {% if account.proxy %}
+                                            <i class="bi bi-shield-check text-success ms-2" title="Has proxy"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        {% if account.status == 'ACTIVE' %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% elif account.status == 'BLOCKED' %}
+                                            <span class="badge bg-danger">Blocked</span>
+                                        {% elif account.status == 'LIMITED' %}
+                                            <span class="badge bg-warning">Limited</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ account.status }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-12 text-center text-muted py-4">
+                        <p>No accounts available</p>
+                        <a href="{% url 'tiktok_uploader:create_account' %}" class="btn btn-primary btn-sm">
+                            Create First Account
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Настройки прогрева -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-gear me-2"></i>
+                    Warmup Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="concurrency" class="form-label">Concurrency</label>
+                        <input type="number" class="form-control" id="concurrency" name="concurrency" min="1" max="4" value="1" required>
+                        <small class="form-text text-muted">How many accounts to warm up simultaneously (1-4)</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="delay_min_sec" class="form-label">Min Delay (seconds)</label>
+                        <input type="number" class="form-control" id="delay_min_sec" name="delay_min_sec" min="5" max="300" value="30" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="delay_max_sec" class="form-label">Max Delay (seconds)</label>
+                        <input type="number" class="form-control" id="delay_max_sec" name="delay_max_sec" min="5" max="600" value="60" required>
+                    </div>
+                </div>
+
+                <hr>
+
+                <h6 class="mb-3">Action Ranges</h6>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Feed Scroll</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Min</span>
+                            <input type="number" class="form-control" name="feed_scroll_min_count" min="0" max="50" value="5">
+                            <span class="input-group-text">Max</span>
+                            <input type="number" class="form-control" name="feed_scroll_max_count" min="0" max="100" value="10">
+                        </div>
+                        <small class="form-text text-muted">Number of feed scrolls</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Likes</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Min</span>
+                            <input type="number" class="form-control" name="like_min_count" min="0" max="50" value="3">
+                            <span class="input-group-text">Max</span>
+                            <input type="number" class="form-control" name="like_max_count" min="0" max="100" value="7">
+                        </div>
+                        <small class="form-text text-muted">Number of likes</small>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Watch Videos</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Min</span>
+                            <input type="number" class="form-control" name="watch_video_min_count" min="0" max="50" value="5">
+                            <span class="input-group-text">Max</span>
+                            <input type="number" class="form-control" name="watch_video_max_count" min="0" max="100" value="15">
+                        </div>
+                        <small class="form-text text-muted">Number of videos to watch</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Follows</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Min</span>
+                            <input type="number" class="form-control" name="follow_min_count" min="0" max="20" value="0">
+                            <span class="input-group-text">Max</span>
+                            <input type="number" class="form-control" name="follow_max_count" min="0" max="50" value="2">
+                        </div>
+                        <small class="form-text text-muted">Number of accounts to follow</small>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Comments</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Min</span>
+                            <input type="number" class="form-control" name="comment_min_count" min="0" max="10" value="0">
+                            <span class="input-group-text">Max</span>
+                            <input type="number" class="form-control" name="comment_max_count" min="0" max="20" value="1">
+                        </div>
+                        <small class="form-text text-muted">Number of comments to post</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Кнопки -->
+        <div class="d-flex justify-content-between">
+            <a href="{% url 'tiktok_uploader:warmup_task_list' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Cancel
+            </a>
+            <button type="submit" class="btn btn-success">
+                <i class="bi bi-check-lg"></i> Create Warmup Task
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const accountCheckboxes = document.querySelectorAll('.account-checkbox');
+    const selectedCount = document.getElementById('selectedCount');
+    const searchInput = document.getElementById('accountSearch');
+    const accountItems = document.querySelectorAll('.account-item');
+
+    // Обновление счетчика
+    function updateCounter() {
+        const checked = document.querySelectorAll('.account-checkbox:checked').length;
+        selectedCount.textContent = checked + ' selected';
+    }
+
+    // Поиск
+    searchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase();
+        accountItems.forEach(item => {
+            const username = item.dataset.username;
+            item.style.display = username.includes(query) ? '' : 'none';
+        });
+    });
+
+    // Select All
+    document.getElementById('selectAll').addEventListener('click', function() {
+        accountItems.forEach(item => {
+            if (item.style.display !== 'none') {
+                item.querySelector('.account-checkbox').checked = true;
+            }
+        });
+        updateCounter();
+    });
+
+    // Select None
+    document.getElementById('selectNone').addEventListener('click', function() {
+        accountCheckboxes.forEach(cb => cb.checked = false);
+        updateCounter();
+    });
+
+    // Select Active Only
+    document.getElementById('selectActive').addEventListener('click', function() {
+        accountCheckboxes.forEach(cb => cb.checked = false);
+        accountItems.forEach(item => {
+            if (item.dataset.status === 'active') {
+                item.querySelector('.account-checkbox').checked = true;
+            }
+        });
+        updateCounter();
+    });
+
+    // Обновлять счетчик при изменении чекбоксов
+    accountCheckboxes.forEach(cb => {
+        cb.addEventListener('change', updateCounter);
+    });
+
+    // Валидация формы
+    document.getElementById('warmupForm').addEventListener('submit', function(e) {
+        const checked = document.querySelectorAll('.account-checkbox:checked').length;
+        if (checked === 0) {
+            e.preventDefault();
+            alert('Please select at least one account');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}
+

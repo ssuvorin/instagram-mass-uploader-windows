@@ -1,0 +1,447 @@
+{% extends "tiktok_uploader/base.html" %}
+
+{% block title %}Dashboard - TikTok Uploader{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* TikTok-themed dashboard */
+    .dashboard-header {
+        background: linear-gradient(135deg, #FE2C55 0%, #000000 100%);
+        color: white;
+        padding: 2.5rem;
+        border-radius: 20px;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .dashboard-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -20%;
+        width: 150%;
+        height: 200%;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></svg>');
+        background-size: 50px 50px;
+        opacity: 0.3;
+        transform: rotate(45deg);
+        z-index: 1;
+    }
+    
+    .dashboard-header .content {
+        position: relative;
+        z-index: 2;
+    }
+    
+    .tiktok-card {
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 8px 30px rgba(254, 44, 85, 0.1);
+        border: 2px solid #f1f1f2;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        height: 100%;
+    }
+    
+    .tiktok-card:hover {
+        transform: translateY(-10px) scale(1.02);
+        box-shadow: 0 20px 50px rgba(254, 44, 85, 0.2);
+        border-color: #FE2C55;
+    }
+    
+    .tiktok-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 5px;
+        background: linear-gradient(90deg, #FE2C55, #00F2EA);
+        z-index: 1;
+    }
+    
+    .quick-action-item {
+        text-decoration: none;
+        color: inherit;
+        display: block;
+        transition: all 0.3s ease;
+    }
+    
+    .quick-action-content {
+        text-align: center;
+        padding: 2rem 1rem;
+        background: #f8f9fa;
+        border-radius: 16px;
+        border: 2px solid #e9ecef;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        height: 100%;
+    }
+    
+    .quick-action-item:hover .quick-action-content {
+        background: linear-gradient(135deg, rgba(254, 44, 85, 0.05), rgba(0, 242, 234, 0.05));
+        transform: translateY(-5px) rotate(-1deg);
+        box-shadow: 0 15px 35px rgba(254, 44, 85, 0.15);
+        border-color: #FE2C55;
+    }
+    
+    .quick-action-icon {
+        font-size: 2.8rem;
+        margin-bottom: 1rem;
+        background: linear-gradient(135deg, #FE2C55, #00F2EA);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        transition: all 0.3s ease;
+    }
+    
+    .quick-action-item:hover .quick-action-icon {
+        transform: scale(1.2) rotate(10deg);
+    }
+    
+    .stat-card {
+        text-align: center;
+        padding: 2rem 1rem;
+        background: linear-gradient(135deg, #f8f9fa, #ffffff);
+        border-radius: 16px;
+        border: 2px solid #e9ecef;
+        transition: all 0.3s ease;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .stat-card::after {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(254, 44, 85, 0.05) 0%, transparent 70%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        background: white;
+        transform: translateY(-5px) scale(1.05);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        border-color: #FE2C55;
+    }
+    
+    .stat-card:hover::after {
+        opacity: 1;
+    }
+    
+    .stat-value {
+        font-size: 3rem;
+        font-weight: 900;
+        background: linear-gradient(135deg, #FE2C55, #000000);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.5rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .status-badge-tiktok {
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .badge-pending { background: linear-gradient(135deg, #ffc107, #ff8f00); color: white; }
+    .badge-running { background: linear-gradient(135deg, #00F2EA, #0088cc); color: white; animation: pulse 2s infinite; }
+    .badge-completed { background: linear-gradient(135deg, #4CAF50, #2E7D32); color: white; }
+    .badge-failed { background: linear-gradient(135deg, #FE2C55, #c41230); color: white; }
+    .badge-active { background: linear-gradient(135deg, #4CAF50, #2E7D32); color: white; }
+    .badge-blocked { background: linear-gradient(135deg, #FE2C55, #c41230); color: white; }
+    
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.05); opacity: 0.9; }
+    }
+    
+    .activity-item {
+        padding: 1.5rem;
+        border-bottom: 1px solid #f1f1f2;
+        transition: all 0.3s ease;
+    }
+    
+    .activity-item:hover {
+        background: linear-gradient(90deg, rgba(254, 44, 85, 0.03), transparent);
+        transform: translateX(10px);
+    }
+    
+    .btn-tiktok-modern {
+        padding: 0.8rem 2rem;
+        border-radius: 30px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        background: linear-gradient(135deg, #FE2C55, #FF0050);
+        color: white;
+        border: none;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(254, 44, 85, 0.3);
+    }
+    
+    .btn-tiktok-modern:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(254, 44, 85, 0.4);
+        color: white;
+    }
+    
+    .empty-state-icon {
+        font-size: 4rem;
+        background: linear-gradient(135deg, #FE2C55, #00F2EA);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        opacity: 0.4;
+    }
+
+    /* Dark theme adjustments */
+    .dark-theme .tiktok-card { background: #1a1a1a; border-color: #333; }
+    .dark-theme .stat-card { background: linear-gradient(135deg, #1a1a1a, #252525); border-color: #333; }
+    .dark-theme .quick-action-content { background: #1a1a1a; border-color: #333; }
+    .dark-theme .activity-item { border-bottom-color: #333; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Dashboard Header -->
+<div class="dashboard-header">
+    <div class="content">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2 fw-bold" style="font-size: 2.5rem;">
+                    <i class="bi bi-badge-tm-fill me-2"></i>
+                    TikTok Uploader Dashboard
+                </h1>
+                <p class="mb-0 opacity-75" style="font-size: 1.1rem;">Automate your TikTok content strategy</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'tiktok_uploader:create_bulk_upload' %}" class="btn btn-light btn-lg btn-tiktok-modern">
+                    <i class="bi bi-plus-circle me-2"></i> New Upload
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="tiktok-card">
+            <div class="card-body p-4">
+                <h5 class="card-title mb-4 fw-bold text-center" style="font-size: 1.5rem;">Quick Actions</h5>
+                <div class="row g-4">
+                    <div class="col-md-2 col-6">
+                        <a href="{% url 'tiktok_uploader:create_bulk_upload' %}" class="quick-action-item">
+                            <div class="quick-action-content">
+                                <i class="bi bi-cloud-arrow-up quick-action-icon"></i>
+                                <div class="quick-action-label fw-bold">Bulk Upload</div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-2 col-6">
+                        <a href="{% url 'tiktok_uploader:account_list' %}" class="quick-action-item">
+                            <div class="quick-action-content">
+                                <i class="bi bi-person-circle quick-action-icon"></i>
+                                <div class="quick-action-label fw-bold">Accounts</div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-2 col-6">
+                        <a href="{% url 'tiktok_uploader:warmup_task_list' %}" class="quick-action-item">
+                            <div class="quick-action-content">
+                                <i class="bi bi-fire quick-action-icon"></i>
+                                <div class="quick-action-label fw-bold">Warmup</div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-2 col-6">
+                        <a href="{% url 'tiktok_uploader:follow_task_list' %}" class="quick-action-item">
+                            <div class="quick-action-content">
+                                <i class="bi bi-people quick-action-icon"></i>
+                                <div class="quick-action-label fw-bold">Follow</div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-2 col-6">
+                        <a href="{% url 'tiktok_uploader:proxy_list' %}" class="quick-action-item">
+                            <div class="quick-action-content">
+                                <i class="bi bi-shield-lock quick-action-icon"></i>
+                                <div class="quick-action-label fw-bold">Proxies</div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-2 col-6">
+                        <a href="{% url 'tiktok_uploader:cookie_dashboard' %}" class="quick-action-item">
+                            <div class="quick-action-content">
+                                <i class="bi bi-journal-code quick-action-icon"></i>
+                                <div class="quick-action-label fw-bold">Cookies</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Overview -->
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="tiktok-card">
+            <div class="card-body p-4">
+                <h5 class="card-title mb-4 fw-bold text-center" style="font-size: 1.5rem;">System Overview</h5>
+                <div class="row g-4">
+                    <div class="col-md-3 col-6">
+                        <div class="stat-card">
+                            <div class="stat-value">{{ total_accounts|default:0 }}</div>
+                            <div class="stat-label">Total Accounts</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-card">
+                            <div class="stat-value">{{ active_accounts|default:0 }}</div>
+                            <div class="stat-label">Active</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-card">
+                            <div class="stat-value">{{ total_videos|default:0 }}</div>
+                            <div class="stat-label">Videos Uploaded</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-card">
+                            <div class="stat-value">{{ total_proxies|default:0 }}</div>
+                            <div class="stat-label">Proxies</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="tiktok-card">
+            <div class="card-header bg-transparent border-0 pb-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold" style="font-size: 1.2rem;">Recent Tasks</h6>
+                    <a href="{% url 'tiktok_uploader:bulk_upload_list' %}" class="btn btn-sm btn-tiktok-outline">View All</a>
+                </div>
+            </div>
+            <div class="card-body pt-3 p-0">
+                {% if recent_tasks %}
+                    {% for task in recent_tasks %}
+                    <div class="activity-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-2">
+                                    <strong class="me-2" style="font-size: 1.1rem;">{{ task.name }}</strong>
+                                    <span class="status-badge-tiktok badge-{{ task.status|lower }}">{{ task.status }}</span>
+                                </div>
+                                <div class="text-muted small">{{ task.created_at|date:"M d, Y H:i" }}</div>
+                            </div>
+                            <div class="ms-3">
+                                <a href="{% url 'tiktok_uploader:bulk_upload_detail' task.id %}" class="btn btn-sm btn-tiktok-outline">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox empty-state-icon"></i>
+                    <p class="text-muted mb-3 fw-bold">No tasks yet</p>
+                    <a href="{% url 'tiktok_uploader:create_bulk_upload' %}" class="btn btn-tiktok-modern">
+                        Create First Task
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6 mb-4">
+        <div class="tiktok-card">
+            <div class="card-header bg-transparent border-0 pb-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold" style="font-size: 1.2rem;">Account Status</h6>
+                    <a href="{% url 'tiktok_uploader:account_list' %}" class="btn btn-sm btn-tiktok-outline">View All</a>
+                </div>
+            </div>
+            <div class="card-body pt-3 p-0">
+                {% if accounts %}
+                    {% for account in accounts %}
+                    <div class="activity-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-2">
+                                    <strong class="me-2" style="font-size: 1.1rem;">@{{ account.username }}</strong>
+                                    <span class="status-badge-tiktok badge-{{ account.status|lower }}">{{ account.status }}</span>
+                                </div>
+                                <div class="text-muted small">
+                                    {% if account.last_used %}
+                                        Last used: {{ account.last_used|date:"M d, Y" }}
+                                    {% else %}
+                                        Never used
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="ms-3">
+                                <a href="{% url 'tiktok_uploader:account_detail' account.id %}" class="btn btn-sm btn-tiktok-outline">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-person-x empty-state-icon"></i>
+                    <p class="text-muted mb-3 fw-bold">No accounts yet</p>
+                    <a href="{% url 'tiktok_uploader:create_account' %}" class="btn btn-tiktok-modern">
+                        Add First Account
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh if there are running tasks
+const runningTasks = document.querySelectorAll('.badge-running');
+if (runningTasks.length > 0) {
+    setTimeout(() => window.location.reload(), 30000); // Refresh every 30 seconds
+}
+</script>
+{% endblock %}
+
+

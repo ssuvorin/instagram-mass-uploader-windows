@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'cabinet',
     'uploader',
+    'tiktok_uploader',  # TikTok automation module
 ]
 
 MIDDLEWARE = [

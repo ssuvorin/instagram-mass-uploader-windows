@@ -1,0 +1,284 @@
+{% extends "tiktok_uploader/base.html" %}
+
+{% block title %}{{ account.username }} - Account Details{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Хлебные крошки -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'tiktok_uploader:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'tiktok_uploader:account_list' %}">Accounts</a></li>
+            <li class="breadcrumb-item active">{{ account.username }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Основная информация -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-person-circle me-2"></i>
+                        Account Information
+                    </h5>
+                    <div class="btn-group" role="group">
+                        <a href="#" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-pencil"></i> Edit
+                        </a>
+                        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                            <i class="bi bi-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Username:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            <span class="badge bg-info">@{{ account.username }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Status:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            {% if account.status == 'ACTIVE' %}
+                                <span class="badge bg-success">Active</span>
+                            {% elif account.status == 'BLOCKED' %}
+                                <span class="badge bg-danger">Blocked</span>
+                            {% elif account.status == 'LIMITED' %}
+                                <span class="badge bg-warning">Limited</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ account.status }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if account.email %}
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Email:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            {{ account.email }}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if account.phone_number %}
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Phone:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            {{ account.phone_number }}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Locale:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            {{ account.locale }}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Created:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            {{ account.created_at|date:"d M Y H:i" }}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Last Used:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            {% if account.last_used %}
+                                {{ account.last_used|date:"d M Y H:i" }}
+                            {% else %}
+                                <em class="text-muted">Never</em>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if account.notes %}
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Notes:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            <p class="mb-0">{{ account.notes }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Дополнительная информация -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-gear me-2"></i>
+                        Technical Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Proxy:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            {% if account.proxy %}
+                                <span class="badge bg-primary">{{ account.proxy.host }}:{{ account.proxy.port }}</span>
+                            {% else %}
+                                <em class="text-muted">No proxy assigned</em>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Dolphin Profile ID:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            {% if account.dolphin_profile_id %}
+                                <code>{{ account.dolphin_profile_id }}</code>
+                            {% else %}
+                                <em class="text-muted">Not created</em>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Has Cookies:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            {% if account.has_cookies %}
+                                <span class="badge bg-success">Yes</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>2FA Enabled:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            {% if account.tfa_secret %}
+                                <span class="badge bg-warning">Yes</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Быстрые действия -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-lightning me-2"></i>
+                        Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body d-grid gap-2">
+                    <button class="btn btn-outline-primary">
+                        <i class="bi bi-upload"></i> Upload Video
+                    </button>
+                    <button class="btn btn-outline-info">
+                        <i class="bi bi-fire"></i> Start Warmup
+                    </button>
+                    <button class="btn btn-outline-success">
+                        <i class="bi bi-person-plus"></i> Follow Users
+                    </button>
+                    <button class="btn btn-outline-warning">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh Cookies
+                    </button>
+                </div>
+            </div>
+
+            <!-- Статистика -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-graph-up me-2"></i>
+                        Statistics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Videos Uploaded:</span>
+                            <strong>0</strong>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-success" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Followers:</span>
+                            <strong>0</strong>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Following:</span>
+                            <strong>0</strong>
+                        </div>
+                    </div>
+
+                    <div class="mb-0">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Total Views:</span>
+                            <strong>0</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal для удаления -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete account <strong>@{{ account.username }}</strong>?
+                This action cannot be undone.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="#" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete Account</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

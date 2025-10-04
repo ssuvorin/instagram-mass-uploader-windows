@@ -1,0 +1,205 @@
+{% extends "tiktok_uploader/base.html" %}
+
+{% block title %}Bulk Upload Tasks - TikTok Uploader{% endblock %}
+
+{% block extra_css %}
+<style>
+    .task-card {
+        border: 2px solid #f1f1f2;
+        border-radius: 20px;
+        overflow: hidden;
+        transition: all 0.4s ease;
+        background: white;
+        position: relative;
+    }
+    .task-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 5px;
+        background: linear-gradient(90deg, #FE2C55, #00F2EA);
+    }
+    .task-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(254, 44, 85, 0.2);
+        border-color: #FE2C55;
+    }
+    .progress-tiktok {
+        height: 8px;
+        border-radius: 10px;
+        background: #f1f1f2;
+        overflow: hidden;
+    }
+    .progress-bar-tiktok {
+        height: 100%;
+        background: linear-gradient(90deg, #FE2C55, #FF0050);
+        transition: width 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h2 class="fw-bold">
+            <i class="bi bi-collection" style="color: #FE2C55;"></i>
+            Bulk Upload Tasks
+        </h2>
+        <p class="text-muted">Mass upload videos to multiple TikTok accounts</p>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="{% url 'tiktok_uploader:create_bulk_upload' %}" class="btn btn-tiktok btn-lg">
+            <i class="bi bi-plus-circle me-2"></i> New Bulk Upload Task
+        </a>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card task-card text-center p-3">
+            <h3 class="fw-bold mb-0" style="background: linear-gradient(135deg, #FE2C55, #000); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                {{ pending_count|default:0 }}
+            </h3>
+            <small class="text-muted fw-bold">PENDING</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card task-card text-center p-3">
+            <h3 class="fw-bold mb-0" style="background: linear-gradient(135deg, #00F2EA, #0088cc); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                {{ running_count|default:0 }}
+            </h3>
+            <small class="text-muted fw-bold">RUNNING</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card task-card text-center p-3">
+            <h3 class="fw-bold mb-0" style="background: linear-gradient(135deg, #4CAF50, #2E7D32); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                {{ completed_count|default:0 }}
+            </h3>
+            <small class="text-muted fw-bold">COMPLETED</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card task-card text-center p-3">
+            <h3 class="fw-bold mb-0" style="background: linear-gradient(135deg, #FE2C55, #c41230); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                {{ failed_count|default:0 }}
+            </h3>
+            <small class="text-muted fw-bold">FAILED</small>
+        </div>
+    </div>
+</div>
+
+<!-- Tasks List -->
+<div class="row">
+    {% for task in tasks %}
+    <div class="col-12 mb-4">
+        <div class="card task-card">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h5 class="fw-bold mb-2">
+                            {{ task.name }}
+                            {% if task.status == 'PENDING' %}
+                            <span class="badge" style="background: #ffc107; color: #000;">PENDING</span>
+                            {% elif task.status == 'RUNNING' %}
+                            <span class="badge" style="background: #00F2EA; color: #000;">
+                                RUNNING <i class="bi bi-arrow-clockwise fa-spin"></i>
+                            </span>
+                            {% elif task.status == 'COMPLETED' %}
+                            <span class="badge" style="background: #4CAF50; color: white;">COMPLETED</span>
+                            {% elif task.status == 'FAILED' %}
+                            <span class="badge" style="background: #FE2C55; color: white;">FAILED</span>
+                            {% elif task.status == 'PAUSED' %}
+                            <span class="badge" style="background: #FF8800; color: white;">PAUSED</span>
+                            {% endif %}
+                        </h5>
+                        
+                        <div class="mb-2">
+                            <small class="text-muted">
+                                <i class="bi bi-person-circle"></i> {{ task.accounts.count }} accounts
+                                <span class="mx-2">•</span>
+                                <i class="bi bi-camera-video"></i> {{ task.videos.count }} videos
+                                <span class="mx-2">•</span>
+                                <i class="bi bi-calendar"></i> Created: {{ task.created_at|date:"M d, Y H:i" }}
+                            </small>
+                        </div>
+                        
+                        <!-- Progress Bar -->
+                        {% if task.videos.count > 0 %}
+                        <div class="progress-tiktok mb-2">
+                            <div class="progress-bar-tiktok" style="width: 0%;"></div>
+                        </div>
+                        <small class="text-muted">
+                            Progress: 0 / {{ task.videos.count }} videos
+                        </small>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-4 text-end">
+                        <div class="btn-group" role="group">
+                            {% if task.status == 'PENDING' %}
+                            <a href="{% url 'tiktok_uploader:start_bulk_upload_api' task.id %}" 
+                               class="btn btn-success"
+                               onclick="return confirm('Start upload task?')">
+                                <i class="bi bi-play-circle"></i> Start
+                            </a>
+                            {% elif task.status == 'RUNNING' %}
+                            <a href="{% url 'tiktok_uploader:pause_bulk_upload' task.id %}" 
+                               class="btn btn-warning"
+                               onclick="return confirm('Pause task?')">
+                                <i class="bi bi-pause-circle"></i> Pause
+                            </a>
+                            {% elif task.status == 'PAUSED' %}
+                            <a href="{% url 'tiktok_uploader:resume_bulk_upload' task.id %}" 
+                               class="btn btn-info"
+                               onclick="return confirm('Resume task?')">
+                                <i class="bi bi-play-circle"></i> Resume
+                            </a>
+                            {% endif %}
+                            
+                            <a href="{% url 'tiktok_uploader:bulk_upload_detail' task.id %}" 
+                               class="btn btn-primary">
+                                <i class="bi bi-eye"></i> View
+                            </a>
+                            
+                            {% if task.status != 'RUNNING' %}
+                            <a href="{% url 'tiktok_uploader:delete_bulk_upload' task.id %}" 
+                               class="btn btn-danger"
+                               onclick="return confirm('Delete task {{ task.name }}?')">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="card task-card text-center py-5">
+            <div class="card-body">
+                <i class="bi bi-inbox" style="font-size: 4rem; color: #f1f1f2;"></i>
+                <h4 class="mt-3 mb-2 fw-bold">No Bulk Upload Tasks</h4>
+                <p class="text-muted mb-4">Create your first bulk upload task to start uploading videos to TikTok</p>
+                <a href="{% url 'tiktok_uploader:create_bulk_upload' %}" class="btn btn-tiktok btn-lg">
+                    <i class="bi bi-plus-circle me-2"></i> Create First Task
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+// Auto-refresh if there are running tasks
+{% if running_count > 0 %}
+setTimeout(() => window.location.reload(), 30000); // Refresh every 30 seconds
+{% endif %}
+</script>
+{% endblock %}
+
+

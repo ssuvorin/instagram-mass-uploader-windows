@@ -1,0 +1,222 @@
+{% extends "tiktok_uploader/base.html" %}
+
+{% block title %}Create Bulk Upload Task - TikTok Uploader{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: white;
+        border: 2px solid #f1f1f2;
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        transition: all 0.3s ease;
+    }
+    .form-section:hover {
+        border-color: #FE2C55;
+        box-shadow: 0 10px 30px rgba(254, 44, 85, 0.1);
+    }
+    .form-section h4 {
+        font-weight: 700;
+        background: linear-gradient(135deg, #FE2C55, #000);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 1.5rem;
+    }
+    .account-checkbox {
+        padding: 1rem;
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    .account-checkbox:hover {
+        background: rgba(254, 44, 85, 0.05);
+        border-color: #FE2C55;
+    }
+    .account-checkbox input[type="checkbox"]:checked + label {
+        font-weight: 700;
+        color: #FE2C55;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="fw-bold">
+            <i class="bi bi-plus-circle" style="color: #FE2C55;"></i>
+            Create Bulk Upload Task
+        </h2>
+        <p class="text-muted">Upload multiple videos to multiple TikTok accounts</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'tiktok_uploader:bulk_upload_list' %}" class="btn btn-outline-dark">
+            <i class="bi bi-arrow-left"></i> Back to Tasks
+        </a>
+    </div>
+</div>
+
+<form method="post" action="{% url 'tiktok_uploader:create_bulk_upload' %}">
+    {% csrf_token %}
+    
+    <!-- Task Settings -->
+    <div class="form-section">
+        <h4><i class="bi bi-gear me-2"></i> Task Settings</h4>
+        <div class="row">
+            <div class="col-md-12 mb-3">
+                <label for="name" class="form-label fw-bold">Task Name *</label>
+                <input type="text" class="form-control form-control-lg" id="name" name="name" 
+                       placeholder="e.g., Daily Content Upload - January 2024" required>
+                <small class="text-muted">Give your task a descriptive name</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Select Accounts -->
+    <div class="form-section">
+        <h4><i class="bi bi-person-circle me-2"></i> Select Accounts</h4>
+        <p class="text-muted mb-3">Choose TikTok accounts for this upload task</p>
+        <div class="row">
+            {% for account in accounts %}
+            <div class="col-md-4 mb-3">
+                <div class="account-checkbox">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="account_ids" 
+                               value="{{ account.id }}" id="account_{{ account.id }}">
+                        <label class="form-check-label w-100" for="account_{{ account.id }}">
+                            <strong>@{{ account.username }}</strong>
+                            {% if account.status == 'ACTIVE' %}
+                            <span class="badge bg-success ms-2">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary ms-2">{{ account.status }}</span>
+                            {% endif %}
+                        </label>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12 text-center py-4">
+                <i class="bi bi-person-x" style="font-size: 3rem; color: #ccc;"></i>
+                <p class="text-muted mt-2">No accounts available</p>
+                <a href="{% url 'tiktok_uploader:create_account' %}" class="btn btn-tiktok">
+                    <i class="bi bi-plus-circle"></i> Add Account
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Upload Settings -->
+    <div class="form-section">
+        <h4><i class="bi bi-sliders me-2"></i> Upload Settings</h4>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label for="delay_min_sec" class="form-label fw-bold">Min Delay (seconds)</label>
+                <input type="number" class="form-control" id="delay_min_sec" name="delay_min_sec" 
+                       value="30" min="10" required>
+                <small class="text-muted">Minimum delay between uploads</small>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="delay_max_sec" class="form-label fw-bold">Max Delay (seconds)</label>
+                <input type="number" class="form-control" id="delay_max_sec" name="delay_max_sec" 
+                       value="60" min="10" required>
+                <small class="text-muted">Maximum delay between uploads</small>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="concurrency" class="form-label fw-bold">Parallel Uploads</label>
+                <input type="number" class="form-control" id="concurrency" name="concurrency" 
+                       value="1" min="1" max="4" required>
+                <small class="text-muted">Number of simultaneous uploads (max 4)</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Video Defaults -->
+    <div class="form-section">
+        <h4><i class="bi bi-camera-video me-2"></i> Video Defaults</h4>
+        <div class="row">
+            <div class="col-md-12 mb-3">
+                <label for="default_caption" class="form-label fw-bold">Default Caption</label>
+                <textarea class="form-control" id="default_caption" name="default_caption" 
+                          rows="4" placeholder="Default caption for all videos..."></textarea>
+                <small class="text-muted">This caption will be used if no individual caption is provided</small>
+            </div>
+            <div class="col-md-12 mb-3">
+                <label for="default_hashtags" class="form-label fw-bold">Default Hashtags</label>
+                <input type="text" class="form-control" id="default_hashtags" name="default_hashtags" 
+                       placeholder="#tiktok, #viral, #trending">
+                <small class="text-muted">Separate hashtags with commas</small>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label for="default_privacy" class="form-label fw-bold">Privacy</label>
+                <select class="form-select" id="default_privacy" name="default_privacy">
+                    <option value="PUBLIC" selected>Public</option>
+                    <option value="FRIENDS">Friends Only</option>
+                    <option value="PRIVATE">Private</option>
+                </select>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="form-check form-switch pt-4">
+                    <input class="form-check-input" type="checkbox" id="allow_comments" 
+                           name="allow_comments" checked>
+                    <label class="form-check-label fw-bold" for="allow_comments">
+                        Allow Comments
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="form-check form-switch pt-4">
+                    <input class="form-check-input" type="checkbox" id="allow_duet" 
+                           name="allow_duet" checked>
+                    <label class="form-check-label fw-bold" for="allow_duet">
+                        Allow Duet
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="form-check form-switch pt-4">
+                    <input class="form-check-input" type="checkbox" id="allow_stitch" 
+                           name="allow_stitch" checked>
+                    <label class="form-check-label fw-bold" for="allow_stitch">
+                        Allow Stitch
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Submit Buttons -->
+    <div class="text-end">
+        <a href="{% url 'tiktok_uploader:bulk_upload_list' %}" class="btn btn-outline-secondary btn-lg me-2">
+            Cancel
+        </a>
+        <button type="submit" class="btn btn-tiktok btn-lg">
+            <i class="bi bi-check-circle me-2"></i> Create Task
+        </button>
+    </div>
+</form>
+
+<script>
+// Select all accounts shortcut
+document.addEventListener('DOMContentLoaded', function() {
+    const header = document.querySelector('.form-section h4');
+    if (header && header.textContent.includes('Select Accounts')) {
+        const selectAllBtn = document.createElement('button');
+        selectAllBtn.type = 'button';
+        selectAllBtn.className = 'btn btn-sm btn-outline-primary float-end';
+        selectAllBtn.innerHTML = '<i class="bi bi-check-all"></i> Select All';
+        selectAllBtn.onclick = function() {
+            const checkboxes = document.querySelectorAll('input[name="account_ids"]');
+            checkboxes.forEach(cb => cb.checked = true);
+        };
+        header.appendChild(selectAllBtn);
+    }
+});
+</script>
+{% endblock %}
+
+

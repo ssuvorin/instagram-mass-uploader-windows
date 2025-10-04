@@ -1,0 +1,287 @@
+{% extends 'tiktok_uploader/base.html' %}
+{% load static %}
+
+{% block title %}TikTok Bulk Upload - {{ task.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .task-header {
+        background: linear-gradient(135deg, #fe2c55, #000000);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+    }
+    
+    .task-status {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.875rem;
+    }
+    
+    .status-pending { background-color: #fbbf24; color: #1f2937; }
+    .status-running { background-color: #10b981; color: white; }
+    .status-paused { background-color: #f59e0b; color: white; }
+    .status-completed { background-color: #059669; color: white; }
+    .status-failed { background-color: #ef4444; color: white; }
+    
+    .progress-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .control-btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-block;
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+        transition: all 0.2s;
+    }
+    
+    .btn-primary { background: #fe2c55; color: white; }
+    .btn-secondary { background: #6b7280; color: white; }
+    .btn-success { background: #10b981; color: white; }
+    .btn-warning { background: #f59e0b; color: white; }
+    .btn-danger { background: #ef4444; color: white; }
+    
+    .control-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .accounts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .account-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .videos-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .video-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+    
+    .logs-container {
+        background: #1f2937;
+        color: #f9fafb;
+        border-radius: 8px;
+        padding: 1rem;
+        max-height: 400px;
+        overflow-y: auto;
+        font-family: 'Courier New', monospace;
+        font-size: 0.875rem;
+        line-height: 1.5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Task Header -->
+    <div class="task-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="h2 mb-2">{{ task.name }}</h1>
+                <span class="task-status status-{{ task.status|lower }}">{{ task.status }}</span>
+                <p class="mb-0 mt-2 opacity-75">
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    Создана: {{ task.created_at|date:"d.m.Y H:i" }}
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                {% if can_start %}
+                    <a href="#" class="control-btn btn-success">
+                        <i class="fas fa-play me-2"></i>Запустить
+                    </a>
+                {% endif %}
+                {% if task.status == 'RUNNING' %}
+                    <a href="#" class="control-btn btn-warning">
+                        <i class="fas fa-pause me-2"></i>Пауза
+                    </a>
+                {% endif %}
+                {% if task.status == 'PAUSED' %}
+                    <a href="#" class="control-btn btn-success">
+                        <i class="fas fa-play me-2"></i>Продолжить
+                    </a>
+                {% endif %}
+                <a href="#" class="control-btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Добавить видео
+                </a>
+                <a href="#" class="control-btn btn-danger">
+                    <i class="fas fa-trash me-2"></i>Удалить
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Overview -->
+    <div class="progress-card">
+        <h3 class="h4 mb-3">
+            <i class="fas fa-chart-line me-2 text-tiktok"></i>
+            Прогресс выполнения
+        </h3>
+        <div class="row">
+            <div class="col-md-3">
+                <div class="text-center">
+                    <div class="h2 text-tiktok mb-1">0</div>
+                    <div class="text-muted">Всего видео</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <div class="h2 text-success mb-1">0</div>
+                    <div class="text-muted">Загружено</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <div class="h2 text-danger mb-1">0</div>
+                    <div class="text-muted">Ошибки</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <div class="h2 text-warning mb-1">0%</div>
+                    <div class="text-muted">Завершено</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="progress mt-3" style="height: 8px;">
+            <div class="progress-bar bg-tiktok" role="progressbar" style="width: 0%"></div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Accounts Section -->
+        <div class="col-lg-6">
+            <div class="progress-card">
+                <h3 class="h5 mb-3">
+                    <i class="fas fa-users me-2 text-tiktok"></i>
+                    Аккаунты ({{ accounts|length }})
+                </h3>
+                
+                {% if accounts %}
+                    <div class="accounts-grid">
+                        {% for account in accounts %}
+                        <div class="account-card">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="avatar-sm bg-tiktok rounded-circle me-2">
+                                    <i class="fas fa-user text-white"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold">{{ account.username }}</div>
+                                    <small class="text-muted">{{ account.status }}</small>
+                                </div>
+                            </div>
+                            <div class="progress" style="height: 4px;">
+                                <div class="progress-bar bg-success" style="width: 0%"></div>
+                            </div>
+                            <small class="text-muted">0/0 видео загружено</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-users fa-3x mb-3"></i>
+                        <p>Аккаунты не добавлены</p>
+                        <a href="#" class="btn btn-tiktok">
+                            <i class="fas fa-plus me-2"></i>Добавить аккаунты
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Videos Section -->
+        <div class="col-lg-6">
+            <div class="progress-card">
+                <h3 class="h5 mb-3">
+                    <i class="fas fa-video me-2 text-tiktok"></i>
+                    Видео ({{ videos|length }})
+                </h3>
+                
+                {% if videos %}
+                    <div class="videos-grid">
+                        {% for video in videos %}
+                        <div class="video-card">
+                            <div class="video-thumbnail mb-2">
+                                <i class="fas fa-video fa-2x text-muted"></i>
+                            </div>
+                            <div class="small fw-bold">{{ video.filename }}</div>
+                            <small class="text-muted">{{ video.status }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-video fa-3x mb-3"></i>
+                        <p>Видео не загружены</p>
+                        <a href="#" class="btn btn-tiktok">
+                            <i class="fas fa-upload me-2"></i>Загрузить видео
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Logs Section -->
+    <div class="progress-card">
+        <h3 class="h5 mb-3">
+            <i class="fas fa-list-alt me-2 text-tiktok"></i>
+            Логи выполнения
+        </h3>
+        
+        <div class="logs-container">
+            <div class="text-muted">
+                [{{ task.created_at|date:"d.m.Y H:i:s" }}] INFO: Задача "{{ task.name }}" создана<br>
+                [{{ task.created_at|date:"d.m.Y H:i:s" }}] INFO: Статус: {{ task.status }}<br>
+                {% if task.status == 'PENDING' %}
+                [{{ task.created_at|date:"d.m.Y H:i:s" }}] INFO: Ожидание запуска...<br>
+                {% endif %}
+                <span class="text-info">Логи будут обновляться в реальном времени после запуска задачи</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-refresh logs if task is running
+    {% if task.status == 'RUNNING' %}
+    setInterval(function() {
+        // Refresh logs via AJAX
+        console.log('Refreshing logs...');
+    }, 5000);
+    {% endif %}
+});
+</script>
+{% endblock %}
+

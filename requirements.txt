@@ -11,9 +11,12 @@ instagrapi==2.1.5
 
 # Browser automation
 playwright==1.45.0
+playwright-stealth>=1.0.6
+tiktok-captcha-solver>=0.8.2
 
 # Security and authentication
 pyotp==2.8.0
+pyzmail36>=1.0.5
 
 # Configuration and environment
 python-dotenv==1.0.0
@@ -22,6 +25,8 @@ dj-database-url==2.2.0
 # HTTP requests and networking
 requests==2.32.3
 PySocks==1.7.1
+websockets>=15.0
+fake-useragent>=2.0.0
 
 # Configuration parsing
 toml==0.10.2
@@ -39,6 +44,7 @@ aiohttp==3.9.5
 # Video processing support
 opencv-python-headless==4.8.1.78
 moviepy>=1.0.3
+numpy>=2.0.0
 
 # Enhanced logging and monitoring
 structlog==23.2.0
