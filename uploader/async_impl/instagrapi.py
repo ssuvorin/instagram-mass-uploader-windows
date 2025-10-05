@@ -46,7 +46,7 @@ from ..logging_utils import log_info, log_success, log_error, log_warning, log_d
 
 
 def _extract_mentions(mentions_text: Optional[str]) -> List[str]:
-	if not mentions_text:
+	if not mentions_text or mentions_text is None:
 		return []
 	# split by whitespace/newlines, normalize @username → username
 	raw = [p.strip() for p in mentions_text.replace("\r", "\n").split("\n")]
@@ -75,7 +75,7 @@ def _extract_mentions(mentions_text: Optional[str]) -> List[str]:
 
 def _build_usertags(cl: 'IGClient', usernames: List[str], reauth_cb: Optional[Callable[[], bool]] = None) -> List['IGUsertag']:
 	user_tags: List['IGUsertag'] = []
-	if not usernames:
+	if not usernames or usernames is None:
 		return user_tags
 	
 	for uname in usernames:
@@ -517,7 +517,7 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 					mentions_text = getattr(videos[idx], 'mentions', None)
 				except Exception:
 					mentions_text = None
-				mention_names = _extract_mentions(mentions_text)
+				mention_names = _extract_mentions(mentions_text or "")
 				usertags: List['IGUsertag'] = []
 				if mention_names:
 					def _reauth() -> bool:
@@ -562,7 +562,7 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 					path=path,
 					caption=caption,
 					thumbnail=thumb_path,
-					usertags=usertags or None,
+					usertags=usertags if usertags else [],
 					location=location_obj,
 				)
 				
@@ -860,7 +860,7 @@ def _sync_photo_upload_impl(account_details: Dict, photo_files_to_upload: List[s
 				media = cl.photo_upload(  # type: ignore[attr-defined]
 					path=path,
 					caption=caption,
-					usertags=usertags or None,
+					usertags=usertags if usertags else [],
 					location=location_obj,
 				)
 
