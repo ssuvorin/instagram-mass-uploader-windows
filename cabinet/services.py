@@ -326,21 +326,25 @@ class AnalyticsService:
         print(f"Client: {self.client.name} (ID: {self.client.id})")
         print(f"Period: {start} to {end} (last {days} days)")
         
-        # Check raw records first
+        # Get client hashtags first
+        client_hashtags = list(self.get_client_hashtags().values_list("hashtag", flat=True))
+        print(f"Client hashtags: {client_hashtags}")
+        
+        # Check raw records first - search by hashtag, not client
         all_manual_records = HashtagAnalytics.objects.filter(
-            client=self.client,
+            hashtag__in=client_hashtags,  # Search by hashtag, not client
             is_manual=True,
             created_at__gte=start,
             created_at__lte=end
         )
         print(f"Total manual records found: {all_manual_records.count()}")
         for record in all_manual_records[:5]:  # Show first 5
-            print(f"  - ID:{record.id}, Network:{record.social_network}, Created:{record.created_at}, Posts:{record.analyzed_medias}, Views:{record.total_views}")
+            print(f"  - ID:{record.id}, Hashtag:{record.hashtag}, Network:{record.social_network}, Created:{record.created_at}, Posts:{record.analyzed_medias}, Views:{record.total_views}")
         
-        # Get manual analytics for this client and aggregate by network
+        # Get manual analytics for this client's hashtags and aggregate by network
         # NOTE: We SUM cumulative metrics (posts, views, likes) but take LATEST for snapshot metrics (accounts, followers)
         networks_data = HashtagAnalytics.objects.filter(
-            client=self.client,
+            hashtag__in=client_hashtags,  # Search by hashtag, not client
             is_manual=True,
             created_at__gte=start,
             created_at__lte=end
@@ -385,7 +389,7 @@ class AnalyticsService:
             # Get latest record for snapshot metrics (accounts, followers, growth_rate)
             # For total_accounts, get the latest record where total_accounts > 0
             latest_record = HashtagAnalytics.objects.filter(
-                client=self.client,
+                hashtag__in=client_hashtags,  # Search by hashtag, not client
                 is_manual=True,
                 social_network=network_key,
                 created_at__gte=start,
@@ -394,7 +398,7 @@ class AnalyticsService:
             
             # For total_accounts, try to get a record with actual account count
             accounts_record = HashtagAnalytics.objects.filter(
-                client=self.client,
+                hashtag__in=client_hashtags,  # Search by hashtag, not client
                 is_manual=True,
                 social_network=network_key,
                 created_at__gte=start,
