@@ -1444,7 +1444,7 @@ class ClientAnalytics(models.Model):
     notes = models.TextField(blank=True, default="", help_text="Additional notes about the analytics")
     
     # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(help_text="Date and time when analytics data was collected")
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(
         'auth.User',
@@ -1468,6 +1468,11 @@ class ClientAnalytics(models.Model):
         return f"{self.client.name} - {self.get_social_network_display()} ({self.period_start} to {self.period_end})"
     
     def save(self, *args, **kwargs):
+        # Set created_at to current time if not provided
+        if not self.created_at:
+            from django.utils import timezone
+            self.created_at = timezone.now()
+        
         # Calculate derived metrics
         if self.total_posts > 0:
             self.average_views = self.total_views / self.total_posts

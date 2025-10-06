@@ -15,6 +15,7 @@ urlpatterns = [
     path('manage/clients/<int:client_id>/delete/', views.delete_client, name='cabinet_delete_client'),
     path('manage/hashtags/<int:item_id>/delete/', views.delete_client_hashtag, name='cabinet_delete_client_hashtag'),
     path('manage/clients/<int:client_id>/reset-password/', views.reset_client_user_password, name='cabinet_reset_client_password'),
+    path('debug/reset-password/<int:client_id>/', views.debug_reset_password, name='debug_reset_password'),
     path('export/excel/', views.export_excel, name='cabinet_export_excel'),
     # Details
     path('hashtag/<str:hashtag>/', views.hashtag_detail, name='cabinet_hashtag_detail'),
