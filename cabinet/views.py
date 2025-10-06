@@ -1025,37 +1025,32 @@ def export_excel(request):
                     network_data.total_accounts
                 ])
             
-            # Sheet 3: Detailed Records
-            ws_details = wb.create_sheet("Detailed Records")
-            headers = ["Date", "Network", "Hashtag", "Posts", "Views", "Likes", "Comments", "Shares", "Followers", "Accounts"]
-            ws_details.append(headers)
-            
-            # Get detailed records
+            # Sheet 3: Detailed Records (only if data exists)
             detailed_records = HashtagAnalytics.objects.filter(
                 client=client,
                 created_at__gte=timezone.now() - timedelta(days=30)
             ).order_by('-created_at')
             
-            for record in detailed_records:
-                ws_details.append([
-                    record.created_at.strftime('%Y-%m-%d'),
-                    record.get_social_network_display(),
-                    f"#{record.hashtag}" if record.hashtag else 'No hashtag',
-                    record.analyzed_medias or 0,
-                    record.total_views or 0,
-                    record.total_likes or 0,
-                    record.total_comments or 0,
-                    record.total_shares or 0,
-                    record.total_followers or 0,
-                    record.total_accounts or 0
-                ])
+            if detailed_records.exists():
+                ws_details = wb.create_sheet("Detailed Records")
+                headers = ["Date", "Network", "Hashtag", "Posts", "Views", "Likes", "Comments", "Shares", "Followers", "Accounts"]
+                ws_details.append(headers)
+                
+                for record in detailed_records:
+                    ws_details.append([
+                        record.created_at.strftime('%Y-%m-%d'),
+                        record.get_social_network_display(),
+                        f"#{record.hashtag}" if record.hashtag else 'No hashtag',
+                        record.analyzed_medias or 0,
+                        record.total_views or 0,
+                        record.total_likes or 0,
+                        record.total_comments or 0,
+                        record.total_shares or 0,
+                        record.total_followers or 0,
+                        record.total_accounts or 0
+                    ])
             
-            # Sheet 4: Daily Performance
-            ws_daily = wb.create_sheet("Daily Performance")
-            headers = ["Date", "Posts", "Views", "Likes", "Comments", "Shares", "Accounts", "Records"]
-            ws_daily.append(headers)
-            
-            # Aggregate by date for this client
+            # Sheet 4: Daily Performance (only if data exists)
             from django.db.models import Sum, Count
             daily_stats = HashtagAnalytics.objects.filter(
                 client=client,
@@ -1070,24 +1065,24 @@ def export_excel(request):
                 records_count=Count('id')
             ).order_by('-date')
             
-            for stat in daily_stats:
-                ws_daily.append([
-                    stat['date'].strftime('%Y-%m-%d'),
-                    stat['total_posts'] or 0,
-                    stat['total_views'] or 0,
-                    stat['total_likes'] or 0,
-                    stat['total_comments'] or 0,
-                    stat['total_shares'] or 0,
-                    stat['total_accounts'] or 0,
-                    stat['records_count']
-                ])
+            if daily_stats.exists():
+                ws_daily = wb.create_sheet("Daily Performance")
+                headers = ["Date", "Posts", "Views", "Likes", "Comments", "Shares", "Accounts", "Records"]
+                ws_daily.append(headers)
+                
+                for stat in daily_stats:
+                    ws_daily.append([
+                        stat['date'].strftime('%Y-%m-%d'),
+                        stat['total_posts'] or 0,
+                        stat['total_views'] or 0,
+                        stat['total_likes'] or 0,
+                        stat['total_comments'] or 0,
+                        stat['total_shares'] or 0,
+                        stat['total_accounts'] or 0,
+                        stat['records_count']
+                    ])
             
-            # Sheet 5: Hashtag Breakdown
-            ws_hashtags = wb.create_sheet("Hashtag Breakdown")
-            headers = ["Hashtag", "Network", "Posts", "Views", "Avg Views", "Likes", "Accounts", "Last Update"]
-            ws_hashtags.append(headers)
-            
-            # Get hashtag performance for this client
+            # Sheet 5: Hashtag Breakdown (only if data exists)
             hashtag_stats = HashtagAnalytics.objects.filter(
                 client=client,
                 created_at__gte=timezone.now() - timedelta(days=30)
@@ -1099,46 +1094,51 @@ def export_excel(request):
                 last_update=Max('created_at')
             ).order_by('-total_views')
             
-            for stat in hashtag_stats:
-                avg_views = (stat['total_views'] / stat['total_posts']) if stat['total_posts'] > 0 else 0
-                ws_hashtags.append([
-                    f"#{stat['hashtag']}" if stat['hashtag'] else 'No hashtag',
-                    dict(HashtagAnalytics.SOCIAL_NETWORK_CHOICES).get(stat['social_network'], stat['social_network']),
-                    stat['total_posts'] or 0,
-                    stat['total_views'] or 0,
-                    f"{avg_views:.1f}",
-                    stat['total_likes'] or 0,
-                    stat['total_accounts'] or 0,
-                    stat['last_update'].strftime('%Y-%m-%d') if stat['last_update'] else 'No date'
-                ])
+            if hashtag_stats.exists():
+                ws_hashtags = wb.create_sheet("Hashtag Breakdown")
+                headers = ["Hashtag", "Network", "Posts", "Views", "Avg Views", "Likes", "Accounts", "Last Update"]
+                ws_hashtags.append(headers)
+                
+                for stat in hashtag_stats:
+                    avg_views = (stat['total_views'] / stat['total_posts']) if stat['total_posts'] > 0 else 0
+                    ws_hashtags.append([
+                        f"#{stat['hashtag']}" if stat['hashtag'] else 'No hashtag',
+                        dict(HashtagAnalytics.SOCIAL_NETWORK_CHOICES).get(stat['social_network'], stat['social_network']),
+                        stat['total_posts'] or 0,
+                        stat['total_views'] or 0,
+                        f"{avg_views:.1f}",
+                        stat['total_likes'] or 0,
+                        stat['total_accounts'] or 0,
+                        stat['last_update'].strftime('%Y-%m-%d') if stat['last_update'] else 'No date'
+                    ])
             
-            # Sheet 6: Advanced Metrics
-            ws_advanced = wb.create_sheet("Advanced Metrics")
-            headers = ["Network", "Hashtag", "Avg Videos/Account", "Max Videos/Account", "Avg Views/Video", "Max Views/Video", 
-                      "Avg Views/Account", "Max Views/Account", "Avg Likes/Video", "Max Likes/Video", "Avg Likes/Account", "Max Likes/Account"]
-            ws_advanced.append(headers)
-            
-            # Get advanced metrics
+            # Sheet 6: Advanced Metrics (only if data exists)
             advanced_records = HashtagAnalytics.objects.filter(
                 client=client,
                 created_at__gte=timezone.now() - timedelta(days=30)
             ).order_by('-created_at')
             
-            for record in advanced_records:
-                ws_advanced.append([
-                    record.get_social_network_display(),
-                    f"#{record.hashtag}" if record.hashtag else 'No hashtag',
-                    f"{(record.avg_videos_per_account or 0):.1f}",
-                    record.max_videos_per_account or 0,
-                    f"{(record.avg_views_per_video or 0):.1f}",
-                    record.max_views_per_video or 0,
-                    f"{(record.avg_views_per_account or 0):.1f}",
-                    record.max_views_per_account or 0,
-                    f"{(record.avg_likes_per_video or 0):.1f}",
-                    record.max_likes_per_video or 0,
-                    f"{(record.avg_likes_per_account or 0):.1f}",
-                    record.max_likes_per_account or 0
-                ])
+            if advanced_records.exists():
+                ws_advanced = wb.create_sheet("Advanced Metrics")
+                headers = ["Network", "Hashtag", "Avg Videos/Account", "Max Videos/Account", "Avg Views/Video", "Max Views/Video", 
+                          "Avg Views/Account", "Max Views/Account", "Avg Likes/Video", "Max Likes/Video", "Avg Likes/Account", "Max Likes/Account"]
+                ws_advanced.append(headers)
+                
+                for record in advanced_records:
+                    ws_advanced.append([
+                        record.get_social_network_display(),
+                        f"#{record.hashtag}" if record.hashtag else 'No hashtag',
+                        f"{(record.avg_videos_per_account or 0):.1f}",
+                        record.max_videos_per_account or 0,
+                        f"{(record.avg_views_per_video or 0):.1f}",
+                        record.max_views_per_video or 0,
+                        f"{(record.avg_views_per_account or 0):.1f}",
+                        record.max_views_per_account or 0,
+                        f"{(record.avg_likes_per_video or 0):.1f}",
+                        record.max_likes_per_video or 0,
+                        f"{(record.avg_likes_per_account or 0):.1f}",
+                        record.max_likes_per_account or 0
+                    ])
         
         else:
             agency = Agency.objects.filter(owner=user).first()
