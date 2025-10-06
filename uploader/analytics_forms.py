@@ -21,7 +21,7 @@ class ClientAnalyticsForm(forms.ModelForm):
     class Meta:
         model = HashtagAnalytics
         fields = [
-            'client', 'social_network', 'hashtag', 'created_at',
+            'client', 'social_network', 'hashtag',
             'analyzed_medias', 'total_views', 'total_likes', 'total_comments', 
             'total_shares', 'total_followers', 'growth_rate',
             'instagram_stories_views', 'instagram_reels_views',

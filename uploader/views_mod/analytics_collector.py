@@ -110,6 +110,15 @@ def analytics_collector(request):
         analytics = form.save(commit=False)
         analytics.is_manual = True
         analytics.created_by = request.user
+        
+        # Handle created_at separately
+        created_at_str = request.POST.get('created_at', '')
+        if created_at_str:
+            from django.utils.dateparse import parse_datetime
+            parsed_datetime = parse_datetime(created_at_str)
+            if parsed_datetime:
+                analytics.created_at = parsed_datetime
+        
         analytics.save()
         
         messages.success(request, f'Аналитика успешно добавлена для {client.name} - {analytics.get_social_network_display()}')
