@@ -322,6 +322,21 @@ class AnalyticsService:
         end = timezone.now()
         start = end - timezone.timedelta(days=days)
         
+        print(f"\n=== DEBUG get_manual_analytics_by_network ===")
+        print(f"Client: {self.client.name} (ID: {self.client.id})")
+        print(f"Period: {start} to {end} (last {days} days)")
+        
+        # Check raw records first
+        all_manual_records = HashtagAnalytics.objects.filter(
+            client=self.client,
+            is_manual=True,
+            created_at__gte=start,
+            created_at__lte=end
+        )
+        print(f"Total manual records found: {all_manual_records.count()}")
+        for record in all_manual_records[:5]:  # Show first 5
+            print(f"  - ID:{record.id}, Network:{record.social_network}, Created:{record.created_at}, Posts:{record.analyzed_medias}, Views:{record.total_views}")
+        
         # Get manual analytics for this client and aggregate by network
         # NOTE: We SUM cumulative metrics (posts, views, likes) but take LATEST for snapshot metrics (accounts, followers)
         networks_data = HashtagAnalytics.objects.filter(
