@@ -1,0 +1,286 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}Analytics Details - {{ analytics.client.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-card {
+        background: white;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        border: 1px solid #dee2e6;
+        margin-bottom: 1.5rem;
+    }
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #007bff;
+    }
+    .metric-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .network-badge {
+        font-size: 1rem;
+        padding: 0.5rem 1rem;
+    }
+    .platform-metrics {
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1rem;
+    }
+    .engagement-bar {
+        height: 8px;
+        background: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .engagement-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #28a745, #20c997);
+        transition: width 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="bi bi-graph-up me-2"></i>Analytics Details
+                    </h2>
+                    <p class="text-muted mb-0">{{ analytics.client.name }} - {{ analytics.get_social_network_display }}</p>
+                </div>
+                <div>
+                    <div class="btn-group">
+                        <a href="{% url 'analytics_edit' analytics.pk %}" class="btn btn-warning">
+                            <i class="bi bi-pencil me-1"></i>Edit
+                        </a>
+                        <a href="{% url 'analytics_delete' analytics.pk %}" class="btn btn-danger">
+                            <i class="bi bi-trash me-1"></i>Delete
+                        </a>
+                    </div>
+                    <a href="{% url 'analytics_dashboard' %}" class="btn btn-outline-secondary ms-2">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Client & Network Info -->
+        <div class="col-md-4">
+            <div class="detail-card">
+                <h5 class="mb-3">
+                    <i class="bi bi-info-circle me-2"></i>Basic Information
+                </h5>
+                
+                <div class="mb-3">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="avatar-lg bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                            {{ analytics.client.name|first|upper }}
+                        </div>
+                        <div>
+                            <h6 class="mb-0">{{ analytics.client.name }}</h6>
+                            {% if analytics.client.agency %}
+                                <small class="text-muted">{{ analytics.client.agency.name }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="metric-label">Social Network</label>
+                    <div class="mt-1">
+                        {% if analytics.social_network == 'INSTAGRAM' %}
+                            <span class="badge bg-gradient network-badge" style="background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%);">
+                                <i class="bi bi-instagram me-1"></i>Instagram
+                            </span>
+                        {% elif analytics.social_network == 'YOUTUBE' %}
+                            <span class="badge bg-danger network-badge">
+                                <i class="bi bi-youtube me-1"></i>YouTube
+                            </span>
+                        {% elif analytics.social_network == 'TIKTOK' %}
+                            <span class="badge bg-dark network-badge">
+                                <i class="bi bi-music-note-beamed me-1"></i>TikTok
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="metric-label">Period</label>
+                    <div class="mt-1">
+                        <div class="fw-semibold">{{ analytics.period_start|date:"M d, Y" }}</div>
+                        <div class="text-muted">to {{ analytics.period_end|date:"M d, Y" }}</div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="metric-label">Created</label>
+                    <div class="mt-1">
+                        <div class="fw-semibold">{{ analytics.created_at|date:"M d, Y" }}</div>
+                        <div class="text-muted">{{ analytics.created_at|time:"H:i" }}</div>
+                        {% if analytics.created_by %}
+                            <div class="text-muted">by {{ analytics.created_by.username }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if analytics.notes %}
+                <div class="mb-3">
+                    <label class="metric-label">Notes</label>
+                    <div class="mt-1 p-2 bg-light rounded">
+                        {{ analytics.notes|linebreaks }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Core Metrics -->
+        <div class="col-md-8">
+            <div class="detail-card">
+                <h5 class="mb-3">
+                    <i class="bi bi-bar-chart me-2"></i>Core Metrics
+                </h5>
+                
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center mb-3">
+                            <div class="metric-value">{{ analytics.total_posts|default:"0" }}</div>
+                            <div class="metric-label">Posts/Videos</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center mb-3">
+                            <div class="metric-value">{{ analytics.total_views|default:"0"|floatformat:0 }}</div>
+                            <div class="metric-label">Total Views</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center mb-3">
+                            <div class="metric-value">{{ analytics.total_followers|default:"0"|floatformat:0 }}</div>
+                            <div class="metric-label">Followers</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center mb-3">
+                            <div class="metric-value">{{ analytics.average_views|default:"0"|floatformat:0 }}</div>
+                            <div class="metric-label">Avg Views</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center mb-3">
+                            <div class="metric-value">{{ analytics.total_likes|default:"0"|floatformat:0 }}</div>
+                            <div class="metric-label">Likes</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center mb-3">
+                            <div class="metric-value">{{ analytics.total_comments|default:"0"|floatformat:0 }}</div>
+                            <div class="metric-label">Comments</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center mb-3">
+                            <div class="metric-value">{{ analytics.total_shares|default:"0"|floatformat:0 }}</div>
+                            <div class="metric-label">Shares</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center mb-3">
+                            <div class="metric-value">{{ analytics.growth_rate|default:"0"|floatformat:2 }}%</div>
+                            <div class="metric-label">Growth Rate</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Engagement Rate -->
+                <div class="mt-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="metric-label">Engagement Rate</span>
+                        <span class="fw-semibold">{{ analytics.engagement_rate|default:"0"|floatformat:2 }}%</span>
+                    </div>
+                    <div class="engagement-bar">
+                        <div class="engagement-fill" style="width: {{ analytics.engagement_rate|default:0|floatformat:2 }}%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Platform Specific Metrics -->
+            {% if analytics.social_network == 'INSTAGRAM' %}
+            <div class="detail-card">
+                <h5 class="mb-3">
+                    <i class="bi bi-instagram me-2"></i>Instagram Specific Metrics
+                </h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="text-center mb-3">
+                            <div class="metric-value">{{ analytics.instagram_stories_views|default:"0"|floatformat:0 }}</div>
+                            <div class="metric-label">Stories Views</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="text-center mb-3">
+                            <div class="metric-value">{{ analytics.instagram_reels_views|default:"0"|floatformat:0 }}</div>
+                            <div class="metric-label">Reels Views</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% elif analytics.social_network == 'YOUTUBE' %}
+            <div class="detail-card">
+                <h5 class="mb-3">
+                    <i class="bi bi-youtube me-2"></i>YouTube Specific Metrics
+                </h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="text-center mb-3">
+                            <div class="metric-value">{{ analytics.youtube_subscribers|default:"0"|floatformat:0 }}</div>
+                            <div class="metric-label">Subscribers</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="text-center mb-3">
+                            <div class="metric-value">{{ analytics.youtube_watch_time|default:"0"|floatformat:0 }}</div>
+                            <div class="metric-label">Watch Time (min)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% elif analytics.social_network == 'TIKTOK' %}
+            <div class="detail-card">
+                <h5 class="mb-3">
+                    <i class="bi bi-music-note-beamed me-2"></i>TikTok Specific Metrics
+                </h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="text-center mb-3">
+                            <div class="metric-value">{{ analytics.tiktok_video_views|default:"0"|floatformat:0 }}</div>
+                            <div class="metric-label">Video Views</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="text-center mb-3">
+                            <div class="metric-value">{{ analytics.tiktok_profile_views|default:"0"|floatformat:0 }}</div>
+                            <div class="metric-label">Profile Views</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

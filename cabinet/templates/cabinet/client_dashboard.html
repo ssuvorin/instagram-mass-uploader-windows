@@ -2,133 +2,399 @@
 
 {% block title %}Cabinet — Client Dashboard{% endblock %}
 
-{% block content %}
-<h2 class="mb-4">Client: {{ client.name }}</h2>
+{% block extra_css %}
+<style>
+@media (max-width: 768px) {
+  .mobile-header {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 1rem;
+  }
+  
+  .mobile-btn-group {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .mobile-btn-group .btn {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .mobile-card-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .mobile-chart-container {
+    height: 200px !important;
+  }
+  
+  .mobile-table {
+    font-size: 0.8rem;
+  }
+  
+  .mobile-table th,
+  .mobile-table td {
+    padding: 0.5rem 0.25rem;
+    white-space: nowrap;
+  }
+  
+  .mobile-hide {
+    display: none !important;
+  }
+}
 
-<div class="row">
-  <div class="col-md-6">
-    <div class="card mb-3">
-      <div class="card-header"><h5 class="mb-0">Assigned hashtags</h5></div>
-      <div class="card-body p-0">
-        <ul class="list-group list-group-flush">
-          {% for h in hashtags %}
-          <li class="list-group-item">#{{ h.hashtag }}</li>
-          {% empty %}
-          <li class="list-group-item text-muted">No hashtags yet</li>
-          {% endfor %}
-        </ul>
+@media (max-width: 576px) {
+  .client-title {
+    font-size: 1.5rem;
+    line-height: 1.2;
+    margin-bottom: 0.5rem;
+  }
+  
+  .mobile-stack {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  .mobile-full-width {
+    width: 100% !important;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 mobile-header">
+  <h2 class="mb-0 client-title">Client: {{ client.name }}</h2>
+  <div class="btn-toolbar gap-2 mobile-btn-group">
+    {% if client.agency %}
+    <a class="btn btn-outline-primary btn-sm" href="{% url 'cabinet_agency_dashboard' %}?agency_id={{ client.agency.id }}">
+      <i class="bi bi-building d-sm-none"></i>
+      <span class="d-none d-sm-inline">Back to Agency</span>
+    </a>
+    {% endif %}
+    <a class="btn btn-success btn-sm" href="{% url 'cabinet_export_excel' %}">
+      <i class="bi bi-file-earmark-excel"></i>
+      <span class="d-none d-sm-inline"> Excel</span>
+    </a>
+  </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-2 g-md-3 mb-4 mobile-card-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+  <div class="col">
+    <div class="card action-card">
+      <div class="card-body text-center py-3">
+        <div class="text-muted small">Total videos</div>
+        <div class="h4 h3-md mb-0">{{ kpi_total_videos|default:0 }}</div>
       </div>
     </div>
   </div>
-  <div class="col-md-6">
-    <div class="card mb-3">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Latest analytics</h5>
-        <a class="btn btn-sm btn-success" href="{% url 'cabinet_export_excel' %}"><i class="bi bi-file-earmark-excel"></i> Export Excel</a>
+  <div class="col">
+    <div class="card action-card">
+      <div class="card-body text-center py-3">
+        <div class="text-muted small">Total views</div>
+        <div class="h4 h3-md mb-0">{{ kpi_total_views|default:0|floatformat:0 }}</div>
       </div>
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-sm align-middle mb-0">
-            <thead><tr>
-              <th>#</th><th>Total videos</th><th>Total views</th><th>Average views</th><th>Likes</th><th>Comments</th><th>ER</th>
-            </tr></thead>
-            <tbody>
-              {% for d in details %}
-              <tr>
-                <td><code>#{{ d.hashtag }}</code></td>
-                <td>{{ d.total_videos }}</td>
-                <td>{{ d.total_views }}</td>
-                <td>{{ d.average_views|floatformat:0 }}</td>
-                <td>{{ d.total_likes }}</td>
-                <td>{{ d.total_comments }}</td>
-                <td>{{ d.engagement_rate|floatformat:4 }}</td>
-              </tr>
-              {% empty %}
-              <tr><td colspan="3" class="text-center text-muted">No analytics yet</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card action-card">
+      <div class="card-body text-center py-3">
+        <div class="text-muted small">Avg per video</div>
+        <div class="h4 h3-md mb-0">{{ kpi_avg_per_video|default:0|floatformat:0 }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card action-card">
+      <div class="card-body text-center py-3">
+        <div class="text-muted small">Engagement Rate</div>
+        <div class="h4 h3-md mb-0">{{ kpi_engagement_rate|default:0|floatformat:2 }}%</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Social Networks Breakdown -->
+{% if network_breakdown %}
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">
+      <i class="bi bi-diagram-3 me-2"></i>Analytics by Social Networks
+    </h5>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 mobile-table">
+        <thead class="table-light">
+          <tr>
+            <th>Network</th>
+            <th>Posts</th>
+            <th>Views</th>
+            <th>Avg Views</th>
+            <th>Followers</th>
+            <th>Engagement</th>
+            <th>Growth</th>
+            <th>Accounts</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for network in network_breakdown %}
+          <tr>
+            <td>
+              {% if network.network == 'INSTAGRAM' %}
+                <span class="badge bg-gradient" style="background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%);">
+                  <i class="bi bi-instagram me-1"></i>{{ network.network_display }}
+                </span>
+              {% elif network.network == 'YOUTUBE' %}
+                <span class="badge bg-danger">
+                  <i class="bi bi-youtube me-1"></i>{{ network.network_display }}
+                </span>
+              {% elif network.network == 'TIKTOK' %}
+                <span class="badge bg-dark">
+                  <i class="bi bi-music-note-beamed me-1"></i>{{ network.network_display }}
+                </span>
+              {% else %}
+                <span class="badge bg-secondary">{{ network.network_display }}</span>
+              {% endif %}
+            </td>
+            <td>{{ network.total_posts|default:0 }}</td>
+            <td>{{ network.total_views|default:0|floatformat:0 }}</td>
+            <td>{{ network.average_views|default:0|floatformat:0 }}</td>
+            <td>{{ network.total_followers|default:0|floatformat:0 }}</td>
+            <td>{{ network.engagement_rate|default:0|floatformat:2 }}%</td>
+            <td>{{ network.growth_rate|default:0|floatformat:2 }}%</td>
+            <td>{{ network.total_accounts|default:0 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Advanced Metrics by Network -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">
+      <i class="bi bi-bar-chart me-2"></i>Advanced Metrics by Network
+    </h5>
+  </div>
+  <div class="card-body">
+    {% for network in network_breakdown %}
+    <div class="mb-4">
+      <h6 class="mb-3">
+        {% if network.network == 'INSTAGRAM' %}
+          <i class="bi bi-instagram me-1" style="color: #E1306C;"></i>{{ network.network_display }}
+        {% elif network.network == 'YOUTUBE' %}
+          <i class="bi bi-youtube me-1" style="color: #FF0000;"></i>{{ network.network_display }}
+        {% elif network.network == 'TIKTOK' %}
+          <i class="bi bi-music-note-beamed me-1" style="color: #000000;"></i>{{ network.network_display }}
+        {% else %}
+          {{ network.network_display }}
+        {% endif %}
+      </h6>
+      <div class="row g-2">
+        <div class="col-md-3 col-6">
+          <div class="border rounded p-2 bg-light">
+            <small class="text-muted d-block">Avg Videos/Account</small>
+            <strong>{{ network.avg_videos_per_account|default:0|floatformat:1 }}</strong>
+          </div>
+        </div>
+        <div class="col-md-3 col-6">
+          <div class="border rounded p-2 bg-light">
+            <small class="text-muted d-block">Max Videos/Account</small>
+            <strong>{{ network.max_videos_per_account|default:0 }}</strong>
+          </div>
+        </div>
+        <div class="col-md-3 col-6">
+          <div class="border rounded p-2 bg-light">
+            <small class="text-muted d-block">Avg Views/Video</small>
+            <strong>{{ network.avg_views_per_video|default:0|floatformat:0 }}</strong>
+          </div>
+        </div>
+        <div class="col-md-3 col-6">
+          <div class="border rounded p-2 bg-light">
+            <small class="text-muted d-block">Max Views/Video</small>
+            <strong>{{ network.max_views_per_video|default:0|floatformat:0 }}</strong>
+          </div>
+        </div>
+        <div class="col-md-3 col-6">
+          <div class="border rounded p-2 bg-light">
+            <small class="text-muted d-block">Avg Views/Account</small>
+            <strong>{{ network.avg_views_per_account|default:0|floatformat:0 }}</strong>
+          </div>
+        </div>
+        <div class="col-md-3 col-6">
+          <div class="border rounded p-2 bg-light">
+            <small class="text-muted d-block">Max Views/Account</small>
+            <strong>{{ network.max_views_per_account|default:0|floatformat:0 }}</strong>
+          </div>
+        </div>
+        <div class="col-md-3 col-6">
+          <div class="border rounded p-2 bg-light">
+            <small class="text-muted d-block">Avg Likes/Video</small>
+            <strong>{{ network.avg_likes_per_video|default:0|floatformat:1 }}</strong>
+          </div>
+        </div>
+        <div class="col-md-3 col-6">
+          <div class="border rounded p-2 bg-light">
+            <small class="text-muted d-block">Max Likes/Video</small>
+            <strong>{{ network.max_likes_per_video|default:0|floatformat:0 }}</strong>
+          </div>
+        </div>
+        <div class="col-md-3 col-6">
+          <div class="border rounded p-2 bg-light">
+            <small class="text-muted d-block">Avg Likes/Account</small>
+            <strong>{{ network.avg_likes_per_account|default:0|floatformat:0 }}</strong>
+          </div>
+        </div>
+        <div class="col-md-3 col-6">
+          <div class="border rounded p-2 bg-light">
+            <small class="text-muted d-block">Max Likes/Account</small>
+            <strong>{{ network.max_likes_per_account|default:0|floatformat:0 }}</strong>
+          </div>
         </div>
       </div>
     </div>
+    {% empty %}
+    <p class="text-muted mb-0">No network analytics available yet.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Hashtag Analytics -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">
+      <i class="bi bi-hash me-2"></i>Hashtag Analytics
+    </h5>
+  </div>
+  <div class="card-body p-0">
+    {% if details %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 mobile-table">
+        <thead class="table-light">
+          <tr>
+            <th>Hashtag</th>
+            <th>Videos</th>
+            <th>Views</th>
+            <th>Avg Views</th>
+            <th>Likes</th>
+            <th>Comments</th>
+            <th>ER</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in details %}
+          <tr>
+            <td>
+              <a href="{% url 'cabinet_hashtag_detail' d.hashtag %}" class="text-decoration-none">
+                <code>#{{ d.hashtag }}</code>
+              </a>
+            </td>
+            <td>{{ d.total_videos }}</td>
+            <td>{{ d.total_views|floatformat:0 }}</td>
+            <td>{{ d.average_views|floatformat:0 }}</td>
+            <td>{{ d.total_likes|floatformat:0 }}</td>
+            <td>{{ d.total_comments|floatformat:0 }}</td>
+            <td>{{ d.engagement_rate|floatformat:2 }}%</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-4">
+      <i class="bi bi-hash text-muted" style="font-size: 3rem;"></i>
+      <h5 class="mt-3 text-muted">No hashtag analytics yet</h5>
+      <p class="text-muted">Hashtag analytics will appear here once data is collected.</p>
+    </div>
+    {% endif %}
   </div>
 </div>
 
-<div class="row">
-  <div class="col-md-6">
-    <div class="card mb-3">
-      <div class="card-header"><h5 class="mb-0">Performance trend (7 days)</h5></div>
-      <div class="card-body">
-        <canvas id="dailyChart" height="180"></canvas>
-      </div>
-    </div>
+<!-- Daily Stats Chart -->
+{% if daily_stats %}
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">
+      <i class="bi bi-graph-up me-2"></i>Daily Analytics (Last 7 Days)
+    </h5>
   </div>
-  <div class="col-md-6">
-    <div class="card mb-3">
-      <div class="card-header"><h5 class="mb-0">Performance trend (12 weeks)</h5></div>
-      <div class="card-body">
-        <canvas id="weeklyChart" height="180"></canvas>
-      </div>
-    </div>
-  </div>
-  <div class="col-12">
-    <div class="alert alert-info">
-      <i class="bi bi-info-circle"></i>
-      <a href="{% url 'account_list' %}?client_id={{ client.id }}" class="alert-link">All accounts in work</a> for this client.
+  <div class="card-body">
+    <div class="mobile-chart-container" style="height: 300px;">
+      <canvas id="dailyStatsChart"></canvas>
     </div>
   </div>
 </div>
-{% endblock %}
+{% endif %}
 
-{% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<!-- Assigned Hashtags -->
+<div class="card">
+  <div class="card-header">
+    <h5 class="mb-0">
+      <i class="bi bi-tags me-2"></i>Assigned Hashtags
+    </h5>
+  </div>
+  <div class="card-body">
+    {% if hashtags %}
+    <div class="d-flex flex-wrap gap-2">
+      {% for hashtag in hashtags %}
+      <span class="badge bg-primary">
+        <a href="{% url 'cabinet_hashtag_detail' hashtag %}" class="text-white text-decoration-none">
+          #{{ hashtag }}
+        </a>
+      </span>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-3">
+      <i class="bi bi-tags text-muted" style="font-size: 2rem;"></i>
+      <p class="text-muted mt-2 mb-0">No hashtags assigned yet</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if daily_stats %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-(function(){
-  const dailyLabels = [{% for s in daily_stats %}'{{ s.day_name }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
-  const dailyViews = [{% for s in daily_stats %}{{ s.total_views|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
-  const dailyVideos = [{% for s in daily_stats %}{{ s.total_videos|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
-  const dailyLikes = [{% for s in daily_stats %}{{ s.total_likes|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
-  const dailyComments = [{% for s in daily_stats %}{{ s.total_comments|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
-
-  const weeklyLabels = [{% for s in weekly_stats %}'{{ s.label }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
-  const weeklyViews = [{% for s in weekly_stats %}{{ s.total_views|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
-  const weeklyVideos = [{% for s in weekly_stats %}{{ s.total_videos|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
-  const weeklyLikes = [{% for s in weekly_stats %}{{ s.total_likes|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
-  const weeklyComments = [{% for s in weekly_stats %}{{ s.total_comments|default:0 }}{% if not forloop.last %}, {% endif %}{% endfor %}];
-
-  try {
-    const dctx = document.getElementById('dailyChart').getContext('2d');
-    new Chart(dctx, {
-      type: 'line',
-      data: {
-        labels: dailyLabels,
-        datasets: [
-          {label: 'Views', data: dailyViews, borderColor: '#667eea', backgroundColor: 'rgba(102,126,234,0.15)', tension: 0.35, fill: true, yAxisID: 'y'},
-          {label: 'Videos', data: dailyVideos, borderColor: '#4facfe', backgroundColor: 'rgba(79,172,254,0.12)', tension: 0.35, fill: false, yAxisID: 'y1'},
-          {label: 'Likes', data: dailyLikes, borderColor: '#43e97b', backgroundColor: 'rgba(67,233,123,0.15)', tension: 0.35, fill: false, yAxisID: 'y2'},
-          {label: 'Comments', data: dailyComments, borderColor: '#f093fb', backgroundColor: 'rgba(240,147,251,0.15)', tension: 0.35, fill: false, yAxisID: 'y2'}
-        ]
-      },
-      options: {responsive: true, maintainAspectRatio: false}
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('dailyStatsChart').getContext('2d');
+    const dailyStats = JSON.parse(document.getElementById('dailyStatsJson').textContent || '[]');
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: dailyStats.map(stat => stat.day_name),
+            datasets: [{
+                label: 'Views',
+                data: dailyStats.map(stat => stat.total_views),
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1
+            }, {
+                label: 'Videos',
+                data: dailyStats.map(stat => stat.total_videos),
+                borderColor: 'rgb(255, 99, 132)',
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
     });
-  } catch (e) {}
-
-  try {
-    const wctx = document.getElementById('weeklyChart').getContext('2d');
-    new Chart(wctx, {
-      type: 'bar',
-      data: {
-        labels: weeklyLabels,
-        datasets: [
-          {label: 'Views', data: weeklyViews, backgroundColor: '#43e97b', yAxisID: 'y'},
-          {label: 'Videos', data: weeklyVideos, backgroundColor: '#4facfe', yAxisID: 'y1'},
-          {label: 'Likes', data: weeklyLikes, backgroundColor: 'rgba(67,233,123,0.6)', yAxisID: 'y2'},
-          {label: 'Comments', data: weeklyComments, backgroundColor: 'rgba(240,147,251,0.6)', yAxisID: 'y2'}
-        ]
-      },
-      options: {responsive: true, maintainAspectRatio: false}
-    });
-  } catch (e) {}
-})();
+});
 </script>
+{% endif %}
 {% endblock %}

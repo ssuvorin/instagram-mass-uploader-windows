@@ -1,0 +1,323 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .form-section h6 {
+        color: #495057;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #dee2e6;
+    }
+    .platform-specific {
+        display: none;
+    }
+    .platform-specific.active {
+        display: block;
+    }
+    .metric-card {
+        background: white;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        border: 1px solid #dee2e6;
+        transition: all 0.2s ease;
+    }
+    .metric-card:hover {
+        border-color: #007bff;
+        box-shadow: 0 2px 4px rgba(0,123,255,0.1);
+    }
+    .metric-card .form-label {
+        font-weight: 600;
+        color: #495057;
+    }
+    .network-icon {
+        width: 20px;
+        height: 20px;
+        margin-right: 0.5rem;
+    }
+    .required-field::after {
+        content: " *";
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="bi bi-graph-up me-2"></i>{{ title }}
+                    </h2>
+                    <p class="text-muted mb-0">Add or edit client analytics data</p>
+                </div>
+                <div>
+                    <a href="{% url 'analytics_dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" id="analyticsForm">
+        {% csrf_token %}
+        
+        <!-- Basic Information -->
+        <div class="form-section">
+            <h6><i class="bi bi-info-circle me-2"></i>Basic Information</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.client.id_for_label }}" class="form-label required-field">Client</label>
+                        {{ form.client }}
+                        {% if form.client.errors %}
+                            <div class="text-danger small mt-1">{{ form.client.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.social_network.id_for_label }}" class="form-label required-field">Social Network</label>
+                        {{ form.social_network }}
+                        {% if form.social_network.errors %}
+                            <div class="text-danger small mt-1">{{ form.social_network.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.period_start.id_for_label }}" class="form-label required-field">Period Start</label>
+                        {{ form.period_start }}
+                        {% if form.period_start.errors %}
+                            <div class="text-danger small mt-1">{{ form.period_start.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.period_end.id_for_label }}" class="form-label required-field">Period End</label>
+                        {{ form.period_end }}
+                        {% if form.period_end.errors %}
+                            <div class="text-danger small mt-1">{{ form.period_end.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Core Metrics -->
+        <div class="form-section">
+            <h6><i class="bi bi-bar-chart me-2"></i>Core Metrics</h6>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="metric-card">
+                        <label for="{{ form.total_posts.id_for_label }}" class="form-label">Total Posts/Videos</label>
+                        {{ form.total_posts }}
+                        {% if form.total_posts.errors %}
+                            <div class="text-danger small mt-1">{{ form.total_posts.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="metric-card">
+                        <label for="{{ form.total_views.id_for_label }}" class="form-label">Total Views</label>
+                        {{ form.total_views }}
+                        {% if form.total_views.errors %}
+                            <div class="text-danger small mt-1">{{ form.total_views.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="metric-card">
+                        <label for="{{ form.total_followers.id_for_label }}" class="form-label">Total Followers</label>
+                        {{ form.total_followers }}
+                        {% if form.total_followers.errors %}
+                            <div class="text-danger small mt-1">{{ form.total_followers.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <label for="{{ form.total_likes.id_for_label }}" class="form-label">Total Likes</label>
+                        {{ form.total_likes }}
+                        {% if form.total_likes.errors %}
+                            <div class="text-danger small mt-1">{{ form.total_likes.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <label for="{{ form.total_comments.id_for_label }}" class="form-label">Total Comments</label>
+                        {{ form.total_comments }}
+                        {% if form.total_comments.errors %}
+                            <div class="text-danger small mt-1">{{ form.total_comments.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <label for="{{ form.total_shares.id_for_label }}" class="form-label">Total Shares</label>
+                        {{ form.total_shares }}
+                        {% if form.total_shares.errors %}
+                            <div class="text-danger small mt-1">{{ form.total_shares.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <label for="{{ form.growth_rate.id_for_label }}" class="form-label">Growth Rate (%)</label>
+                        {{ form.growth_rate }}
+                        {% if form.growth_rate.errors %}
+                            <div class="text-danger small mt-1">{{ form.growth_rate.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instagram Specific -->
+        <div class="form-section platform-specific" id="instagramFields">
+            <h6><i class="bi bi-instagram me-2"></i>Instagram Specific Metrics</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="metric-card">
+                        <label for="{{ form.instagram_stories_views.id_for_label }}" class="form-label">Stories Views</label>
+                        {{ form.instagram_stories_views }}
+                        {% if form.instagram_stories_views.errors %}
+                            <div class="text-danger small mt-1">{{ form.instagram_stories_views.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="metric-card">
+                        <label for="{{ form.instagram_reels_views.id_for_label }}" class="form-label">Reels Views</label>
+                        {{ form.instagram_reels_views }}
+                        {% if form.instagram_reels_views.errors %}
+                            <div class="text-danger small mt-1">{{ form.instagram_reels_views.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- YouTube Specific -->
+        <div class="form-section platform-specific" id="youtubeFields">
+            <h6><i class="bi bi-youtube me-2"></i>YouTube Specific Metrics</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="metric-card">
+                        <label for="{{ form.youtube_subscribers.id_for_label }}" class="form-label">Subscribers</label>
+                        {{ form.youtube_subscribers }}
+                        {% if form.youtube_subscribers.errors %}
+                            <div class="text-danger small mt-1">{{ form.youtube_subscribers.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="metric-card">
+                        <label for="{{ form.youtube_watch_time.id_for_label }}" class="form-label">Watch Time (minutes)</label>
+                        {{ form.youtube_watch_time }}
+                        {% if form.youtube_watch_time.errors %}
+                            <div class="text-danger small mt-1">{{ form.youtube_watch_time.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TikTok Specific -->
+        <div class="form-section platform-specific" id="tiktokFields">
+            <h6><i class="bi bi-music-note-beamed me-2"></i>TikTok Specific Metrics</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="metric-card">
+                        <label for="{{ form.tiktok_video_views.id_for_label }}" class="form-label">Video Views</label>
+                        {{ form.tiktok_video_views }}
+                        {% if form.tiktok_video_views.errors %}
+                            <div class="text-danger small mt-1">{{ form.tiktok_video_views.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="metric-card">
+                        <label for="{{ form.tiktok_profile_views.id_for_label }}" class="form-label">Profile Views</label>
+                        {{ form.tiktok_profile_views }}
+                        {% if form.tiktok_profile_views.errors %}
+                            <div class="text-danger small mt-1">{{ form.tiktok_profile_views.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="form-section">
+            <h6><i class="bi bi-sticky me-2"></i>Additional Notes</h6>
+            <div class="mb-3">
+                {{ form.notes }}
+                {% if form.notes.errors %}
+                    <div class="text-danger small mt-1">{{ form.notes.errors.0 }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'analytics_dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-1"></i>Save Analytics
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+function togglePlatformFields() {
+    const socialNetwork = document.getElementById('{{ form.social_network.id_for_label }}').value;
+    
+    // Hide all platform-specific sections
+    document.getElementById('instagramFields').classList.remove('active');
+    document.getElementById('youtubeFields').classList.remove('active');
+    document.getElementById('tiktokFields').classList.remove('active');
+    
+    // Show relevant section
+    if (socialNetwork === 'INSTAGRAM') {
+        document.getElementById('instagramFields').classList.add('active');
+    } else if (socialNetwork === 'YOUTUBE') {
+        document.getElementById('youtubeFields').classList.add('active');
+    } else if (socialNetwork === 'TIKTOK') {
+        document.getElementById('tiktokFields').classList.add('active');
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    togglePlatformFields();
+    
+    // Add event listener to social network select
+    document.getElementById('{{ form.social_network.id_for_label }}').addEventListener('change', togglePlatformFields);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,510 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}Analytics Collector{% endblock %}
+
+{% block extra_css %}
+<style>
+    .collector-section {
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .collector-section h6 {
+        color: #495057;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #dee2e6;
+    }
+    .platform-specific {
+        display: none;
+    }
+    .platform-specific.active {
+        display: block;
+    }
+    .metric-card {
+        background: white;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        border: 1px solid #dee2e6;
+        transition: all 0.2s ease;
+    }
+    .metric-card:hover {
+        border-color: #007bff;
+        box-shadow: 0 2px 4px rgba(0,123,255,0.1);
+    }
+    .metric-card .form-label {
+        font-weight: 600;
+        color: #495057;
+    }
+    .network-icon {
+        width: 20px;
+        height: 20px;
+        margin-right: 0.5rem;
+    }
+    .required-field::after {
+        content: " *";
+        color: #dc3545;
+    }
+    .client-info {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="bi bi-graph-up me-2"></i>Analytics Collector
+                    </h2>
+                    <p class="text-muted mb-0">Collect manual analytics data for clients</p>
+                </div>
+                <div>
+                    <a href="{% url 'analytics_dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" id="analyticsCollectorForm">
+        {% csrf_token %}
+        
+        <!-- Client Selection -->
+        <div class="collector-section">
+            <h6><i class="bi bi-person me-2"></i>Client Selection</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="client_id" class="form-label required-field">Client</label>
+                        <select class="form-select" id="client_id" name="client_id" required onchange="loadClientInfo()">
+                            <option value="">Select a client...</option>
+                            {% for client in clients %}
+                            <option value="{{ client.id }}" {% if form_client_id == client.id|stringformat:"s" %}selected{% endif %}>
+                                {{ client.name }}{% if client.agency %} ({{ client.agency.name }}){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="social_network" class="form-label required-field">Social Network</label>
+                        <select class="form-select" id="social_network" name="social_network" required onchange="togglePlatformFields()">
+                            <option value="">Select social network...</option>
+                            <option value="INSTAGRAM" {% if form_social_network == 'INSTAGRAM' %}selected{% endif %}>Instagram</option>
+                            <option value="YOUTUBE" {% if form_social_network == 'YOUTUBE' %}selected{% endif %}>YouTube</option>
+                            <option value="TIKTOK" {% if form_social_network == 'TIKTOK' %}selected{% endif %}>TikTok</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Hashtag Selection (for all platforms) -->
+            <div class="row" id="hashtagSelection">
+                <div class="col-12">
+                    <div class="mb-3">
+                        <label for="hashtag" class="form-label required-field">Hashtag</label>
+                        <select class="form-select" id="hashtag" name="hashtag" required>
+                            <option value="">Select hashtag</option>
+                        </select>
+                        <div class="form-text">Select a specific hashtag to associate with this analytics data</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Client Info Display -->
+            <div id="clientInfo" class="client-info" style="display: none;">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-lg bg-white text-primary rounded-circle d-flex align-items-center justify-content-center me-3">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0" id="clientName">Client Name</h6>
+                        <small id="clientAgency">Agency Name</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Core Metrics -->
+        <div class="collector-section">
+            <h6><i class="bi bi-bar-chart me-2"></i>Core Metrics</h6>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <label for="analyzed_medias" class="form-label required-field">Total Posts/Videos</label>
+                        <input type="number" class="form-control" id="analyzed_medias" name="analyzed_medias" min="0" step="1" required
+                               value="{{ form_data.analyzed_medias|default:'' }}">
+                        <small class="form-text text-muted">Number of posts/videos analyzed</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <label for="total_views" class="form-label">Total Views</label>
+                        <input type="number" class="form-control" id="total_views" name="total_views" min="0" step="1"
+                               value="{{ form_data.total_views|default:'0' }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <label for="total_followers" class="form-label">Total Followers <i class="bi bi-info-circle text-muted" title="Current follower count (snapshot)"></i></label>
+                        <input type="number" class="form-control" id="total_followers" name="total_followers" min="0" step="1"
+                               value="{{ form_data.total_followers|default:'0' }}">
+                        <small class="form-text text-muted">Current follower count (snapshot, not cumulative)</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <label for="growth_rate" class="form-label">Growth Rate (%)</label>
+                        <input type="number" class="form-control" id="growth_rate" name="growth_rate" step="0.01" placeholder="0.00"
+                               value="{{ form_data.growth_rate|default:'0.00' }}">
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-4">
+                    <div class="metric-card">
+                        <label for="total_likes" class="form-label">Total Likes</label>
+                        <input type="number" class="form-control" id="total_likes" name="total_likes" min="0" step="1"
+                               value="{{ form_data.total_likes|default:'0' }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="metric-card">
+                        <label for="total_comments" class="form-label">Total Comments</label>
+                        <input type="number" class="form-control" id="total_comments" name="total_comments" min="0" step="1"
+                               value="{{ form_data.total_comments|default:'0' }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="metric-card">
+                        <label for="total_shares" class="form-label">Total Shares</label>
+                        <input type="number" class="form-control" id="total_shares" name="total_shares" min="0" step="1"
+                               value="{{ form_data.total_shares|default:'0' }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced Account-Level Metrics -->
+        <div class="collector-section">
+            <h6><i class="bi bi-people me-2"></i>Account-Level Statistics</h6>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="metric-card">
+                        <label for="total_accounts" class="form-label">Total Accounts <i class="bi bi-info-circle text-muted" title="Current number of accounts (not cumulative)"></i></label>
+                        <input type="number" class="form-control" id="total_accounts" name="total_accounts" min="0" step="1"
+                               value="{{ form_data.total_accounts|default:'0' }}">
+                        <small class="form-text text-muted">Current number of active accounts (will be updated, not summed)</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="metric-card">
+                        <label for="avg_videos_per_account" class="form-label">Avg Videos/Account <small class="text-muted">(auto)</small></label>
+                        <input type="number" class="form-control bg-light" id="avg_videos_per_account" name="avg_videos_per_account" min="0" step="0.1"
+                               value="{{ form_data.avg_videos_per_account|default:'0.0' }}" readonly>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="metric-card">
+                        <label for="max_videos_per_account" class="form-label">Max Videos/Account</label>
+                        <input type="number" class="form-control" id="max_videos_per_account" name="max_videos_per_account" min="0" step="1"
+                               value="{{ form_data.max_videos_per_account|default:'0' }}">
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-4">
+                    <div class="metric-card">
+                        <label for="avg_views_per_video" class="form-label">Avg Views/Video <small class="text-muted">(auto)</small></label>
+                        <input type="number" class="form-control bg-light" id="avg_views_per_video" name="avg_views_per_video" min="0" step="0.1"
+                               value="{{ form_data.avg_views_per_video|default:'0.0' }}" readonly>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="metric-card">
+                        <label for="max_views_per_video" class="form-label">Max Views/Video</label>
+                        <input type="number" class="form-control" id="max_views_per_video" name="max_views_per_video" min="0" step="1"
+                               value="{{ form_data.max_views_per_video|default:'0' }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="metric-card">
+                        <label for="avg_views_per_account" class="form-label">Avg Views/Account <small class="text-muted">(auto)</small></label>
+                        <input type="number" class="form-control bg-light" id="avg_views_per_account" name="avg_views_per_account" min="0" step="0.1"
+                               value="{{ form_data.avg_views_per_account|default:'0.0' }}" readonly>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-4">
+                    <div class="metric-card">
+                        <label for="max_views_per_account" class="form-label">Max Views/Account</label>
+                        <input type="number" class="form-control" id="max_views_per_account" name="max_views_per_account" min="0" step="1"
+                               value="{{ form_data.max_views_per_account|default:'0' }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="metric-card">
+                        <label for="avg_likes_per_video" class="form-label">Avg Likes/Video <small class="text-muted">(auto)</small></label>
+                        <input type="number" class="form-control bg-light" id="avg_likes_per_video" name="avg_likes_per_video" min="0" step="0.1"
+                               value="{{ form_data.avg_likes_per_video|default:'0.0' }}" readonly>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="metric-card">
+                        <label for="max_likes_per_video" class="form-label">Max Likes/Video</label>
+                        <input type="number" class="form-control" id="max_likes_per_video" name="max_likes_per_video" min="0" step="1"
+                               value="{{ form_data.max_likes_per_video|default:'0' }}">
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div class="metric-card">
+                        <label for="avg_likes_per_account" class="form-label">Avg Likes/Account <small class="text-muted">(auto)</small></label>
+                        <input type="number" class="form-control bg-light" id="avg_likes_per_account" name="avg_likes_per_account" min="0" step="0.1"
+                               value="{{ form_data.avg_likes_per_account|default:'0.0' }}" readonly>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="metric-card">
+                        <label for="max_likes_per_account" class="form-label">Max Likes/Account</label>
+                        <input type="number" class="form-control" id="max_likes_per_account" name="max_likes_per_account" min="0" step="1"
+                               value="{{ form_data.max_likes_per_account|default:'0' }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instagram Specific -->
+        <div class="collector-section platform-specific" id="instagramFields">
+            <h6><i class="bi bi-instagram me-2"></i>Instagram Specific Metrics</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="metric-card">
+                        <label for="instagram_stories_views" class="form-label">Stories Views</label>
+                        <input type="number" class="form-control" id="instagram_stories_views" name="instagram_stories_views" min="0" step="1"
+                               value="{{ form_data.instagram_stories_views|default:'0' }}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="metric-card">
+                        <label for="instagram_reels_views" class="form-label">Reels Views</label>
+                        <input type="number" class="form-control" id="instagram_reels_views" name="instagram_reels_views" min="0" step="1"
+                               value="{{ form_data.instagram_reels_views|default:'0' }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- YouTube Specific -->
+        <div class="collector-section platform-specific" id="youtubeFields">
+            <h6><i class="bi bi-youtube me-2"></i>YouTube Specific Metrics</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="metric-card">
+                        <label for="youtube_subscribers" class="form-label">Subscribers</label>
+                        <input type="number" class="form-control" id="youtube_subscribers" name="youtube_subscribers" min="0" step="1"
+                               value="{{ form_data.youtube_subscribers|default:'0' }}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="metric-card">
+                        <label for="youtube_watch_time" class="form-label">Watch Time (minutes)</label>
+                        <input type="number" class="form-control" id="youtube_watch_time" name="youtube_watch_time" min="0" step="1"
+                               value="{{ form_data.youtube_watch_time|default:'0' }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TikTok Specific -->
+        <div class="collector-section platform-specific" id="tiktokFields">
+            <h6><i class="bi bi-music-note-beamed me-2"></i>TikTok Specific Metrics</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="metric-card">
+                        <label for="tiktok_video_views" class="form-label">Video Views</label>
+                        <input type="number" class="form-control" id="tiktok_video_views" name="tiktok_video_views" min="0" step="1"
+                               value="{{ form_data.tiktok_video_views|default:'0' }}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="metric-card">
+                        <label for="tiktok_profile_views" class="form-label">Profile Views</label>
+                        <input type="number" class="form-control" id="tiktok_profile_views" name="tiktok_profile_views" min="0" step="1"
+                               value="{{ form_data.tiktok_profile_views|default:'0' }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="collector-section">
+            <h6><i class="bi bi-sticky me-2"></i>Additional Notes</h6>
+            <div class="mb-3">
+                <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Additional notes about this analytics data...">{{ form_data.notes|default:'' }}</textarea>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'analytics_dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-1"></i>Collect Analytics
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+function togglePlatformFields() {
+    const socialNetwork = document.getElementById('social_network').value;
+    
+    // Hide all platform-specific sections
+    document.getElementById('instagramFields').classList.remove('active');
+    document.getElementById('youtubeFields').classList.remove('active');
+    document.getElementById('tiktokFields').classList.remove('active');
+    
+    // Show appropriate platform fields
+    if (socialNetwork === 'INSTAGRAM') {
+        document.getElementById('instagramFields').classList.add('active');
+    } else if (socialNetwork === 'YOUTUBE') {
+        document.getElementById('youtubeFields').classList.add('active');
+    } else if (socialNetwork === 'TIKTOK') {
+        document.getElementById('tiktokFields').classList.add('active');
+    }
+}
+
+function loadClientInfo() {
+    const clientId = document.getElementById('client_id').value;
+    const clientInfo = document.getElementById('clientInfo');
+    const hashtagSelect = document.getElementById('hashtag');
+    
+    if (!clientId) {
+        clientInfo.style.display = 'none';
+        return;
+    }
+    
+    // Fetch client info via API
+    fetch(`/analytics/collector/api/?client_id=${clientId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.client) {
+                document.getElementById('clientName').textContent = data.client.name;
+                document.getElementById('clientAgency').textContent = data.client.agency || 'No agency';
+                clientInfo.style.display = 'block';
+                
+                // Load hashtags
+                hashtagSelect.innerHTML = '<option value="">Select hashtag</option>';
+                if (data.hashtags && data.hashtags.length > 0) {
+                    data.hashtags.forEach(hashtag => {
+                        const option = document.createElement('option');
+                        option.value = hashtag;
+                        option.textContent = `#${hashtag}`;
+                        hashtagSelect.appendChild(option);
+                    });
+                } else {
+                    // If no hashtags available, show warning
+                    const warningOption = document.createElement('option');
+                    warningOption.value = '';
+                    warningOption.textContent = 'No hashtags available for this client';
+                    warningOption.disabled = true;
+                    hashtagSelect.appendChild(warningOption);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error loading client info:', error);
+            clientInfo.style.display = 'none';
+        });
+}
+
+// Auto-calculate average metrics based on totals
+function calculateAverageMetrics() {
+    const totalPosts = parseFloat(document.getElementById('analyzed_medias').value) || 0;
+    const totalViews = parseFloat(document.getElementById('total_views').value) || 0;
+    const totalLikes = parseFloat(document.getElementById('total_likes').value) || 0;
+    const totalAccounts = parseFloat(document.getElementById('total_accounts').value) || 0;
+    
+    // Calculate Avg Videos per Account
+    if (totalAccounts > 0 && totalPosts > 0) {
+        const avgVideosPerAccount = totalPosts / totalAccounts;
+        document.getElementById('avg_videos_per_account').value = avgVideosPerAccount.toFixed(1);
+    }
+    
+    // Calculate Avg Views per Video
+    if (totalPosts > 0 && totalViews > 0) {
+        const avgViewsPerVideo = totalViews / totalPosts;
+        document.getElementById('avg_views_per_video').value = avgViewsPerVideo.toFixed(1);
+    }
+    
+    // Calculate Avg Views per Account
+    if (totalAccounts > 0 && totalViews > 0) {
+        const avgViewsPerAccount = totalViews / totalAccounts;
+        document.getElementById('avg_views_per_account').value = avgViewsPerAccount.toFixed(1);
+    }
+    
+    // Calculate Avg Likes per Video
+    if (totalPosts > 0 && totalLikes > 0) {
+        const avgLikesPerVideo = totalLikes / totalPosts;
+        document.getElementById('avg_likes_per_video').value = avgLikesPerVideo.toFixed(1);
+    }
+    
+    // Calculate Avg Likes per Account
+    if (totalAccounts > 0 && totalLikes > 0) {
+        const avgLikesPerAccount = totalLikes / totalAccounts;
+        document.getElementById('avg_likes_per_account').value = avgLikesPerAccount.toFixed(1);
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    togglePlatformFields();
+    loadClientInfo();
+    
+    // Add event listeners
+    document.getElementById('social_network').addEventListener('change', togglePlatformFields);
+    document.getElementById('client_id').addEventListener('change', loadClientInfo);
+    
+    // Add event listeners for auto-calculation
+    const fieldsForCalculation = [
+        'analyzed_medias',
+        'total_views', 
+        'total_likes',
+        'total_accounts'
+    ];
+    
+    fieldsForCalculation.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.addEventListener('input', calculateAverageMetrics);
+            field.addEventListener('change', calculateAverageMetrics);
+        }
+    });
+    
+    // Initial calculation on page load
+    calculateAverageMetrics();
+});
+</script>
+{% endblock %}

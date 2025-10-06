@@ -1,0 +1,124 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}Delete Analytics - {{ analytics.client.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="bi bi-exclamation-triangle me-2 text-warning"></i>Delete Analytics
+                    </h2>
+                    <p class="text-muted mb-0">Confirm deletion of analytics data</p>
+                </div>
+                <div>
+                    <a href="{% url 'analytics_dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Confirm Deletion
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Warning:</strong> This action cannot be undone. The analytics data will be permanently deleted.
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="avatar-lg bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                    {{ analytics.client.name|first|upper }}
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">{{ analytics.client.name }}</h6>
+                                    {% if analytics.client.agency %}
+                                        <small class="text-muted">{{ analytics.client.agency.name }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-end">
+                                {% if analytics.social_network == 'INSTAGRAM' %}
+                                    <span class="badge bg-gradient" style="background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%);">
+                                        <i class="bi bi-instagram me-1"></i>Instagram
+                                    </span>
+                                {% elif analytics.social_network == 'YOUTUBE' %}
+                                    <span class="badge bg-danger">
+                                        <i class="bi bi-youtube me-1"></i>YouTube
+                                    </span>
+                                {% elif analytics.social_network == 'TIKTOK' %}
+                                    <span class="badge bg-dark">
+                                        <i class="bi bi-music-note-beamed me-1"></i>TikTok
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Period</h6>
+                            <p class="mb-0">{{ analytics.period_start|date:"M d, Y" }} to {{ analytics.period_end|date:"M d, Y" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Key Metrics</h6>
+                            <p class="mb-0">
+                                {{ analytics.total_posts|default:"0" }} posts, 
+                                {{ analytics.total_views|default:"0"|floatformat:0 }} views, 
+                                {{ analytics.total_followers|default:"0"|floatformat:0 }} followers
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Created</h6>
+                            <p class="mb-0">{{ analytics.created_at|date:"M d, Y H:i" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Created By</h6>
+                            <p class="mb-0">{{ analytics.created_by.username|default:"Unknown" }}</p>
+                        </div>
+                    </div>
+
+                    {% if analytics.notes %}
+                    <div class="mb-4">
+                        <h6>Notes</h6>
+                        <div class="p-2 bg-light rounded">
+                            {{ analytics.notes|linebreaks }}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'analytics_detail' analytics.pk %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash me-1"></i>Delete Analytics
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

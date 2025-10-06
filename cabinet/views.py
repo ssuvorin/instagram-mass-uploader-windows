@@ -442,20 +442,24 @@ def agency_dashboard(request):
 
     client_rows = []
     for c in clients_list:
-        hashtags = ClientHashtag.objects.filter(client=c).values_list("hashtag", flat=True)
-        total_views = 0
-        total_videos = 0
-        average_views = 0.0
-        count = 0
-        for h in hashtags:
-            last = HashtagAnalytics.objects.filter(hashtag=h).order_by("-created_at").first()
-            if last:
-                total_views += int(last.total_views or 0)
-                total_videos += int(getattr(last, "analyzed_medias", 0) or 0)
-                average_views += float(last.average_views or 0.0)
-                count += 1
-        avg_avg = (average_views / count) if count > 0 else 0.0
-        client_rows.append({"client": c, "total_views": total_views, "total_videos": total_videos, "avg_views": avg_avg})
+        # Use AnalyticsService to get combined data
+        analytics_service = AnalyticsService(c)
+        combined_summary = analytics_service.get_combined_analytics_summary(days=30)
+        network_breakdown = analytics_service.get_network_breakdown(days=30)
+        
+        # Calculate total accounts across all networks
+        total_accounts = sum(network.total_accounts for network in combined_summary.networks.values())
+        
+        client_rows.append({
+            "client": c, 
+            "total_views": combined_summary.total_views, 
+            "total_videos": combined_summary.total_posts, 
+            "avg_views": combined_summary.average_views,
+            "engagement_rate": combined_summary.engagement_rate,
+            "total_accounts": total_accounts,
+            "network_breakdown": network_breakdown,
+            "networks_count": len(network_breakdown)
+        })
 
     # Daily stats for last 7 days (views and videos)
     end = timezone.now()
@@ -616,69 +620,732 @@ def agency_dashboard(request):
     )
 
 
-@login_required
 def export_excel(request):
-    """Export analytics to Excel based on role (admin/agency/client)."""
+    """Export detailed analytics to Excel with multiple sheets and comprehensive data."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    from django.db.models import Sum, Avg, Max, Count
+    from datetime import datetime, timedelta
+    
     wb = Workbook()
-    ws = wb.active
-    ws.title = "Summary"
+    
+    # Remove default sheet
+    wb.remove(wb.active)
 
     user = request.user
-    filename = f"cabinet_analytics_{user.username}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    filename = f"detailed_analytics_{user.username}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    
+    # Define styles
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
 
     if user.is_superuser:
-        # Admin summary of latest hashtag snapshots
-        ws.append(["Hashtag", "Total Videos", "Total Views", "Avg Views", "Likes", "Comments", "ER", "Created At"])
-        rows = (
-            HashtagAnalytics.objects.order_by("hashtag", "-created_at")
-        )
-        seen = set()
-        for r in rows:
-            if r.hashtag in seen:
-                continue
-            seen.add(r.hashtag)
-            ws.append([
-                f"#{r.hashtag}",
-                int(getattr(r, "analyzed_medias", 0) or 0),
-                int(getattr(r, "total_views", 0) or 0),
-                float(getattr(r, "average_views", 0.0) or 0.0),
-                int(getattr(r, "total_likes", 0) or 0),
-                int(getattr(r, "total_comments", 0) or 0),
-                float(getattr(r, "engagement_rate", 0.0) or 0.0),
-                r.created_at.strftime("%Y-%m-%d %H:%M"),
+        # Sheet 1: Summary Overview
+        ws_summary = wb.create_sheet("Summary Overview")
+        ws_summary.append(["Analytics Summary", f"Generated: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}"])
+        ws_summary.append([])
+        
+        # Get total counts
+        total_clients = Client.objects.count()
+        total_agencies = Agency.objects.count()
+        total_hashtags = ClientHashtag.objects.count()
+        total_analytics = HashtagAnalytics.objects.count()
+        manual_analytics = HashtagAnalytics.objects.filter(is_manual=True).count()
+        auto_analytics = HashtagAnalytics.objects.filter(is_manual=False).count()
+        
+        ws_summary.append(["Total Clients", total_clients])
+        ws_summary.append(["Total Agencies", total_agencies])
+        ws_summary.append(["Total Hashtags", total_hashtags])
+        ws_summary.append(["Total Analytics Records", total_analytics])
+        
+        # Sheet 2: Clients Overview
+        ws_clients = wb.create_sheet("Clients Overview")
+        headers = ["Client Name", "Agency", "Total Hashtags", "Total Analytics", "Last Activity"]
+        ws_clients.append(headers)
+        
+        # Style headers
+        for col in range(1, len(headers) + 1):
+            cell = ws_clients.cell(row=1, column=col)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = border
+        
+        clients = Client.objects.select_related('agency').prefetch_related('client_hashtags', 'hashtag_analytics')
+        for client in clients:
+            hashtag_count = client.client_hashtags.count()
+            analytics_count = client.hashtag_analytics.count()
+            last_activity = client.hashtag_analytics.order_by('-created_at').first()
+            last_activity_date = last_activity.created_at.strftime('%Y-%m-%d') if last_activity else 'No activity'
+            
+            ws_clients.append([
+                client.name,
+                client.agency.name if client.agency else 'No agency',
+                hashtag_count,
+                analytics_count,
+                last_activity_date
             ])
+        
+        # Sheet 3: Analytics Details
+        ws_manual = wb.create_sheet("Analytics Details")
+        headers = ["Client", "Social Network", "Hashtag", "Posts", "Views", "Likes", "Comments", "Shares", 
+                  "Followers", "Growth Rate", "Accounts", "Avg Views/Video", "Avg Likes/Video", "Created At"]
+        ws_manual.append(headers)
+        
+        # Style headers
+        for col in range(1, len(headers) + 1):
+            cell = ws_manual.cell(row=1, column=col)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = border
+        
+        manual_analytics = HashtagAnalytics.objects.select_related('client').order_by('-created_at')
+        for analytics in manual_analytics:
+            ws_manual.append([
+                analytics.client.name if analytics.client else 'No client',
+                analytics.get_social_network_display(),
+                f"#{analytics.hashtag}" if analytics.hashtag else 'No hashtag',
+                analytics.analyzed_medias or 0,
+                analytics.total_views or 0,
+                analytics.total_likes or 0,
+                analytics.total_comments or 0,
+                analytics.total_shares or 0,
+                analytics.total_followers or 0,
+                f"{(analytics.growth_rate or 0):.2f}%" if analytics.growth_rate else '0.00%',
+                analytics.total_accounts or 0,
+                f"{(analytics.avg_views_per_video or 0):.1f}" if analytics.avg_views_per_video else '0.0',
+                f"{(analytics.avg_likes_per_video or 0):.1f}" if analytics.avg_likes_per_video else '0.0',
+                analytics.created_at.strftime('%Y-%m-%d %H:%M')
+            ])
+        
+        # Sheet 4: Social Network Breakdown
+        ws_networks = wb.create_sheet("Social Networks")
+        headers = ["Social Network", "Total Records", "Total Posts", "Total Views", "Total Likes", 
+                  "Avg Views/Post", "Avg Likes/Post", "Total Accounts", "Avg Posts/Account"]
+        ws_networks.append(headers)
+        
+        # Style headers
+        for col in range(1, len(headers) + 1):
+            cell = ws_networks.cell(row=1, column=col)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = border
+        
+        # Aggregate by social network
+        network_stats = HashtagAnalytics.objects.values('social_network').annotate(
+            total_records=Count('id'),
+            total_posts=Sum('analyzed_medias'),
+            total_views=Sum('total_views'),
+            total_likes=Sum('total_likes'),
+            total_accounts=Sum('total_accounts'),
+            avg_views_per_post=Avg('avg_views_per_video'),
+            avg_likes_per_post=Avg('avg_likes_per_video'),
+            avg_posts_per_account=Avg('avg_videos_per_account')
+        ).order_by('social_network')
+        
+        for stat in network_stats:
+            ws_networks.append([
+                stat['social_network'],
+                stat['total_records'] or 0,
+                stat['total_posts'] or 0,
+                stat['total_views'] or 0,
+                stat['total_likes'] or 0,
+                f"{(stat['avg_views_per_post'] or 0):.1f}",
+                f"{(stat['avg_likes_per_post'] or 0):.1f}",
+                stat['total_accounts'] or 0,
+                f"{(stat['avg_posts_per_account'] or 0):.1f}"
+            ])
+        
+        # Sheet 5: Daily Analytics (Last 30 days)
+        ws_daily = wb.create_sheet("Daily Analytics")
+        headers = ["Date", "Client", "Social Network", "Hashtag", "Posts", "Views", "Likes", "Comments", "Shares", "Followers", "Accounts"]
+        ws_daily.append(headers)
+        
+        # Style headers
+        for col in range(1, len(headers) + 1):
+            cell = ws_daily.cell(row=1, column=col)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = border
+        
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        daily_analytics = HashtagAnalytics.objects.filter(
+            created_at__gte=thirty_days_ago
+        ).select_related('client').order_by('-created_at')
+        
+        for analytics in daily_analytics:
+            ws_daily.append([
+                analytics.created_at.strftime('%Y-%m-%d'),
+                analytics.client.name if analytics.client else 'No client',
+                analytics.get_social_network_display(),
+                f"#{analytics.hashtag}" if analytics.hashtag else 'No hashtag',
+                analytics.analyzed_medias or 0,
+                analytics.total_views or 0,
+                analytics.total_likes or 0,
+                analytics.total_comments or 0,
+                analytics.total_shares or 0,
+                analytics.total_followers or 0,
+                analytics.total_accounts or 0
+            ])
+        
+        # Sheet 6: Daily Aggregation by Date
+        ws_daily_agg = wb.create_sheet("Daily Aggregation")
+        headers = ["Date", "Total Posts", "Total Views", "Total Likes", "Total Comments", "Total Shares", "Total Accounts", "Records Count"]
+        ws_daily_agg.append(headers)
+        
+        # Style headers
+        for col in range(1, len(headers) + 1):
+            cell = ws_daily_agg.cell(row=1, column=col)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = border
+        
+        # Aggregate by date
+        from django.db.models import Sum, Count
+        daily_stats = HashtagAnalytics.objects.filter(
+            created_at__gte=thirty_days_ago
+        ).extra(select={'date': 'DATE(created_at)'}).values('date').annotate(
+            total_posts=Sum('analyzed_medias'),
+            total_views=Sum('total_views'),
+            total_likes=Sum('total_likes'),
+            total_comments=Sum('total_comments'),
+            total_shares=Sum('total_shares'),
+            total_accounts=Sum('total_accounts'),
+            records_count=Count('id')
+        ).order_by('-date')
+        
+        for stat in daily_stats:
+            ws_daily_agg.append([
+                stat['date'].strftime('%Y-%m-%d'),
+                stat['total_posts'] or 0,
+                stat['total_views'] or 0,
+                stat['total_likes'] or 0,
+                stat['total_comments'] or 0,
+                stat['total_shares'] or 0,
+                stat['total_accounts'] or 0,
+                stat['records_count']
+            ])
+        
+        # Sheet 7: Client Performance Comparison
+        ws_comparison = wb.create_sheet("Client Comparison")
+        headers = ["Client", "Agency", "Total Posts", "Total Views", "Avg Views/Post", "Total Likes", "Total Accounts", "Networks Count", "Last Activity"]
+        ws_comparison.append(headers)
+        
+        # Style headers
+        for col in range(1, len(headers) + 1):
+            cell = ws_comparison.cell(row=1, column=col)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = border
+        
+        # Get all clients with their analytics
+        all_clients = Client.objects.select_related('agency').prefetch_related('hashtag_analytics')
+        for client in all_clients:
+            # Get client's analytics for last 30 days
+            client_analytics = client.hashtag_analytics.filter(
+                created_at__gte=thirty_days_ago
+            )
+            
+            total_posts = sum(a.analyzed_medias or 0 for a in client_analytics)
+            total_views = sum(a.total_views or 0 for a in client_analytics)
+            total_likes = sum(a.total_likes or 0 for a in client_analytics)
+            total_accounts = sum(a.total_accounts or 0 for a in client_analytics)
+            
+            # Get unique networks
+            networks = set(a.social_network for a in client_analytics if a.social_network)
+            
+            # Get last activity
+            last_activity = client_analytics.order_by('-created_at').first()
+            last_activity_date = last_activity.created_at.strftime('%Y-%m-%d') if last_activity else 'No activity'
+            
+            avg_views = (total_views / total_posts) if total_posts > 0 else 0
+            
+            ws_comparison.append([
+                client.name,
+                client.agency.name if client.agency else 'No agency',
+                total_posts,
+                total_views,
+                f"{avg_views:.1f}",
+                total_likes,
+                total_accounts,
+                len(networks),
+                last_activity_date
+            ])
+        
+        # Sheet 8: Hashtag Performance
+        ws_hashtags = wb.create_sheet("Hashtag Performance")
+        headers = ["Hashtag", "Client", "Social Network", "Total Posts", "Total Views", "Avg Views/Post", "Total Likes", "Total Accounts", "Last Update"]
+        ws_hashtags.append(headers)
+        
+        # Style headers
+        for col in range(1, len(headers) + 1):
+            cell = ws_hashtags.cell(row=1, column=col)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = border
+        
+        # Get hashtag performance
+        hashtag_stats = HashtagAnalytics.objects.filter(
+            created_at__gte=thirty_days_ago
+        ).select_related('client').values('hashtag', 'client__name', 'social_network').annotate(
+            total_posts=Sum('analyzed_medias'),
+            total_views=Sum('total_views'),
+            total_likes=Sum('total_likes'),
+            total_accounts=Sum('total_accounts'),
+            last_update=Max('created_at')
+        ).order_by('-total_views')
+        
+        for stat in hashtag_stats:
+            avg_views = (stat['total_views'] / stat['total_posts']) if stat['total_posts'] > 0 else 0
+            ws_hashtags.append([
+                f"#{stat['hashtag']}" if stat['hashtag'] else 'No hashtag',
+                stat['client__name'] or 'No client',
+                dict(HashtagAnalytics.SOCIAL_NETWORK_CHOICES).get(stat['social_network'], stat['social_network']),
+                stat['total_posts'] or 0,
+                stat['total_views'] or 0,
+                f"{avg_views:.1f}",
+                stat['total_likes'] or 0,
+                stat['total_accounts'] or 0,
+                stat['last_update'].strftime('%Y-%m-%d') if stat['last_update'] else 'No date'
+            ])
+        
+        # Sheet 9: Platform-Specific Metrics
+        ws_platform = wb.create_sheet("Platform Metrics")
+        headers = ["Social Network", "Metric", "Value", "Description"]
+        ws_platform.append(headers)
+        
+        # Style headers
+        for col in range(1, len(headers) + 1):
+            cell = ws_platform.cell(row=1, column=col)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = border
+        
+        # Platform-specific metrics
+        platform_metrics = [
+            ('INSTAGRAM', 'Stories Views', 'instagram_stories_views', 'Total Instagram Stories views'),
+            ('INSTAGRAM', 'Reels Views', 'instagram_reels_views', 'Total Instagram Reels views'),
+            ('YOUTUBE', 'Subscribers', 'youtube_subscribers', 'Total YouTube subscribers'),
+            ('YOUTUBE', 'Watch Time (min)', 'youtube_watch_time', 'Total YouTube watch time in minutes'),
+            ('TIKTOK', 'Video Views', 'tiktok_video_views', 'Total TikTok video views'),
+            ('TIKTOK', 'Profile Views', 'tiktok_profile_views', 'Total TikTok profile views'),
+        ]
+        
+        for network, metric_name, field_name, description in platform_metrics:
+            total_value = HashtagAnalytics.objects.filter(
+                social_network=network,
+                created_at__gte=thirty_days_ago
+            ).aggregate(total=Sum(field_name))['total'] or 0
+            
+            ws_platform.append([
+                dict(HashtagAnalytics.SOCIAL_NETWORK_CHOICES).get(network, network),
+                metric_name,
+                total_value,
+                description
+            ])
+    
     else:
+        # For non-superusers, show only their data
         client = Client.objects.filter(user=user).first()
         if client:
             service = AnalyticsService(client)
-            ws.append(["Hashtag", "Total Videos", "Total Views", "Avg Views", "Likes", "Comments", "ER"]) 
-            for d in service.get_hashtag_details():
-                ws.append([
-                    f"#{d.hashtag}",
-                    d.total_videos,
-                    d.total_views,
-                    round(d.average_views, 2),
-                    d.total_likes,
-                    d.total_comments,
-                    round(d.engagement_rate, 4),
+            
+            # Sheet 1: Client Summary
+            ws_summary = wb.create_sheet("My Analytics")
+            ws_summary.append([f"Analytics for {client.name}", f"Generated: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}"])
+            ws_summary.append([])
+            
+            # Get client's analytics summary
+            networks = service.get_manual_analytics_by_network(30)
+            total_posts = sum(network.total_posts for network in networks.values())
+            total_views = sum(network.total_views for network in networks.values())
+            total_likes = sum(network.total_likes for network in networks.values())
+            
+            ws_summary.append(["Total Posts (30 days)", total_posts])
+            ws_summary.append(["Total Views (30 days)", total_views])
+            ws_summary.append(["Total Likes (30 days)", total_likes])
+            ws_summary.append(["Networks Active", len(networks)])
+            
+            # Sheet 2: Network Breakdown
+            ws_networks = wb.create_sheet("By Network")
+            headers = ["Network", "Posts", "Views", "Likes", "Avg Views", "Engagement", "Accounts"]
+            ws_networks.append(headers)
+            
+            for network_key, network_data in networks.items():
+                ws_networks.append([
+                    network_data.network,
+                    network_data.total_posts,
+                    network_data.total_views,
+                    network_data.total_likes,
+                    f"{network_data.average_views:.1f}",
+                    f"{network_data.engagement_rate:.2%}",
+                    network_data.total_accounts
                 ])
+            
+            # Sheet 3: Detailed Records
+            ws_details = wb.create_sheet("Detailed Records")
+            headers = ["Date", "Network", "Hashtag", "Posts", "Views", "Likes", "Comments", "Shares", "Followers", "Accounts"]
+            ws_details.append(headers)
+            
+            # Get detailed records
+            detailed_records = HashtagAnalytics.objects.filter(
+                client=client,
+                created_at__gte=timezone.now() - timedelta(days=30)
+            ).order_by('-created_at')
+            
+            for record in detailed_records:
+                ws_details.append([
+                    record.created_at.strftime('%Y-%m-%d'),
+                    record.get_social_network_display(),
+                    f"#{record.hashtag}" if record.hashtag else 'No hashtag',
+                    record.analyzed_medias or 0,
+                    record.total_views or 0,
+                    record.total_likes or 0,
+                    record.total_comments or 0,
+                    record.total_shares or 0,
+                    record.total_followers or 0,
+                    record.total_accounts or 0
+                ])
+            
+            # Sheet 4: Daily Performance
+            ws_daily = wb.create_sheet("Daily Performance")
+            headers = ["Date", "Posts", "Views", "Likes", "Comments", "Shares", "Accounts", "Records"]
+            ws_daily.append(headers)
+            
+            # Aggregate by date for this client
+            from django.db.models import Sum, Count
+            daily_stats = HashtagAnalytics.objects.filter(
+                client=client,
+                created_at__gte=timezone.now() - timedelta(days=30)
+            ).extra(select={'date': 'DATE(created_at)'}).values('date').annotate(
+                total_posts=Sum('analyzed_medias'),
+                total_views=Sum('total_views'),
+                total_likes=Sum('total_likes'),
+                total_comments=Sum('total_comments'),
+                total_shares=Sum('total_shares'),
+                total_accounts=Sum('total_accounts'),
+                records_count=Count('id')
+            ).order_by('-date')
+            
+            for stat in daily_stats:
+                ws_daily.append([
+                    stat['date'].strftime('%Y-%m-%d'),
+                    stat['total_posts'] or 0,
+                    stat['total_views'] or 0,
+                    stat['total_likes'] or 0,
+                    stat['total_comments'] or 0,
+                    stat['total_shares'] or 0,
+                    stat['total_accounts'] or 0,
+                    stat['records_count']
+                ])
+            
+            # Sheet 5: Hashtag Breakdown
+            ws_hashtags = wb.create_sheet("Hashtag Breakdown")
+            headers = ["Hashtag", "Network", "Posts", "Views", "Avg Views", "Likes", "Accounts", "Last Update"]
+            ws_hashtags.append(headers)
+            
+            # Get hashtag performance for this client
+            hashtag_stats = HashtagAnalytics.objects.filter(
+                client=client,
+                created_at__gte=timezone.now() - timedelta(days=30)
+            ).values('hashtag', 'social_network').annotate(
+                total_posts=Sum('analyzed_medias'),
+                total_views=Sum('total_views'),
+                total_likes=Sum('total_likes'),
+                total_accounts=Sum('total_accounts'),
+                last_update=Max('created_at')
+            ).order_by('-total_views')
+            
+            for stat in hashtag_stats:
+                avg_views = (stat['total_views'] / stat['total_posts']) if stat['total_posts'] > 0 else 0
+                ws_hashtags.append([
+                    f"#{stat['hashtag']}" if stat['hashtag'] else 'No hashtag',
+                    dict(HashtagAnalytics.SOCIAL_NETWORK_CHOICES).get(stat['social_network'], stat['social_network']),
+                    stat['total_posts'] or 0,
+                    stat['total_views'] or 0,
+                    f"{avg_views:.1f}",
+                    stat['total_likes'] or 0,
+                    stat['total_accounts'] or 0,
+                    stat['last_update'].strftime('%Y-%m-%d') if stat['last_update'] else 'No date'
+                ])
+            
+            # Sheet 6: Advanced Metrics
+            ws_advanced = wb.create_sheet("Advanced Metrics")
+            headers = ["Network", "Hashtag", "Avg Videos/Account", "Max Videos/Account", "Avg Views/Video", "Max Views/Video", 
+                      "Avg Views/Account", "Max Views/Account", "Avg Likes/Video", "Max Likes/Video", "Avg Likes/Account", "Max Likes/Account"]
+            ws_advanced.append(headers)
+            
+            # Get advanced metrics
+            advanced_records = HashtagAnalytics.objects.filter(
+                client=client,
+                created_at__gte=timezone.now() - timedelta(days=30)
+            ).order_by('-created_at')
+            
+            for record in advanced_records:
+                ws_advanced.append([
+                    record.get_social_network_display(),
+                    f"#{record.hashtag}" if record.hashtag else 'No hashtag',
+                    f"{(record.avg_videos_per_account or 0):.1f}",
+                    record.max_videos_per_account or 0,
+                    f"{(record.avg_views_per_video or 0):.1f}",
+                    record.max_views_per_video or 0,
+                    f"{(record.avg_views_per_account or 0):.1f}",
+                    record.max_views_per_account or 0,
+                    f"{(record.avg_likes_per_video or 0):.1f}",
+                    record.max_likes_per_video or 0,
+                    f"{(record.avg_likes_per_account or 0):.1f}",
+                    record.max_likes_per_account or 0
+                ])
+        
         else:
             agency = Agency.objects.filter(owner=user).first()
             if agency:
-                ws.append(["Client", "Total Views", "Avg Views"])
+                # Sheet 1: Agency Summary
+                ws_summary = wb.create_sheet("Agency Summary")
+                ws_summary.append([f"Agency: {agency.name}", f"Generated: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}"])
+                ws_summary.append([])
+                
                 clients = agency.clients.all()
+                total_clients = clients.count()
+                
+                # Calculate agency totals
+                total_views = 0
+                total_posts = 0
+                total_accounts = 0
+                
                 for c in clients:
-                    hashtags = ClientHashtag.objects.filter(client=c).values_list("hashtag", flat=True)
-                    total_views = 0
-                    avg_sum = 0.0
-                    cnt = 0
-                    for h in hashtags:
-                        last = HashtagAnalytics.objects.filter(hashtag=h).order_by("-created_at").first()
-                        if last:
-                            total_views += int(last.total_views or 0)
-                            avg_sum += float(last.average_views or 0.0)
-                            cnt += 1
-                    ws.append([c.name, total_views, round((avg_sum / cnt) if cnt else 0.0, 2)])
+                    analytics_service = AnalyticsService(c)
+                    combined_summary = analytics_service.get_combined_analytics_summary(days=30)
+                    total_views += combined_summary.total_views
+                    total_posts += combined_summary.total_posts
+                    total_accounts += sum(network.total_accounts for network in combined_summary.networks.values())
+                
+                ws_summary.append(["Total Clients", total_clients])
+                ws_summary.append(["Total Views (30 days)", total_views])
+                ws_summary.append(["Total Posts (30 days)", total_posts])
+                ws_summary.append(["Total Accounts", total_accounts])
+                
+                # Sheet 2: Client Comparison
+                ws_clients = wb.create_sheet("Client Comparison")
+                headers = ["Client", "Total Views", "Total Posts", "Avg Views/Post", "Total Accounts", "Networks", "Last Activity"]
+                ws_clients.append(headers)
+                
+                for c in clients:
+                    analytics_service = AnalyticsService(c)
+                    combined_summary = analytics_service.get_combined_analytics_summary(days=30)
+                    total_accounts = sum(network.total_accounts for network in combined_summary.networks.values())
+                    
+                    # Get last activity
+                    last_activity = c.hashtag_analytics.order_by('-created_at').first()
+                    last_activity_date = last_activity.created_at.strftime('%Y-%m-%d') if last_activity else 'No activity'
+                    
+                    ws_clients.append([
+                        c.name,
+                        combined_summary.total_views,
+                        combined_summary.total_posts,
+                        f"{combined_summary.average_views:.1f}",
+                        total_accounts,
+                        len(combined_summary.networks),
+                        last_activity_date
+                    ])
+                
+                # Sheet 3: Network Breakdown (by all clients)
+                ws_networks = wb.create_sheet("By Network")
+                headers = ["Network", "Posts", "Views", "Likes", "Comments", "Shares", "Followers", "Avg Views", "Engagement", "Accounts"]
+                ws_networks.append(headers)
+                
+                # Aggregate networks across all agency clients
+                agency_networks = {}
+                for c in clients:
+                    analytics_service = AnalyticsService(c)
+                    client_networks = analytics_service.get_manual_analytics_by_network(30)
+                    for network_key, network_data in client_networks.items():
+                        if network_key not in agency_networks:
+                            agency_networks[network_key] = {
+                                'network': network_data.network,
+                                'total_posts': 0,
+                                'total_views': 0,
+                                'total_likes': 0,
+                                'total_comments': 0,
+                                'total_shares': 0,
+                                'total_followers': 0,
+                                'total_accounts': 0
+                            }
+                        agency_networks[network_key]['total_posts'] += network_data.total_posts
+                        agency_networks[network_key]['total_views'] += network_data.total_views
+                        agency_networks[network_key]['total_likes'] += network_data.total_likes
+                        agency_networks[network_key]['total_comments'] += network_data.total_comments
+                        agency_networks[network_key]['total_shares'] += network_data.total_shares
+                        agency_networks[network_key]['total_followers'] += network_data.total_followers
+                        agency_networks[network_key]['total_accounts'] += network_data.total_accounts
+                
+                for network_key, network_data in agency_networks.items():
+                    avg_views = (network_data['total_views'] / network_data['total_posts']) if network_data['total_posts'] > 0 else 0
+                    total_engagement = network_data['total_likes'] + network_data['total_comments'] + network_data['total_shares']
+                    engagement_rate = (total_engagement / network_data['total_views']) if network_data['total_views'] > 0 else 0
+                    
+                    ws_networks.append([
+                        network_data['network'],
+                        network_data['total_posts'],
+                        network_data['total_views'],
+                        network_data['total_likes'],
+                        network_data['total_comments'],
+                        network_data['total_shares'],
+                        network_data['total_followers'],
+                        f"{avg_views:.1f}",
+                        f"{engagement_rate:.2%}",
+                        network_data['total_accounts']
+                    ])
+                
+                # Sheet 4: All Client Analytics
+                ws_analytics = wb.create_sheet("All Client Analytics")
+                headers = ["Client", "Social Network", "Hashtag", "Posts", "Views", "Likes", "Comments", "Shares", "Followers", "Accounts", "Date"]
+                ws_analytics.append(headers)
+                
+                for c in clients:
+                    client_analytics = c.hashtag_analytics.filter(
+                        created_at__gte=timezone.now() - timedelta(days=30)
+                    ).order_by('-created_at')
+                    
+                    for record in client_analytics:
+                        ws_analytics.append([
+                            c.name,
+                            record.get_social_network_display(),
+                            f"#{record.hashtag}" if record.hashtag else 'No hashtag',
+                            record.analyzed_medias or 0,
+                            record.total_views or 0,
+                            record.total_likes or 0,
+                            record.total_comments or 0,
+                            record.total_shares or 0,
+                            record.total_followers or 0,
+                            record.total_accounts or 0,
+                            record.created_at.strftime('%Y-%m-%d')
+                        ])
+                
+                # Sheet 5: Daily Performance (aggregated across all clients)
+                ws_daily = wb.create_sheet("Daily Performance")
+                headers = ["Date", "Posts", "Views", "Likes", "Comments", "Shares", "Accounts", "Records"]
+                ws_daily.append(headers)
+                
+                # Aggregate by date for all agency clients
+                daily_stats = HashtagAnalytics.objects.filter(
+                    client__agency=agency,
+                    created_at__gte=timezone.now() - timedelta(days=30)
+                ).extra(select={'date': 'DATE(created_at)'}).values('date').annotate(
+                    total_posts=Sum('analyzed_medias'),
+                    total_views=Sum('total_views'),
+                    total_likes=Sum('total_likes'),
+                    total_comments=Sum('total_comments'),
+                    total_shares=Sum('total_shares'),
+                    total_accounts=Sum('total_accounts'),
+                    records_count=Count('id')
+                ).order_by('-date')
+                
+                for stat in daily_stats:
+                    ws_daily.append([
+                        stat['date'].strftime('%Y-%m-%d'),
+                        stat['total_posts'] or 0,
+                        stat['total_views'] or 0,
+                        stat['total_likes'] or 0,
+                        stat['total_comments'] or 0,
+                        stat['total_shares'] or 0,
+                        stat['total_accounts'] or 0,
+                        stat['records_count']
+                    ])
+                
+                # Sheet 6: Hashtag Breakdown (across all clients)
+                ws_hashtags = wb.create_sheet("Hashtag Breakdown")
+                headers = ["Hashtag", "Client", "Network", "Posts", "Views", "Avg Views", "Likes", "Accounts", "Last Update"]
+                ws_hashtags.append(headers)
+                
+                # Get hashtag performance for all agency clients
+                hashtag_stats = HashtagAnalytics.objects.filter(
+                    client__agency=agency,
+                    created_at__gte=timezone.now() - timedelta(days=30)
+                ).select_related('client').values('hashtag', 'client__name', 'social_network').annotate(
+                    total_posts=Sum('analyzed_medias'),
+                    total_views=Sum('total_views'),
+                    total_likes=Sum('total_likes'),
+                    total_accounts=Sum('total_accounts'),
+                    last_update=Max('created_at')
+                ).order_by('-total_views')
+                
+                for stat in hashtag_stats:
+                    avg_views = (stat['total_views'] / stat['total_posts']) if stat['total_posts'] > 0 else 0
+                    ws_hashtags.append([
+                        f"#{stat['hashtag']}" if stat['hashtag'] else 'No hashtag',
+                        stat['client__name'] or 'No client',
+                        dict(HashtagAnalytics.SOCIAL_NETWORK_CHOICES).get(stat['social_network'], stat['social_network']),
+                        stat['total_posts'] or 0,
+                        stat['total_views'] or 0,
+                        f"{avg_views:.1f}",
+                        stat['total_likes'] or 0,
+                        stat['total_accounts'] or 0,
+                        stat['last_update'].strftime('%Y-%m-%d') if stat['last_update'] else 'No date'
+                    ])
+                
+                # Sheet 7: Advanced Metrics (across all clients)
+                ws_advanced = wb.create_sheet("Advanced Metrics")
+                headers = ["Client", "Network", "Hashtag", "Avg Videos/Account", "Max Videos/Account", "Avg Views/Video", "Max Views/Video", 
+                          "Avg Views/Account", "Max Views/Account", "Avg Likes/Video", "Max Likes/Video", "Avg Likes/Account", "Max Likes/Account"]
+                ws_advanced.append(headers)
+                
+                # Get advanced metrics for all agency clients
+                advanced_records = HashtagAnalytics.objects.filter(
+                    client__agency=agency,
+                    created_at__gte=timezone.now() - timedelta(days=30)
+                ).select_related('client').order_by('-created_at')
+                
+                for record in advanced_records:
+                    ws_advanced.append([
+                        record.client.name if record.client else 'No client',
+                        record.get_social_network_display(),
+                        f"#{record.hashtag}" if record.hashtag else 'No hashtag',
+                        f"{(record.avg_videos_per_account or 0):.1f}",
+                        record.max_videos_per_account or 0,
+                        f"{(record.avg_views_per_video or 0):.1f}",
+                        record.max_views_per_video or 0,
+                        f"{(record.avg_views_per_account or 0):.1f}",
+                        record.max_views_per_account or 0,
+                        f"{(record.avg_likes_per_video or 0):.1f}",
+                        record.max_likes_per_video or 0,
+                        f"{(record.avg_likes_per_account or 0):.1f}",
+                        record.max_likes_per_account or 0
+                    ])
+            else:
+                # No role assigned - create empty sheet
+                ws_summary = wb.create_sheet("No Data")
+                ws_summary.append(["No cabinet role assigned", f"Generated: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}"])
+                ws_summary.append([])
+                ws_summary.append(["Please contact administrator to assign a role."])
+    
+    # Auto-adjust column widths
+    for sheet in wb.worksheets:
+        for column in sheet.columns:
+            max_length = 0
+            column_letter = get_column_letter(column[0].column)
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            sheet.column_dimensions[column_letter].width = adjusted_width
 
     from io import BytesIO
     buf = BytesIO()
@@ -690,6 +1357,8 @@ def export_excel(request):
     )
     resp["Content-Disposition"] = f"attachment; filename={filename}"
     return resp
+
+
 
 
 @login_required
@@ -768,6 +1437,54 @@ def client_data_view(request):
         for row in qs
     ]
     return JsonResponse({"client_name": client.name, "daily_stats": daily_stats})
+
+
+@login_required
+def client_dashboard(request):
+    """Client-specific dashboard with analytics breakdown by social networks"""
+    # Get client based on user role
+    client = None
+    if request.user.is_superuser:
+        client_id = request.GET.get("client_id")
+        if client_id:
+            client = Client.objects.filter(id=client_id).select_related("agency").first()
+    else:
+        # Non-superusers can only see their own client data
+        client = Client.objects.filter(user=request.user).select_related("agency").first()
+    
+    if not client:
+        return render(request, "cabinet/error.html", {"message": "Client not found or access denied."})
+    
+    # Initialize analytics service
+    analytics_service = AnalyticsService(client)
+    
+    # Get analytics data
+    hashtag_details = analytics_service.get_hashtag_details()
+    network_breakdown = analytics_service.get_network_breakdown(days=30)
+    combined_summary = analytics_service.get_combined_analytics_summary(days=30)
+    
+    # Get client hashtags
+    hashtags = list(analytics_service.get_client_hashtags().values_list("hashtag", flat=True))
+    
+    # Get daily and weekly stats for charts
+    daily_stats = analytics_service.get_daily_stats(days=7)
+    weekly_stats = analytics_service.get_weekly_stats(weeks=12)
+    
+    context = {
+        "client": client,
+        "hashtags": hashtags,
+        "details": hashtag_details,  # For backward compatibility
+        "network_breakdown": network_breakdown,
+        "combined_summary": combined_summary,
+        "daily_stats": daily_stats,
+        "weekly_stats": weekly_stats,
+        "kpi_total_views": combined_summary.total_views,
+        "kpi_total_videos": combined_summary.total_posts,
+        "kpi_avg_per_video": combined_summary.average_views,
+        "kpi_engagement_rate": combined_summary.engagement_rate,
+    }
+    
+    return render(request, "cabinet/client_dashboard.html", context)
 
 
 @login_required

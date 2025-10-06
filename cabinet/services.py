@@ -31,6 +31,55 @@ class HashtagDetail:
     last_snapshot_id: int
 
 
+@dataclass
+class SocialNetworkAnalytics:
+    """Analytics data for a specific social network"""
+    network: str
+    total_posts: int
+    total_views: int
+    total_likes: int
+    total_comments: int
+    total_shares: int
+    total_followers: int
+    average_views: float
+    engagement_rate: float
+    growth_rate: float
+    # Platform-specific metrics
+    instagram_stories_views: int = 0
+    instagram_reels_views: int = 0
+    youtube_subscribers: int = 0
+    youtube_watch_time: int = 0
+    tiktok_video_views: int = 0
+    tiktok_profile_views: int = 0
+    # Advanced account-level metrics
+    total_accounts: int = 0
+    avg_videos_per_account: float = 0.0
+    max_videos_per_account: int = 0
+    avg_views_per_video: float = 0.0
+    max_views_per_video: int = 0
+    avg_views_per_account: float = 0.0
+    max_views_per_account: int = 0
+    avg_likes_per_video: float = 0.0
+    max_likes_per_video: int = 0
+    avg_likes_per_account: float = 0.0
+    max_likes_per_account: int = 0
+
+
+@dataclass
+class ClientAnalyticsSummary:
+    """Combined analytics summary for a client across all networks"""
+    client: Client
+    networks: Dict[str, SocialNetworkAnalytics]
+    total_posts: int
+    total_views: int
+    total_likes: int
+    total_comments: int
+    total_shares: int
+    total_followers: int
+    average_views: float
+    engagement_rate: float
+
+
 class AnalyticsService:
     def __init__(self, client: Client) -> None:
         self.client = client
@@ -83,11 +132,19 @@ class AnalyticsService:
         return details
 
     def get_daily_stats(self, days: int = 7) -> List[Dict[str, Any]]:
+        """Get daily stats - combines hashtag analytics and manual analytics"""
         hashtags = list(self.get_client_hashtags().values_list("hashtag", flat=True))
         end = timezone.now()
         start = end - timezone.timedelta(days=days)
-        qs = (
-            HashtagAnalytics.objects.filter(hashtag__in=hashtags, created_at__gte=start, created_at__lte=end)
+        
+        # Get hashtag analytics (automatic)
+        hashtag_qs = (
+            HashtagAnalytics.objects.filter(
+                hashtag__in=hashtags, 
+                is_manual=False,
+                created_at__gte=start, 
+                created_at__lte=end
+            )
             .annotate(day=TruncDate("created_at"))
             .values("day")
             .annotate(
@@ -98,27 +155,81 @@ class AnalyticsService:
             )
             .order_by("day")
         )
-        out: List[Dict[str, Any]] = []
-        for row in qs:
+        
+        # Get manual analytics - each record as separate point on chart
+        manual_qs = (
+            HashtagAnalytics.objects.filter(
+                client=self.client,
+                is_manual=True,
+                created_at__gte=start,
+                created_at__lte=end
+            )
+            .annotate(day=TruncDate("created_at"))
+            .values("day")
+            .annotate(
+                total_views=Sum("total_views"),
+                total_videos=Sum("analyzed_medias"),
+                total_likes=Sum("total_likes"),
+                total_comments=Sum("total_comments"),
+            )
+            .order_by("day")
+        )
+        
+        # Merge both querysets by date
+        stats_dict: Dict[str, Dict[str, int]] = {}
+        
+        for row in hashtag_qs:
             d = row.get("day")
-            out.append(
-                {
-                    "date": d.strftime("%Y-%m-%d") if d else "",
-                    "day_name": d.strftime("%b %d") if d else "",
+            if d:
+                date_str = d.strftime("%Y-%m-%d")
+                stats_dict[date_str] = {
+                    "date": date_str,
+                    "day_name": d.strftime("%b %d"),
                     "total_views": int(row.get("total_views") or 0),
                     "total_videos": int(row.get("total_videos") or 0),
                     "total_likes": int(row.get("total_likes") or 0),
                     "total_comments": int(row.get("total_comments") or 0),
                 }
-            )
+        
+        for row in manual_qs:
+            d = row.get("day")
+            if d:
+                date_str = d.strftime("%Y-%m-%d")
+                if date_str in stats_dict:
+                    # Add to existing
+                    stats_dict[date_str]["total_views"] += int(row.get("total_views") or 0)
+                    stats_dict[date_str]["total_videos"] += int(row.get("total_videos") or 0)
+                    stats_dict[date_str]["total_likes"] += int(row.get("total_likes") or 0)
+                    stats_dict[date_str]["total_comments"] += int(row.get("total_comments") or 0)
+                else:
+                    # Create new entry
+                    stats_dict[date_str] = {
+                        "date": date_str,
+                        "day_name": d.strftime("%b %d"),
+                        "total_views": int(row.get("total_views") or 0),
+                        "total_videos": int(row.get("total_videos") or 0),
+                        "total_likes": int(row.get("total_likes") or 0),
+                        "total_comments": int(row.get("total_comments") or 0),
+                    }
+        
+        # Convert dict to sorted list
+        out = sorted(stats_dict.values(), key=lambda x: x["date"])
         return out
 
     def get_weekly_stats(self, weeks: int = 12) -> List[Dict[str, Any]]:
+        """Get weekly stats - combines hashtag analytics and manual analytics"""
         hashtags = list(self.get_client_hashtags().values_list("hashtag", flat=True))
         end = timezone.now()
         start = end - timezone.timedelta(weeks=weeks)
-        qs = (
-            HashtagAnalytics.objects.filter(hashtag__in=hashtags, created_at__gte=start, created_at__lte=end)
+        
+        # Get hashtag analytics (automatic)
+        hashtag_qs = (
+            HashtagAnalytics.objects.filter(
+                hashtag__in=hashtags,
+                is_manual=False,
+                created_at__gte=start, 
+                created_at__lte=end
+            )
             .annotate(week=TruncWeek("created_at"))
             .values("week")
             .annotate(
@@ -129,20 +240,278 @@ class AnalyticsService:
             )
             .order_by("week")
         )
-        out: List[Dict[str, Any]] = []
-        for row in qs:
+        
+        # Get manual analytics grouped by created_at
+        manual_qs = (
+            HashtagAnalytics.objects.filter(
+                client=self.client,
+                is_manual=True,
+                created_at__gte=start,
+                created_at__lte=end
+            )
+            .annotate(week=TruncWeek("created_at"))
+            .values("week")
+            .annotate(
+                total_views=Sum("total_views"),
+                total_videos=Sum("analyzed_medias"),
+                total_likes=Sum("total_likes"),
+                total_comments=Sum("total_comments"),
+            )
+            .order_by("week")
+        )
+        
+        # Merge both querysets by week
+        stats_dict: Dict[str, Dict[str, Any]] = {}
+        
+        for row in hashtag_qs:
             w = row.get("week")
-            out.append(
-                {
-                    "week": w.strftime("%Y-%W") if w else "",
-                    "label": w.strftime("%b %d") if w else "",
+            if w:
+                week_str = w.strftime("%Y-%W")
+                stats_dict[week_str] = {
+                    "week": week_str,
+                    "label": w.strftime("%b %d"),
                     "total_views": int(row.get("total_views") or 0),
                     "total_videos": int(row.get("total_videos") or 0),
                     "total_likes": int(row.get("total_likes") or 0),
                     "total_comments": int(row.get("total_comments") or 0),
                 }
-            )
+        
+        for row in manual_qs:
+            w = row.get("week")
+            if w:
+                week_str = w.strftime("%Y-%W")
+                if week_str in stats_dict:
+                    # Add to existing
+                    stats_dict[week_str]["total_views"] += int(row.get("total_views") or 0)
+                    stats_dict[week_str]["total_videos"] += int(row.get("total_videos") or 0)
+                    stats_dict[week_str]["total_likes"] += int(row.get("total_likes") or 0)
+                    stats_dict[week_str]["total_comments"] += int(row.get("total_comments") or 0)
+                else:
+                    # Create new entry
+                    stats_dict[week_str] = {
+                        "week": week_str,
+                        "label": w.strftime("%b %d"),
+                        "total_views": int(row.get("total_views") or 0),
+                        "total_videos": int(row.get("total_videos") or 0),
+                        "total_likes": int(row.get("total_likes") or 0),
+                        "total_comments": int(row.get("total_comments") or 0),
+                    }
+        
+        # Convert dict to sorted list
+        out = sorted(stats_dict.values(), key=lambda x: x["week"])
         return out
+
+    def get_manual_analytics_by_network(self, days: int = 30) -> Dict[str, SocialNetworkAnalytics]:
+        """Get manual analytics data grouped by social network - AGGREGATES cumulative metrics, takes latest for snapshots"""
+        from django.db.models import Sum, Avg, Max
+        
+        end = timezone.now()
+        start = end - timezone.timedelta(days=days)
+        
+        # Get manual analytics for this client and aggregate by network
+        # NOTE: We SUM cumulative metrics (posts, views, likes) but take LATEST for snapshot metrics (accounts, followers)
+        networks_data = HashtagAnalytics.objects.filter(
+            client=self.client,
+            is_manual=True,
+            created_at__gte=start,
+            created_at__lte=end
+        ).values('social_network').annotate(
+            total_posts=Sum('analyzed_medias'),
+            total_views=Sum('total_views'),
+            total_likes=Sum('total_likes'),
+            total_comments=Sum('total_comments'),
+            total_shares=Sum('total_shares'),
+            instagram_stories_views=Sum('instagram_stories_views'),
+            instagram_reels_views=Sum('instagram_reels_views'),
+            youtube_subscribers=Sum('youtube_subscribers'),
+            youtube_watch_time=Sum('youtube_watch_time'),
+            tiktok_video_views=Sum('tiktok_video_views'),
+            tiktok_profile_views=Sum('tiktok_profile_views'),
+            # Advanced metrics - average for avg fields, max for max fields
+            avg_videos_per_account=Avg('avg_videos_per_account'),
+            max_videos_per_account=Max('max_videos_per_account'),
+            avg_views_per_video=Avg('avg_views_per_video'),
+            max_views_per_video=Max('max_views_per_video'),
+            avg_views_per_account=Avg('avg_views_per_account'),
+            max_views_per_account=Max('max_views_per_account'),
+            avg_likes_per_video=Avg('avg_likes_per_video'),
+            max_likes_per_video=Max('max_likes_per_video'),
+            avg_likes_per_account=Avg('avg_likes_per_account'),
+            max_likes_per_account=Max('max_likes_per_account'),
+        )
+        
+        networks = {}
+        
+        for network_data in networks_data:
+            network_key = network_data['social_network']
+            total_posts = network_data['total_posts'] or 0
+            total_views = network_data['total_views'] or 0
+            
+            # Calculate average views and engagement rate from aggregated data
+            avg_views = (total_views / total_posts) if total_posts > 0 else 0
+            
+            total_engagement = (network_data['total_likes'] or 0) + (network_data['total_comments'] or 0) + (network_data['total_shares'] or 0)
+            engagement_rate = (total_engagement / total_views) if total_views > 0 else 0
+            
+            # Get latest record for snapshot metrics (accounts, followers, growth_rate)
+            # For total_accounts, get the latest record where total_accounts > 0
+            latest_record = HashtagAnalytics.objects.filter(
+                client=self.client,
+                is_manual=True,
+                social_network=network_key,
+                created_at__gte=start,
+                created_at__lte=end
+            ).order_by('-created_at').first()
+            
+            # For total_accounts, try to get a record with actual account count
+            accounts_record = HashtagAnalytics.objects.filter(
+                client=self.client,
+                is_manual=True,
+                social_network=network_key,
+                created_at__gte=start,
+                created_at__lte=end,
+                total_accounts__gt=0
+            ).order_by('-created_at').first()
+            
+            # Snapshot metrics from latest record
+            total_accounts = accounts_record.total_accounts if accounts_record else (latest_record.total_accounts if latest_record else 0)
+            total_followers = latest_record.total_followers if latest_record else 0
+            growth_rate = latest_record.growth_rate if latest_record else 0.0
+            
+            networks[network_key] = SocialNetworkAnalytics(
+                network=network_key,
+                total_posts=total_posts,
+                total_views=total_views,
+                total_likes=network_data['total_likes'] or 0,
+                total_comments=network_data['total_comments'] or 0,
+                total_shares=network_data['total_shares'] or 0,
+                total_followers=total_followers,
+                average_views=avg_views,
+                engagement_rate=engagement_rate,
+                growth_rate=growth_rate,
+                instagram_stories_views=network_data['instagram_stories_views'] or 0,
+                instagram_reels_views=network_data['instagram_reels_views'] or 0,
+                youtube_subscribers=network_data['youtube_subscribers'] or 0,
+                youtube_watch_time=network_data['youtube_watch_time'] or 0,
+                tiktok_video_views=network_data['tiktok_video_views'] or 0,
+                tiktok_profile_views=network_data['tiktok_profile_views'] or 0,
+                # Advanced metrics - snapshot from latest record
+                total_accounts=total_accounts,
+                avg_videos_per_account=network_data['avg_videos_per_account'] or 0.0,
+                max_videos_per_account=network_data['max_videos_per_account'] or 0,
+                avg_views_per_video=network_data['avg_views_per_video'] or 0.0,
+                max_views_per_video=network_data['max_views_per_video'] or 0,
+                avg_views_per_account=network_data['avg_views_per_account'] or 0.0,
+                max_views_per_account=network_data['max_views_per_account'] or 0,
+                avg_likes_per_video=network_data['avg_likes_per_video'] or 0.0,
+                max_likes_per_video=network_data['max_likes_per_video'] or 0,
+                avg_likes_per_account=network_data['avg_likes_per_account'] or 0.0,
+                max_likes_per_account=network_data['max_likes_per_account'] or 0,
+            )
+        
+        return networks
+
+    def get_combined_analytics_summary(self, days: int = 30) -> ClientAnalyticsSummary:
+        """Get combined analytics summary including both hashtag and manual data"""
+        # Get manual analytics by network
+        manual_networks = self.get_manual_analytics_by_network(days)
+        
+        # Get hashtag analytics (Instagram-focused)
+        hashtag_details = self.get_hashtag_details()
+        
+        # Combine Instagram hashtag data with manual Instagram data
+        if 'INSTAGRAM' in manual_networks:
+            # Add hashtag data to Instagram manual data
+            instagram_manual = manual_networks['INSTAGRAM']
+            for detail in hashtag_details:
+                instagram_manual.total_posts += detail.total_videos
+                instagram_manual.total_views += detail.total_views
+                instagram_manual.total_likes += detail.total_likes
+                instagram_manual.total_comments += detail.total_comments
+        else:
+            # Create Instagram entry from hashtag data
+            total_posts = sum(detail.total_videos for detail in hashtag_details)
+            total_views = sum(detail.total_views for detail in hashtag_details)
+            total_likes = sum(detail.total_likes for detail in hashtag_details)
+            total_comments = sum(detail.total_comments for detail in hashtag_details)
+            
+            if total_posts > 0:
+                manual_networks['INSTAGRAM'] = SocialNetworkAnalytics(
+                    network='INSTAGRAM',
+                    total_posts=total_posts,
+                    total_views=total_views,
+                    total_likes=total_likes,
+                    total_comments=total_comments,
+                    total_shares=0,  # Not available from hashtag data
+                    total_followers=0,  # Not available from hashtag data
+                    average_views=total_views / total_posts if total_posts > 0 else 0,
+                    engagement_rate=sum(detail.engagement_rate for detail in hashtag_details) / len(hashtag_details) if hashtag_details else 0,
+                    growth_rate=0,  # Not available from hashtag data
+                )
+        
+        # Calculate totals across all networks
+        total_posts = sum(network.total_posts for network in manual_networks.values())
+        total_views = sum(network.total_views for network in manual_networks.values())
+        total_likes = sum(network.total_likes for network in manual_networks.values())
+        total_comments = sum(network.total_comments for network in manual_networks.values())
+        total_shares = sum(network.total_shares for network in manual_networks.values())
+        total_followers = sum(network.total_followers for network in manual_networks.values())
+        
+        return ClientAnalyticsSummary(
+            client=self.client,
+            networks=manual_networks,
+            total_posts=total_posts,
+            total_views=total_views,
+            total_likes=total_likes,
+            total_comments=total_comments,
+            total_shares=total_shares,
+            total_followers=total_followers,
+            average_views=total_views / total_posts if total_posts > 0 else 0,
+            engagement_rate=(total_likes + total_comments + total_shares) / total_views if total_views > 0 else 0,
+        )
+
+    def get_network_breakdown(self, days: int = 30) -> List[Dict[str, Any]]:
+        """Get analytics breakdown by social network for dashboard display"""
+        summary = self.get_combined_analytics_summary(days)
+        
+        breakdown = []
+        for network_key, network_data in summary.networks.items():
+            network_display = dict(HashtagAnalytics.SOCIAL_NETWORK_CHOICES).get(network_key, network_key)
+            
+            breakdown.append({
+                'network': network_key,
+                'network_display': network_display,
+                'total_posts': network_data.total_posts,
+                'total_views': network_data.total_views,
+                'total_likes': network_data.total_likes,
+                'total_comments': network_data.total_comments,
+                'total_shares': network_data.total_shares,
+                'total_followers': network_data.total_followers,
+                'average_views': network_data.average_views,
+                'engagement_rate': network_data.engagement_rate,
+                'growth_rate': network_data.growth_rate,
+                # Platform-specific metrics
+                'instagram_stories_views': network_data.instagram_stories_views,
+                'instagram_reels_views': network_data.instagram_reels_views,
+                'youtube_subscribers': network_data.youtube_subscribers,
+                'youtube_watch_time': network_data.youtube_watch_time,
+                'tiktok_video_views': network_data.tiktok_video_views,
+                'tiktok_profile_views': network_data.tiktok_profile_views,
+                # Advanced account-level metrics
+                'total_accounts': network_data.total_accounts,
+                'avg_videos_per_account': network_data.avg_videos_per_account,
+                'max_videos_per_account': network_data.max_videos_per_account,
+                'avg_views_per_video': network_data.avg_views_per_video,
+                'max_views_per_video': network_data.max_views_per_video,
+                'avg_views_per_account': network_data.avg_views_per_account,
+                'max_views_per_account': network_data.max_views_per_account,
+                'avg_likes_per_video': network_data.avg_likes_per_video,
+                'max_likes_per_video': network_data.max_likes_per_video,
+                'avg_likes_per_account': network_data.avg_likes_per_account,
+                'max_likes_per_account': network_data.max_likes_per_account,
+            })
+        
+        return breakdown
 
 
 

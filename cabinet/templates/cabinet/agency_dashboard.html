@@ -122,7 +122,7 @@
           <th>Client</th>
           <th class="text-end">Views</th>
           <th class="text-end d-none d-md-table-cell">Avg views</th>
-          <th class="text-center d-none d-lg-table-cell">Accounts</th>
+          <th class="text-center">Accounts</th>
         </tr></thead>
         <tbody>
           {% for row in client_rows %}
@@ -139,13 +139,7 @@
             </td>
             <td class="text-end">{{ row.total_views }}</td>
             <td class="text-end d-none d-md-table-cell">{{ row.avg_views|floatformat:0 }}</td>
-            <td class="text-center d-none d-lg-table-cell">
-              {% if user.is_superuser %}
-                <a class="btn btn-sm btn-outline-secondary" href="{% url 'account_list' %}?client_id={{ row.client.id }}">Open</a>
-              {% else %}
-                —
-              {% endif %}
-            </td>
+            <td class="text-center">{{ row.total_accounts|default:0 }}</td>
           </tr>
           {% empty %}
           <tr><td colspan="2" class="d-md-none text-center text-muted">No clients</td></tr>
@@ -156,6 +150,101 @@
     </div>
   </div>
 </div>
+
+<!-- Client Analytics by Network -->
+{% if client_rows %}
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">
+      <i class="bi bi-diagram-3 me-2"></i>Client Analytics by Social Network
+    </h5>
+  </div>
+  <div class="card-body">
+    {% for row in client_rows %}
+    <div class="mb-4">
+      <h6 class="mb-3">
+        <i class="bi bi-person-circle me-2"></i>{{ row.client.name }}
+      </h6>
+      
+      <!-- Network Summary -->
+      {% if row.network_breakdown %}
+      <div class="row g-2 mb-3">
+        {% for network in row.network_breakdown %}
+        <div class="col-md-4 col-sm-6">
+          <div class="card border">
+            <div class="card-body p-3">
+              <h6 class="card-title mb-2">
+                {% if network.network == 'INSTAGRAM' %}
+                  <i class="bi bi-instagram me-1" style="color: #E1306C;"></i>{{ network.network_display }}
+                {% elif network.network == 'YOUTUBE' %}
+                  <i class="bi bi-youtube me-1" style="color: #FF0000;"></i>{{ network.network_display }}
+                {% elif network.network == 'TIKTOK' %}
+                  <i class="bi bi-music-note-beamed me-1" style="color: #000000;"></i>{{ network.network_display }}
+                {% else %}
+                  {{ network.network_display }}
+                {% endif %}
+              </h6>
+              <div class="row g-1">
+                <div class="col-6">
+                  <small class="text-muted d-block">Posts:</small>
+                  <strong>{{ network.total_posts|default:0 }}</strong>
+                </div>
+                <div class="col-6">
+                  <small class="text-muted d-block">Views:</small>
+                  <strong>{{ network.total_views|default:0|floatformat:0 }}</strong>
+                </div>
+                <div class="col-6">
+                  <small class="text-muted d-block">Avg Views:</small>
+                  <strong>{{ network.average_views|default:0|floatformat:0 }}</strong>
+                </div>
+                <div class="col-6">
+                  <small class="text-muted d-block">Engagement:</small>
+                  <strong>{{ network.engagement_rate|default:0|floatformat:2 }}%</strong>
+                </div>
+                <div class="col-12 mt-2">
+                  <small class="text-muted d-block">Accounts: {{ network.total_accounts|default:0 }}</small>
+                </div>
+              </div>
+              
+              <!-- Advanced Metrics Toggle -->
+              <button class="btn btn-sm btn-outline-secondary mt-2 w-100" type="button" 
+                      data-bs-toggle="collapse" data-bs-target="#advanced-{{ row.client.id }}-{{ network.network }}" 
+                      aria-expanded="false">
+                <i class="bi bi-chevron-down"></i> Advanced Metrics
+              </button>
+              
+              <div class="collapse mt-2" id="advanced-{{ row.client.id }}-{{ network.network }}">
+                <div class="border-top pt-2">
+                  <small class="text-muted d-block mb-1"><strong>Videos per Account:</strong></small>
+                  <small>Avg: {{ network.avg_videos_per_account|default:0|floatformat:1 }} | Max: {{ network.max_videos_per_account|default:0 }}</small>
+                  
+                  <small class="text-muted d-block mb-1 mt-2"><strong>Views per Video:</strong></small>
+                  <small>Avg: {{ network.avg_views_per_video|default:0|floatformat:0 }} | Max: {{ network.max_views_per_video|default:0|floatformat:0 }}</small>
+                  
+                  <small class="text-muted d-block mb-1 mt-2"><strong>Views per Account:</strong></small>
+                  <small>Avg: {{ network.avg_views_per_account|default:0|floatformat:0 }} | Max: {{ network.max_views_per_account|default:0|floatformat:0 }}</small>
+                  
+                  <small class="text-muted d-block mb-1 mt-2"><strong>Likes per Video:</strong></small>
+                  <small>Avg: {{ network.avg_likes_per_video|default:0|floatformat:1 }} | Max: {{ network.max_likes_per_video|default:0|floatformat:0 }}</small>
+                  
+                  <small class="text-muted d-block mb-1 mt-2"><strong>Likes per Account:</strong></small>
+                  <small>Avg: {{ network.avg_likes_per_account|default:0|floatformat:0 }} | Max: {{ network.max_likes_per_account|default:0|floatformat:0 }}</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-muted small mb-0">No network analytics available</p>
+      {% endif %}
+    </div>
+    <hr class="my-4">
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
 
 <!-- Recent Calculations -->
 <div class="row mt-4">
@@ -404,55 +493,6 @@
   </div>
 </div>
 
-<div class="row mt-4">
-  <div class="col-12">
-    <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Account Analytics</h5>
-        <a href="{% url 'account_list' %}" class="btn btn-sm btn-outline-secondary d-none d-md-inline-block">Open Accounts Table</a>
-      </div>
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-sm align-middle mb-0 mobile-table">
-            <thead>
-              <tr>
-                <th>Account</th>
-                <th class="text-end d-none d-sm-table-cell">Videos</th>
-                <th class="text-end">Views</th>
-                <th class="text-end d-none d-md-table-cell">Avg Views</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for a in accounts_analytics %}
-              <tr>
-                <td>
-                  @{{ a.username }}
-                  <div class="d-sm-none small text-muted mt-1">
-                    {{ a.videos }} videos
-                  </div>
-                </td>
-                <td class="text-end d-none d-sm-table-cell">{{ a.videos }}</td>
-                <td class="text-end">
-                  {{ a.views }}
-                  <div class="d-md-none small text-muted">
-                    Avg: {{ a.avg_views|floatformat:0 }}
-                  </div>
-                </td>
-                <td class="text-end d-none d-md-table-cell">{{ a.avg_views|floatformat:0 }}</td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="2" class="d-sm-none text-center text-muted">No data</td>
-                <td colspan="4" class="d-none d-sm-table-cell text-center text-muted">No data</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
