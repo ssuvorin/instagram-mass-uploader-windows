@@ -34,7 +34,8 @@ class ClientAnalyticsForm(forms.ModelForm):
             'avg_views_per_account', 'max_views_per_account',
             'avg_likes_per_video', 'max_likes_per_video',
             'avg_likes_per_account', 'max_likes_per_account',
-            'notes', 'created_at'
+            'notes'
+            # Note: created_at is explicitly defined above and will be handled separately
         ]
         widgets = {
             'client': forms.Select(attrs={
