@@ -42,6 +42,10 @@ class LocaleResolver:
                 return 'es'
             elif any(indicator in username for indicator in ['br', 'pt']):
                 return 'pt'
+            elif any(indicator in username for indicator in ['de', 'at', 'ch']):
+                return 'de'
+            elif any(indicator in username for indicator in ['gr', 'cy']):
+                return 'el'
         
         return 'ru'  # Default fallback
     
@@ -52,6 +56,10 @@ class LocaleResolver:
             return ['es', 'en', 'ru']
         elif locale == 'pt':
             return ['pt', 'en', 'ru']
+        elif locale == 'de':
+            return ['de', 'en', 'ru']
+        elif locale == 'el':
+            return ['el', 'en', 'ru']
         elif locale == 'en':
             return ['en', 'ru']
         else:

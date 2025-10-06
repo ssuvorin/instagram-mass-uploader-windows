@@ -1,0 +1,340 @@
+{% extends "uploader/yt_base.html" %}
+
+{% block title %}
+	{% if account %}
+		Edit {{ account.email }} - YouTube Account
+	{% else %}
+		Create YouTube Account - YouTube Shorts Uploader
+	{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+	/* YouTube-inspired styling */
+	:root {
+		--yt-red: #ff0000;
+		--yt-dark-red: #cc0000;
+		--yt-light-gray: #f9f9f9;
+		--yt-gray: #606060;
+		--yt-border: #e0e0e0;
+	}
+	
+	.btn-yt-primary {
+		background-color: var(--yt-red);
+		border-color: var(--yt-red);
+		color: white;
+	}
+	.btn-yt-primary:hover {
+		background-color: var(--yt-dark-red);
+		border-color: var(--yt-dark-red);
+		color: white;
+	}
+	
+	.form-section {
+		background: white;
+		border: 1px solid var(--yt-border);
+		border-radius: 8px;
+		padding: 1.5rem;
+		margin-bottom: 1.5rem;
+	}
+	
+	.section-title {
+		color: var(--yt-gray);
+		font-weight: 600;
+		margin-bottom: 1rem;
+		padding-bottom: 0.5rem;
+		border-bottom: 1px solid var(--yt-border);
+	}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+	<div>
+		<a href="{% if account %}{% url 'yt_account_detail' account.id %}{% else %}{% url 'yt_accounts_list' %}{% endif %}" class="text-decoration-none">
+			<i class="bi bi-arrow-left"></i> 
+			{% if account %}
+				Back to Account Details
+			{% else %}
+				Back to YouTube Accounts
+			{% endif %}
+		</a>
+		<h2 class="mb-0 mt-2">
+			<i class="bi bi-youtube text-danger me-2"></i>
+			{% if account %}
+				Edit {{ account.email }}
+			{% else %}
+				Create YouTube Account
+			{% endif %}
+		</h2>
+	</div>
+</div>
+
+<div class="row">
+	<div class="col-lg-8 mx-auto">
+		<form method="post">
+			{% csrf_token %}
+			
+			<!-- Basic Information -->
+			<div class="form-section">
+				<h5 class="section-title">
+					<i class="bi bi-person-circle me-2"></i>Basic Information
+				</h5>
+				
+				<div class="row">
+					<div class="col-md-6 mb-3">
+						<label for="{{ form.email.id_for_label }}" class="form-label">
+							Email <span class="text-danger">*</span>
+						</label>
+						{{ form.email }}
+						{% if form.email.errors %}
+						<div class="text-danger small">
+							{% for error in form.email.errors %}
+								<div>{{ error }}</div>
+							{% endfor %}
+						</div>
+						{% endif %}
+					</div>
+					<div class="col-md-6 mb-3">
+						<label for="{{ form.password.id_for_label }}" class="form-label">
+							Password <span class="text-danger">*</span>
+						</label>
+						{{ form.password }}
+						{% if form.password.errors %}
+						<div class="text-danger small">
+							{% for error in form.password.errors %}
+								<div>{{ error }}</div>
+							{% endfor %}
+						</div>
+						{% endif %}
+					</div>
+				</div>
+				
+				<div class="row">
+					<div class="col-md-6 mb-3">
+						<label for="{{ form.channel_name.id_for_label }}" class="form-label">Channel Name</label>
+						{{ form.channel_name }}
+						{% if form.channel_name.errors %}
+						<div class="text-danger small">
+							{% for error in form.channel_name.errors %}
+								<div>{{ error }}</div>
+							{% endfor %}
+						</div>
+						{% endif %}
+					</div>
+					<div class="col-md-6 mb-3">
+						<label for="{{ form.channel_id.id_for_label }}" class="form-label">Channel ID</label>
+						{{ form.channel_id }}
+						{% if form.channel_id.errors %}
+						<div class="text-danger small">
+							{% for error in form.channel_id.errors %}
+								<div>{{ error }}</div>
+							{% endfor %}
+						</div>
+						{% endif %}
+					</div>
+				</div>
+				
+				<div class="row">
+					<div class="col-md-6 mb-3">
+						<label for="{{ form.recovery_email.id_for_label }}" class="form-label">Recovery Email</label>
+						{{ form.recovery_email }}
+						{% if form.recovery_email.errors %}
+						<div class="text-danger small">
+							{% for error in form.recovery_email.errors %}
+								<div>{{ error }}</div>
+							{% endfor %}
+						</div>
+						{% endif %}
+					</div>
+					<div class="col-md-6 mb-3">
+						<label for="{{ form.phone_number.id_for_label }}" class="form-label">Phone Number</label>
+						{{ form.phone_number }}
+						{% if form.phone_number.errors %}
+						<div class="text-danger small">
+							{% for error in form.phone_number.errors %}
+								<div>{{ error }}</div>
+							{% endfor %}
+						</div>
+						{% endif %}
+					</div>
+				</div>
+			</div>
+			
+			<!-- Security & Authentication -->
+			<div class="form-section">
+				<h5 class="section-title">
+					<i class="bi bi-shield-lock me-2"></i>Security & Authentication
+				</h5>
+				
+				<div class="row">
+					<div class="col-md-6 mb-3">
+						<label for="{{ form.tfa_secret.id_for_label }}" class="form-label">2FA Secret</label>
+						{{ form.tfa_secret }}
+						<div class="form-text">TOTP secret for two-factor authentication</div>
+						{% if form.tfa_secret.errors %}
+						<div class="text-danger small">
+							{% for error in form.tfa_secret.errors %}
+								<div>{{ error }}</div>
+							{% endfor %}
+						</div>
+						{% endif %}
+					</div>
+					<div class="col-md-6 mb-3">
+						<label for="{{ form.status.id_for_label }}" class="form-label">Status</label>
+						{{ form.status }}
+						{% if form.status.errors %}
+						<div class="text-danger small">
+							{% for error in form.status.errors %}
+								<div>{{ error }}</div>
+							{% endfor %}
+						</div>
+						{% endif %}
+					</div>
+				</div>
+			</div>
+			
+			<!-- Technical Settings -->
+			<div class="form-section">
+				<h5 class="section-title">
+					<i class="bi bi-gear me-2"></i>Technical Settings
+				</h5>
+				
+				<div class="row">
+					<div class="col-md-6 mb-3">
+						<label for="{{ form.proxy.id_for_label }}" class="form-label">Proxy</label>
+						{{ form.proxy }}
+						<div class="form-text">Select a proxy for this account</div>
+						{% if form.proxy.errors %}
+						<div class="text-danger small">
+							{% for error in form.proxy.errors %}
+								<div>{{ error }}</div>
+							{% endfor %}
+						</div>
+						{% endif %}
+					</div>
+					<div class="col-md-6 mb-3">
+						<label for="{{ form.dolphin_profile_id.id_for_label }}" class="form-label">Dolphin Profile ID</label>
+						{{ form.dolphin_profile_id }}
+						<div class="form-text">Dolphin Anty browser profile ID</div>
+						{% if form.dolphin_profile_id.errors %}
+						<div class="text-danger small">
+							{% for error in form.dolphin_profile_id.errors %}
+								<div>{{ error }}</div>
+							{% endfor %}
+						</div>
+						{% endif %}
+					</div>
+				</div>
+				
+				<div class="row">
+					<div class="col-md-6 mb-3">
+						<label for="{{ form.locale.id_for_label }}" class="form-label">Locale</label>
+						{{ form.locale }}
+						<div class="form-text">Browser locale for this account</div>
+						{% if form.locale.errors %}
+						<div class="text-danger small">
+							{% for error in form.locale.errors %}
+								<div>{{ error }}</div>
+							{% endfor %}
+						</div>
+						{% endif %}
+					</div>
+				</div>
+			</div>
+			
+			<!-- Additional Information -->
+			<div class="form-section">
+				<h5 class="section-title">
+					<i class="bi bi-sticky me-2"></i>Additional Information
+				</h5>
+				
+				<div class="mb-3">
+					<label for="{{ form.notes.id_for_label }}" class="form-label">Notes</label>
+					{{ form.notes }}
+					<div class="form-text">Add any additional notes about this account</div>
+					{% if form.notes.errors %}
+					<div class="text-danger small">
+						{% for error in form.notes.errors %}
+							<div>{{ error }}</div>
+						{% endfor %}
+					</div>
+					{% endif %}
+				</div>
+			</div>
+			
+			<!-- Form Actions -->
+			<div class="d-flex justify-content-between">
+				<a href="{% if account %}{% url 'yt_account_detail' account.id %}{% else %}{% url 'yt_accounts_list' %}{% endif %}" class="btn btn-secondary">
+					<i class="bi bi-arrow-left"></i> Cancel
+				</a>
+				<button type="submit" class="btn btn-yt-primary">
+					<i class="bi bi-check-circle"></i> 
+					{% if account %}Update Account{% else %}Create Account{% endif %}
+				</button>
+			</div>
+		</form>
+	</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add form validation
+    const form = document.querySelector('form');
+    const emailField = document.querySelector('#{{ form.email.id_for_label }}');
+    const passwordField = document.querySelector('#{{ form.password.id_for_label }}');
+    
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // Validate email
+        if (!emailField.value.trim()) {
+            showFieldError(emailField, 'Email is required');
+            isValid = false;
+        } else if (!isValidEmail(emailField.value)) {
+            showFieldError(emailField, 'Please enter a valid email address');
+            isValid = false;
+        } else {
+            clearFieldError(emailField);
+        }
+        
+        // Validate password
+        if (!passwordField.value.trim()) {
+            showFieldError(passwordField, 'Password is required');
+            isValid = false;
+        } else {
+            clearFieldError(passwordField);
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+        }
+    });
+    
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+    
+    function showFieldError(field, message) {
+        clearFieldError(field);
+        field.classList.add('is-invalid');
+        
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'invalid-feedback';
+        errorDiv.textContent = message;
+        field.parentNode.appendChild(errorDiv);
+    }
+    
+    function clearFieldError(field) {
+        field.classList.remove('is-invalid');
+        const errorDiv = field.parentNode.querySelector('.invalid-feedback');
+        if (errorDiv) {
+            errorDiv.remove();
+        }
+    }
+});
+</script>
+{% endblock %}

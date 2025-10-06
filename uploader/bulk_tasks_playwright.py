@@ -816,10 +816,16 @@ def detect_and_fill_email_field(page, email_login):
                 'button[type="submit"]',
                 'button:has-text("Continue")',
                 'button:has-text("Продолжить")',
+                'button:has-text("Fortfahren")',  # DE
+                'button:has-text("Συνέχεια")',     # EL
                 'button:has-text("Submit")',
                 'button:has-text("Отправить")',
+                'button:has-text("Absenden")',     # DE
+                'button:has-text("Υποβολή")',      # EL
                 'div[role="button"]:has-text("Continue")',
                 'div[role="button"]:has-text("Продолжить")',
+                'div[role="button"]:has-text("Fortfahren")',  # DE
+                'div[role="button"]:has-text("Συνέχεια")',     # EL
             ]
             
             submit_button = None
@@ -1052,8 +1058,13 @@ def handle_success_dialog_and_close(page, video_file_path):
                 'svg[aria-label*="Закрыть" i]',
                 'svg[aria-label*="Close" i]',
                 'button:has-text("OK")',
+                'button:has-text("ОК")',
+                'button:has-text("Akzeptieren")',  # DE
+                'button:has-text("Αποδοχή")',      # EL
                 'button:has-text("Готово")',
                 'button:has-text("Done")',
+                'button:has-text("Fertig")',       # DE
+                'button:has-text("Τέλος")',        # EL
             ]
             
             close_button = None

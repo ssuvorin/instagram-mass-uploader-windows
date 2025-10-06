@@ -220,7 +220,19 @@ def run_cookie_robot_task(task_id):
     try:
         # Get the account
         account = task.account
-        log_message = f"Using account: {account.username}"
+        if hasattr(account, 'username'):
+            # Instagram account
+            account_name = account.username
+            account_type = "Instagram"
+        elif hasattr(account, 'email'):
+            # YouTube account
+            account_name = account.email
+            account_type = "YouTube"
+        else:
+            account_name = "Unknown"
+            account_type = "Unknown"
+            
+        log_message = f"Using {account_type} account: {account_name}"
         task.log += log_message + "\n"
         logger.info(log_message)
         
@@ -335,15 +347,28 @@ def run_cookie_robot_task(task_id):
                 dolphin_client = DolphinAnty(api_key=api_key, local_api_base=dolphin_api_host)
                 cookies_list = dolphin_client.get_cookies(account.dolphin_profile_id) or []
                 if cookies_list:
-                    from uploader.models import InstagramCookies
-                    InstagramCookies.objects.update_or_create(
-                        account=account,
-                        defaults={
-                            'cookies_data': cookies_list,
-                            'is_valid': True,
-                        }
-                    )
-                    logger.info(f"[COOKIES] Persisted {len(cookies_list)} cookies after robot run for {account.username}")
+                    if hasattr(account, 'username'):
+                        # Instagram account
+                        from uploader.models import InstagramCookies
+                        InstagramCookies.objects.update_or_create(
+                            account=account,
+                            defaults={
+                                'cookies_data': cookies_list,
+                                'is_valid': True,
+                            }
+                        )
+                        logger.info(f"[COOKIES] Persisted {len(cookies_list)} cookies after robot run for Instagram account {account.username}")
+                    elif hasattr(account, 'email'):
+                        # YouTube account
+                        from uploader.models import YouTubeCookies
+                        YouTubeCookies.objects.update_or_create(
+                            account=account,
+                            defaults={
+                                'cookies_data': cookies_list,
+                                'is_valid': True,
+                            }
+                        )
+                        logger.info(f"[COOKIES] Persisted {len(cookies_list)} cookies after robot run for YouTube account {account.email}")
         except Exception as ce:
             logger.warning(f"[COOKIES] Could not persist cookies after robot run: {ce}")
         

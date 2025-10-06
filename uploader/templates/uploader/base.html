@@ -97,8 +97,7 @@
         <nav class="navbar navbar-expand-xl">
             <div class="container">
                 <a class="navbar-brand app-logo" href="{% url 'dashboard' %}">
-                    <img src="{% static 'css/logo.svg' %}" alt="Logo" width="30" height="30" class="d-inline-block align-text-top me-2">
-                    Instagram Uploader
+                    Recomedia
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                     <span class="navbar-toggler-icon"></span>
@@ -107,12 +106,13 @@
                     <ul class="navbar-nav ms-auto scrollable-navbar">
                         {% if user.is_superuser %}
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle {% if active_tab == 'dashboard' or active_tab == 'tiktok_dashboard' %}active{% endif %}" href="#" id="dashDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <a class="nav-link dropdown-toggle {% if active_tab == 'dashboard' or active_tab == 'tiktok_dashboard' or active_tab == 'yt_shorts_dashboard' %}active{% endif %}" href="#" id="dashDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="bi bi-grid"></i> Dashboard
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="dashDropdown">
                                 <li><a class="dropdown-item {% if active_tab == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}"><i class="bi bi-instagram me-2"></i>Instagram</a></li>
                                 <li><a class="dropdown-item {% if active_tab == 'tiktok_dashboard' %}active{% endif %}" href="{% url 'tiktok_dashboard' %}"><i class="bi bi-music-note-beamed me-2"></i>TikTok</a></li>
+                                <li><a class="dropdown-item {% if active_tab == 'yt_shorts_dashboard' %}active{% endif %}" href="{% url 'yt_shorts_dashboard' %}"><i class="bi bi-youtube me-2 text-danger"></i>YouTube Shorts</a></li>
                             </ul>
                         </li>
                         {% endif %}
@@ -124,9 +124,9 @@
                                 <i class="bi bi-collection"></i> Content
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="contentDropdown">
-                                <li class="dropdown-header">Bulk Upload</li>
-                                <li><a class="dropdown-item" href="{% url 'bulk_upload_list' %}"><i class="bi bi-card-list me-2"></i>All Bulk Tasks</a></li>
-                                <li><a class="dropdown-item" href="{% url 'create_bulk_upload' %}"><i class="bi bi-plus-square me-2"></i>Create Bulk Task</a></li>
+                                <li class="dropdown-header">Instagram Bulk Upload</li>
+                                <li><a class="dropdown-item" href="{% url 'bulk_upload_list' %}"><i class="bi bi-card-list me-2"></i>All Instagram Bulk Tasks</a></li>
+                                <li><a class="dropdown-item" href="{% url 'create_bulk_upload' %}"><i class="bi bi-plus-square me-2"></i>Create Instagram Bulk Task</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li class="dropdown-header">Avatars</li>
                                 <li><a class="dropdown-item" href="{% url 'avatar_task_list' %}"><i class="bi bi-person-bounding-box me-2"></i>Avatar Tasks</a></li>
@@ -146,12 +146,13 @@
                                 <i class="bi bi-people"></i> Accounts & Proxies
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="accountsGroupDropdown">
-                                <li class="dropdown-header">Accounts</li>
-                                <li><a class="dropdown-item" href="{% url 'account_list' %}"><i class="bi bi-people me-2"></i>All Accounts</a></li>
+                                <li class="dropdown-header">Instagram Accounts</li>
+                                <li><a class="dropdown-item" href="{% url 'account_list' %}"><i class="bi bi-people me-2"></i>All Instagram Accounts</a></li>
                                 
-                                <li><a class="dropdown-item" href="{% url 'import_accounts' %}"><i class="bi bi-file-earmark-arrow-up me-2"></i>Import Accounts</a></li>
+                                <li><a class="dropdown-item" href="{% url 'import_accounts' %}"><i class="bi bi-file-earmark-arrow-up me-2"></i>Import Instagram Accounts</a></li>
                                 <li><a class="dropdown-item" href="{% url 'import_ua_cookies' %}"><i class="bi bi-file-earmark-arrow-up me-2"></i>Import UA+Cookies</a></li>
                                 <li><a class="dropdown-item" href="{% url 'import_accounts_bundle' %}"><i class="bi bi-box-arrow-in-down me-2"></i>Import Bundle</a></li>
+                                <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="{% url 'cabinet_dashboard' %}"><i class="bi bi-speedometer2 me-2"></i>Cabinet Dashboard</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li class="dropdown-header">Proxies</li>
@@ -188,7 +189,9 @@
                                 <li><a class="dropdown-item" href="{% url 'warmup_task_list' %}"><i class="bi bi-activity me-2"></i>Warmup Tasks</a></li>
                                 <li><a class="dropdown-item" href="{% url 'warmup_task_create' %}"><i class="bi bi-plus-square me-2"></i>Create Warmup Task</a></li>
                                 <li class="dropdown-header">Instagram</li>
+                                {% if user.is_superuser %}
                                 <li><a class="dropdown-item" href="{% url 'hashtag_analyzer' %}"><i class="bi bi-hash me-2"></i>Hashtag Analyzer</a></li>
+                                {% endif %}
                             </ul>
                         </li>
                         {% endif %}
@@ -211,6 +214,10 @@
                                 <li><a class="dropdown-item" href="{% url 'cabinet_manage_agencies' %}"><i class="bi bi-diagram-3 me-2"></i>Manage Agencies</a></li>
                                 <li><a class="dropdown-item" href="{% url 'cabinet_manage_clients' %}"><i class="bi bi-people me-2"></i>Manage Clients</a></li>
                                 <li><a class="dropdown-item" href="{% url 'cabinet_manage_hashtags' %}"><i class="bi bi-hash me-2"></i>Manage Hashtags</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li class="dropdown-header">Analytics</li>
+                                <li><a class="dropdown-item" href="{% url 'analytics_dashboard' %}"><i class="bi bi-graph-up me-2"></i>Analytics Dashboard</a></li>
+                                <li><a class="dropdown-item" href="{% url 'analytics_collector' %}"><i class="bi bi-download me-2"></i>Analytics Collector</a></li>
                                 {% endif %}
                             </ul>
                         </li>

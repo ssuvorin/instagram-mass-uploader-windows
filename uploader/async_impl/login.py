@@ -1530,16 +1530,28 @@ async def handle_email_verification_async(page, account_details):
                 'div[role="button"]:has-text("Continuar")',  # ES/PT
                 'div[role="button"]:has-text("Seguir")',      # PT
                 'div[role="button"]:has-text("Siguiente")',  # ES
+                'div[role="button"]:has-text("Weiter")',      # DE
+                'div[role="button"]:has-text("Fortfahren")',  # DE
+                'div[role="button"]:has-text("Επόμενο")',     # EL
+                'div[role="button"]:has-text("Συνέχεια")',    # EL
                 'button:has-text("Продолжить")',
                 'button:has-text("Continue")', 
                 'button:has-text("Continuar")',
                 'button:has-text("Seguir")',
                 'button:has-text("Siguiente")',
+                'button:has-text("Weiter")',      # DE
+                'button:has-text("Fortfahren")', # DE
+                'button:has-text("Επόμενο")',     # EL
+                'button:has-text("Συνέχεια")',    # EL
                 '[role="button"]:has(span:has-text("Продолжить"))',
                 '[role="button"]:has(span:has-text("Continue"))',
                 '[role="button"]:has(span:has-text("Continuar"))',
                 '[role="button"]:has(span:has-text("Seguir"))',
                 '[role="button"]:has(span:has-text("Siguiente"))',
+                '[role="button"]:has(span:has-text("Weiter"))',      # DE
+                '[role="button"]:has(span:has-text("Fortfahren"))',  # DE
+                '[role="button"]:has(span:has-text("Επόμενο"))',     # EL
+                '[role="button"]:has(span:has-text("Συνέχεια"))',    # EL
             ]
 
             submit_button = None

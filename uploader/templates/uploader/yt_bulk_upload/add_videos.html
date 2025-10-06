@@ -1,0 +1,93 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}Add Videos - {{ task.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .text-danger { color: #ff0000 !important; }
+    .btn-danger { background: linear-gradient(135deg, #ff0000, #cc0000); border: none; }
+    .btn-danger:hover { background: linear-gradient(135deg, #cc0000, #990000); }
+    .bg-danger { background: linear-gradient(135deg, #ff0000, #cc0000) !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="mb-4 fw-bold">
+            <i class="bi bi-camera-video text-danger me-2"></i>
+            Add Videos to Task
+        </h2>
+        <p class="text-muted">Upload Shorts video files for "{{ task.name }}"</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'yt_shorts_bulk_upload_detail' task_id=task.id %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Task
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">Upload Videos</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Select multiple video files to upload. Supported formats: MP4, MOV, AVI
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.videos.label }}</label>
+                        {{ form.videos }}
+                        <div class="form-text">{{ form.videos.help_text }}</div>
+                        {% if form.videos.errors %}
+                        <div class="text-danger">
+                            {% for error in form.videos.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <button type="submit" class="btn btn-danger btn-lg">
+                        <i class="bi bi-upload me-2"></i>Upload Videos
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Current Videos</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-2">Already uploaded: <strong>{{ task.videos.count }}</strong> videos</p>
+                {% if task.videos.count > 0 %}
+                <ul class="list-unstyled mb-0">
+                    {% for video in task.videos.all|slice:":5" %}
+                    <li class="mb-1">
+                        <i class="bi bi-check-circle text-success me-1"></i>
+                        <small>{{ video.video_file.name|slice:"20:" }}</small>
+                    </li>
+                    {% endfor %}
+                    {% if task.videos.count > 5 %}
+                    <li class="text-muted">
+                        <small>... and {{ task.videos.count|add:"-5" }} more</small>
+                    </li>
+                    {% endif %}
+                </ul>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

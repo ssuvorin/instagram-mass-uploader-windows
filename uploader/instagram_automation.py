@@ -338,8 +338,12 @@ class InstagramNavigator(InstagramAutomationBase):
             upload_indicators = [
                 'div:has-text("Создать")',
                 'div:has-text("Create")',
+                'div:has-text("Erstellen")',    # DE
+                'div:has-text("Δημιουργία")',    # EL
                 'div:has-text("Публикация")',
                 'div:has-text("Post")',
+                'div:has-text("Beitrag")',       # DE
+                'div:has-text("Δημοσίευση")',    # EL
                 'div:has-text("Выбрать")',
                 'div:has-text("Select")',
                 'button:has-text("Выбрать на компьютере")',
@@ -1245,10 +1249,18 @@ class InstagramUploader(InstagramAutomationBase):
             next_button = self.find_element([
                 'button:has-text("Далее")',
                 'button:has-text("Next")',
+                'button:has-text("Weiter")',      # DE
+                'button:has-text("Fortfahren")', # DE
+                'button:has-text("Επόμενο")',     # EL
+                'button:has-text("Συνέχεια")',    # EL
                 'button:has-text("Продолжить")',
                 'button:has-text("Continue")',
                 'div[role="button"]:has-text("Далее")',
                 'div[role="button"]:has-text("Next")',
+                'div[role="button"]:has-text("Weiter")',      # DE
+                'div[role="button"]:has-text("Fortfahren")',  # DE
+                'div[role="button"]:has-text("Επόμενο")',     # EL
+                'div[role="button"]:has-text("Συνέχεια")',    # EL
             ])
             
             if next_button:
@@ -1909,6 +1921,18 @@ class InstagramUploader(InstagramAutomationBase):
                 'div[role="button"]:has-text("Share")',
                 'div[role="button"]:has-text("Post")',
                 
+                # German buttons
+                'button:has-text("Teilen")',        # DE
+                'button:has-text("Veröffentlichen")', # DE
+                'div[role="button"]:has-text("Teilen")',        # DE
+                'div[role="button"]:has-text("Veröffentlichen")', # DE
+                
+                # Greek buttons
+                'button:has-text("Κοινοποίηση")',   # EL
+                'button:has-text("Δημοσίευση")',    # EL
+                'div[role="button"]:has-text("Κοινοποίηση")',   # EL
+                'div[role="button"]:has-text("Δημοσίευση")',    # EL
+                
                 # XPath selectors for better precision
                 '//button[contains(text(), "Поделиться")]',
                 '//button[contains(text(), "Опубликовать")]',
@@ -1927,6 +1951,10 @@ class InstagramUploader(InstagramAutomationBase):
                 'button[type="submit"]',
                 'button[type="button"]:has-text("Поделиться")',
                 'button[type="button"]:has-text("Share")',
+                'button[type="button"]:has-text("Teilen")',        # DE
+                'button[type="button"]:has-text("Veröffentlichen")', # DE
+                'button[type="button"]:has-text("Κοινοποίηση")',   # EL
+                'button[type="button"]:has-text("Δημοσίευση")',    # EL
             ]
             
             share_button = None
@@ -2109,10 +2137,16 @@ class InstagramUploader(InstagramAutomationBase):
                 'textarea[aria-label*="Write a caption" i]',
                 'input[placeholder*="Добавить местоположение" i]',
                 'input[placeholder*="Add location" i]',
+                'input[placeholder*="Ort hinzufügen" i]',     # DE
+                'input[placeholder*="Προσθήκη τοποθεσίας" i]', # EL
                 'button:has-text("Поделиться")',
                 'button:has-text("Share")',
+                'button:has-text("Teilen")',        # DE
+                'button:has-text("Κοινοποίηση")',   # EL
                 'button:has-text("Опубликовать")',
                 'button:has-text("Post")',
+                'button:has-text("Veröffentlichen")', # DE
+                'button:has-text("Δημοσίευση")',    # EL
             ]
             
             still_on_upload = False

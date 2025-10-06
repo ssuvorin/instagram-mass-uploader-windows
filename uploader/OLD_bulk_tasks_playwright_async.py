@@ -1623,18 +1623,32 @@ async def try_broader_upload_detection_async(page) -> bool:
         upload_indicators = [
             'div:has-text("Создать")',
             'div:has-text("Create")',
+            'div:has-text("Erstellen")',    # DE
+            'div:has-text("Δημιουργία")',    # EL
             'div:has-text("Публикация")',
             'div:has-text("Post")',
+            'div:has-text("Beitrag")',       # DE
+            'div:has-text("Δημοσίευση")',    # EL
             'div:has-text("Выбрать")',
             'div:has-text("Select")',
+            'div:has-text("Auswählen")',     # DE
+            'div:has-text("Επιλογή")',       # EL
             'button:has-text("Выбрать на компьютере")',
             'button:has-text("Select from computer")',
+            'button:has-text("Vom Computer auswählen")', # DE
+            'button:has-text("Επιλογή από υπολογιστή")',   # EL
             'button:has-text("Выбрать файлы")',
             'button:has-text("Select files")',
+            'button:has-text("Dateien auswählen")', # DE
+            'button:has-text("Επιλογή αρχείων")',   # EL
             'div[role="button"]:has-text("Создать")',
             'div[role="button"]:has-text("Create")',
+            'div[role="button"]:has-text("Erstellen")',    # DE
+            'div[role="button"]:has-text("Δημιουργία")',    # EL
             'div[role="button"]:has-text("Публикация")',
             'div[role="button"]:has-text("Post")',
+            'div[role="button"]:has-text("Beitrag")',       # DE
+            'div[role="button"]:has-text("Δημοσίευση")',    # EL
             'input[type="file"]',
             'input[accept*="video"]',
             'input[accept*="image"]',
@@ -2340,12 +2354,24 @@ async def click_next_button_async(page, step_number):
         next_button_selectors = [
             'button:has-text("Далее")',
             'button:has-text("Next")',
+            'button:has-text("Weiter")',      # DE
+            'button:has-text("Fortfahren")', # DE
+            'button:has-text("Επόμενο")',     # EL
+            'button:has-text("Συνέχεια")',    # EL
             'button:has-text("Продолжить")',
             'button:has-text("Continue")',
             'div[role="button"]:has-text("Далее")',
             'div[role="button"]:has-text("Next")',
+            'div[role="button"]:has-text("Weiter")',      # DE
+            'div[role="button"]:has-text("Fortfahren")',  # DE
+            'div[role="button"]:has-text("Επόμενο")',     # EL
+            'div[role="button"]:has-text("Συνέχεια")',    # EL
             '//button[contains(text(), "Далее")]',
             '//button[contains(text(), "Next")]',
+            '//button[contains(text(), "Weiter")]',      # DE
+            '//button[contains(text(), "Fortfahren")]',  # DE
+            '//button[contains(text(), "Επόμενο")]',     # EL
+            '//button[contains(text(), "Συνέχεια")]',    # EL
         ]
         
         next_button = None
@@ -3001,6 +3027,18 @@ async def click_share_button_async(page):
             'button:has-text("Поделиться")',
             'div[role="button"]:has-text("Share")',
             'button:has-text("Share")',
+            
+            # German selectors
+            'div[role="button"]:has-text("Teilen")',        # DE
+            'button:has-text("Teilen")',        # DE
+            'div[role="button"]:has-text("Veröffentlichen")', # DE
+            'button:has-text("Veröffentlichen")', # DE
+            
+            # Greek selectors
+            'div[role="button"]:has-text("Κοινοποίηση")',   # EL
+            'button:has-text("Κοινοποίηση")',   # EL
+            'div[role="button"]:has-text("Δημοσίευση")',    # EL
+            'button:has-text("Δημοσίευση")',    # EL
             
             # Alternative selectors
             'div[aria-label*="Поделиться"]',

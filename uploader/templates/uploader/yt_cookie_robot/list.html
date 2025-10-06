@@ -1,0 +1,145 @@
+{% extends "uploader/yt_base.html" %}
+
+{% block title %}Cookie Robot Tasks - YouTube Shorts{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">Cookie Robot Tasks</h2>
+        <p class="text-muted mb-0">Manage YouTube Cookie Robot tasks</p>
+    </div>
+    <div>
+        <a href="{% url 'yt_cookie_robot_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Create Task
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if page_obj %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Task ID</th>
+                        <th>YouTube Account</th>
+                        <th>Status</th>
+                        <th>URLs Count</th>
+                        <th>Settings</th>
+                        <th>Created</th>
+                        <th>Updated</th>
+                        <th width="120">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in page_obj %}
+                    <tr>
+                        <td>
+                            <span class="badge bg-light text-dark">#{{ task.id }}</span>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-envelope text-muted me-2"></i>
+                                <div>
+                                    <div class="fw-medium">{{ task.youtube_account.email }}</div>
+                                    {% if task.youtube_account.channel_name %}
+                                    <small class="text-muted">{{ task.youtube_account.channel_name }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if task.status == 'PENDING' %}
+                            <span class="badge bg-warning">Pending</span>
+                            {% elif task.status == 'RUNNING' %}
+                            <span class="badge bg-primary">Running</span>
+                            {% elif task.status == 'COMPLETED' %}
+                            <span class="badge bg-success">Completed</span>
+                            {% elif task.status == 'FAILED' %}
+                            <span class="badge bg-danger">Failed</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ task.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark">{{ task.urls|length }}</span>
+                        </td>
+                        <td>
+                            <div class="d-flex flex-column">
+                                {% if task.headless %}
+                                <small class="text-muted"><i class="bi bi-eye-slash"></i> Headless</small>
+                                {% endif %}
+                                {% if task.imageless %}
+                                <small class="text-muted"><i class="bi bi-image"></i> No Images</small>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ task.created_at|date:"M d, Y H:i" }}</small>
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ task.updated_at|date:"M d, Y H:i" }}</small>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{% url 'yt_cookie_robot_detail' task.id %}" class="btn btn-outline-primary" title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'yt_cookie_robot_delete' task.id %}" class="btn btn-outline-danger" title="Delete" onclick="return confirm('Are you sure?')">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="card-footer">
+            <nav aria-label="Cookie Robot tasks pagination">
+                <ul class="pagination pagination-sm mb-0 justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1">&laquo; First</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                    </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-robot fs-1 text-muted mb-3 d-block"></i>
+            <h5 class="text-muted">No Cookie Robot Tasks</h5>
+            <p class="text-muted">Create your first Cookie Robot task to get started.</p>
+            <a href="{% url 'yt_cookie_robot_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Create Task
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

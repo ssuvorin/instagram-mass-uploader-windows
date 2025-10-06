@@ -7,6 +7,9 @@ from .views_mod import views_photo
 from .views_mod import misc
 from .views_mod import hashtag
 from .views_mod import proxies
+from .views_mod import yt_shorts_bulk
+from .views_mod import analytics
+from .views_mod import analytics_collector
 
 urlpatterns = [
     # Dashboard
@@ -29,8 +32,12 @@ urlpatterns = [
     path('accounts/<int:account_id>/edit/', views.edit_account, name='edit_account'),
     path('accounts/<int:account_id>/change-proxy/', views.change_account_proxy, name='change_account_proxy'),
     path('accounts/<int:account_id>/create-profile/', views.create_dolphin_profile, name='create_dolphin_profile'),
+    path('accounts/<int:account_id>/save-profile-snapshot/', misc.save_dolphin_profile_snapshot, name='save_dolphin_profile_snapshot'),
     path('accounts/<int:account_id>/delete/', views.delete_account, name='delete_account'),
     path('accounts/bulk-change-proxy/', views.bulk_change_proxy, name='bulk_change_proxy'),
+    path('accounts/bulk-save-snapshots/', views.bulk_save_snapshots, name='bulk_save_snapshots'),
+    path('accounts/bulk-change-status/', views.bulk_change_status, name='bulk_change_status'),
+    path('accounts/bulk-delete/', views.bulk_delete_accounts, name='bulk_delete_accounts'),
     path('accounts/refresh-dolphin-proxies/', views.refresh_dolphin_proxies, name='refresh_dolphin_proxies'),
     
     # Proxies
@@ -175,4 +182,52 @@ urlpatterns += [
 
 urlpatterns += [
     # External worker API routes temporarily disabled
+]
+
+# YouTube Shorts Routes
+urlpatterns += [
+    # Dashboard
+    path('yt-shorts/', yt_shorts_bulk.yt_shorts_dashboard, name='yt_shorts_dashboard'),
+    
+    # Bulk Upload
+    path('yt-shorts/bulk-upload/', yt_shorts_bulk.yt_shorts_bulk_upload_list, name='yt_shorts_bulk_upload_list'),
+    path('yt-shorts/bulk-upload/create/', yt_shorts_bulk.create_yt_shorts_bulk_upload, name='create_yt_shorts_bulk_upload'),
+    path('yt-shorts/bulk-upload/<int:task_id>/', yt_shorts_bulk.yt_shorts_bulk_upload_detail, name='yt_shorts_bulk_upload_detail'),
+    path('yt-shorts/bulk-upload/<int:task_id>/add-videos/', yt_shorts_bulk.add_yt_shorts_bulk_videos, name='yt_shorts_add_bulk_videos'),
+    path('yt-shorts/bulk-upload/<int:task_id>/add-titles/', yt_shorts_bulk.add_yt_shorts_bulk_titles, name='yt_shorts_add_bulk_titles'),
+    path('yt-shorts/bulk-upload/<int:task_id>/start/', yt_shorts_bulk.start_yt_shorts_bulk_upload, name='start_yt_shorts_bulk_upload'),
+    path('yt-shorts/bulk-upload/<int:task_id>/delete/', yt_shorts_bulk.delete_yt_shorts_bulk_upload, name='delete_yt_shorts_bulk_upload'),
+    path('yt-shorts/bulk-upload/<int:task_id>/logs/', yt_shorts_bulk.get_yt_shorts_bulk_task_logs, name='yt_shorts_bulk_task_logs'),
+    path('yt-shorts/bulk-upload/video/<int:video_id>/edit/', yt_shorts_bulk.edit_yt_shorts_video_settings, name='edit_yt_shorts_video_settings'),
+    path('yt-shorts/bulk-upload/<int:task_id>/bulk-edit-videos/', yt_shorts_bulk.bulk_edit_yt_shorts_videos, name='bulk_edit_yt_shorts_videos'),
+    
+    # YouTube Shorts - Account Management
+    path('yt-shorts/accounts/', yt_shorts_bulk.yt_accounts_list, name='yt_accounts_list'),
+    path('yt-shorts/accounts/import/', yt_shorts_bulk.yt_accounts_import, name='yt_accounts_import'),
+    path('yt-shorts/accounts/create/', yt_shorts_bulk.yt_account_create, name='yt_account_create'),
+    path('yt-shorts/accounts/<int:account_id>/', yt_shorts_bulk.yt_account_detail, name='yt_account_detail'),
+    path('yt-shorts/accounts/<int:account_id>/edit/', yt_shorts_bulk.yt_account_edit, name='yt_account_edit'),
+    path('yt-shorts/accounts/<int:account_id>/delete/', yt_shorts_bulk.yt_account_delete, name='yt_account_delete'),
+    path('yt-shorts/accounts/<int:account_id>/create-dolphin-profile/', yt_shorts_bulk.create_yt_dolphin_profile, name='create_yt_dolphin_profile'),
+    path('yt-shorts/accounts/<int:account_id>/change-proxy/', yt_shorts_bulk.change_yt_account_proxy, name='change_yt_account_proxy'),
+    path('yt-shorts/accounts/<int:account_id>/available-proxies/', yt_shorts_bulk.get_available_proxies_for_yt_account, name='get_available_proxies_for_yt_account'),
+    path('yt-shorts/accounts/bulk-action/', yt_shorts_bulk.yt_accounts_bulk_action, name='yt_accounts_bulk_action'),
+    
+    # YouTube Cookie Robot
+    path('yt-shorts/cookie-robot/', yt_shorts_bulk.yt_cookie_robot_list, name='yt_cookie_robot_list'),
+    path('yt-shorts/cookie-robot/create/', yt_shorts_bulk.yt_cookie_robot_create, name='yt_cookie_robot_create'),
+    path('yt-shorts/cookie-robot/<int:task_id>/', yt_shorts_bulk.yt_cookie_robot_detail, name='yt_cookie_robot_detail'),
+    path('yt-shorts/cookie-robot/<int:task_id>/delete/', yt_shorts_bulk.yt_cookie_robot_delete, name='yt_cookie_robot_delete'),
+    
+    # Analytics Management
+    path('analytics/', analytics.analytics_dashboard, name='analytics_dashboard'),
+    path('analytics/add/', analytics.analytics_add, name='analytics_add'),
+    path('analytics/<int:pk>/', analytics.analytics_detail, name='analytics_detail'),
+    path('analytics/<int:pk>/edit/', analytics.analytics_edit, name='analytics_edit'),
+    path('analytics/<int:pk>/delete/', analytics.analytics_delete, name='analytics_delete'),
+    path('analytics/api/summary/', analytics.analytics_api_summary, name='analytics_api_summary'),
+    
+    # Analytics Collector
+    path('analytics/collector/', analytics_collector.analytics_collector, name='analytics_collector'),
+    path('analytics/collector/api/', analytics_collector.analytics_collector_api, name='analytics_collector_api'),
 ] 

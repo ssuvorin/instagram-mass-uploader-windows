@@ -935,7 +935,7 @@ def create_dolphin_profile(request, account_id):
     # Read UI params
     proxy_selection = request.POST.get('proxy_selection', 'locale_only') if request.method == 'POST' else 'locale_only'
     selected_locale = request.POST.get('profile_locale', 'ru_BY') if request.method == 'POST' else 'ru_BY'
-    if selected_locale != 'ru_BY':
+    if selected_locale not in ['ru_BY', 'en_IN', 'es_CL', 'es_MX', 'pt_BR', 'el_GR', 'de_DE']:
         selected_locale = 'ru_BY'
     
     try:
@@ -1037,6 +1037,52 @@ def create_dolphin_profile(request, account_id):
         messages.error(request, f'Error creating Dolphin profile: {str(e)}')
     
     return redirect('account_detail', account_id=account.id)
+
+
+@login_required
+def save_dolphin_profile_snapshot(request, account_id):
+    """Fetch and save snapshot of existing Dolphin profile"""
+    account = get_object_or_404(InstagramAccount, id=account_id)
+    
+    if not account.dolphin_profile_id:
+        messages.error(request, f'Account {account.username} does not have a Dolphin profile!')
+        return redirect('account_detail', account_id=account.id)
+    
+    try:
+        # Initialize Dolphin API
+        dolphin_token = os.environ.get('DOLPHIN_API_TOKEN')
+        if not dolphin_token:
+            messages.error(request, 'Dolphin API token not configured in environment!')
+            return redirect('account_detail', account_id=account.id)
+        
+        from bot.src.instagram_uploader.dolphin_anty import DolphinAnty
+        dolphin = DolphinAnty(dolphin_token)
+        
+        if not dolphin.authenticate():
+            messages.error(request, 'Failed to authenticate with Dolphin Anty API!')
+            return redirect('account_detail', account_id=account.id)
+        
+        logger.info(f"[SNAPSHOT] Fetching profile data from Dolphin API for profile {account.dolphin_profile_id}")
+        
+        # Use service function to save snapshot
+        from uploader.services.dolphin_snapshot import save_existing_profile_snapshot
+        
+        success = save_existing_profile_snapshot(account, dolphin)
+        
+        if success:
+            messages.success(request, f'Successfully saved Dolphin profile snapshot for {account.username}!')
+            logger.info(f"[SNAPSHOT] Successfully saved snapshot for account {account.username}")
+        else:
+            messages.error(request, f'Failed to save Dolphin profile snapshot for {account.username}. Check logs for details.')
+            logger.error(f"[SNAPSHOT] Failed to save snapshot for account {account.username}")
+    
+    except Exception as e:
+        logger.error(f"[SNAPSHOT] Error saving Dolphin profile snapshot for account {account.username}: {str(e)}")
+        messages.error(request, f'Error saving Dolphin profile snapshot: {str(e)}')
+    
+    return redirect('account_detail', account_id=account.id)
+
+
 def edit_video_location_mentions(request, video_id):
     """Edit location and mentions for a specific video"""
     video = get_object_or_404(BulkVideo, id=video_id)

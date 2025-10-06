@@ -10,6 +10,11 @@ from instgrapi_func.services.code_providers import CompositeProvider, TOTPProvid
 @require_http_methods(["GET", "POST"])
 def hashtag_analyzer(request):
     """UI: Select account and enter hashtag to compute total views."""
+    # Only superusers can access hashtag analyzer
+    if not request.user.is_superuser:
+        messages.error(request, 'Доступ запрещен. Только администраторы могут использовать анализатор хэштегов.')
+        return redirect('dashboard')
+    
     accounts = InstagramAccount.objects.all().order_by('username')
     context = {
         'accounts': accounts,

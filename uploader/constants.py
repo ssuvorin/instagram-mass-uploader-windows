@@ -485,10 +485,14 @@ class InstagramSelectors:
         # CSS селекторы
         'button:has-text("Готово")',
         'button:has-text("Done")',
+        'button:has-text("Fertig")',       # DE
+        'button:has-text("Τέλος")',        # EL
         'button:has-text("Продолжить")',
         'button:has-text("Continue")',
         'div[role="button"]:has-text("Готово")',
         'div[role="button"]:has-text("Done")',
+        'div[role="button"]:has-text("Fertig")',       # DE
+        'div[role="button"]:has-text("Τέλος")',        # EL
         
         # Расширенные XPath
         "//div[@role='button' and text()='Done']",
@@ -507,8 +511,12 @@ class InstagramSelectors:
         # Fallback селекторы
         'button:has-text("OK")',
         'button:has-text("ОК")',
+        'button:has-text("Akzeptieren")',  # DE
+        'button:has-text("Αποδοχή")',      # EL
         '[aria-label*="OK"]',
-        '[aria-label*="ОК"]'
+        '[aria-label*="ОК"]',
+        '[aria-label*="Akzeptieren"]',    # DE
+        '[aria-label*="Αποδοχή"]'         # EL
     ]
     
     # Кнопка "Далее" - SEMANTIC VERSION (без динамических CSS-классов)
@@ -518,24 +526,42 @@ class InstagramSelectors:
         'button:has-text("Next")',
         'button:has-text("Продолжить")',
         'button:has-text("Continue")',
+        'button:has-text("Weiter")',
+        'button:has-text("Fortfahren")',
+        'button:has-text("Επόμενο")',
+        'button:has-text("Συνέχεια")',
         'div[role="button"]:has-text("Далее")',
         'div[role="button"]:has-text("Next")',
         'div[role="button"]:has-text("Продолжить")',
         'div[role="button"]:has-text("Continue")',
+        'div[role="button"]:has-text("Weiter")',
+        'div[role="button"]:has-text("Fortfahren")',
+        'div[role="button"]:has-text("Επόμενο")',
+        'div[role="button"]:has-text("Συνέχεια")',
         
         # [TARGET] ПРИОРИТЕТ 2: Роли и табиндексы (семантические)
         '[role="button"]:has-text("Далее")',
         '[role="button"][tabindex="0"]:has-text("Далее")',
         '[role="button"]:has-text("Next")',
         '[role="button"][tabindex="0"]:has-text("Next")',
+        '[role="button"]:has-text("Weiter")',
+        '[role="button"][tabindex="0"]:has-text("Weiter")',
+        '[role="button"]:has-text("Επόμενο")',
+        '[role="button"][tabindex="0"]:has-text("Επόμενο")',
         '[role="button"]:has-text("Продолжить")',
         '[role="button"]:has-text("Continue")',
+        '[role="button"]:has-text("Fortfahren")',
+        '[role="button"]:has-text("Συνέχεια")',
         
         # [TARGET] ПРИОРИТЕТ 3: Aria-label атрибуты
         'button[aria-label*="Далее"]',
         'button[aria-label*="Next"]',
         'button[aria-label*="Продолжить"]',
         'button[aria-label*="Continue"]',
+        'button[aria-label*="Weiter"]',
+        'button[aria-label*="Fortfahren"]',
+        'button[aria-label*="Επόμενο"]',
+        'button[aria-label*="Συνέχεια"]',
         '[role="button"][aria-label*="Далее"]',
         '[role="button"][aria-label*="Next"]',
         
@@ -544,10 +570,18 @@ class InstagramSelectors:
         '//button[contains(text(), "Next")]',
         '//button[contains(text(), "Продолжить")]',
         '//button[contains(text(), "Continue")]',
+        '//button[contains(text(), "Weiter")]',
+        '//button[contains(text(), "Fortfahren")]',
+        '//button[contains(text(), "Επόμενο")]',
+        '//button[contains(text(), "Συνέχεια")]',
         '//div[@role="button" and contains(text(), "Далее")]',
         '//div[@role="button" and contains(text(), "Next")]',
         '//div[@role="button" and contains(text(), "Продолжить")]',
         '//div[@role="button" and contains(text(), "Continue")]',
+        '//div[@role="button" and contains(text(), "Weiter")]',
+        '//div[@role="button" and contains(text(), "Fortfahren")]',
+        '//div[@role="button" and contains(text(), "Επόμενο")]',
+        '//div[@role="button" and contains(text(), "Συνέχεια")]',
         
         # [TARGET] ПРИОРИТЕТ 5: XPath с span (для сложной структуры)
         '//button[.//span[contains(text(), "Далее")]]',
@@ -556,6 +590,10 @@ class InstagramSelectors:
         '//div[@role="button" and .//span[contains(text(), "Next")]]',
         '//button[.//span[contains(text(), "Продолжить")]]',
         '//div[@role="button" and .//span[contains(text(), "Продолжить")]]',
+        '//button[.//span[contains(text(), "Weiter")]]',
+        '//div[@role="button" and .//span[contains(text(), "Weiter")]]',
+        '//button[.//span[contains(text(), "Επόμενο")]]',
+        '//div[@role="button" and .//span[contains(text(), "Επόμενο")]]',
         
         # [TARGET] ПРИОРИТЕТ 6: Универсальные семантические селекторы
         'div[role="button"][tabindex="0"]',  # Любая кнопка с табиндексом
@@ -605,10 +643,16 @@ class InstagramSelectors:
         'button[type="submit"]',
         'input[type="submit"]',
         'button:has-text("Confirm")',
+        'button:has-text("Bestätigen")',   # DE
+        'button:has-text("Επιβεβαίωση")',  # EL
         'button:has-text("Continue")',
         'button:has-text("Submit")',
         'button:has-text("Next")',
+        'button:has-text("Weiter")',
+        'button:has-text("Επόμενο")',
         'button:has-text("Продолжить")',
+        'button:has-text("Fortfahren")',
+        'button:has-text("Συνέχεια")',
         'button:has-text("Подтвердить")',
         'button:has-text("Отправить")',
         'button[aria-label*="confirm" i]',
@@ -1005,10 +1049,18 @@ class InstagramSelectors:
         'button:has-text("Share")',
         'button:has-text("Compartir")',
         'button:has-text("Compartilhar")',
+        'button:has-text("Teilen")',
+        'button:has-text("Veröffentlichen")',
+        'button:has-text("Κοινοποίηση")',
+        'button:has-text("Δημοσίευση")',
         'button:has-text("Publish")',
         'div[role="button"]:has-text("Share")',
         'div[role="button"]:has-text("Compartir")',
         'div[role="button"]:has-text("Compartilhar")',
+        'div[role="button"]:has-text("Teilen")',
+        'div[role="button"]:has-text("Veröffentlichen")',
+        'div[role="button"]:has-text("Κοινοποίηση")',
+        'div[role="button"]:has-text("Δημοσίευση")',
         'textarea[aria-label*="Напишите подпись"]',
         'textarea[placeholder*="Напишите подпись"]',
         'textarea[aria-label*="Write a caption"]',
@@ -1021,9 +1073,17 @@ class InstagramSelectors:
         'button:has-text("Next")',
         'button:has-text("Siguiente")',
         'button:has-text("Avançar")',
+        'button:has-text("Weiter")',
+        'button:has-text("Fortfahren")',
+        'button:has-text("Επόμενο")',
+        'button:has-text("Συνέχεια")',
         '[aria-label*="Обрезка"]',
         '[aria-label*="Crop"]',
-        'button:has-text("Обрезка")'
+        '[aria-label*="Zuschnitt"]',
+        '[aria-label*="περικοπή"]',
+        'button:has-text("Обрезка")',
+        'button:has-text("Zuschnitt")',
+        'button:has-text("περικοπή")'
     ]
     
     # Диалоги успешной загрузки

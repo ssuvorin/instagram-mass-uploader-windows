@@ -16,6 +16,12 @@ class InstagramSelectors:
         'a[role="link"]:has(span:has-text("Crear"))',
         'a[role="link"]:has(svg[aria-label*="Nova publicação"])',
         'a[role="link"]:has(span:has-text("Criar"))',
+        # German high-priority
+        'a[role="link"]:has(svg[aria-label*="Neuer Beitrag"])',
+        'a[role="link"]:has(span:has-text("Erstellen"))',
+        # Greek high-priority
+        'a[role="link"]:has(svg[aria-label*="Νέα δημοσίευση"])',
+        'a[role="link"]:has(span:has-text("Δημιουργία"))',
         'button:has(svg[aria-label*="Новая публикация"])',
         'button:has(svg[aria-label*="New post"])',
         'button:has(svg[aria-label*="Nueva publicación"])',
@@ -39,6 +45,10 @@ class InstagramSelectors:
         'svg[aria-label*="Nova publicação"]',
         'svg[aria-label*="Crear"]',
         'svg[aria-label*="Criar"]',
+        'svg[aria-label*="Neuer Beitrag"]',
+        'svg[aria-label*="Erstellen"]',
+        'svg[aria-label*="Νέα δημοσίευση"]',
+        'svg[aria-label*="Δημιουργία"]',
         
         # [TARGET] ПРИОРИТЕТ 2: Родительские элементы с семантическими SVG
         'a:has(svg[aria-label="Новая публикация"])',
@@ -71,6 +81,14 @@ class InstagramSelectors:
         'a:has(span:has-text("Criar"))',
         'div[role="button"]:has-text("Criar")',
         'button:has-text("Criar")',
+        'span:has-text("Erstellen")',
+        'a:has(span:has-text("Erstellen"))',
+        'div[role="button"]:has-text("Erstellen")',
+        'button:has-text("Erstellen")',
+        'span:has-text("Δημιουργία")',
+        'a:has(span:has-text("Δημιουργία"))',
+        'div[role="button"]:has-text("Δημιουργία")',
+        'button:has-text("Δημιουργία")',
         
         # [TARGET] ПРИОРИТЕТ 4: XPath семантические
         '//svg[@aria-label="Новая публикация"]',
@@ -82,6 +100,10 @@ class InstagramSelectors:
         '//svg[contains(@aria-label, "Nova publicação")]',
         '//svg[contains(@aria-label, "Crear")]',
         '//svg[contains(@aria-label, "Criar")]',
+        '//svg[contains(@aria-label, "Neuer Beitrag")]',
+        '//svg[contains(@aria-label, "Erstellen")]',
+        '//svg[contains(@aria-label, "Νέα δημοσίευση")]',
+        '//svg[contains(@aria-label, "Δημιουργία")]',
         '//a[.//svg[@aria-label="Новая публикация"]]',
         '//button[.//svg[@aria-label="Новая публикация"]]',
         '//div[@role="button" and .//svg[@aria-label="Новая публикация"]]',
@@ -103,6 +125,14 @@ class InstagramSelectors:
         '//a[.//span[contains(text(), "Criar")]]',
         '//div[@role="button" and contains(text(), "Criar")]',
         '//button[contains(text(), "Criar")]',
+        '//span[contains(text(), "Erstellen")]',
+        '//a[.//span[contains(text(), "Erstellen")]]',
+        '//div[@role="button" and contains(text(), "Erstellen")]',
+        '//button[contains(text(), "Erstellen")]',
+        '//span[contains(text(), "Δημιουργία")]',
+        '//a[.//span[contains(text(), "Δημιουργία")]]',
+        '//div[@role="button" and contains(text(), "Δημιουργία")]',
+        '//button[contains(text(), "Δημιουργία")]',
         
         # [TARGET] ПРИОРИТЕТ 6: Универсальные aria-label
         '[aria-label*="Создать"]',
@@ -113,14 +143,22 @@ class InstagramSelectors:
         '[aria-label*="Nova publicação"]',
         '[aria-label*="Crear"]',
         '[aria-label*="Criar"]',
+        '[aria-label*="Neuer Beitrag"]',
+        '[aria-label*="Erstellen"]',
+        '[aria-label*="Νέα δημοσίευση"]',
+        '[aria-label*="Δημιουργία"]',
         'button[aria-label*="Создать"]',
         'button[aria-label*="Create"]',
         'button[aria-label*="Crear"]',
         'button[aria-label*="Criar"]',
+        'button[aria-label*="Erstellen"]',
+        'button[aria-label*="Δημιουργία"]',
         'a[aria-label*="Создать"]',
         'a[aria-label*="Create"]',
         'a[aria-label*="Crear"]',
         'a[aria-label*="Criar"]',
+        'a[aria-label*="Erstellen"]',
+        'a[aria-label*="Δημιουργία"]',
     ]
     
     # Post option selectors - SEMANTIC APPROACH
@@ -130,6 +168,10 @@ class InstagramSelectors:
         'svg[aria-label*="Публикация"]',
         'svg[aria-label*="Post"]',
         'svg[aria-label="Post"]',
+        'svg[aria-label*="Beitrag"]',
+        'svg[aria-label="Beitrag"]',
+        'svg[aria-label*="Δημοσίευση"]',
+        'svg[aria-label="Δημοσίευση"]',
         'a:has(svg[aria-label="Публикация"])',
         'div[role="menuitem"]:has(svg[aria-label="Публикация"])',
         'div[role="button"]:has(svg[aria-label="Публикация"])',
@@ -146,12 +188,18 @@ class InstagramSelectors:
         'div[role="menuitem"]:has(span:has-text("Post"))',
         'div[role="button"]:has(span:has-text("Post"))',
         'span:has-text("Post")',
+        'span:has-text("Beitrag")',
+        'span:has-text("Δημοσίευση")',
         
         # [TARGET] ПРИОРИТЕТ 3: XPath семантические
         '//svg[@aria-label="Публикация"]',
         '//svg[contains(@aria-label, "Публикация")]',
         '//svg[contains(@aria-label, "Post")]',
         '//svg[@aria-label="Post"]',
+        '//svg[contains(@aria-label, "Beitrag")]',
+        '//svg[@aria-label="Beitrag"]',
+        '//svg[contains(@aria-label, "Δημοσίευση")]',
+        '//svg[@aria-label="Δημοσίευση"]',
         '//a[.//svg[@aria-label="Публикация"]]',
         '//div[@role="menuitem" and .//svg[@aria-label="Публикация"]]',
         '//a[.//svg[@aria-label="Post"]]',
@@ -164,12 +212,18 @@ class InstagramSelectors:
         '//a[.//span[text()="Post"]]',
         '//div[@role="menuitem" and .//span[text()="Post"]]',
         '//span[text()="Post"]',
+        '//span[text()="Beitrag"]',
+        '//span[text()="Δημοσίευση"]',
         
         # [TARGET] ПРИОРИТЕТ 5: Универсальные
         '[aria-label*="Публикация"]',
         '[aria-label*="Post"]',
+        '[aria-label*="Beitrag"]',
+        '[aria-label*="Δημοσίευση"]',
         'button[aria-label*="Публикация"]',
         'button[aria-label*="Post"]',
+        'button[aria-label*="Beitrag"]',
+        'button[aria-label*="Δημοσίευση"]',
     ]
     
     # File input selectors - SEMANTIC APPROACH
@@ -225,6 +279,20 @@ class InstagramSelectors:
         'div[role="button"]:has-text("Selecionar do dispositivo")',
         'button:has-text("Selecionar arquivos")',
         'div[role="button"]:has-text("Selecionar arquivos")',
+        # German file selection buttons
+        'button:has-text("Vom Computer auswählen")',
+        'div[role="button"]:has-text("Vom Computer auswählen")',
+        'button:has-text("Dateien auswählen")',
+        'div[role="button"]:has-text("Dateien auswählen")',
+        'button:has-text("Vom Gerät auswählen")',
+        'div[role="button"]:has-text("Vom Gerät auswählen")',
+        # Greek file selection buttons
+        'button:has-text("Επιλογή από τον υπολογιστή")',
+        'div[role="button"]:has-text("Επιλογή από τον υπολογιστή")',
+        'button:has-text("Επιλογή αρχείων")',
+        'div[role="button"]:has-text("Επιλογή αρχείων")',
+        'button:has-text("Επιλογή από τη συσκευή")',
+        'div[role="button"]:has-text("Επιλογή από τη συσκευή")',
         
         # [TARGET] ПРИОРИТЕТ 5: XPath тексты
         '//button[contains(text(), "Выбрать на компьютере")]',
@@ -251,20 +319,42 @@ class InstagramSelectors:
         '//div[@role="button" and contains(text(), "Selecionar arquivos")]',
         '//button[contains(text(), "Selecionar do dispositivo")]',
         '//div[@role="button" and contains(text(), "Selecionar do dispositivo")]',
+        # German XPath selectors
+        '//button[contains(text(), "Vom Computer auswählen")]',
+        '//div[@role="button" and contains(text(), "Vom Computer auswählen")]',
+        '//button[contains(text(), "Dateien auswählen")]',
+        '//div[@role="button" and contains(text(), "Dateien auswählen")]',
+        '//button[contains(text(), "Vom Gerät auswählen")]',
+        '//div[@role="button" and contains(text(), "Vom Gerät auswählen")]',
+        # Greek XPath selectors
+        '//button[contains(text(), "Επιλογή από τον υπολογιστή")]',
+        '//div[@role="button" and contains(text(), "Επιλογή από τον υπολογιστή")]',
+        '//button[contains(text(), "Επιλογή αρχείων")]',
+        '//div[@role="button" and contains(text(), "Επιλογή αρχείων")]',
+        '//button[contains(text(), "Επιλογή από τη συσκευή")]',
+        '//div[@role="button" and contains(text(), "Επιλογή από τη συσκευή")]',
         
         # [TARGET] ПРИОРИТЕТ 6: Aria-label семантические
         'button[aria-label*="Выбрать"]',
         'button[aria-label*="Select"]',
         'button[aria-label*="Choose"]',
+        'button[aria-label*="Auswählen"]',
+        'button[aria-label*="Επιλογή"]',
         '[aria-label*="Выбрать файл"]',
         '[aria-label*="Select file"]',
         '[aria-label*="Choose file"]',
+        '[aria-label*="Datei auswählen"]',
+        '[aria-label*="Επιλογή αρχείου"]',
         
         # [TARGET] ПРИОРИТЕТ 7: Drag and drop области
         'div:has-text("Перетащите фото и видео сюда")',
         'div:has-text("Drag photos and videos here")',
+        'div:has-text("Ziehen Sie Fotos und Videos hierher")',
+        'div:has-text("Σύρετε φωτογραφίες και βίντεο εδώ")',
         'div[role="button"]:has-text("Перетащите")',
         'div[role="button"]:has-text("Drag")',
+        'div[role="button"]:has-text("Ziehen")',
+        'div[role="button"]:has-text("Σύρετε")',
         
         # [TARGET] ПРИОРИТЕТ 8: Универсальные файловые input
         'input[type="file"]:not([style*="display: none"]):not([hidden])',
@@ -300,6 +390,16 @@ class InstagramSelectors:
         'div[role="button"]:has-text("Accept")',
         'button:has-text("Принять")',
         'div[role="button"]:has-text("Принять")',
+        # German accept buttons
+        'button:has-text("Akzeptieren")',
+        'div[role="button"]:has-text("Akzeptieren")',
+        'button:has-text("Alle akzeptieren")',
+        'div[role="button"]:has-text("Alle akzeptieren")',
+        # Greek accept buttons
+        'button:has-text("Αποδοχή")',
+        'div[role="button"]:has-text("Αποδοχή")',
+        'button:has-text("Αποδοχή όλων")',
+        'div[role="button"]:has-text("Αποδοχή όλων")',
     ]
     
     # Reels dialog specific accept buttons (more specific than OK_ACCEPT_BUTTONS)
@@ -313,6 +413,12 @@ class InstagramSelectors:
         'button:has-text("ОК")',
         'div[role="button"]:has-text("OK")',
         'div[role="button"]:has-text("ОК")',
+        # German Reels dialog accept buttons
+        'button:has-text("Akzeptieren")',
+        'div[role="button"]:has-text("Akzeptieren")',
+        # Greek Reels dialog accept buttons
+        'button:has-text("Αποδοχή")',
+        'div[role="button"]:has-text("Αποδοχή")',
         # Селекторы внутри диалога Reels
         'div[role="dialog"] button:last-child',
         'div[role="dialog"] div[role="button"]:last-child',
@@ -321,6 +427,10 @@ class InstagramSelectors:
         '//div[@role="dialog"]//button[contains(text(), "Aceitar")]',
         '//div[@role="dialog"]//button[contains(text(), "OK")]',
         '//div[@role="dialog"]//button[contains(text(), "ОК")]',
+        # German XPath for Reels dialog
+        '//div[@role="dialog"]//button[contains(text(), "Akzeptieren")]',
+        # Greek XPath for Reels dialog
+        '//div[@role="dialog"]//button[contains(text(), "Αποδοχή")]',
     ]
     
     # Next button selectors - SEMANTIC APPROACH
@@ -339,6 +449,16 @@ class InstagramSelectors:
         'div[role="button"]:has-text("Siguiente")',
         'button:has-text("Avançar")',
         'div[role="button"]:has-text("Avançar")',
+        # German next buttons
+        'button:has-text("Weiter")',
+        'div[role="button"]:has-text("Weiter")',
+        'button:has-text("Fortfahren")',
+        'div[role="button"]:has-text("Fortfahren")',
+        # Greek next buttons
+        'button:has-text("Επόμενο")',
+        'div[role="button"]:has-text("Επόμενο")',
+        'button:has-text("Συνέχεια")',
+        'div[role="button"]:has-text("Συνέχεια")',
         
         # [TARGET] ПРИОРИТЕТ 2: XPath текстовые
         '//button[contains(text(), "Далее")]',
@@ -347,20 +467,40 @@ class InstagramSelectors:
         '//button[contains(text(), "Continue")]',
         '//div[@role="button" and contains(text(), "Далее")]',
         '//div[@role="button" and contains(text(), "Next")]',
+        # German XPath next buttons
+        '//button[contains(text(), "Weiter")]',
+        '//button[contains(text(), "Fortfahren")]',
+        '//div[@role="button" and contains(text(), "Weiter")]',
+        '//div[@role="button" and contains(text(), "Fortfahren")]',
+        # Greek XPath next buttons
+        '//button[contains(text(), "Επόμενο")]',
+        '//button[contains(text(), "Συνέχεια")]',
+        '//div[@role="button" and contains(text(), "Επόμενο")]',
+        '//div[@role="button" and contains(text(), "Συνέχεια")]',
         
         # [TARGET] ПРИОРИТЕТ 3: Aria-label
         'button[aria-label*="Далее"]',
         'button[aria-label*="Next"]',
         'button[aria-label*="Продолжить"]',
         'button[aria-label*="Continue"]',
+        'button[aria-label*="Weiter"]',
+        'button[aria-label*="Fortfahren"]',
+        'button[aria-label*="Επόμενο"]',
+        'button[aria-label*="Συνέχεια"]',
         '[role="button"][aria-label*="Далее"]',
         '[role="button"][aria-label*="Next"]',
+        '[role="button"][aria-label*="Weiter"]',
+        '[role="button"][aria-label*="Επόμενο"]',
         
         # [TARGET] ПРИОРИТЕТ 4: Универсальные роли
         '[role="button"]:has-text("Далее")',
         '[role="button"][tabindex="0"]:has-text("Далее")',
         '[role="button"]:has-text("Next")',
         '[role="button"][tabindex="0"]:has-text("Next")',
+        '[role="button"]:has-text("Weiter")',
+        '[role="button"][tabindex="0"]:has-text("Weiter")',
+        '[role="button"]:has-text("Επόμενο")',
+        '[role="button"][tabindex="0"]:has-text("Επόμενο")',
     ]
 
     # Keywords to validate Next/Continue buttons by text content (lowercase)
@@ -368,7 +508,9 @@ class InstagramSelectors:
         'далее', 'продолжить',
         'next', 'continue',
         'siguiente', 'continuar',
-        'avançar'
+        'avançar',
+        'weiter', 'fortfahren',
+        'επόμενο', 'συνέχεια'
     ]
     
     # Share button selectors - SEMANTIC APPROACH
@@ -388,6 +530,16 @@ class InstagramSelectors:
         'div[role="button"]:has-text("Compartir")',
         'button:has-text("Compartilhar")',
         'div[role="button"]:has-text("Compartilhar")',
+        # German share buttons
+        'button:has-text("Teilen")',
+        'div[role="button"]:has-text("Teilen")',
+        'button:has-text("Veröffentlichen")',
+        'div[role="button"]:has-text("Veröffentlichen")',
+        # Greek share buttons
+        'button:has-text("Κοινοποίηση")',
+        'div[role="button"]:has-text("Κοινοποίηση")',
+        'button:has-text("Δημοσίευση")',
+        'div[role="button"]:has-text("Δημοσίευση")',
         
         # [TARGET] ПРИОРИТЕТ 2: XPath текстовые
         '//button[contains(text(), "Поделиться")]',
@@ -396,14 +548,30 @@ class InstagramSelectors:
         '//button[contains(text(), "Post")]',
         '//div[@role="button" and contains(text(), "Поделиться")]',
         '//div[@role="button" and contains(text(), "Share")]',
+        # German XPath share buttons
+        '//button[contains(text(), "Teilen")]',
+        '//button[contains(text(), "Veröffentlichen")]',
+        '//div[@role="button" and contains(text(), "Teilen")]',
+        '//div[@role="button" and contains(text(), "Veröffentlichen")]',
+        # Greek XPath share buttons
+        '//button[contains(text(), "Κοινοποίηση")]',
+        '//button[contains(text(), "Δημοσίευση")]',
+        '//div[@role="button" and contains(text(), "Κοινοποίηση")]',
+        '//div[@role="button" and contains(text(), "Δημοσίευση")]',
         
         # [TARGET] ПРИОРИТЕТ 3: Aria-label
         'button[aria-label*="Поделиться"]',
         'button[aria-label*="Share"]',
         'button[aria-label*="Опубликовать"]',
         'button[aria-label*="Post"]',
+        'button[aria-label*="Teilen"]',
+        'button[aria-label*="Veröffentlichen"]',
+        'button[aria-label*="Κοινοποίηση"]',
+        'button[aria-label*="Δημοσίευση"]',
         '[role="button"][aria-label*="Поделиться"]',
         '[role="button"][aria-label*="Share"]',
+        '[role="button"][aria-label*="Teilen"]',
+        '[role="button"][aria-label*="Κοινοποίηση"]',
     ]
     
     # Done button in mentions/location dialogs (RU/EN/ES/PT)
@@ -428,6 +596,18 @@ class InstagramSelectors:
         'button[aria-label*="Listo"]',
         'div[aria-label*="Concluído"]',
         'button[aria-label*="Concluído"]',
+        # German done buttons
+        '//div[text()="Fertig"]',
+        'div[role="button"]:has-text("Fertig")',
+        'button:has-text("Fertig")',
+        'div[aria-label*="Fertig"]',
+        'button[aria-label*="Fertig"]',
+        # Greek done buttons
+        '//div[text()="Τέλος"]',
+        'div[role="button"]:has-text("Τέλος")',
+        'button:has-text("Τέλος")',
+        'div[aria-label*="Τέλος"]',
+        'button[aria-label*="Τέλος"]',
     ]
     
     # Caption textarea selectors - SEMANTIC APPROACH (multilingual)
@@ -441,6 +621,14 @@ class InstagramSelectors:
         'textarea[aria-label*="descripción"]',
         'textarea[aria-label*="Escreva uma descrição"]',
         'textarea[aria-label*="descrição"]',
+        # German caption textarea
+        'textarea[aria-label*="Schreibe eine Bildunterschrift"]',
+        'textarea[aria-label*="Bildunterschrift"]',
+        'textarea[aria-label*="Beschreibung"]',
+        # Greek caption textarea
+        'textarea[aria-label*="Γράψτε μια λεζάντα"]',
+        'textarea[aria-label*="λεζάντα"]',
+        'textarea[aria-label*="περιγραφή"]',
         
         # [TARGET] ПРИОРИТЕТ 2: Contenteditable div (все языки)
         'div[contenteditable="true"][aria-label*="подпись"]',
@@ -449,6 +637,14 @@ class InstagramSelectors:
         'div[contenteditable="true"][aria-label*="descripción"]',
         'div[contenteditable="true"][aria-label*="Escreva uma descrição"]',
         'div[contenteditable="true"][aria-label*="descrição"]',
+        # German contenteditable div
+        'div[contenteditable="true"][aria-label*="Schreibe eine Bildunterschrift"]',
+        'div[contenteditable="true"][aria-label*="Bildunterschrift"]',
+        'div[contenteditable="true"][aria-label*="Beschreibung"]',
+        # Greek contenteditable div
+        'div[contenteditable="true"][aria-label*="Γράψτε μια λεζάντα"]',
+        'div[contenteditable="true"][aria-label*="λεζάντα"]',
+        'div[contenteditable="true"][aria-label*="περιγραφή"]',
         
         # [TARGET] ПРИОРИТЕТ 3: Placeholder атрибуты
         'textarea[placeholder*="Напишите подпись"]',
@@ -459,12 +655,26 @@ class InstagramSelectors:
         'div[contenteditable="true"][placeholder*="caption"]',
         'div[contenteditable="true"][placeholder*="descripción"]',
         'div[contenteditable="true"][placeholder*="descrição"]',
+        # German placeholder attributes
+        'textarea[placeholder*="Schreibe eine Bildunterschrift"]',
+        'textarea[placeholder*="Bildunterschrift"]',
+        'div[contenteditable="true"][placeholder*="Bildunterschrift"]',
+        # Greek placeholder attributes
+        'textarea[placeholder*="Γράψτε μια λεζάντα"]',
+        'textarea[placeholder*="λεζάντα"]',
+        'div[contenteditable="true"][placeholder*="λεζάντα"]',
         
         # [TARGET] ПРИОРИТЕТ 4: Дополнительные испанские/португальские варианты
         'textarea[aria-label*="Escribe un pie de foto"]',
         'textarea[placeholder*="Escribe un pie de foto"]',
         'textarea[aria-label*="Escreva uma legenda"]',
         'textarea[placeholder*="Escreva uma legenda"]',
+        # German additional variants
+        'textarea[aria-label*="Schreibe eine Legende"]',
+        'textarea[placeholder*="Schreibe eine Legende"]',
+        # Greek additional variants
+        'textarea[aria-label*="Γράψτε μια επιγραφή"]',
+        'textarea[placeholder*="Γράψτε μια επιγραφή"]',
         
         # [TARGET] ПРИОРИТЕТ 5: XPath (все языки)
         '//textarea[contains(@aria-label, "подпись")]',
@@ -475,6 +685,16 @@ class InstagramSelectors:
         '//div[@contenteditable="true" and contains(@aria-label, "caption")]',
         '//div[@contenteditable="true" and contains(@aria-label, "descripción")]',
         '//div[@contenteditable="true" and contains(@aria-label, "descrição")]',
+        # German XPath selectors
+        '//textarea[contains(@aria-label, "Bildunterschrift")]',
+        '//textarea[contains(@aria-label, "Beschreibung")]',
+        '//div[@contenteditable="true" and contains(@aria-label, "Bildunterschrift")]',
+        '//div[@contenteditable="true" and contains(@aria-label, "Beschreibung")]',
+        # Greek XPath selectors
+        '//textarea[contains(@aria-label, "λεζάντα")]',
+        '//textarea[contains(@aria-label, "περιγραφή")]',
+        '//div[@contenteditable="true" and contains(@aria-label, "λεζάντα")]',
+        '//div[@contenteditable="true" and contains(@aria-label, "περιγραφή")]',
         
         # [TARGET] ПРИОРИТЕТ 6: Роль textbox (универсальный)
         'div[role="textbox"][contenteditable="true"]',
@@ -512,6 +732,12 @@ class InstagramSelectors:
             'div[role="button"]:has-text("Iniciar sesión")',
             'button:has-text("Entrar")',
             'div[role="button"]:has-text("Entrar")',
+            # German login buttons
+            'button:has-text("Anmelden")',
+            'div[role="button"]:has-text("Anmelden")',
+            # Greek login buttons
+            'button:has-text("Σύνδεση")',
+            'div[role="button"]:has-text("Σύνδεση")',
         ]
     }
     
@@ -525,6 +751,12 @@ class InstagramSelectors:
         'input[placeholder*="код"]',
         'input[placeholder*="code"]',
         'input[placeholder*="código" i]',
+        # German 2FA input
+        'input[aria-label*="Code" i]',
+        'input[placeholder*="Code" i]',
+        # Greek 2FA input
+        'input[aria-label*="κωδικός" i]',
+        'input[placeholder*="κωδικός" i]',
         'input[maxlength="6"]',
         'input[pattern="[0-9]*"]',
     ]
@@ -554,6 +786,16 @@ class InstagramSelectors:
         'div:has-text("Reels compartilhados")',
         'div[role="dialog"][aria-label*="Post compartilhado" i]',
         '[role="dialog"][aria-label*="Post compartilhado" i]',
+        # German success messages
+        'div:has-text("Ihr Beitrag wurde geteilt")',
+        'div:has-text("Beitrag geteilt")',
+        'div:has-text("Video veröffentlicht")',
+        'div:has-text("Erfolgreich veröffentlicht")',
+        # Greek success messages
+        'div:has-text("Η δημοσίευσή σας κοινοποιήθηκε")',
+        'div:has-text("Δημοσίευση κοινοποιήθηκε")',
+        'div:has-text("Βίντεο δημοσιεύτηκε")',
+        'div:has-text("Δημοσιεύτηκε επιτυχώς")',
         
         # XPath selectors for success messages
         '//div[contains(text(), "Ваша публикация опубликована")]',
@@ -564,6 +806,14 @@ class InstagramSelectors:
         '//div[contains(text(), "Seu reel foi compartilhado")]',
         '//div[contains(text(), "Reels compartilhados")]',
         '//*[@role="dialog" and contains(@aria-label, "Post compartilhado")]',
+        # German XPath success messages
+        '//div[contains(text(), "Ihr Beitrag wurde geteilt")]',
+        '//div[contains(text(), "Beitrag geteilt")]',
+        '//div[contains(text(), "Video veröffentlicht")]',
+        # Greek XPath success messages
+        '//div[contains(text(), "Η δημοσίευσή σας κοινοποιήθηκε")]',
+        '//div[contains(text(), "Δημοσίευση κοινοποιήθηκε")]',
+        '//div[contains(text(), "Βίντεο δημοσιεύτηκε")]',
     ]
     
     # Error dialog selectors
@@ -576,6 +826,14 @@ class InstagramSelectors:
         'div:has-text("Что-то пошло не так")',
         'div:has-text("Algo salió mal")',
         'div:has-text("Algo deu errado")',
+        # German error messages
+        'div:has-text("Fehler")',
+        'div:has-text("Fehlgeschlagen")',
+        'div:has-text("Etwas ist schiefgelaufen")',
+        # Greek error messages
+        'div:has-text("Σφάλμα")',
+        'div:has-text("Αποτυχία")',
+        'div:has-text("Κάτι πήγε στραβά")',
     ]
 
     # Reels dialog detection selectors (RU/EN/ES/PT)
@@ -585,6 +843,12 @@ class InstagramSelectors:
         'div:has(h2:has-text("Ahora las publicaciones de video se pueden compartir como Reels"))',
         'div:has(h2:has-text("Las publicaciones con video ahora se comparten como reels"))',
         'div:has(h2:has-text("Agora as publicações de vídeo podem ser compartilhadas como Reels"))',
+        # German Reels dialog
+        'div:has(h2:has-text("Video-Beiträge können jetzt als Reels-Videos geteilt werden"))',
+        'div:has(h2:has-text("Reels-Videos"))',
+        # Greek Reels dialog
+        'div:has(h2:has-text("Τα βίντεο δημοσιεύσεις μπορούν τώρα να κοινοποιηθούν ως βίντεο Reels"))',
+        'div:has(h2:has-text("βίντεο Reels"))',
         'div:has(h2:has-text("видео Reels"))',
         'div:has(h2:has-text("Reels videos"))',
         'div:has(h2:has-text("videos de Reels"))',
@@ -599,6 +863,18 @@ class InstagramSelectors:
         'div:has(span:has-text("Now video publications"))',
         'div:has(span:has-text("Ahora las publicaciones de video"))',
         'div:has(span:has-text("Agora as publicações de vídeo"))',
+        # German span texts
+        'div:has(span:has-text("Video-Beiträge können jetzt"))',
+        'div:has(span:has-text("öffentliches Konto"))',
+        'div:has(span:has-text("Reels-Videos erstellen"))',
+        'div:has(span:has-text("Audiospur"))',
+        'div:has(span:has-text("Remix erstellen"))',
+        # Greek span texts
+        'div:has(span:has-text("Τα βίντεο δημοσιεύσεις μπορούν τώρα"))',
+        'div:has(span:has-text("δημόσιος λογαριασμός"))',
+        'div:has(span:has-text("δημιουργία βίντεο Reels"))',
+        'div:has(span:has-text("ήχος"))',
+        'div:has(span:has-text("δημιουργία remix"))',
         'div:has(span:has-text("общедоступный аккаунт"))',
         'div:has(span:has-text("public account"))',
         'div:has(span:has-text("cuenta pública"))',
@@ -623,6 +899,12 @@ class InstagramSelectors:
         'div[role="dialog"]:has-text("ahora se comparten como reels")',
         'div[role="dialog"]:has-text("As publicações de vídeo")',
         'div[role="dialog"]:has-text("agora são compartilhadas como reels")',
+        # German dialog texts
+        'div[role="dialog"]:has-text("Video-Beiträge können jetzt")',
+        'div[role="dialog"]:has-text("als Reels-Videos geteilt werden")',
+        # Greek dialog texts
+        'div[role="dialog"]:has-text("Τα βίντεο δημοσιεύσεις μπορούν τώρα")',
+        'div[role="dialog"]:has-text("να κοινοποιηθούν ως βίντεο Reels")',
         # Icon-based hints
         'div:has(img[src*="reels_nux_icon.png"])',
         'div:has(img[alt*="reels"])',
@@ -637,12 +919,16 @@ class InstagramSelectors:
         'div[aria-label*="Create"]',
         'div[aria-label*="Crear"]',
         'div[aria-label*="Criar"]',
+        'div[aria-label*="Erstellen"]',
+        'div[aria-label*="Δημιουργία"]',
         'div[aria-label*="Publicar"]',
         'div[aria-label*="Publicação"]',
         'textarea[aria-label*="подпись"]',
         'textarea[aria-label*="caption"]',
         'textarea[aria-label*="Escribe un pie de foto"]',
         'textarea[aria-label*="Escreva uma legenda"]',
+        'textarea[aria-label*="Schreibe eine Bildunterschrift"]',
+        'textarea[aria-label*="Γράψτε μια λεζάντα"]',
     ]
 
     # Location input selectors (RU/EN/ES/PT)
@@ -663,6 +949,14 @@ class InstagramSelectors:
         # Portuguese
         'input[placeholder*="Adicionar localização" i]',
         'input[aria-label*="localização" i]',
+        # German location input
+        'input[placeholder*="Ort hinzufügen" i]',
+        'input[aria-label*="Ort" i]',
+        'input[placeholder*="Standort hinzufügen" i]',
+        'input[aria-label*="Standort" i]',
+        # Greek location input
+        'input[placeholder*="Προσθήκη τοποθεσίας" i]',
+        'input[aria-label*="τοποθεσία" i]',
     ]
 
     # Mentions input selectors (RU/EN/ES/PT)
@@ -682,6 +976,14 @@ class InstagramSelectors:
         # Portuguese
         'input[placeholder*="Adicionar colaboradores" i]',
         'input[aria-label*="colaboradores" i]',
+        # German mentions input
+        'input[placeholder*="Mitwirkende hinzufügen" i]',
+        'input[aria-label*="Mitwirkende" i]',
+        'input[placeholder*="Kollaborateure hinzufügen" i]',
+        'input[aria-label*="Kollaborateure" i]',
+        # Greek mentions input
+        'input[placeholder*="Προσθήκη συνεργατών" i]',
+        'input[aria-label*="συνεργάτες" i]',
     ]
 
     # Phone verification indicators (RU/EN/ES/PT)
@@ -700,6 +1002,14 @@ class InstagramSelectors:
         'div:has-text("Confirme seu número de telefone")',
         'div:has-text("Insira o código de confirmação")',
         'input[placeholder*="código" i]',
+        # German phone verification
+        'div:has-text("Bestätigen Sie Ihre Telefonnummer")',
+        'div:has-text("Geben Sie den Bestätigungscode ein")',
+        'input[placeholder*="Code" i]',
+        # Greek phone verification
+        'div:has-text("Επιβεβαιώστε τον αριθμό τηλεφώνου σας")',
+        'div:has-text("Εισάγετε τον κωδικό επιβεβαίωσης")',
+        'input[placeholder*="κωδικός" i]',
     ]
 
     # Account suspension indicators (RU/EN/ES/PT)
@@ -718,6 +1028,14 @@ class InstagramSelectors:
         'div:has-text("Sua conta foi desativada")',
         'div:has-text("Conta suspensa")',
         'div:has-text("bloqueada temporariamente")',
+        # German suspension indicators
+        'div:has-text("Ihr Konto wurde deaktiviert")',
+        'div:has-text("Konto gesperrt")',
+        'div:has-text("temporär gesperrt")',
+        # Greek suspension indicators
+        'div:has-text("Ο λογαριασμός σας έχει απενεργοποιηθεί")',
+        'div:has-text("Λογαριασμός ανασταλμένος")',
+        'div:has-text("προσωρινά κλειδωμένος")',
     ]
 
     # Suspension text keywords (used when scanning body text)
@@ -737,7 +1055,24 @@ class InstagramSelectors:
         'временно приостановлен',
         'temporarily suspended',
         'осталось',
-        'days left'
+        'days left',
+        # German suspension keywords
+        'wir haben ihr konto gesperrt',
+        'konto gesperrt',
+        'konto wurde gesperrt',
+        'ihr konto ist gesperrt',
+        'konto deaktiviert',
+        'temporär gesperrt',
+        'verbleibende',
+        'tage verbleibend',
+        # Greek suspension keywords
+        'έχουμε αναστείλει τον λογαριασμό σας',
+        'λογαριασμός ανασταλμένος',
+        'ο λογαριασμός σας είναι ανασταλμένος',
+        'λογαριασμός απενεργοποιημένος',
+        'προσωρινά ανασταλμένος',
+        'απομένουν',
+        'ημέρες απομένουν'
     ]
     
     # Reels dialog detection keywords (multilingual)
@@ -745,12 +1080,17 @@ class InstagramSelectors:
         'Reels', 'видео', 'Теперь', 'Now', 'общедоступный', 'public',
         'Las publicaciones con video', 'ahora se comparten como reels',
         'As publicações de vídeo', 'agora são compartilhadas como reels',
-        'Tu cuenta es pública', 'Sua conta é pública'
+        'Tu cuenta es pública', 'Sua conta é pública',
+        # German Reels dialog keywords
+        'Video-Beiträge', 'Reels-Videos', 'öffentliches Konto', 'Audiospur', 'Remix',
+        # Greek Reels dialog keywords
+        'βίντεο δημοσιεύσεις', 'βίντεο Reels', 'δημόσιος λογαριασμός', 'ήχος', 'remix'
     ]
     
     # Accept button keywords (multilingual)
     ACCEPT_BUTTON_KEYWORDS = [
-        'OK', 'ОК', 'Aceptar', 'Aceitar', 'Accept', 'Принять'
+        'OK', 'ОК', 'Aceptar', 'Aceitar', 'Accept', 'Принять',
+        'Akzeptieren', 'Αποδοχή'
     ]
 
     # Email submit buttons (RU/EN/ES/PT)
@@ -761,7 +1101,13 @@ class InstagramSelectors:
         'button:has-text("Confirmar")',
         'div[role="button"]:has-text("Confirm")',
         'div[role="button"]:has-text("Подтвердить")',
-        'div[role="button"]:has-text("Confirmar")'
+        'div[role="button"]:has-text("Confirmar")',
+        # German email submit buttons
+        'button:has-text("Bestätigen")',
+        'div[role="button"]:has-text("Bestätigen")',
+        # Greek email submit buttons
+        'button:has-text("Επιβεβαίωση")',
+        'div[role="button"]:has-text("Επιβεβαίωση")'
     ]
     
     # Crop page indicators (multilingual)
@@ -784,6 +1130,14 @@ class InstagramSelectors:
         'svg[aria-label*="обрезать"]',
         'svg[aria-label*="recorte"]',
         'svg[aria-label*="corte"]',
+        # German crop SVG aria-labels
+        'svg[aria-label*="Zuschnitt auswählen"]',
+        'svg[aria-label*="Zuschnitt"]',
+        'svg[aria-label*="beschneiden"]',
+        # Greek crop SVG aria-labels
+        'svg[aria-label*="Επιλογή περικοπής"]',
+        'svg[aria-label*="περικοπή"]',
+        'svg[aria-label*="κόψιμο"]',
         # Crop option indicators
         'span:has-text("1:1")',
         'span:has-text("9:16")',
@@ -792,6 +1146,12 @@ class InstagramSelectors:
         'svg[title*="recorte"]',
         'svg[title*="crop"]',
         'svg[title*="обрезать"]',
+        # German SVG titles for crop
+        'svg[title*="Zuschnitt"]',
+        'svg[title*="beschneiden"]',
+        # Greek SVG titles for crop
+        'svg[title*="περικοπή"]',
+        'svg[title*="κόψιμο"]',
     ]
     
     # Original crop button selectors (multilingual, prioritized)
@@ -823,10 +1183,16 @@ class InstagramSelectors:
         # Common close button selectors
         'button[aria-label*="Закрыть"]',
         'button[aria-label*="Close"]',
+        'button[aria-label*="Schließen"]',
+        'button[aria-label*="Κλείσιμο"]',
         'svg[aria-label*="Закрыть"]',
         'svg[aria-label*="Close"]',
+        'svg[aria-label*="Schließen"]',
+        'svg[aria-label*="Κλείσιμο"]',
         '[aria-label*="Закрыть"]',
         '[aria-label*="Close"]',
+        '[aria-label*="Schließen"]',
+        '[aria-label*="Κλείσιμο"]',
         
         # X button patterns
         'button:has-text("×")',
@@ -839,6 +1205,10 @@ class InstagramSelectors:
         '//button[@aria-label="Close"]',
         '//svg[@aria-label="Закрыть"]',
         '//svg[@aria-label="Close"]',
+        '//button[@aria-label="Schließen"]',
+        '//svg[@aria-label="Schließen"]',
+        '//button[@aria-label="Κλείσιμο"]',
+        '//svg[@aria-label="Κλείσιμο"]',
         '//button[contains(text(), "×")]',
         '//div[@role="button" and contains(text(), "×")]',
         
@@ -855,6 +1225,8 @@ class InstagramSelectors:
         'div[style*="width: 200px"]',
         'div:has(span:has-text("Публикация"))',
         'div:has(span:has-text("Post"))',
+        'div:has(span:has-text("Beitrag"))',
+        'div:has(span:has-text("Δημοσίευση"))',
     ]
     
     # Main interface selectors (for navigation verification)
@@ -899,6 +1271,40 @@ class InstagramSelectors:
         '[aria-label*="Criar"]',
         'svg[aria-label*="Perfil"]',
         '[aria-label*="Perfil"]',
+        # German navigation labels
+        'svg[aria-label*="Startseite"]',
+        '[aria-label*="Startseite"]',
+        'svg[aria-label*="Suchen"]',
+        '[aria-label*="Suchen"]',
+        'svg[aria-label*="Entdecken"]',
+        '[aria-label*="Entdecken"]',
+        'svg[aria-label*="Reels"]',
+        '[aria-label*="Reels"]',
+        'svg[aria-label*="Nachrichten"]',
+        '[aria-label*="Nachrichten"]',
+        'svg[aria-label*="Benachrichtigungen"]',
+        '[aria-label*="Benachrichtigungen"]',
+        'svg[aria-label*="Erstellen"]',
+        '[aria-label*="Erstellen"]',
+        'svg[aria-label*="Profil"]',
+        '[aria-label*="Profil"]',
+        # Greek navigation labels
+        'svg[aria-label*="Αρχική"]',
+        '[aria-label*="Αρχική"]',
+        'svg[aria-label*="Αναζήτηση"]',
+        '[aria-label*="Αναζήτηση"]',
+        'svg[aria-label*="Εξερεύνηση"]',
+        '[aria-label*="Εξερεύνηση"]',
+        'svg[aria-label*="Reels"]',
+        '[aria-label*="Reels"]',
+        'svg[aria-label*="Μηνύματα"]',
+        '[aria-label*="Μηνύματα"]',
+        'svg[aria-label*="Ειδοποιήσεις"]',
+        '[aria-label*="Ειδοποιήσεις"]',
+        'svg[aria-label*="Δημιουργία"]',
+        '[aria-label*="Δημιουργία"]',
+        'svg[aria-label*="Προφίλ"]',
+        '[aria-label*="Προφίλ"]',
     ]
     
     # Upload indicators (to check if still on upload page)
@@ -906,6 +1312,10 @@ class InstagramSelectors:
         'input[type="file"]',
         'div:has-text("Drag photos and videos here")',
         'div:has-text("Select from computer")',
+        'div:has-text("Ziehen Sie Fotos und Videos hierher")',
+        'div:has-text("Vom Computer auswählen")',
+        'div:has-text("Σύρετε φωτογραφίες και βίντεο εδώ")',
+        'div:has-text("Επιλογή από τον υπολογιστή")',
     ]
 
     # Broader upload detection indicators (RU/EN/ES/PT)

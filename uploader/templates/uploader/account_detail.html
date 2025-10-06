@@ -121,6 +121,12 @@
                             <a href="{% url 'bulk_cookie_robot' %}" class="btn btn-sm btn-success">
                                 <i class="bi bi-browser-chrome"></i> Cookie Robot (async)
                             </a>
+                            <form method="post" action="{% url 'save_dolphin_profile_snapshot' account_id=account.id %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-info" title="Fetch and save full profile configuration to database for 1:1 recreation">
+                                    <i class="bi bi-cloud-download"></i> Save Snapshot
+                                </button>
+                            </form>
                             <button type="button" class="btn btn-sm btn-outline-danger" disabled title="Profile reset not implemented yet">
                                 <i class="bi bi-arrow-clockwise"></i> Reset Profile
                             </button>
@@ -128,9 +134,17 @@
                             {% if account.proxy %}
                             <form method="post" action="{% url 'create_dolphin_profile' account_id=account.id %}" class="d-flex align-items-center gap-2">
                                 {% csrf_token %}
-                                <input type="hidden" name="profile_locale" value="ru_BY" />
+                                <select name="profile_locale" class="form-select form-select-sm" style="width:auto;">
+                                    <option value="ru_BY" selected>ru_BY (BY)</option>
+                                    <option value="en_IN">en_IN (IN)</option>
+                                    <option value="es_CL">es_CL (CL)</option>
+                                    <option value="es_MX">es_MX (MX)</option>
+                                    <option value="pt_BR">pt_BR (BR)</option>
+                                    <option value="el_GR">el_GR (GR)</option>
+                                    <option value="de_DE">de_DE (DE)</option>
+                                </select>
                                 <select name="proxy_selection" class="form-select form-select-sm" style="width:auto;">
-                                    <option value="locale_only" selected>Прокси: BY</option>
+                                    <option value="locale_only" selected>Прокси: по локали</option>
                                     <option value="any">Прокси: любые</option>
                                 </select>
                                 <button type="submit" class="btn btn-sm btn-primary">

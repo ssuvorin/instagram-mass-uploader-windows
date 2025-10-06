@@ -1,0 +1,174 @@
+{% extends "uploader/yt_base.html" %}
+
+{% block title %}Cookie Robot Task #{{ task.id }} - YouTube Shorts{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="{% url 'yt_cookie_robot_list' %}" class="text-decoration-none">
+            <i class="bi bi-arrow-left"></i> Back to Cookie Robot Tasks
+        </a>
+        <h2 class="mb-0 mt-2">Cookie Robot Task #{{ task.id }}</h2>
+    </div>
+    <div>
+        <a href="{% url 'yt_cookie_robot_delete' task.id %}" class="btn btn-outline-danger" onclick="return confirm('Are you sure you want to delete this task?')">
+            <i class="bi bi-trash"></i> Delete Task
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Task Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>YouTube Account</h6>
+                        <p class="mb-3">
+                            <i class="bi bi-envelope text-muted me-2"></i>
+                            <strong>{{ task.youtube_account.email }}</strong>
+                            {% if task.youtube_account.channel_name %}
+                            <br><small class="text-muted">{{ task.youtube_account.channel_name }}</small>
+                            {% endif %}
+                        </p>
+                        
+                        <h6>Dolphin Profile</h6>
+                        <p class="mb-3">
+                            {% if task.youtube_account.dolphin_profile_id %}
+                            <span class="badge bg-success">{{ task.youtube_account.dolphin_profile_id }}</span>
+                            {% else %}
+                            <span class="badge bg-danger">No Profile</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Status</h6>
+                        <p class="mb-3">
+                            {% if task.status == 'PENDING' %}
+                            <span class="badge bg-warning fs-6">Pending</span>
+                            {% elif task.status == 'RUNNING' %}
+                            <span class="badge bg-primary fs-6">Running</span>
+                            {% elif task.status == 'COMPLETED' %}
+                            <span class="badge bg-success fs-6">Completed</span>
+                            {% elif task.status == 'FAILED' %}
+                            <span class="badge bg-danger fs-6">Failed</span>
+                            {% else %}
+                            <span class="badge bg-secondary fs-6">{{ task.status }}</span>
+                            {% endif %}
+                        </p>
+                        
+                        <h6>Settings</h6>
+                        <p class="mb-3">
+                            {% if task.headless %}
+                            <span class="badge bg-light text-dark me-1"><i class="bi bi-eye-slash"></i> Headless</span>
+                            {% endif %}
+                            {% if task.imageless %}
+                            <span class="badge bg-light text-dark"><i class="bi bi-image"></i> No Images</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Created</h6>
+                        <p class="mb-3">{{ task.created_at|date:"F d, Y H:i" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Last Updated</h6>
+                        <p class="mb-3">{{ task.updated_at|date:"F d, Y H:i" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-list-ul"></i> URLs to Visit ({{ task.urls|length }})</h5>
+            </div>
+            <div class="card-body">
+                {% if task.urls %}
+                <div class="list-group">
+                    {% for url in task.urls %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <a href="{{ url }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none">
+                            <i class="bi bi-link-45deg me-2"></i>{{ url }}
+                        </a>
+                        <span class="badge bg-light text-dark">{{ forloop.counter }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="bi bi-link-45deg fs-1 text-muted mb-2 d-block"></i>
+                    <p class="text-muted mb-0">No URLs specified</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if task.log %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-terminal"></i> Task Log</h5>
+            </div>
+            <div class="card-body">
+                <pre class="bg-light p-3 rounded" style="max-height: 400px; overflow-y: auto; font-size: 0.875rem;">{{ task.log }}</pre>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-gear"></i> Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if task.status == 'PENDING' %}
+                    <button class="btn btn-success" disabled>
+                        <i class="bi bi-play"></i> Task is Pending
+                    </button>
+                    {% elif task.status == 'RUNNING' %}
+                    <button class="btn btn-warning" disabled>
+                        <i class="bi bi-stop"></i> Task is Running
+                    </button>
+                    {% elif task.status == 'COMPLETED' %}
+                    <button class="btn btn-success" disabled>
+                        <i class="bi bi-check-circle"></i> Task Completed
+                    </button>
+                    {% elif task.status == 'FAILED' %}
+                    <button class="btn btn-danger" disabled>
+                        <i class="bi bi-x-circle"></i> Task Failed
+                    </button>
+                    {% endif %}
+                    
+                    <a href="{% url 'yt_cookie_robot_create' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-plus-circle"></i> Create New Task
+                    </a>
+                    
+                    <a href="{% url 'yt_cookie_robot_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-list"></i> All Tasks
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> About Cookie Robot</h5>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted mb-0">
+                    Cookie Robot visits the specified URLs using the YouTube account's Dolphin profile. 
+                    This helps warm up the account and collect cookies for better automation.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

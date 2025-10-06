@@ -581,6 +581,44 @@ class DolphinAnty:
             ]
             lat, lon = random.choice(br_cities)
             geo_payload = {"mode": "manual", "latitude": lat, "longitude": lon}
+        elif normalized_locale in {"el_GR", "el-GR"}:
+            # Greece (Ελληνικά, Ελλάδα)
+            tz_payload = {"mode": "manual", "value": "Europe/Athens"}
+            gr_cities = [
+                (37.9755, 23.7348),   # Athens
+                (40.6403, 22.9439),   # Thessaloniki
+                (38.2466, 21.7346),   # Patras
+                (35.3397, 25.1372),   # Heraklion
+                (36.3932, 25.4615),   # Rhodes
+                (39.0742, 21.8243),   # Larissa
+                (38.0428, 23.7561),   # Piraeus
+                (40.9375, 24.4129),   # Kavala
+            ]
+            lat, lon = random.choice(gr_cities)
+            geo_payload = {"mode": "manual", "latitude": lat, "longitude": lon}
+        elif normalized_locale in {"de_DE", "de-DE"}:
+            # Germany (Deutsch, Deutschland)
+            de_timezones = [
+                "Europe/Berlin",
+                "Europe/Munich",
+                "Europe/Hamburg",
+                "Europe/Cologne",
+            ]
+            tz_payload = {"mode": "manual", "value": random.choice(de_timezones)}
+            de_cities = [
+                (52.5200, 13.4050),   # Berlin
+                (48.1351, 11.5820),   # Munich
+                (53.5511, 9.9937),    # Hamburg
+                (50.9375, 6.9603),    # Cologne
+                (51.2277, 6.7735),    # Düsseldorf
+                (49.4521, 11.0767),   # Nuremberg
+                (52.3759, 9.7320),    # Hanover
+                (48.7758, 9.1829),    # Stuttgart
+                (51.0504, 13.7373),   # Dresden
+                (50.1109, 8.6821),    # Frankfurt
+            ]
+            lat, lon = random.choice(de_cities)
+            geo_payload = {"mode": "manual", "latitude": lat, "longitude": lon}
         else:
             # Default: Russia (original behavior)
             ru_timezones = [
@@ -753,10 +791,10 @@ class DolphinAnty:
         logger.error(f"[FAIL] {error_msg}")
         return {"success": False, "error": error_msg, "status_code": status_code}
 
-    def create_profile_for_account(self, account_data: Dict[str, Any], proxy_data: Optional[Dict[str, Any]] = None) -> Optional[str]:
+    def create_profile_for_account(self, account_data: Dict[str, Any], proxy_data: Optional[Dict[str, Any]] = None) -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
         """
         Create a profile specifically configured for an Instagram account
-        Returns the profile ID if successful, None otherwise
+        Returns (profile_id, response) tuple if successful, (None, None) otherwise
         """
         username = account_data.get('username', 'unknown')
         name = f"Instagram {username}"
@@ -780,7 +818,7 @@ class DolphinAnty:
             inferred_locale = None
 
         locale = account_data.get('locale') or inferred_locale or 'ru_BY'
-        if locale not in {'ru_BY'}:
+        if locale not in {'ru_BY', 'en_IN', 'es_CL', 'es_MX', 'pt_BR', 'el_GR', 'de_DE'}:
             locale = 'ru_BY'
 
         # Optional: select proxy according to locale selection policy if not provided
@@ -819,10 +857,10 @@ class DolphinAnty:
         
         if profile_id:
             logger.info(f"[OK] Successfully created profile for {username}: {profile_id}")
-            return profile_id
+            return profile_id, response
         else:
             logger.error(f"[FAIL] Failed to create profile for {username}")
-            return None
+            return None, None
 
     def start_profile(
         self,
@@ -1230,7 +1268,9 @@ class DolphinAnty:
                     'div[data-bloks-name="bk.components.Flexbox"]',
                     'div[role="dialog"]',
                     'button:has-text("Продолжить")',
-                    'button:has-text("Continue")'
+                    'button:has-text("Continue")',
+                    'button:has-text("Fortfahren")',  # DE
+                    'button:has-text("Συνέχεια")',     # EL
                 ]
                 
                 # Ищем элементы диалога верификации

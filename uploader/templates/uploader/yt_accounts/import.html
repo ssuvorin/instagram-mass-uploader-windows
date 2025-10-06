@@ -1,0 +1,237 @@
+{% extends "uploader/yt_base.html" %}
+
+{% block title %}Import YouTube Accounts - YouTube Shorts Uploader{% endblock %}
+
+{% block extra_css %}
+<style>
+	/* YouTube-inspired styling */
+	:root {
+		--yt-red: #ff0000;
+		--yt-dark-red: #cc0000;
+		--yt-light-gray: #f9f9f9;
+		--yt-gray: #606060;
+		--yt-border: #e0e0e0;
+	}
+	
+	.btn-yt-primary {
+		background-color: var(--yt-red);
+		border-color: var(--yt-red);
+		color: white;
+	}
+	.btn-yt-primary:hover {
+		background-color: var(--yt-dark-red);
+		border-color: var(--yt-dark-red);
+		color: white;
+	}
+	
+	.format-example {
+		background: var(--yt-light-gray);
+		border: 1px solid var(--yt-border);
+		border-radius: 6px;
+		padding: 12px;
+		margin: 8px 0;
+		font-family: 'Courier New', monospace;
+		font-size: 14px;
+	}
+	
+	.format-example code {
+		background: white;
+		padding: 2px 6px;
+		border-radius: 3px;
+		border: 1px solid var(--yt-border);
+		color: var(--yt-red);
+		font-weight: bold;
+	}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+	<div>
+		<a href="{% url 'yt_accounts_list' %}" class="text-decoration-none">
+			<i class="bi bi-arrow-left"></i> Back to YouTube Accounts
+		</a>
+		<h2 class="mb-0 mt-2">
+			<i class="bi bi-youtube text-danger me-2"></i>Import YouTube Accounts
+		</h2>
+	</div>
+</div>
+
+<div class="row">
+	<div class="col-lg-8 mx-auto">
+		<div class="card">
+			<div class="card-header">
+				<h5 class="mb-0"><i class="bi bi-file-earmark-arrow-up"></i> Upload Accounts File</h5>
+			</div>
+			<div class="card-body">
+				<div class="alert alert-info">
+					<div class="d-flex">
+						<div class="me-3">
+							<i class="bi bi-info-circle-fill fs-3 text-info"></i>
+						</div>
+						<div>
+							<h6 class="alert-heading">Expected Formats</h6>
+							<p class="mb-0">
+								Upload a text file with each YouTube account on a new line in one of these formats:
+							</p>
+							
+							<div class="mt-3">
+								<h6 class="fw-bold">Format 1: Basic Format</h6>
+								<div class="format-example">
+									<code>email:password</code>
+								</div>
+								<p class="small text-muted mt-1">Basic format for YouTube/Google accounts.</p>
+								<p class="small">Example: <code>user@gmail.com:password123</code></p>
+							</div>
+							
+							<div class="mt-3">
+								<h6 class="fw-bold">Format 2: With Recovery Email</h6>
+								<div class="format-example">
+									<code>email:password:recovery_email</code>
+								</div>
+								<p class="small text-muted mt-1">Use this format when you have a recovery email for the account.</p>
+								<p class="small">Example: <code>user@gmail.com:password123:recovery@gmail.com</code></p>
+							</div>
+							
+							<div class="alert alert-warning mt-3 mb-0 small">
+								<i class="bi bi-exclamation-triangle-fill me-2"></i> 
+								<strong>Note:</strong> The <code>:</code> (colon) is used as a separator. 
+								If any of your passwords contain the colon character, please make sure to handle them properly.
+							</div>
+						</div>
+					</div>
+				</div>
+				
+				<form method="post" enctype="multipart/form-data">
+					{% csrf_token %}
+					
+					<div class="mb-4">
+						<label for="{{ form.accounts_file.id_for_label }}" class="form-label">
+							<strong>{{ form.accounts_file.label }}</strong>
+						</label>
+						{{ form.accounts_file }}
+						{% if form.accounts_file.help_text %}
+						<div class="form-text">{{ form.accounts_file.help_text }}</div>
+						{% endif %}
+						{% if form.accounts_file.errors %}
+						<div class="text-danger small">
+							{% for error in form.accounts_file.errors %}
+								<div>{{ error }}</div>
+							{% endfor %}
+						</div>
+						{% endif %}
+					</div>
+					
+					<div class="mb-4">
+						<label for="{{ form.client.id_for_label }}" class="form-label">
+							<strong>{{ form.client.label }}</strong>
+						</label>
+						{{ form.client }}
+						{% if form.client.help_text %}
+						<div class="form-text">{{ form.client.help_text }}</div>
+						{% endif %}
+						{% if form.client.errors %}
+						<div class="text-danger small">
+							{% for error in form.client.errors %}
+								<div>{{ error }}</div>
+							{% endfor %}
+						</div>
+						{% endif %}
+					</div>
+					
+					<div class="mb-4">
+						<label for="{{ form.locale.id_for_label }}" class="form-label">
+							<strong>{{ form.locale.label }}</strong>
+						</label>
+						{{ form.locale }}
+						{% if form.locale.help_text %}
+						<div class="form-text">{{ form.locale.help_text }}</div>
+						{% endif %}
+						{% if form.locale.errors %}
+						<div class="text-danger small">
+							{% for error in form.locale.errors %}
+								<div>{{ error }}</div>
+							{% endfor %}
+						</div>
+						{% endif %}
+					</div>
+					
+					<div class="mb-4">
+						<label for="{{ form.proxy_selection.id_for_label }}" class="form-label">
+							<strong>{{ form.proxy_selection.label }}</strong>
+						</label>
+						{{ form.proxy_selection }}
+						{% if form.proxy_selection.help_text %}
+						<div class="form-text">{{ form.proxy_selection.help_text }}</div>
+						{% endif %}
+						{% if form.proxy_selection.errors %}
+						<div class="text-danger small">
+							{% for error in form.proxy_selection.errors %}
+								<div>{{ error }}</div>
+							{% endfor %}
+						</div>
+						{% endif %}
+					</div>
+					
+					<div class="d-flex justify-content-between">
+						<a href="{% url 'yt_accounts_list' %}" class="btn btn-secondary">
+							<i class="bi bi-arrow-left"></i> Cancel
+						</a>
+						<button type="submit" class="btn btn-yt-primary">
+							<i class="bi bi-upload"></i> Import Accounts
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+		
+		<!-- Additional Information -->
+		<div class="card mt-4">
+			<div class="card-header">
+				<h6 class="mb-0"><i class="bi bi-lightbulb"></i> Tips & Best Practices</h6>
+			</div>
+			<div class="card-body">
+				<ul class="mb-0">
+					<li><strong>File Format:</strong> Use UTF-8 encoded text files (.txt)</li>
+					<li><strong>Line Endings:</strong> Each account should be on a separate line</li>
+					<li><strong>Duplicate Prevention:</strong> Accounts with existing emails will be skipped</li>
+					<li><strong>Validation:</strong> Invalid formats will be reported with line numbers</li>
+					<li><strong>Recovery Email:</strong> Optional but recommended for account recovery</li>
+					<li><strong>Security:</strong> Ensure your accounts file is secure and not shared</li>
+				</ul>
+			</div>
+		</div>
+		
+		<!-- Sample File -->
+		<div class="card mt-4">
+			<div class="card-header">
+				<h6 class="mb-0"><i class="bi bi-file-text"></i> Sample File Content</h6>
+			</div>
+			<div class="card-body">
+				<pre class="mb-0"><code>user1@gmail.com:password123
+user2@gmail.com:mypassword456:recovery@gmail.com
+user3@outlook.com:securepass789
+user4@yahoo.com:strongpass:backup@email.com</code></pre>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add file input styling
+    const fileInput = document.querySelector('input[type="file"]');
+    if (fileInput) {
+        fileInput.addEventListener('change', function(e) {
+            const fileName = e.target.files[0]?.name || 'No file selected';
+            const label = fileInput.nextElementSibling;
+            if (label && label.classList.contains('form-text')) {
+                label.textContent = `Selected: ${fileName}`;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

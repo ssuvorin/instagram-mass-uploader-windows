@@ -360,6 +360,27 @@ def main():
                     logger.info("[OK] Данные аккаунта обновлены с ID профиля Dolphin")
                 except Exception as e:
                     logger.error(f"[FAIL] Не удалось сохранить обновленные данные аккаунта: {str(e)}")
+                
+                # Сохраняем snapshot профиля в БД если есть account_id и response
+                if account_data.get('account_id') and hasattr(browser, 'dolphin_profile_response'):
+                    try:
+                        # Import Django settings
+                        import django
+                        import sys
+                        import os
+                        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'instagram_uploader.settings')
+                        django.setup()
+                        
+                        from uploader.models import InstagramAccount
+                        from uploader.services.dolphin_snapshot import save_dolphin_snapshot
+                        
+                        account = InstagramAccount.objects.filter(id=account_data['account_id']).first()
+                        if account:
+                            save_dolphin_snapshot(account, dolphin_profile_id, browser.dolphin_profile_response)
+                            logger.info(f"[OK] Dolphin profile snapshot saved to database for account {account.username}")
+                    except Exception as snap_err:
+                        logger.warning(f"[WARN] Could not save Dolphin snapshot to database: {str(snap_err)}")
         
         if not browser:
             logger.error("[FAIL] Не удалось инициализировать браузер")

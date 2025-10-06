@@ -40,6 +40,8 @@ def proxy_list(request):
 
 def create_proxy(request):
     """Create a new proxy"""
+    from django.db import close_old_connections, OperationalError
+    
     if request.method == 'POST':
         form = ProxyForm(request.POST)
         if form.is_valid():
@@ -82,8 +84,13 @@ def create_proxy(request):
             proxy.last_verified = timezone.now()
             proxy.last_checked = timezone.now()
             
-            # Save the valid proxy
-            proxy.save()
+            # Save the valid proxy with retry logic for DB connection issues
+            try:
+                proxy.save()
+            except OperationalError:
+                # Close old connections and retry
+                close_old_connections()
+                proxy.save()
             messages.success(request, f'Proxy {proxy.host}:{proxy.port} created and validated successfully!')
             return redirect('proxy_list')
     else:
@@ -98,6 +105,8 @@ def create_proxy(request):
 
 def edit_proxy(request, proxy_id):
     """Edit an existing proxy"""
+    from django.db import close_old_connections, OperationalError
+    
     proxy = get_object_or_404(Proxy, id=proxy_id)
     
     if request.method == 'POST':
@@ -150,8 +159,13 @@ def edit_proxy(request, proxy_id):
                     if geo_info.get('external_ip'):
                         updated_proxy.external_ip = geo_info.get('external_ip')
             
-            # Save the valid proxy
-            updated_proxy.save()
+            # Save the valid proxy with retry logic for DB connection issues
+            try:
+                updated_proxy.save()
+            except OperationalError:
+                # Close old connections and retry
+                close_old_connections()
+                updated_proxy.save()
             messages.success(request, f'Proxy {updated_proxy.host}:{updated_proxy.port} updated successfully!')
             return redirect('proxy_list')
     else:
@@ -167,6 +181,8 @@ def edit_proxy(request, proxy_id):
 
 def test_proxy(request, proxy_id):
     """Test if a proxy server is working"""
+    from django.db import close_old_connections, OperationalError
+    
     proxy = get_object_or_404(Proxy, id=proxy_id)
     
     # Test proxy functionality using the validation utility
@@ -200,7 +216,13 @@ def test_proxy(request, proxy_id):
         if geo_info.get('external_ip'):
             proxy.external_ip = geo_info.get('external_ip')
     
-    proxy.save()
+    # Save with retry logic for DB connection issues
+    try:
+        proxy.save()
+    except OperationalError:
+        # Close old connections and retry
+        close_old_connections()
+        proxy.save()
     
     if is_valid:
         messages.success(request, f'Proxy {proxy.host}:{proxy.port} is working! {message}')
@@ -212,6 +234,8 @@ def test_proxy(request, proxy_id):
 
 def import_proxies(request):
     """Import proxies from a text file"""
+    from django.db import close_old_connections, OperationalError
+    
     if request.method == 'POST' and request.FILES.get('proxies_file'):
         proxies_file = request.FILES['proxies_file']
         
@@ -304,7 +328,13 @@ def import_proxies(request):
                         if geo_info.get('external_ip'):
                             identical_proxy.external_ip = geo_info.get('external_ip')
                     
-                    identical_proxy.save()
+                    # Save with retry logic for DB connection issues
+                    try:
+                        identical_proxy.save()
+                    except OperationalError:
+                        # Close old connections and retry
+                        close_old_connections()
+                        identical_proxy.save()
                     updated_count += 1
                 else:
                     # Create new proxy
@@ -329,7 +359,13 @@ def import_proxies(request):
                         if geo_info.get('external_ip'):
                             new_proxy.external_ip = geo_info.get('external_ip')
                     
-                    new_proxy.save()
+                    # Save with retry logic for DB connection issues
+                    try:
+                        new_proxy.save()
+                    except OperationalError:
+                        # Close old connections and retry
+                        close_old_connections()
+                        new_proxy.save()
                     created_count += 1
                 
             except Exception as e:
@@ -390,7 +426,10 @@ def _validate_proxies_background(proxies, user_id):
     from django.contrib.messages.storage.fallback import FallbackStorage
     from django.contrib.sessions.backends.db import SessionStore
     from django.http import HttpRequest
-    from django.db import connections
+    from django.db import connections, close_old_connections, OperationalError
+    
+    # Reset DB connection state for this background thread
+    close_old_connections()
     
     # Create a fake request to use for messaging
     request = HttpRequest()
@@ -423,7 +462,8 @@ def _validate_proxies_background(proxies, user_id):
     except Exception:
         env_workers = 0
     configured = req_workers or env_workers
-    thread_count = configured if configured > 0 else 20
+    # Default to 10 threads instead of 20 to reduce DB connection pressure
+    thread_count = configured if configured > 0 else 10
     thread_count = min(thread_count, max(1, proxies.count()))
     
     if thread_count <= 0:
@@ -432,51 +472,98 @@ def _validate_proxies_background(proxies, user_id):
     from concurrent.futures import ThreadPoolExecutor
     
     def validate_proxy_worker(proxy):
-        is_valid, _, geo_info = validate_proxy(
-            host=proxy.host,
-            port=proxy.port,
-            username=proxy.username,
-            password=proxy.password,
-            timeout=10,
-            proxy_type=proxy.proxy_type
-        )
-        
-        # Update proxy verification timestamp and location data
-        proxy.last_verified = timezone.now()
-        proxy.last_checked = timezone.now()
-        
-        # Update status based on validation result
-        proxy.status = 'active' if is_valid else 'inactive'
-        proxy.is_active = is_valid
-        
-        # Update country, city, and external IP information if available
-        if geo_info and is_valid:
-            if geo_info.get('country'):
-                proxy.country = geo_info.get('country')
-            if geo_info.get('city'):
-                proxy.city = geo_info.get('city')
-            if geo_info.get('external_ip'):
-                proxy.external_ip = geo_info.get('external_ip')
-        
-        proxy.save()
-        
-        return is_valid
+        """Worker function to validate a single proxy with proper DB connection handling"""
+        try:
+            # Ensure fresh DB connection for this thread
+            close_old_connections()
+            
+            # Add small random delay to simulate human behavior and reduce DB pressure
+            import random
+            import time
+            delay = random.uniform(0.1, 0.5)  # 100-500ms delay
+            time.sleep(delay)
+            
+            is_valid, _, geo_info = validate_proxy(
+                host=proxy.host,
+                port=proxy.port,
+                username=proxy.username,
+                password=proxy.password,
+                timeout=10,
+                proxy_type=proxy.proxy_type
+            )
+            
+            # Update proxy verification timestamp and location data
+            proxy.last_verified = timezone.now()
+            proxy.last_checked = timezone.now()
+            
+            # Update status based on validation result
+            proxy.status = 'active' if is_valid else 'inactive'
+            proxy.is_active = is_valid
+            
+            # Update country, city, and external IP information if available
+            if geo_info and is_valid:
+                if geo_info.get('country'):
+                    proxy.country = geo_info.get('country')
+                if geo_info.get('city'):
+                    proxy.city = geo_info.get('city')
+                if geo_info.get('external_ip'):
+                    proxy.external_ip = geo_info.get('external_ip')
+            
+            # Save with retry logic for DB connection issues
+            try:
+                proxy.save()
+            except OperationalError:
+                # Close old connections and retry
+                close_old_connections()
+                proxy.save()
+            
+            return is_valid
+            
+        except Exception as e:
+            logger.error(f"Error validating proxy {proxy.host}:{proxy.port}: {str(e)}")
+            # Try to mark proxy as invalid if we can
+            try:
+                close_old_connections()
+                proxy.status = 'inactive'
+                proxy.is_active = False
+                proxy.last_verified = timezone.now()
+                proxy.last_checked = timezone.now()
+                proxy.save()
+            except Exception:
+                pass  # If we can't save, just continue
+            return False
     
     # Execute validation in parallel
-    with ThreadPoolExecutor(max_workers=thread_count) as executor:
-        # Evaluate queryset to list in main thread to avoid DB usage across threads during iteration
-        proxy_list = list(proxies)
-        results = list(executor.map(validate_proxy_worker, proxy_list))
+    try:
+        with ThreadPoolExecutor(max_workers=thread_count) as executor:
+            # Evaluate queryset to list in main thread to avoid DB usage across threads during iteration
+            proxy_list = list(proxies)
+            results = list(executor.map(validate_proxy_worker, proxy_list))
+            
+        valid_count = sum(1 for r in results if r)
+        invalid_count = sum(1 for r in results if not r)
         
-    valid_count = sum(1 for r in results if r)
-    invalid_count = sum(1 for r in results if not r)
+    except Exception as e:
+        logger.error(f"Error in proxy validation background task: {str(e)}")
+        # Try to add error message
+        try:
+            request._messages.add(
+                message_constants.ERROR,
+                f'Proxy validation failed: {str(e)}'
+            )
+        except Exception:
+            pass
+        return
     
     # Add message to the fake request
     # This will be seen on the next page load
-    request._messages.add(
-        message_constants.SUCCESS,
-        f'Proxy validation complete. Valid: {valid_count}, Invalid: {invalid_count}'
-    )
+    try:
+        request._messages.add(
+            message_constants.SUCCESS,
+            f'Proxy validation complete. Valid: {valid_count}, Invalid: {invalid_count}'
+        )
+    except Exception:
+        pass
     
     # Gently close DB connections opened by this background thread
     try:

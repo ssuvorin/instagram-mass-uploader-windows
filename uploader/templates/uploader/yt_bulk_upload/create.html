@@ -1,0 +1,189 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}Create YouTube Shorts Bulk Upload - Uploader{% endblock %}
+
+{% block extra_css %}
+<style>
+    .text-danger { color: #ff0000 !important; }
+    .btn-danger { background: linear-gradient(135deg, #ff0000, #cc0000); border: none; }
+    .btn-danger:hover { background: linear-gradient(135deg, #cc0000, #990000); }
+    .bg-danger { background: linear-gradient(135deg, #ff0000, #cc0000) !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="mb-4 fw-bold">
+            <i class="bi bi-youtube text-danger me-2"></i>
+            Create YouTube Shorts Bulk Upload
+        </h2>
+        <p class="text-muted">Set up a new bulk upload task with multiple YouTube accounts.</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'yt_shorts_bulk_upload_list' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to List
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-danger text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-1-circle me-2"></i>Step 1: Select YouTube Accounts
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        Select multiple YouTube accounts to use for uploading Shorts. Videos will be distributed among these channels.
+                    </div>
+                    
+                    <!-- Account Selection -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">{{ form.selected_accounts.label }}</label>
+                        
+                        {% if form.client_filter.field.choices %}
+                        <div class="mb-3">
+                            <label for="{{ form.client_filter.id_for_label }}" class="form-label">
+                                {{ form.client_filter.label }}
+                            </label>
+                            {{ form.client_filter }}
+                        </div>
+                        {% endif %}
+                        
+                        <div class="row">
+                            {% for account in form.selected_accounts.field.queryset %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   name="selected_accounts" value="{{ account.id }}" 
+                                                   id="account_{{ account.id }}">
+                                            <label class="form-check-label w-100" for="account_{{ account.id }}">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div>
+                                                        <strong>{{ account.email }}</strong>
+                                                        {% if account.channel_name %}
+                                                        <div class="text-muted small">{{ account.channel_name }}</div>
+                                                        {% endif %}
+                                                    </div>
+                                                    <span class="badge bg-{{ account.status|lower }}">
+                                                        {{ account.get_status_display }}
+                                                    </span>
+                                                </div>
+                                                <div class="mt-2">
+                                                    {% if account.proxy %}
+                                                    <span class="badge bg-success me-1">
+                                                        <i class="bi bi-shield-check"></i> Proxy
+                                                    </span>
+                                                    {% endif %}
+                                                    {% if account.dolphin_profile_id %}
+                                                    <span class="badge bg-info me-1">
+                                                        <i class="bi bi-laptop"></i> Dolphin
+                                                    </span>
+                                                    {% endif %}
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="col-12">
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    No YouTube accounts found. Please add accounts first.
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if form.selected_accounts.errors %}
+                        <div class="text-danger mt-2">
+                            {% for error in form.selected_accounts.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Default Settings -->
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="bi bi-gear me-2"></i>Default Settings (Optional)
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i>
+                                These settings will be used as defaults. You can override them for individual videos later.
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">{{ form.default_visibility.label }}</label>
+                                    {{ form.default_visibility }}
+                                    <div class="form-text">{{ form.default_visibility.help_text }}</div>
+                                </div>
+                                <div class="col-md-8 mb-3">
+                                    <label class="form-label">{{ form.default_category.label }}</label>
+                                    {{ form.default_category }}
+                                    <div class="form-text">{{ form.default_category.help_text }}</div>
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <label class="form-label">{{ form.default_tags.label }}</label>
+                                    {{ form.default_tags }}
+                                    <div class="form-text">{{ form.default_tags.help_text }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-danger btn-lg">
+                            <i class="bi bi-arrow-right me-2"></i>Next: Add Videos
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="card-title mb-0">Bulk Upload Process</h5>
+            </div>
+            <div class="card-body">
+                <ol class="mb-0">
+                    <li class="mb-3">
+                        <strong>Select Accounts</strong>
+                        <p class="text-muted small">Choose which YouTube channels to use for uploading</p>
+                    </li>
+                    <li class="mb-3">
+                        <strong>Add Videos</strong>
+                        <p class="text-muted small">Upload multiple Shorts video files</p>
+                    </li>
+                    <li class="mb-3">
+                        <strong>Add Titles (Optional)</strong>
+                        <p class="text-muted small">Import titles and descriptions from a text file</p>
+                    </li>
+                    <li class="mb-3">
+                        <strong>Start Upload</strong>
+                        <p class="text-muted small">Begin the upload process and monitor progress</p>
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,340 @@
+{% extends "uploader/yt_base.html" %}
+
+{% block title %}Bulk Actions - YouTube Accounts{% endblock %}
+
+{% block extra_css %}
+<style>
+	/* YouTube-inspired styling */
+	:root {
+		--yt-red: #ff0000;
+		--yt-dark-red: #cc0000;
+		--yt-light-gray: #f9f9f9;
+		--yt-gray: #606060;
+		--yt-border: #e0e0e0;
+	}
+	
+	.btn-yt-primary {
+		background-color: var(--yt-red);
+		border-color: var(--yt-red);
+		color: white;
+	}
+	.btn-yt-primary:hover {
+		background-color: var(--yt-dark-red);
+		border-color: var(--yt-dark-red);
+		color: white;
+	}
+	
+	.action-card {
+		background: white;
+		border: 1px solid var(--yt-border);
+		border-radius: 8px;
+		padding: 1.5rem;
+		margin-bottom: 1.5rem;
+		transition: box-shadow 0.2s ease;
+	}
+	.action-card:hover {
+		box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+	}
+	
+	.action-icon {
+		width: 3rem;
+		height: 3rem;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 1.25rem;
+		margin-bottom: 1rem;
+	}
+	
+	.action-change-status { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+	.action-assign-proxy { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+	.action-change-locale { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+	.action-delete { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+	<div>
+		<a href="{% url 'yt_accounts_list' %}" class="text-decoration-none">
+			<i class="bi bi-arrow-left"></i> Back to YouTube Accounts
+		</a>
+		<h2 class="mb-0 mt-2">
+			<i class="bi bi-youtube text-danger me-2"></i>Bulk Actions
+		</h2>
+	</div>
+</div>
+
+<div class="row">
+	<div class="col-lg-8 mx-auto">
+		<div class="alert alert-info">
+			<div class="d-flex">
+				<div class="me-3">
+					<i class="bi bi-info-circle-fill fs-4"></i>
+				</div>
+				<div>
+					<h6 class="alert-heading">Bulk Actions</h6>
+					<p class="mb-0">
+						Select accounts from the <a href="{% url 'yt_accounts_list' %}">accounts list</a> 
+						and then choose an action to apply to all selected accounts.
+					</p>
+				</div>
+			</div>
+		</div>
+		
+		<!-- Available Actions -->
+		<div class="row">
+			<div class="col-md-6 mb-4">
+				<div class="action-card text-center">
+					<div class="action-icon action-change-status mx-auto">
+						<i class="bi bi-toggle-on"></i>
+					</div>
+					<h5>Change Status</h5>
+					<p class="text-muted">Update the status of selected accounts (Active, Blocked, Limited, etc.)</p>
+					<button class="btn btn-outline-success" onclick="showActionModal('change_status')">
+						<i class="bi bi-gear"></i> Change Status
+					</button>
+				</div>
+			</div>
+			
+			<div class="col-md-6 mb-4">
+				<div class="action-card text-center">
+					<div class="action-icon action-assign-proxy mx-auto">
+						<i class="bi bi-shield-lock"></i>
+					</div>
+					<h5>Assign Proxy</h5>
+					<p class="text-muted">Assign a proxy to selected accounts for better anonymity</p>
+					<button class="btn btn-outline-primary" onclick="showActionModal('assign_proxy')">
+						<i class="bi bi-gear"></i> Assign Proxy
+					</button>
+				</div>
+			</div>
+			
+			<div class="col-md-6 mb-4">
+				<div class="action-card text-center">
+					<div class="action-icon action-change-locale mx-auto">
+						<i class="bi bi-globe"></i>
+					</div>
+					<h5>Change Locale</h5>
+					<p class="text-muted">Update the browser locale for selected accounts</p>
+					<button class="btn btn-outline-warning" onclick="showActionModal('change_locale')">
+						<i class="bi bi-gear"></i> Change Locale
+					</button>
+				</div>
+			</div>
+			
+			<div class="col-md-6 mb-4">
+				<div class="action-card text-center">
+					<div class="action-icon action-delete mx-auto">
+						<i class="bi bi-trash"></i>
+					</div>
+					<h5>Delete Accounts</h5>
+					<p class="text-muted">Permanently delete selected accounts (this action cannot be undone)</p>
+					<button class="btn btn-outline-danger" onclick="showActionModal('delete')">
+						<i class="bi bi-gear"></i> Delete Accounts
+					</button>
+				</div>
+			</div>
+		</div>
+		
+		<!-- Instructions -->
+		<div class="action-card">
+			<h5 class="mb-3">
+				<i class="bi bi-question-circle text-info me-2"></i>How to Use Bulk Actions
+			</h5>
+			<ol class="mb-0">
+				<li>Go to the <a href="{% url 'yt_accounts_list' %}">YouTube Accounts list</a></li>
+				<li>Select the accounts you want to modify using the checkboxes</li>
+				<li>Click the "Actions" button in the bulk actions bar</li>
+				<li>Choose the action you want to perform</li>
+				<li>Configure the action parameters and confirm</li>
+			</ol>
+		</div>
+	</div>
+</div>
+
+<!-- Action Modals -->
+<!-- Change Status Modal -->
+<div class="modal fade" id="changeStatusModal" tabindex="-1">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Change Account Status</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+			</div>
+			<form method="post" action="{% url 'yt_accounts_bulk_action' %}">
+				{% csrf_token %}
+				<input type="hidden" name="action" value="change_status">
+				<div class="modal-body">
+					<div class="mb-3">
+						<label class="form-label">New Status</label>
+						<select name="new_status" class="form-select" required>
+							<option value="">Select status...</option>
+							<option value="ACTIVE">Active</option>
+							<option value="BLOCKED">Blocked</option>
+							<option value="LIMITED">Limited</option>
+							<option value="INACTIVE">Inactive</option>
+							<option value="PHONE_VERIFICATION_REQUIRED">Phone Verification Required</option>
+							<option value="HUMAN_VERIFICATION_REQUIRED">Human Verification Required</option>
+							<option value="SUSPENDED">Suspended</option>
+						</select>
+					</div>
+					<div class="alert alert-warning">
+						<i class="bi bi-exclamation-triangle me-2"></i>
+						This will change the status of all selected accounts.
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+					<button type="submit" class="btn btn-success">Change Status</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+
+<!-- Assign Proxy Modal -->
+<div class="modal fade" id="assignProxyModal" tabindex="-1">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Assign Proxy</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+			</div>
+			<form method="post" action="{% url 'yt_accounts_bulk_action' %}">
+				{% csrf_token %}
+				<input type="hidden" name="action" value="assign_proxy">
+				<div class="modal-body">
+					<div class="mb-3">
+						<label class="form-label">Select Proxy</label>
+						<select name="new_proxy" class="form-select" required>
+							<option value="">Select proxy...</option>
+							<!-- Proxy options will be populated dynamically -->
+						</select>
+					</div>
+					<div class="alert alert-info">
+						<i class="bi bi-info-circle me-2"></i>
+						This will assign the selected proxy to all selected accounts.
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+					<button type="submit" class="btn btn-primary">Assign Proxy</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+
+<!-- Change Locale Modal -->
+<div class="modal fade" id="changeLocaleModal" tabindex="-1">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Change Locale</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+			</div>
+			<form method="post" action="{% url 'yt_accounts_bulk_action' %}">
+				{% csrf_token %}
+				<input type="hidden" name="action" value="change_locale">
+				<div class="modal-body">
+					<div class="mb-3">
+						<label class="form-label">New Locale</label>
+						<select name="new_locale" class="form-select" required>
+							<option value="">Select locale...</option>
+							<option value="en_US">English (US)</option>
+							<option value="en_GB">English (UK)</option>
+							<option value="ru_RU">Русский</option>
+							<option value="es_ES">Español</option>
+							<option value="fr_FR">Français</option>
+							<option value="de_DE">Deutsch</option>
+							<option value="pt_BR">Português (Brasil)</option>
+							<option value="ja_JP">日本語</option>
+							<option value="ko_KR">한국어</option>
+							<option value="zh_CN">中文 (简体)</option>
+						</select>
+					</div>
+					<div class="alert alert-info">
+						<i class="bi bi-info-circle me-2"></i>
+						This will change the browser locale for all selected accounts.
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+					<button type="submit" class="btn btn-warning">Change Locale</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+
+<!-- Delete Accounts Modal -->
+<div class="modal fade" id="deleteAccountsModal" tabindex="-1">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Delete Accounts</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+			</div>
+			<form method="post" action="{% url 'yt_accounts_bulk_action' %}">
+				{% csrf_token %}
+				<input type="hidden" name="action" value="delete">
+				<div class="modal-body">
+					<div class="alert alert-danger">
+						<i class="bi bi-exclamation-triangle-fill me-2"></i>
+						<strong>Warning:</strong> This action cannot be undone. All selected accounts will be permanently deleted.
+					</div>
+					<div class="mb-3">
+						<label class="form-label">Type "DELETE" to confirm</label>
+						<input type="text" class="form-control" id="deleteConfirm" placeholder="Type DELETE to confirm">
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+					<button type="submit" class="btn btn-danger" id="deleteButton" disabled>Delete Accounts</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showActionModal(action) {
+    let modalId;
+    switch(action) {
+        case 'change_status':
+            modalId = 'changeStatusModal';
+            break;
+        case 'assign_proxy':
+            modalId = 'assignProxyModal';
+            break;
+        case 'change_locale':
+            modalId = 'changeLocaleModal';
+            break;
+        case 'delete':
+            modalId = 'deleteAccountsModal';
+            break;
+    }
+    
+    if (modalId) {
+        const modal = new bootstrap.Modal(document.getElementById(modalId));
+        modal.show();
+    }
+}
+
+// Delete confirmation
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteConfirm = document.getElementById('deleteConfirm');
+    const deleteButton = document.getElementById('deleteButton');
+    
+    if (deleteConfirm && deleteButton) {
+        deleteConfirm.addEventListener('input', function() {
+            deleteButton.disabled = this.value !== 'DELETE';
+        });
+    }
+});
+</script>
+{% endblock %}

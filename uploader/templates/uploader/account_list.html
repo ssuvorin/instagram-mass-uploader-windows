@@ -10,6 +10,27 @@
 	.badge-proxy { background: #fff; color: #111827; border: 1px solid #e5e7eb; }
 	.badge-status-active { background: rgba(16,185,129,.1); color: #10b981; border: 1px solid rgba(16,185,129,.2); }
 	.badge-status-inactive { background: rgba(239,68,68,.08); color: #ef4444; border: 1px solid rgba(239,68,68,.2); }
+	
+	/* Массовые действия */
+	#bulkActionsBar {
+		display: none;
+		border-left: 4px solid #0d6efd;
+		background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+	}
+	#bulkActionsBar.show {
+		display: block;
+		animation: slideDown 0.3s ease;
+	}
+	@keyframes slideDown {
+		from { opacity: 0; transform: translateY(-10px); }
+		to { opacity: 1; transform: translateY(0); }
+	}
+	.account-checkbox:checked {
+		accent-color: #0d6efd;
+	}
+	tr.selected {
+		background-color: #e7f3ff !important;
+	}
 </style>
 {% endblock %}
 
@@ -78,12 +99,45 @@
     </div>
 </div>
 
+<!-- Панель массовых действий -->
+<div id="bulkActionsBar" class="card mb-3">
+    <div class="card-body py-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <i class="bi bi-check2-square text-primary me-2"></i>
+                <span id="selectedCount" class="fw-bold fs-5">0</span>
+                <span class="text-muted ms-2">accounts selected</span>
+            </div>
+            <div class="btn-group">
+                <button type="button" class="btn btn-info" onclick="bulkSaveSnapshots()" title="Save Dolphin profile snapshots for selected accounts">
+                    <i class="bi bi-cloud-download"></i> Save Snapshots
+                </button>
+                <button type="button" class="btn btn-warning" onclick="bulkChangeProxy()" title="Change proxy for selected accounts">
+                    <i class="bi bi-shield-lock"></i> Change Proxy
+                </button>
+                <button type="button" class="btn btn-success" onclick="bulkChangeStatus()" title="Change status for selected accounts">
+                    <i class="bi bi-tag"></i> Change Status
+                </button>
+                <button type="button" class="btn btn-danger" onclick="bulkDeleteAccounts()" title="Delete selected accounts">
+                    <i class="bi bi-trash"></i> Delete
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="clearSelection()">
+                    <i class="bi bi-x"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="card">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead>
                     <tr>
+                        <th style="width: 40px;">
+                            <input type="checkbox" id="selectAll" class="form-check-input" title="Select All">
+                        </th>
                         <th>Username</th>
                         <th>Status</th>
                         <th>Dolphin Profile</th>
@@ -97,7 +151,10 @@
                 </thead>
                 <tbody>
                     {% for account in accounts %}
-                    <tr>
+                    <tr data-account-id="{{ account.id }}">
+                        <td>
+                            <input type="checkbox" class="form-check-input account-checkbox" value="{{ account.id }}" data-username="{{ account.username }}">
+                        </td>
                         <td>{{ account.username }}</td>
                         <td>
                             {% if account.status == 'ACTIVE' %}
@@ -182,7 +239,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="8" class="text-center py-4">
+                        <td colspan="10" class="text-center py-4">
                             <i class="bi bi-person-x fs-1 text-muted mb-3 d-block"></i>
                             <p class="text-muted">No accounts found</p>
                             <a href="{% url 'create_account' %}" class="btn btn-primary btn-sm">Create New Account</a>
@@ -234,5 +291,195 @@
 	var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
 	tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl); });
 })();
+
+// Управление массовыми действиями
+const selectAllCheckbox = document.getElementById('selectAll');
+const accountCheckboxes = document.querySelectorAll('.account-checkbox');
+const bulkActionsBar = document.getElementById('bulkActionsBar');
+const selectedCountEl = document.getElementById('selectedCount');
+
+// Select All / Deselect All
+selectAllCheckbox.addEventListener('change', function() {
+	accountCheckboxes.forEach(checkbox => {
+		checkbox.checked = this.checked;
+		updateRowHighlight(checkbox);
+	});
+	updateBulkActionsBar();
+});
+
+// Individual checkbox change
+accountCheckboxes.forEach(checkbox => {
+	checkbox.addEventListener('change', function() {
+		updateRowHighlight(this);
+		updateBulkActionsBar();
+		
+		// Update selectAll checkbox state
+		const allChecked = Array.from(accountCheckboxes).every(cb => cb.checked);
+		const someChecked = Array.from(accountCheckboxes).some(cb => cb.checked);
+		selectAllCheckbox.checked = allChecked;
+		selectAllCheckbox.indeterminate = someChecked && !allChecked;
+	});
+});
+
+function updateRowHighlight(checkbox) {
+	const row = checkbox.closest('tr');
+	if (checkbox.checked) {
+		row.classList.add('selected');
+	} else {
+		row.classList.remove('selected');
+	}
+}
+
+function updateBulkActionsBar() {
+	const selectedCheckboxes = Array.from(accountCheckboxes).filter(cb => cb.checked);
+	const count = selectedCheckboxes.length;
+	
+	selectedCountEl.textContent = count;
+	
+	if (count > 0) {
+		bulkActionsBar.classList.add('show');
+	} else {
+		bulkActionsBar.classList.remove('show');
+	}
+}
+
+function getSelectedAccountIds() {
+	return Array.from(accountCheckboxes)
+		.filter(cb => cb.checked)
+		.map(cb => cb.value);
+}
+
+function clearSelection() {
+	accountCheckboxes.forEach(checkbox => {
+		checkbox.checked = false;
+		updateRowHighlight(checkbox);
+	});
+	selectAllCheckbox.checked = false;
+	selectAllCheckbox.indeterminate = false;
+	updateBulkActionsBar();
+}
+
+// Массовые действия
+function bulkSaveSnapshots() {
+	const accountIds = getSelectedAccountIds();
+	if (accountIds.length === 0) return;
+	
+	if (!confirm(`Save Dolphin profile snapshots for ${accountIds.length} selected account(s)?`)) {
+		return;
+	}
+	
+	const form = document.createElement('form');
+	form.method = 'POST';
+	form.action = '{% url "bulk_save_snapshots" %}';
+	
+	const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+	if (csrfToken) {
+		const csrfInput = document.createElement('input');
+		csrfInput.type = 'hidden';
+		csrfInput.name = 'csrfmiddlewaretoken';
+		csrfInput.value = csrfToken.value;
+		form.appendChild(csrfInput);
+	}
+	
+	accountIds.forEach(id => {
+		const input = document.createElement('input');
+		input.type = 'hidden';
+		input.name = 'account_ids';
+		input.value = id;
+		form.appendChild(input);
+	});
+	
+	document.body.appendChild(form);
+	form.submit();
+}
+
+function bulkChangeProxy() {
+	const accountIds = getSelectedAccountIds();
+	if (accountIds.length === 0) return;
+	
+	// Redirect to existing bulk change proxy page with selected IDs
+	const url = '{% url "bulk_change_proxy" %}?account_ids=' + accountIds.join(',');
+	window.location.href = url;
+}
+
+function bulkChangeStatus() {
+	const accountIds = getSelectedAccountIds();
+	if (accountIds.length === 0) return;
+	
+	const status = prompt('Enter new status (ACTIVE, BLOCKED, LIMITED, INACTIVE, SUSPENDED):');
+	if (!status) return;
+	
+	const validStatuses = ['ACTIVE', 'BLOCKED', 'LIMITED', 'INACTIVE', 'PHONE_VERIFICATION_REQUIRED', 'HUMAN_VERIFICATION_REQUIRED', 'SUSPENDED'];
+	if (!validStatuses.includes(status.toUpperCase())) {
+		alert('Invalid status! Valid options: ' + validStatuses.join(', '));
+		return;
+	}
+	
+	const form = document.createElement('form');
+	form.method = 'POST';
+	form.action = '{% url "bulk_change_status" %}';
+	
+	const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+	if (csrfToken) {
+		const csrfInput = document.createElement('input');
+		csrfInput.type = 'hidden';
+		csrfInput.name = 'csrfmiddlewaretoken';
+		csrfInput.value = csrfToken.value;
+		form.appendChild(csrfInput);
+	}
+	
+	accountIds.forEach(id => {
+		const input = document.createElement('input');
+		input.type = 'hidden';
+		input.name = 'account_ids';
+		input.value = id;
+		form.appendChild(input);
+	});
+	
+	const statusInput = document.createElement('input');
+	statusInput.type = 'hidden';
+	statusInput.name = 'status';
+	statusInput.value = status.toUpperCase();
+	form.appendChild(statusInput);
+	
+	document.body.appendChild(form);
+	form.submit();
+}
+
+function bulkDeleteAccounts() {
+	const accountIds = getSelectedAccountIds();
+	if (accountIds.length === 0) return;
+	
+	if (!confirm(`Are you sure you want to delete ${accountIds.length} selected account(s)? This action cannot be undone!`)) {
+		return;
+	}
+	
+	const form = document.createElement('form');
+	form.method = 'POST';
+	form.action = '{% url "bulk_delete_accounts" %}';
+	
+	const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+	if (csrfToken) {
+		const csrfInput = document.createElement('input');
+		csrfInput.type = 'hidden';
+		csrfInput.name = 'csrfmiddlewaretoken';
+		csrfInput.value = csrfToken.value;
+		form.appendChild(csrfInput);
+	}
+	
+	accountIds.forEach(id => {
+		const input = document.createElement('input');
+		input.type = 'hidden';
+		input.name = 'account_ids';
+		input.value = id;
+		form.appendChild(input);
+	});
+	
+	document.body.appendChild(form);
+	form.submit();
+}
 </script>
+
+<!-- CSRF Token для JavaScript -->
+{% csrf_token %}
 {% endblock %} 

@@ -54,6 +54,14 @@ class BaseSelectorProvider:
             'div[role="button"]:has-text("Siguiente")',
             'button:has-text("Avançar")',
             'div[role="button"]:has-text("Avançar")',
+            'button:has-text("Weiter")',      # DE
+            'div[role="button"]:has-text("Weiter")',      # DE
+            'button:has-text("Fortfahren")',  # DE
+            'div[role="button"]:has-text("Fortfahren")',  # DE
+            'button:has-text("Επόμενο")',     # EL
+            'div[role="button"]:has-text("Επόμενο")',     # EL
+            'button:has-text("Συνέχεια")',    # EL
+            'div[role="button"]:has-text("Συνέχεια")',    # EL
         ]
         return base + extras
 
@@ -64,6 +72,14 @@ class BaseSelectorProvider:
             'div[role="button"]:has-text("Compartir")',
             'button:has-text("Compartilhar")',
             'div[role="button"]:has-text("Compartilhar")',
+            'button:has-text("Teilen")',        # DE
+            'div[role="button"]:has-text("Teilen")',        # DE
+            'button:has-text("Veröffentlichen")', # DE
+            'div[role="button"]:has-text("Veröffentlichen")', # DE
+            'button:has-text("Κοινοποίηση")',   # EL
+            'div[role="button"]:has-text("Κοινοποίηση")',   # EL
+            'button:has-text("Δημοσίευση")',    # EL
+            'div[role="button"]:has-text("Δημοσίευση")',    # EL
         ]
         return base + extras
 

@@ -274,7 +274,7 @@ def create_account(request):
             try:
                 proxy_selection = request.POST.get('proxy_selection', 'locale_only')
                 selected_locale = request.POST.get('profile_locale', 'ru_BY')
-                if selected_locale not in ['ru_BY', 'en_IN', 'es_CL', 'es_MX', 'pt_BR']:
+                if selected_locale not in ['ru_BY', 'en_IN', 'es_CL', 'es_MX', 'pt_BR', 'el_GR', 'de_DE']:
                     selected_locale = 'ru_BY'
 
                 base_qs = Proxy.objects.filter(is_active=True, assigned_account__isnull=True)
@@ -345,7 +345,7 @@ def create_account(request):
 
                         # Using updated create_profile with multiple locales
                         selected_locale = request.POST.get('profile_locale', 'ru_BY')
-                        if selected_locale not in ['ru_BY', 'en_IN', 'es_CL', 'es_MX', 'pt_BR']:
+                        if selected_locale not in ['ru_BY', 'en_IN', 'es_CL', 'es_MX', 'pt_BR', 'el_GR', 'de_DE']:
                             selected_locale = 'ru_BY'
                         response = dolphin.create_profile(
                             name=profile_name,
@@ -482,9 +482,9 @@ def import_accounts(request):
         proxy_selection = request.POST.get('proxy_selection', 'locale_only')
         proxy_locale_strict = request.POST.get('proxy_locale_strict') == '1'
         profile_mode = request.POST.get('profile_mode', 'create_profiles')
-        # Locale: support ru_BY, en_IN, es_CL, es_MX, pt_BR
+        # Locale: support ru_BY, en_IN, es_CL, es_MX, pt_BR, el_GR, de_DE
         selected_locale = request.POST.get('profile_locale', 'ru_BY')
-        allowed_locales = ['ru_BY', 'en_IN', 'es_CL', 'es_MX', 'pt_BR']
+        allowed_locales = ['ru_BY', 'en_IN', 'es_CL', 'es_MX', 'pt_BR', 'el_GR', 'de_DE']
         if selected_locale not in allowed_locales:
             selected_locale = 'ru_BY'
         # Derive target country from locale
@@ -503,6 +503,12 @@ def import_accounts(request):
         elif selected_locale == 'pt_BR':
             locale_country = 'BR'
             country_text = 'Brazil'
+        elif selected_locale == 'el_GR':
+            locale_country = 'GR'
+            country_text = 'Greece'
+        elif selected_locale == 'de_DE':
+            locale_country = 'DE'
+            country_text = 'Germany'
         else:
             locale_country = 'BY'
             country_text = 'Belarus'
@@ -955,6 +961,13 @@ def import_accounts(request):
                             account.save(update_fields=['dolphin_profile_id', 'locale'])
                             dolphin_created_count += 1
                             logger.info(f"[SUCCESS] Created Dolphin profile {profile_id} for account {username}")
+                            
+                            # Save Dolphin profile snapshot for 1:1 recreation
+                            try:
+                                from uploader.services.dolphin_snapshot import save_dolphin_snapshot
+                                save_dolphin_snapshot(account, profile_id, response)
+                            except Exception as snap_err:
+                                logger.warning(f"[IMPORT] Could not save Dolphin snapshot for {username}: {snap_err}")
 
                             # Import cookies into the newly created profile if we have DESKTOP cookies
                             try:
@@ -1238,14 +1251,20 @@ def import_accounts_ua_cookies(request):
 		proxy_locale_strict = request.POST.get('proxy_locale_strict') == '1'
 		profile_mode = request.POST.get('profile_mode', 'create_profiles')
 		selected_locale = request.POST.get('profile_locale', 'ru_BY')
-		allowed_locales = ['ru_BY', 'en_IN', 'es_CL', 'es_MX', 'pt_BR']
+		allowed_locales = ['ru_BY', 'en_IN', 'es_CL', 'es_MX', 'pt_BR', 'el_GR', 'de_DE']
 		if selected_locale not in allowed_locales:
 			selected_locale = 'ru_BY'
 		locale_country = (
 			'BY' if selected_locale == 'ru_BY' else (
 				'IN' if selected_locale == 'en_IN' else (
 					'CL' if selected_locale == 'es_CL' else (
-						'MX' if selected_locale == 'es_MX' else 'BR'
+						'MX' if selected_locale == 'es_MX' else (
+							'BR' if selected_locale == 'pt_BR' else (
+								'GR' if selected_locale == 'el_GR' else (
+									'DE' if selected_locale == 'de_DE' else 'BY'
+								)
+							)
+						)
 					)
 				)
 			)
@@ -1533,6 +1552,13 @@ def import_accounts_ua_cookies(request):
 								account.save(update_fields=['dolphin_profile_id'])
 							dolphin_created_count += 1
 							logger.info(f"[UA+COOKIES][SUCCESS] Created Dolphin profile {profile_id} for account {username}")
+							
+							# Save Dolphin profile snapshot for 1:1 recreation
+							try:
+								from uploader.services.dolphin_snapshot import save_dolphin_snapshot
+								save_dolphin_snapshot(account, profile_id, response)
+							except Exception as snap_err:
+								logger.warning(f"[UA+COOKIES] Could not save Dolphin snapshot for {username}: {snap_err}")
 							# Import cookies to Dolphin (prefer Local API)
 							try:
 								if parsed_cookies_list:
@@ -1950,3 +1976,191 @@ def import_accounts_bundle(request):
 		'clients': clients,
 	}
 	return render(request, 'uploader/import_accounts_bundle.html', context)
+
+
+@login_required
+def bulk_save_snapshots(request):
+	"""Bulk save Dolphin profile snapshots for selected accounts"""
+	if request.method != 'POST':
+		return redirect('account_list')
+	
+	account_ids = request.POST.getlist('account_ids')
+	if not account_ids:
+		messages.warning(request, 'No accounts selected!')
+		return redirect('account_list')
+	
+	try:
+		# Initialize Dolphin API
+		dolphin_token = os.environ.get('DOLPHIN_API_TOKEN')
+		if not dolphin_token:
+			messages.error(request, 'Dolphin API token not configured!')
+			return redirect('account_list')
+		
+		from bot.src.instagram_uploader.dolphin_anty import DolphinAnty
+		dolphin = DolphinAnty(dolphin_token)
+		
+		if not dolphin.authenticate():
+			messages.error(request, 'Failed to authenticate with Dolphin Anty API!')
+			return redirect('account_list')
+		
+		from uploader.services.dolphin_snapshot import save_existing_profile_snapshot
+		
+		success_count = 0
+		error_count = 0
+		skipped_count = 0
+		
+		accounts = InstagramAccount.objects.filter(id__in=account_ids)
+		
+		for account in accounts:
+			if not account.dolphin_profile_id:
+				skipped_count += 1
+				logger.warning(f"[BULK SNAPSHOT] Account {account.username} has no Dolphin profile, skipped")
+				continue
+			
+			try:
+				if save_existing_profile_snapshot(account, dolphin):
+					success_count += 1
+					logger.info(f"[BULK SNAPSHOT] Successfully saved snapshot for {account.username}")
+				else:
+					error_count += 1
+					logger.error(f"[BULK SNAPSHOT] Failed to save snapshot for {account.username}")
+			except Exception as e:
+				error_count += 1
+				logger.error(f"[BULK SNAPSHOT] Error saving snapshot for {account.username}: {str(e)}")
+		
+		# Show summary
+		if success_count > 0:
+			messages.success(request, f'Successfully saved {success_count} snapshot(s)!')
+		if error_count > 0:
+			messages.error(request, f'Failed to save {error_count} snapshot(s). Check logs for details.')
+		if skipped_count > 0:
+			messages.warning(request, f'Skipped {skipped_count} account(s) without Dolphin profiles.')
+	
+	except Exception as e:
+		logger.error(f"[BULK SNAPSHOT] Bulk save snapshots error: {str(e)}")
+		messages.error(request, f'Error during bulk snapshot save: {str(e)}')
+	
+	return redirect('account_list')
+
+
+@login_required
+def bulk_change_status(request):
+	"""Bulk change status for selected accounts"""
+	if request.method != 'POST':
+		return redirect('account_list')
+	
+	account_ids = request.POST.getlist('account_ids')
+	new_status = request.POST.get('status', '').upper()
+	
+	if not account_ids:
+		messages.warning(request, 'No accounts selected!')
+		return redirect('account_list')
+	
+	valid_statuses = ['ACTIVE', 'BLOCKED', 'LIMITED', 'INACTIVE', 'PHONE_VERIFICATION_REQUIRED', 'HUMAN_VERIFICATION_REQUIRED', 'SUSPENDED']
+	if new_status not in valid_statuses:
+		messages.error(request, f'Invalid status! Valid options: {", ".join(valid_statuses)}')
+		return redirect('account_list')
+	
+	try:
+		accounts = InstagramAccount.objects.filter(id__in=account_ids)
+		count = accounts.update(status=new_status)
+		
+		logger.info(f"[BULK STATUS] Changed status to {new_status} for {count} account(s)")
+		messages.success(request, f'Successfully changed status to {new_status} for {count} account(s)!')
+	
+	except Exception as e:
+		logger.error(f"[BULK STATUS] Error changing status: {str(e)}")
+		messages.error(request, f'Error changing status: {str(e)}')
+	
+	return redirect('account_list')
+
+
+@login_required
+def bulk_delete_accounts(request):
+	"""Bulk delete selected accounts"""
+	if request.method != 'POST':
+		return redirect('account_list')
+	
+	account_ids = request.POST.getlist('account_ids')
+	
+	if not account_ids:
+		messages.warning(request, 'No accounts selected!')
+		return redirect('account_list')
+	
+	try:
+		accounts = InstagramAccount.objects.filter(id__in=account_ids)
+		count = accounts.count()
+		usernames = [acc.username for acc in accounts[:10]]  # Show first 10
+		
+		# Initialize Dolphin API for profile deletion
+		dolphin = None
+		api_key = os.environ.get("DOLPHIN_API_TOKEN", "")
+		if api_key:
+			try:
+				dolphin_api_host = os.environ.get("DOLPHIN_API_HOST", "http://localhost:3001/v1.0")
+				if not dolphin_api_host.endswith("/v1.0"):
+					dolphin_api_host = dolphin_api_host.rstrip("/") + "/v1.0"
+				
+				from bot.src.instagram_uploader.dolphin_anty import DolphinAnty
+				dolphin = DolphinAnty(api_key=api_key, local_api_base=dolphin_api_host)
+				if not dolphin.authenticate():
+					logger.warning("[BULK DELETE] Failed to authenticate with Dolphin API")
+					dolphin = None
+			except Exception as e:
+				logger.error(f"[BULK DELETE] Error initializing Dolphin API: {str(e)}")
+				dolphin = None
+		
+		# Delete Dolphin profiles and release proxies
+		dolphin_deleted_count = 0
+		dolphin_failed_count = 0
+		proxy_released_count = 0
+		
+		for account in accounts:
+			# Delete Dolphin profile if exists
+			if account.dolphin_profile_id and dolphin:
+				try:
+					delete_result = dolphin.delete_profile(account.dolphin_profile_id)
+					if delete_result:
+						dolphin_deleted_count += 1
+						logger.info(f"[BULK DELETE] Deleted Dolphin profile {account.dolphin_profile_id} for {account.username}")
+					else:
+						dolphin_failed_count += 1
+						logger.warning(f"[BULK DELETE] Failed to delete Dolphin profile {account.dolphin_profile_id} for {account.username}")
+				except Exception as e:
+					dolphin_failed_count += 1
+					logger.error(f"[BULK DELETE] Error deleting Dolphin profile {account.dolphin_profile_id} for {account.username}: {str(e)}")
+			
+			# Release proxy if assigned
+			if account.proxy:
+				try:
+					proxy = account.proxy
+					proxy.assigned_account = None
+					proxy.save(update_fields=['assigned_account'])
+					proxy_released_count += 1
+					logger.info(f"[BULK DELETE] Released proxy {proxy} from account {account.username}")
+				except Exception as e:
+					logger.error(f"[BULK DELETE] Error releasing proxy for {account.username}: {str(e)}")
+		
+		# Delete accounts from database
+		accounts.delete()
+		
+		# Prepare summary message
+		summary_parts = [f'Successfully deleted {count} account(s)']
+		if dolphin_deleted_count > 0:
+			summary_parts.append(f'{dolphin_deleted_count} Dolphin profile(s) deleted')
+		if dolphin_failed_count > 0:
+			summary_parts.append(f'{dolphin_failed_count} Dolphin profile(s) failed to delete')
+		if proxy_released_count > 0:
+			summary_parts.append(f'{proxy_released_count} proxy(ies) released')
+		
+		logger.info(f"[BULK DELETE] Deleted {count} account(s): {', '.join(usernames)}")
+		messages.success(request, '. '.join(summary_parts) + '.')
+		
+		if dolphin_failed_count > 0:
+			messages.warning(request, f'{dolphin_failed_count} Dolphin profile(s) could not be deleted. They may need to be cleaned up manually.')
+	
+	except Exception as e:
+		logger.error(f"[BULK DELETE] Error deleting accounts: {str(e)}")
+		messages.error(request, f'Error deleting accounts: {str(e)}')
+	
+	return redirect('account_list')

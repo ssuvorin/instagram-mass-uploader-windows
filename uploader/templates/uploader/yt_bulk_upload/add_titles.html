@@ -1,0 +1,101 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}Add Titles - {{ task.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .text-danger { color: #ff0000 !important; }
+    .btn-danger { background: linear-gradient(135deg, #ff0000, #cc0000); border: none; }
+    .btn-danger:hover { background: linear-gradient(135deg, #cc0000, #990000); }
+    .bg-danger { background: linear-gradient(135deg, #ff0000, #cc0000) !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="mb-4 fw-bold">
+            <i class="bi bi-file-text text-danger me-2"></i>
+            Add Titles & Descriptions
+        </h2>
+        <p class="text-muted">Import titles and descriptions for "{{ task.name }}"</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'yt_shorts_bulk_upload_detail' task_id=task.id %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Task
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">Upload Titles File</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>File Format:</strong> Text file with title on first line, description on following lines, separated by blank line.
+                        <br><br>
+                        <strong>Example:</strong>
+                        <pre class="mb-0 mt-2 small">Amazing Short Video #1
+This is the description for video 1
+It can span multiple lines
+
+Another Great Video
+This is the description for video 2</pre>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.titles_file.label }}</label>
+                        {{ form.titles_file }}
+                        <div class="form-text">{{ form.titles_file.help_text }}</div>
+                        {% if form.titles_file.errors %}
+                        <div class="text-danger">
+                            {% for error in form.titles_file.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <button type="submit" class="btn btn-danger btn-lg">
+                        <i class="bi bi-upload me-2"></i>Import Titles
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Current Titles</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-2">Already imported: <strong>{{ task.titles.count }}</strong> titles</p>
+                {% if task.titles.count > 0 %}
+                <ul class="list-unstyled mb-0">
+                    {% for title in task.titles.all|slice:":5" %}
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success me-1"></i>
+                        <small><strong>{{ title.title }}</strong></small>
+                    </li>
+                    {% endfor %}
+                    {% if task.titles.count > 5 %}
+                    <li class="text-muted">
+                        <small>... and {{ task.titles.count|add:"-5" }} more</small>
+                    </li>
+                    {% endif %}
+                </ul>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

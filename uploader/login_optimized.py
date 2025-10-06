@@ -551,8 +551,12 @@ def _check_for_human_verification_dialog(page):
                 # Button selectors for "Continue" button
                 'div[role="button"][aria-label="Продолжить"]',
                 'div[role="button"][aria-label="Continue"]',
+                'div[role="button"][aria-label="Fortfahren"]',  # DE
+                'div[role="button"][aria-label="Συνέχεια"]',     # EL
                 'div[data-bloks-name="bk.components.Flexbox"][role="button"]:has-text("Продолжить")',
                 'div[data-bloks-name="bk.components.Flexbox"][role="button"]:has-text("Continue")',
+                'div[data-bloks-name="bk.components.Flexbox"][role="button"]:has-text("Fortfahren")',  # DE
+                'div[data-bloks-name="bk.components.Flexbox"][role="button"]:has-text("Συνέχεια")',     # EL
                 
                 # Image selector for the verification icon
                 'img[src*="mIFHU0SL-7O.png"]',

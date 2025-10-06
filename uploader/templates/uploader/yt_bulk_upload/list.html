@@ -1,0 +1,191 @@
+{% extends "uploader/base.html" %}
+
+{% block title %}YouTube Shorts Bulk Upload - Uploader{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Modern card design */
+    .task-dashboard {
+        background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 16px;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .task-dashboard::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        transform: rotate(45deg);
+        z-index: 1;
+    }
+    
+    .task-dashboard .content {
+        position: relative;
+        z-index: 2;
+    }
+    
+    .task-card {
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        border: 1px solid #e9ecef;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+    }
+    
+    .task-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+    }
+    
+    .task-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #ff0000, #cc0000);
+        z-index: 1;
+    }
+    
+    .empty-state {
+        background: white;
+        border-radius: 16px;
+        padding: 4rem 2rem;
+        text-align: center;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        border: 1px solid #e9ecef;
+    }
+    
+    .empty-icon {
+        font-size: 4rem;
+        color: #6c757d;
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="task-dashboard">
+    <div class="content">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2 fw-bold">
+                    <i class="bi bi-youtube me-2"></i>
+                    YouTube Shorts Bulk Upload Dashboard
+                </h2>
+                <p class="mb-0 opacity-75">Manage and monitor your YouTube Shorts bulk upload campaigns</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{% url 'create_yt_shorts_bulk_upload' %}" class="btn btn-light btn-lg">
+                    <i class="bi bi-plus-circle me-2"></i> New Campaign
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if tasks %}
+<!-- Tasks Table -->
+<div class="card shadow-sm">
+    <div class="card-header bg-white">
+        <h4 class="mb-0"><i class="bi bi-list-ul me-2"></i>All Tasks ({{ tasks|length }})</h4>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Task Name</th>
+                        <th>Status</th>
+                        <th>Accounts</th>
+                        <th>Videos</th>
+                        <th>Uploaded</th>
+                        <th>Failed</th>
+                        <th>Progress</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in tasks %}
+                    <tr>
+                        <td>
+                            <div>
+                                <strong>{{ task.name }}</strong>
+                                <div class="text-muted small">#{{ task.id }}</div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ task.status|lower }} text-white">
+                                {{ task.status|title }}
+                            </span>
+                        </td>
+                        <td><span class="badge bg-secondary">{{ task.get_total_count }}</span></td>
+                        <td><span class="badge bg-info">{{ task.videos.count }}</span></td>
+                        <td><span class="badge bg-success">{{ task.uploaded_success_total }}</span></td>
+                        <td><span class="badge bg-danger">{{ task.uploaded_failed_total }}</span></td>
+                        <td>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: {{ task.get_completion_percentage }}%"
+                                     aria-valuenow="{{ task.get_completion_percentage }}" 
+                                     aria-valuemin="0" aria-valuemax="100">
+                                    {{ task.get_completion_percentage }}%
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-nowrap">{{ task.created_at|date:"M d, Y" }}</div>
+                            <div class="text-muted small">{{ task.created_at|date:"H:i" }}</div>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'yt_shorts_bulk_upload_detail' task_id=task.id %}" 
+                                   class="btn btn-outline-primary" title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if task.status == 'PENDING' %}
+                                <a href="{% url 'start_yt_shorts_bulk_upload' task_id=task.id %}" 
+                                   class="btn btn-outline-success" title="Start Upload">
+                                    <i class="bi bi-play-circle"></i>
+                                </a>
+                                {% endif %}
+                                <a href="{% url 'delete_yt_shorts_bulk_upload' task_id=task.id %}" 
+                                   class="btn btn-outline-danger" title="Delete Task"
+                                   onclick="return confirm('Are you sure you want to delete this task?')">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">
+        <i class="bi bi-youtube"></i>
+    </div>
+    <h4 class="text-muted mb-3">No YouTube Shorts bulk upload campaigns found</h4>
+    <p class="text-muted mb-4">Start by creating a new bulk upload campaign to upload multiple Shorts across different channels.</p>
+    <a href="{% url 'create_yt_shorts_bulk_upload' %}" class="btn btn-danger btn-lg">
+        <i class="bi bi-plus-circle me-2"></i> Create Your First Campaign
+    </a>
+</div>
+{% endif %}
+{% endblock %}
+

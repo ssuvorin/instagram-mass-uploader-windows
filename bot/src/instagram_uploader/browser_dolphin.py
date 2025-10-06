@@ -142,15 +142,16 @@ class DolphinBrowser:
                 logger.info(f"[WARN] No proxy specified for account {username}")
             
             # Create profile
-            profile_id = self.dolphin.create_profile_for_account(account_data, proxy_data)
+            profile_id, response = self.dolphin.create_profile_for_account(account_data, proxy_data)
             
             if not profile_id:
                 logger.error(f"[FAIL] Failed to create Dolphin profile for account: {username}")
                 return None
                 
-            # Store profile ID
+            # Store profile ID and response for snapshot
             logger.info(f"[OK] Successfully created Dolphin profile ID: {profile_id}")
             self.dolphin_profile_id = profile_id
+            self.dolphin_profile_response = response  # Store for potential snapshot saving
                 
             # Connect to the profile
             logger.info(f"[RETRY] [Step 2/2] Connecting to newly created Dolphin profile {profile_id}...")
