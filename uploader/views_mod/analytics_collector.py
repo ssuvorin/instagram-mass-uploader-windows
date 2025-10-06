@@ -104,12 +104,17 @@ def analytics_collector(request):
         'max_likes_per_account': request.POST.get('max_likes_per_account', '') or 0,
     })
 
-    form = ClientAnalyticsForm(form_data)
+    form = ClientAnalyticsForm(request.POST)
     
     if form.is_valid():
         analytics = form.save(commit=False)
         analytics.is_manual = True
         analytics.created_by = request.user
+        
+        # Set created_at from form (it's not in Meta.fields, so handle manually)
+        if 'created_at' in form.cleaned_data and form.cleaned_data['created_at']:
+            analytics.created_at = form.cleaned_data['created_at']
+        
         analytics.save()
         
         messages.success(request, f'Аналитика успешно добавлена для {client.name} - {analytics.get_social_network_display()}')
