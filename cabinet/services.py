@@ -90,10 +90,12 @@ class AnalyticsService:
     def get_hashtag_summaries(self) -> List[HashtagSummary]:
         summaries: List[HashtagSummary] = []
         for ch in self.get_client_hashtags():
-            # Only get Instagram analytics or records without social_network (legacy)
+            # Only get automatic (non-manual) Instagram analytics
+            # Manual analytics are handled separately by get_manual_analytics_by_network()
             last_snap: Optional[HashtagAnalytics] = (
                 HashtagAnalytics.objects.filter(
-                    hashtag=ch.hashtag
+                    hashtag=ch.hashtag,
+                    is_manual=False  # Only automatic hashtag analytics
                 ).filter(
                     Q(social_network='INSTAGRAM') | Q(social_network__isnull=True) | Q(social_network='')
                 )
@@ -115,10 +117,12 @@ class AnalyticsService:
     def get_hashtag_details(self) -> List[HashtagDetail]:
         details: List[HashtagDetail] = []
         for ch in self.get_client_hashtags():
-            # Only get Instagram analytics or records without social_network (legacy)
+            # Only get automatic (non-manual) Instagram analytics
+            # Manual analytics are handled separately by get_manual_analytics_by_network()
             last_snap: Optional[HashtagAnalytics] = (
                 HashtagAnalytics.objects.filter(
-                    hashtag=ch.hashtag
+                    hashtag=ch.hashtag,
+                    is_manual=False  # Only automatic hashtag analytics
                 ).filter(
                     Q(social_network='INSTAGRAM') | Q(social_network__isnull=True) | Q(social_network='')
                 )
