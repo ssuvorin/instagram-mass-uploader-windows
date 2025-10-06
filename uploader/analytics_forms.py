@@ -11,7 +11,7 @@ class ClientAnalyticsForm(forms.ModelForm):
     class Meta:
         model = HashtagAnalytics
         fields = [
-            'client', 'social_network', 'hashtag',
+            'client', 'social_network', 'hashtag', 'created_at',
             'analyzed_medias', 'total_views', 'total_likes', 'total_comments', 
             'total_shares', 'total_followers', 'growth_rate',
             'instagram_stories_views', 'instagram_reels_views',
@@ -113,6 +113,11 @@ class ClientAnalyticsForm(forms.ModelForm):
                 'required': True,
                 'placeholder': 'Enter hashtag without #'
             }),
+            'created_at': forms.DateTimeInput(attrs={
+                'class': 'form-control',
+                'type': 'datetime-local',
+                'required': False
+            }),
             'notes': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': '3',
@@ -203,6 +208,7 @@ class ClientAnalyticsForm(forms.ModelForm):
             'tiktok_video_views': 'TikTok Video Views',
             'tiktok_profile_views': 'TikTok Profile Views',
             'hashtag': 'Hashtag',
+            'created_at': 'Date & Time',
             'notes': 'Notes',
             # Advanced metrics labels
             'total_accounts': 'Total Accounts',

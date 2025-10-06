@@ -61,6 +61,7 @@ def analytics_collector(request):
         'client': client_id,
         'social_network': social_network,
         'hashtag': hashtag,
+        'created_at': request.POST.get('created_at', ''),
         'analyzed_medias': request.POST.get('analyzed_medias', '') or 0,
         'total_views': request.POST.get('total_views', '') or 0,
         'total_likes': request.POST.get('total_likes', '') or 0,
