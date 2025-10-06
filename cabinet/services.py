@@ -345,60 +345,98 @@ class AnalyticsService:
         end = timezone.now()
         start = end - timezone.timedelta(days=days)
         
-        print(f"\n=== DEBUG get_manual_analytics_by_network ===")
-        print(f"Client: {self.client.name} (ID: {self.client.id})")
-        print(f"Period: {start} to {end} (last {days} days)")
-        
         # Get client hashtags first
         client_hashtags = list(self.get_client_hashtags().values_list("hashtag", flat=True))
-        print(f"Client hashtags: {client_hashtags}")
         
-        # Check raw records first - search by hashtag, not client
-        all_manual_records = HashtagAnalytics.objects.filter(
-            hashtag__in=client_hashtags,  # Search by hashtag, not client
-            is_manual=True,
-            created_at__gte=start,
-            created_at__lte=end
-        )
-        print(f"Total manual records found: {all_manual_records.count()}")
-        for record in all_manual_records[:5]:  # Show first 5
-            print(f"  - ID:{record.id}, Hashtag:{record.hashtag}, Network:{record.social_network}, Created:{record.created_at}, Posts:{record.analyzed_medias}, Views:{record.total_views}")
+        # Get the latest analytics for each social network for each hashtag
+        # This prevents duplication by taking only the most recent record per network
+        networks_data = {}
         
-        # Get manual analytics for this client's hashtags and aggregate by network
-        # NOTE: We SUM cumulative metrics (posts, views, likes) but take LATEST for snapshot metrics (accounts, followers)
-        networks_data = HashtagAnalytics.objects.filter(
-            hashtag__in=client_hashtags,  # Search by hashtag, not client
-            is_manual=True,
-            created_at__gte=start,
-            created_at__lte=end
-        ).values('social_network').annotate(
-            total_posts=Sum('analyzed_medias'),
-            total_views=Sum('total_views'),
-            total_likes=Sum('total_likes'),
-            total_comments=Sum('total_comments'),
-            total_shares=Sum('total_shares'),
-            instagram_stories_views=Sum('instagram_stories_views'),
-            instagram_reels_views=Sum('instagram_reels_views'),
-            youtube_subscribers=Sum('youtube_subscribers'),
-            youtube_watch_time=Sum('youtube_watch_time'),
-            tiktok_video_views=Sum('tiktok_video_views'),
-            tiktok_profile_views=Sum('tiktok_profile_views'),
-            # Advanced metrics - average for avg fields, max for max fields
-            avg_videos_per_account=Avg('avg_videos_per_account'),
-            max_videos_per_account=Max('max_videos_per_account'),
-            avg_views_per_video=Avg('avg_views_per_video'),
-            max_views_per_video=Max('max_views_per_video'),
-            avg_views_per_account=Avg('avg_views_per_account'),
-            max_views_per_account=Max('max_views_per_account'),
-            avg_likes_per_video=Avg('avg_likes_per_video'),
-            max_likes_per_video=Max('max_likes_per_video'),
-            avg_likes_per_account=Avg('avg_likes_per_account'),
-            max_likes_per_account=Max('max_likes_per_account'),
-        )
+        for hashtag in client_hashtags:
+            # Get all manual analytics for this hashtag
+            hashtag_analytics = HashtagAnalytics.objects.filter(
+                hashtag=hashtag,
+                is_manual=True,
+                created_at__gte=start,
+                created_at__lte=end
+            )
+            
+            # Group by social network and get the latest record for each
+            latest_by_network = {}
+            for analytics in hashtag_analytics:
+                network = analytics.social_network or 'INSTAGRAM'
+                if network not in latest_by_network or analytics.created_at > latest_by_network[network].created_at:
+                    latest_by_network[network] = analytics
+            
+            # Aggregate data from latest records only
+            for network_key, analytics in latest_by_network.items():
+                if network_key not in networks_data:
+                    networks_data[network_key] = {
+                        'social_network': network_key,
+                        'total_posts': 0,
+                        'total_views': 0,
+                        'total_likes': 0,
+                        'total_comments': 0,
+                        'total_shares': 0,
+                        'instagram_stories_views': 0,
+                        'instagram_reels_views': 0,
+                        'youtube_subscribers': 0,
+                        'youtube_watch_time': 0,
+                        'tiktok_video_views': 0,
+                        'tiktok_profile_views': 0,
+                        'avg_videos_per_account': 0,
+                        'max_videos_per_account': 0,
+                        'avg_views_per_video': 0,
+                        'max_views_per_video': 0,
+                        'avg_views_per_account': 0,
+                        'max_views_per_account': 0,
+                        'avg_likes_per_video': 0,
+                        'max_likes_per_video': 0,
+                        'avg_likes_per_account': 0,
+                        'max_likes_per_account': 0,
+                    }
+                
+                # Sum data from latest records
+                networks_data[network_key]['total_posts'] += int(getattr(analytics, "analyzed_medias", 0) or 0)
+                networks_data[network_key]['total_views'] += int(getattr(analytics, "total_views", 0) or 0)
+                networks_data[network_key]['total_likes'] += int(getattr(analytics, "total_likes", 0) or 0)
+                networks_data[network_key]['total_comments'] += int(getattr(analytics, "total_comments", 0) or 0)
+                networks_data[network_key]['total_shares'] += int(getattr(analytics, "total_shares", 0) or 0)
+                networks_data[network_key]['instagram_stories_views'] += int(getattr(analytics, "instagram_stories_views", 0) or 0)
+                networks_data[network_key]['instagram_reels_views'] += int(getattr(analytics, "instagram_reels_views", 0) or 0)
+                networks_data[network_key]['youtube_subscribers'] += int(getattr(analytics, "youtube_subscribers", 0) or 0)
+                networks_data[network_key]['youtube_watch_time'] += int(getattr(analytics, "youtube_watch_time", 0) or 0)
+                networks_data[network_key]['tiktok_video_views'] += int(getattr(analytics, "tiktok_video_views", 0) or 0)
+                networks_data[network_key]['tiktok_profile_views'] += int(getattr(analytics, "tiktok_profile_views", 0) or 0)
+                
+                # Take max values for max fields
+                networks_data[network_key]['max_videos_per_account'] = max(
+                    networks_data[network_key]['max_videos_per_account'],
+                    int(getattr(analytics, "max_videos_per_account", 0) or 0)
+                )
+                networks_data[network_key]['max_views_per_video'] = max(
+                    networks_data[network_key]['max_views_per_video'],
+                    int(getattr(analytics, "max_views_per_video", 0) or 0)
+                )
+                networks_data[network_key]['max_views_per_account'] = max(
+                    networks_data[network_key]['max_views_per_account'],
+                    int(getattr(analytics, "max_views_per_account", 0) or 0)
+                )
+                networks_data[network_key]['max_likes_per_video'] = max(
+                    networks_data[network_key]['max_likes_per_video'],
+                    int(getattr(analytics, "max_likes_per_video", 0) or 0)
+                )
+                networks_data[network_key]['max_likes_per_account'] = max(
+                    networks_data[network_key]['max_likes_per_account'],
+                    int(getattr(analytics, "max_likes_per_account", 0) or 0)
+                )
+        
+        # Convert to list format
+        networks_data_list = list(networks_data.values())
         
         networks = {}
         
-        for network_data in networks_data:
+        for network_data in networks_data_list:
             network_key = network_data['social_network']
             total_posts = network_data['total_posts'] or 0
             total_views = network_data['total_views'] or 0
