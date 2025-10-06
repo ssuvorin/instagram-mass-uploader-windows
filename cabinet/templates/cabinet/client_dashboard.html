@@ -133,9 +133,7 @@
             <th>Posts</th>
             <th>Views</th>
             <th>Avg Views</th>
-            <th>Followers</th>
             <th>Engagement</th>
-            <th>Growth</th>
             <th>Accounts</th>
           </tr>
         </thead>
@@ -162,9 +160,7 @@
             <td>{{ network.total_posts|default:0 }}</td>
             <td>{{ network.total_views|default:0|floatformat:0 }}</td>
             <td>{{ network.average_views|default:0|floatformat:0 }}</td>
-            <td>{{ network.total_followers|default:0|floatformat:0 }}</td>
             <td>{{ network.engagement_rate|default:0|floatformat:2 }}%</td>
-            <td>{{ network.growth_rate|default:0|floatformat:2 }}%</td>
             <td>{{ network.total_accounts|default:0 }}</td>
           </tr>
           {% endfor %}

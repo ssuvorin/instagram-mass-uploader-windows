@@ -90,12 +90,10 @@ class AnalyticsService:
     def get_hashtag_summaries(self) -> List[HashtagSummary]:
         summaries: List[HashtagSummary] = []
         for ch in self.get_client_hashtags():
-            # Only get automatic (non-manual) Instagram analytics
-            # Manual analytics are handled separately by get_manual_analytics_by_network()
+            # Get both manual and automatic Instagram analytics
             last_snap: Optional[HashtagAnalytics] = (
                 HashtagAnalytics.objects.filter(
-                    hashtag=ch.hashtag,
-                    is_manual=False  # Only automatic hashtag analytics
+                    hashtag=ch.hashtag
                 ).filter(
                     Q(social_network='INSTAGRAM') | Q(social_network__isnull=True) | Q(social_network='')
                 )
@@ -117,12 +115,10 @@ class AnalyticsService:
     def get_hashtag_details(self) -> List[HashtagDetail]:
         details: List[HashtagDetail] = []
         for ch in self.get_client_hashtags():
-            # Only get automatic (non-manual) Instagram analytics
-            # Manual analytics are handled separately by get_manual_analytics_by_network()
+            # Get both manual and automatic Instagram analytics
             last_snap: Optional[HashtagAnalytics] = (
                 HashtagAnalytics.objects.filter(
-                    hashtag=ch.hashtag,
-                    is_manual=False  # Only automatic hashtag analytics
+                    hashtag=ch.hashtag
                 ).filter(
                     Q(social_network='INSTAGRAM') | Q(social_network__isnull=True) | Q(social_network='')
                 )
@@ -146,16 +142,15 @@ class AnalyticsService:
         return details
 
     def get_daily_stats(self, days: int = 7) -> List[Dict[str, Any]]:
-        """Get daily stats - combines hashtag analytics and manual analytics"""
+        """Get daily stats - combines all hashtag analytics (both manual and automatic)"""
         hashtags = list(self.get_client_hashtags().values_list("hashtag", flat=True))
         end = timezone.now()
         start = end - timezone.timedelta(days=days)
         
-        # Get hashtag analytics (automatic)
+        # Get all hashtag analytics (both manual and automatic)
         hashtag_qs = (
             HashtagAnalytics.objects.filter(
-                hashtag__in=hashtags, 
-                is_manual=False,
+                hashtag__in=hashtags,
                 created_at__gte=start, 
                 created_at__lte=end
             )
@@ -170,7 +165,7 @@ class AnalyticsService:
             .order_by("day")
         )
         
-        # Get manual analytics - each record as separate point on chart
+        # Get manual analytics by client - each record as separate point on chart
         manual_qs = (
             HashtagAnalytics.objects.filter(
                 client=self.client,
@@ -236,11 +231,10 @@ class AnalyticsService:
         end = timezone.now()
         start = end - timezone.timedelta(weeks=weeks)
         
-        # Get hashtag analytics (automatic)
+        # Get all hashtag analytics (both manual and automatic)
         hashtag_qs = (
             HashtagAnalytics.objects.filter(
                 hashtag__in=hashtags,
-                is_manual=False,
                 created_at__gte=start, 
                 created_at__lte=end
             )
