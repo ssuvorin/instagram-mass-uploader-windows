@@ -32,7 +32,8 @@ def dashboard(request):
     # Non-superusers must be redirected to their specific cabinet only
     client = Client.objects.filter(user=request.user).select_related("agency").first()
     if client:
-        return redirect("cabinet_agency_dashboard")  # client sees agency dashboard scoped via query params if needed
+        # Redirect client with required agency_id and client_id parameters
+        return redirect(f"/cabinet/agency/?agency_id={client.agency_id}&client_id={client.id}")
 
     agency = Agency.objects.filter(owner=request.user).first()
     if agency:
@@ -478,6 +479,10 @@ def agency_dashboard(request):
             return render(request, "cabinet/error.html", {"message": "Invalid agency_id or client_id."})
         if client_for_scope.agency_id != q_agency_id_int or client_for_scope.id != q_client_id_int:
             return render(request, "cabinet/error.html", {"message": "Access denied for this agency/client."})
+        
+        # Additional security check: ensure client belongs to the specified agency
+        if not Client.objects.filter(id=q_client_id_int, agency_id=q_agency_id_int).exists():
+            return render(request, "cabinet/error.html", {"message": "Client does not belong to the specified agency."})
         client_scope = True
         agency = client_for_scope.agency
 
