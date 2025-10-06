@@ -32,8 +32,8 @@ def dashboard(request):
     # Non-superusers must be redirected to their specific cabinet only
     client = Client.objects.filter(user=request.user).select_related("agency").first()
     if client:
-        # Redirect client to agency dashboard (agency will be determined automatically)
-        return redirect("cabinet_agency_dashboard")
+        # Redirect client to their personal dashboard
+        return redirect("cabinet_client_dashboard")
 
     agency = Agency.objects.filter(owner=request.user).first()
     if agency:
@@ -461,43 +461,16 @@ def agency_dashboard(request):
     accounts_analytics = []
 
     agency = Agency.objects.filter(owner=request.user).first()
-    client_scope = False
-    client_for_scope = None
     if not agency:
-        # Allow clients to open this page - automatically determine their agency
+        # Check if user is a client - if so, redirect to personal dashboard
         client_for_scope = Client.objects.filter(user=request.user).select_related("agency").first()
-        if not client_for_scope:
-            return render(request, "cabinet/error.html", {"message": "No agency found for this user."})
+        if client_for_scope:
+            return redirect("cabinet_client_dashboard")
         
-        # Check if specific agency_id and client_id are provided (for direct links)
-        q_agency_id = request.GET.get("agency_id")
-        q_client_id = request.GET.get("client_id")
-        
-        if q_agency_id and q_client_id:
-            # Validate provided parameters
-            try:
-                q_agency_id_int = int(q_agency_id)
-                q_client_id_int = int(q_client_id)
-            except ValueError:
-                return render(request, "cabinet/error.html", {"message": "Invalid agency_id or client_id."})
-            
-            # Security check: ensure the provided IDs match the client's actual data
-            if client_for_scope.agency_id != q_agency_id_int or client_for_scope.id != q_client_id_int:
-                return render(request, "cabinet/error.html", {"message": "Access denied for this agency/client."})
-            
-            # Additional security check: ensure client belongs to the specified agency
-            if not Client.objects.filter(id=q_client_id_int, agency_id=q_agency_id_int).exists():
-                return render(request, "cabinet/error.html", {"message": "Client does not belong to the specified agency."})
-        
-        # Use the client's agency automatically
-        client_scope = True
-        agency = client_for_scope.agency
+        return render(request, "cabinet/error.html", {"message": "No agency found for this user."})
 
-    # Build client list (single client for client scope, all for agency owner)
-    if client_scope and client_for_scope:
-        clients_list = [client_for_scope]
-    else:
-        clients_list = list(agency.clients.select_related("user").all())
+    # Build client list (all clients for agency owner)
+    clients_list = list(agency.clients.select_related("user").all())
 
     client_rows = []
     for c in clients_list:
@@ -523,10 +496,7 @@ def agency_dashboard(request):
     # Daily stats for last 7 days (views and videos)
     end = timezone.now()
     start = end - timezone.timedelta(days=7)
-    if client_scope and client_for_scope:
-        agency_hashtags = ClientHashtag.objects.filter(client=client_for_scope).values_list("hashtag", flat=True)
-    else:
-        agency_hashtags = ClientHashtag.objects.filter(client__agency=agency).values_list("hashtag", flat=True)
+    agency_hashtags = ClientHashtag.objects.filter(client__agency=agency).values_list("hashtag", flat=True)
     # Daily stats aggregated by day
     qs = (
         HashtagAnalytics.objects.filter(hashtag__in=agency_hashtags, created_at__gte=start, created_at__lte=end)
