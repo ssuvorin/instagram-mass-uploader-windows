@@ -90,24 +90,29 @@ class AnalyticsService:
     def get_hashtag_summaries(self) -> List[HashtagSummary]:
         summaries: List[HashtagSummary] = []
         for ch in self.get_client_hashtags():
-            # Get both manual and automatic Instagram analytics
-            last_snap: Optional[HashtagAnalytics] = (
-                HashtagAnalytics.objects.filter(
-                    hashtag=ch.hashtag
-                ).filter(
-                    Q(social_network='INSTAGRAM') | Q(social_network__isnull=True) | Q(social_network='')
-                )
-                .order_by("-created_at")
-                .first()
-            )
-            if not last_snap:
+            # Get all analytics for this hashtag and aggregate them
+            analytics_qs = HashtagAnalytics.objects.filter(hashtag=ch.hashtag)
+            
+            if not analytics_qs.exists():
                 continue
+            
+            # Aggregate data from all social networks
+            total_views = sum(int(getattr(a, "total_views", 0) or 0) for a in analytics_qs)
+            total_videos = sum(int(getattr(a, "analyzed_medias", 0) or 0) for a in analytics_qs)
+            
+            # Calculate average views
+            average_views = total_views / total_videos if total_videos > 0 else 0.0
+            
+            # Get the latest snapshot ID
+            latest_snap = analytics_qs.order_by("-created_at").first()
+            last_snapshot_id = latest_snap.id if latest_snap else 0
+            
             summaries.append(
                 HashtagSummary(
                     hashtag=ch.hashtag,
-                    total_views=last_snap.total_views,
-                    average_views=last_snap.average_views,
-                    last_snapshot_id=last_snap.id,
+                    total_views=total_views,
+                    average_views=average_views,
+                    last_snapshot_id=last_snapshot_id,
                 )
             )
         return summaries
@@ -115,28 +120,38 @@ class AnalyticsService:
     def get_hashtag_details(self) -> List[HashtagDetail]:
         details: List[HashtagDetail] = []
         for ch in self.get_client_hashtags():
-            # Get both manual and automatic Instagram analytics
-            last_snap: Optional[HashtagAnalytics] = (
-                HashtagAnalytics.objects.filter(
-                    hashtag=ch.hashtag
-                ).filter(
-                    Q(social_network='INSTAGRAM') | Q(social_network__isnull=True) | Q(social_network='')
-                )
-                .order_by("-created_at")
-                .first()
-            )
-            if not last_snap:
+            # Get all analytics for this hashtag and aggregate them
+            analytics_qs = HashtagAnalytics.objects.filter(hashtag=ch.hashtag)
+            
+            if not analytics_qs.exists():
                 continue
+            
+            # Aggregate data from all social networks
+            total_videos = sum(int(getattr(a, "analyzed_medias", 0) or 0) for a in analytics_qs)
+            total_views = sum(int(getattr(a, "total_views", 0) or 0) for a in analytics_qs)
+            total_likes = sum(int(getattr(a, "total_likes", 0) or 0) for a in analytics_qs)
+            total_comments = sum(int(getattr(a, "total_comments", 0) or 0) for a in analytics_qs)
+            
+            # Calculate average views
+            average_views = total_views / total_videos if total_videos > 0 else 0.0
+            
+            # Calculate engagement rate
+            engagement_rate = (total_likes + total_comments) / total_views if total_views > 0 else 0.0
+            
+            # Get the latest snapshot ID
+            latest_snap = analytics_qs.order_by("-created_at").first()
+            last_snapshot_id = latest_snap.id if latest_snap else 0
+            
             details.append(
                 HashtagDetail(
                     hashtag=ch.hashtag,
-                    total_videos=int(getattr(last_snap, "analyzed_medias", 0) or 0),
-                    total_views=int(getattr(last_snap, "total_views", 0) or 0),
-                    average_views=float(getattr(last_snap, "average_views", 0.0) or 0.0),
-                    total_likes=int(getattr(last_snap, "total_likes", 0) or 0),
-                    total_comments=int(getattr(last_snap, "total_comments", 0) or 0),
-                    engagement_rate=float(getattr(last_snap, "engagement_rate", 0.0) or 0.0),
-                    last_snapshot_id=last_snap.id,
+                    total_videos=total_videos,
+                    total_views=total_views,
+                    average_views=average_views,
+                    total_likes=total_likes,
+                    total_comments=total_comments,
+                    engagement_rate=engagement_rate,
+                    last_snapshot_id=last_snapshot_id,
                 )
             )
         return details
