@@ -370,31 +370,33 @@ class AnalyticsService:
             
             # Aggregate data from latest records only
             for network_key, analytics in latest_by_network.items():
-                if network_key not in networks_data:
-                    networks_data[network_key] = {
-                        'social_network': network_key,
-                        'total_posts': 0,
-                        'total_views': 0,
-                        'total_likes': 0,
-                        'total_comments': 0,
-                        'total_shares': 0,
-                        'instagram_stories_views': 0,
-                        'instagram_reels_views': 0,
-                        'youtube_subscribers': 0,
-                        'youtube_watch_time': 0,
-                        'tiktok_video_views': 0,
-                        'tiktok_profile_views': 0,
-                        'avg_videos_per_account': 0,
-                        'max_videos_per_account': 0,
-                        'avg_views_per_video': 0,
-                        'max_views_per_video': 0,
-                        'avg_views_per_account': 0,
-                        'max_views_per_account': 0,
-                        'avg_likes_per_video': 0,
-                        'max_likes_per_video': 0,
-                        'avg_likes_per_account': 0,
-                        'max_likes_per_account': 0,
-                    }
+                # Only include networks with actual data (not zero values)
+                if analytics.total_views > 0 or analytics.analyzed_medias > 0:
+                    if network_key not in networks_data:
+                        networks_data[network_key] = {
+                            'social_network': network_key,
+                            'total_posts': 0,
+                            'total_views': 0,
+                            'total_likes': 0,
+                            'total_comments': 0,
+                            'total_shares': 0,
+                            'instagram_stories_views': 0,
+                            'instagram_reels_views': 0,
+                            'youtube_subscribers': 0,
+                            'youtube_watch_time': 0,
+                            'tiktok_video_views': 0,
+                            'tiktok_profile_views': 0,
+                            'avg_videos_per_account': 0,
+                            'max_videos_per_account': 0,
+                            'avg_views_per_video': 0,
+                            'max_views_per_video': 0,
+                            'avg_views_per_account': 0,
+                            'max_views_per_account': 0,
+                            'avg_likes_per_video': 0,
+                            'max_likes_per_video': 0,
+                            'avg_likes_per_account': 0,
+                            'max_likes_per_account': 0,
+                        }
                 
                 # Sum data from latest records
                 networks_data[network_key]['total_posts'] += int(getattr(analytics, "analyzed_medias", 0) or 0)
@@ -431,8 +433,21 @@ class AnalyticsService:
                     int(getattr(analytics, "max_likes_per_account", 0) or 0)
                 )
         
+        # Remove duplicate networks with identical data
+        # If two networks have the same views/posts, keep only one
+        unique_networks = {}
+        for network_key, data in networks_data.items():
+            data_key = f"{data['total_views']}_{data['total_posts']}"
+            if data_key not in unique_networks:
+                unique_networks[data_key] = data
+            else:
+                # If we have duplicate data, prefer the network with actual data
+                existing = unique_networks[data_key]
+                if data['total_accounts'] > existing['total_accounts']:
+                    unique_networks[data_key] = data
+        
         # Convert to list format
-        networks_data_list = list(networks_data.values())
+        networks_data_list = list(unique_networks.values())
         
         networks = {}
         
