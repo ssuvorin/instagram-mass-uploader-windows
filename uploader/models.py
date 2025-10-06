@@ -596,7 +596,6 @@ class HashtagAnalytics(models.Model):
     total_comments = models.BigIntegerField(default=0, blank=True)
     engagement_rate = models.FloatField(default=0.0, help_text="(likes+comments)/views, 0 if views == 0")
     info_json = models.JSONField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
     
     # Manual analytics fields
     client = models.ForeignKey(
@@ -656,6 +655,10 @@ class HashtagAnalytics(models.Model):
     max_likes_per_video = models.BigIntegerField(default=0, blank=True, help_text="Maximum likes per video")
     avg_likes_per_account = models.FloatField(default=0.0, blank=True, help_text="Average likes per account")
     max_likes_per_account = models.BigIntegerField(default=0, blank=True, help_text="Maximum likes per account")
+    
+    # Timestamps
+    created_at = models.DateTimeField(default=timezone.now, help_text="Date and time when analytics data was collected")
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         indexes = [

@@ -113,16 +113,10 @@ def analytics_collector(request):
         
         # Set created_at from form (it's not in Meta.fields, so handle manually)
         created_at_value = form.cleaned_data.get('created_at')
-        print(f"DEBUG: created_at from cleaned_data: {created_at_value}")
-        print(f"DEBUG: created_at from POST: {request.POST.get('created_at')}")
-        print(f"DEBUG: All form.cleaned_data keys: {form.cleaned_data.keys()}")
-        
         if created_at_value:
             analytics.created_at = created_at_value
-            print(f"DEBUG: Set analytics.created_at to: {analytics.created_at}")
         
         analytics.save()
-        print(f"DEBUG: After save, analytics.created_at is: {analytics.created_at}")
         
         messages.success(request, f'Аналитика успешно добавлена для {client.name} - {analytics.get_social_network_display()}')
         return redirect('analytics_collector')
