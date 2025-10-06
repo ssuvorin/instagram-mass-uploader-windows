@@ -32,8 +32,8 @@ def dashboard(request):
     # Non-superusers must be redirected to their specific cabinet only
     client = Client.objects.filter(user=request.user).select_related("agency").first()
     if client:
-        # Redirect client with required agency_id and client_id parameters
-        return redirect(f"/cabinet/agency/?agency_id={client.agency_id}&client_id={client.id}")
+        # Redirect client to agency dashboard (agency will be determined automatically)
+        return redirect("cabinet_agency_dashboard")
 
     agency = Agency.objects.filter(owner=request.user).first()
     if agency:
@@ -464,25 +464,32 @@ def agency_dashboard(request):
     client_scope = False
     client_for_scope = None
     if not agency:
-        # Allow clients to open this page only for specific agency and client
+        # Allow clients to open this page - automatically determine their agency
         client_for_scope = Client.objects.filter(user=request.user).select_related("agency").first()
         if not client_for_scope:
             return render(request, "cabinet/error.html", {"message": "No agency found for this user."})
+        
+        # Check if specific agency_id and client_id are provided (for direct links)
         q_agency_id = request.GET.get("agency_id")
         q_client_id = request.GET.get("client_id")
-        if not q_agency_id or not q_client_id:
-            return render(request, "cabinet/error.html", {"message": "agency_id and client_id are required for client access."})
-        try:
-            q_agency_id_int = int(q_agency_id)
-            q_client_id_int = int(q_client_id)
-        except ValueError:
-            return render(request, "cabinet/error.html", {"message": "Invalid agency_id or client_id."})
-        if client_for_scope.agency_id != q_agency_id_int or client_for_scope.id != q_client_id_int:
-            return render(request, "cabinet/error.html", {"message": "Access denied for this agency/client."})
         
-        # Additional security check: ensure client belongs to the specified agency
-        if not Client.objects.filter(id=q_client_id_int, agency_id=q_agency_id_int).exists():
-            return render(request, "cabinet/error.html", {"message": "Client does not belong to the specified agency."})
+        if q_agency_id and q_client_id:
+            # Validate provided parameters
+            try:
+                q_agency_id_int = int(q_agency_id)
+                q_client_id_int = int(q_client_id)
+            except ValueError:
+                return render(request, "cabinet/error.html", {"message": "Invalid agency_id or client_id."})
+            
+            # Security check: ensure the provided IDs match the client's actual data
+            if client_for_scope.agency_id != q_agency_id_int or client_for_scope.id != q_client_id_int:
+                return render(request, "cabinet/error.html", {"message": "Access denied for this agency/client."})
+            
+            # Additional security check: ensure client belongs to the specified agency
+            if not Client.objects.filter(id=q_client_id_int, agency_id=q_agency_id_int).exists():
+                return render(request, "cabinet/error.html", {"message": "Client does not belong to the specified agency."})
+        
+        # Use the client's agency automatically
         client_scope = True
         agency = client_for_scope.agency
 
