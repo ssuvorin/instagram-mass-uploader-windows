@@ -11,7 +11,7 @@ django.db.utils.ProgrammingError: column "updated_at" of relation "uploader_hash
 
 ## Решение
 
-### Вариант 1: Применить безопасную миграцию (рекомендуется)
+### Вариант 1: Применить исправленные миграции (рекомендуется)
 ```bash
 # Перейдите в директорию проекта
 cd C:\Users\Admin\instagram-mass-uploader-windows
@@ -19,22 +19,35 @@ cd C:\Users\Admin\instagram-mass-uploader-windows
 # Активируйте виртуальное окружение
 venv\Scripts\activate
 
+# Получите последние изменения
+git pull
+
 # Примените миграции
 python manage.py migrate
 ```
 
-Если все еще возникает ошибка, используйте Вариант 2.
-
-### Вариант 2: Пропустить проблемную миграцию
+### Вариант 2: Если есть конфликт зависимостей
 ```bash
-# Отметьте миграцию как примененную без выполнения
-python manage.py migrate uploader 0044_add_updated_at_to_hashtaganalytics --fake
+# Удалите проблемную миграцию (если она существует локально)
+# del uploader\migrations\0046_merge_20251006_2342.py
 
-# Затем примените остальные миграции
+# Получите исправленные миграции
+git pull
+
+# Примените миграции
 python manage.py migrate
 ```
 
-### Вариант 3: Сброс миграций (только если нет важных данных)
+### Вариант 3: Принудительное исправление (если ничего не помогает)
+```bash
+# Отметьте все миграции как примененные
+python manage.py migrate uploader --fake
+
+# Затем примените реальные изменения
+python manage.py migrate uploader 0045_safe_add_missing_columns
+```
+
+### Вариант 4: Сброс миграций (только если нет важных данных)
 ```bash
 # Удалите все таблицы (ОСТОРОЖНО: это удалит все данные!)
 python manage.py flush
