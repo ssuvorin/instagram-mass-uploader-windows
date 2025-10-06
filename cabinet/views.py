@@ -211,50 +211,50 @@ def delete_client_hashtag(request, item_id: int):
 @login_required
 def reset_client_user_password(request, client_id: int):
     try:
-    if not request.user.is_superuser:
-        return redirect("cabinet_dashboard")
-        
-    client = get_object_or_404(Client, id=client_id)
-        
-    if request.method == "POST":
-        new_password = request.POST.get("new_password", "").strip()
-        # If no password provided or too short, generate a safe one
-        generate = False
-        if not new_password or len(new_password) < 6:
-            import secrets
-            new_password = secrets.token_urlsafe(9)
-            generate = True
+        if not request.user.is_superuser:
+            return redirect("cabinet_dashboard")
+            
+        client = get_object_or_404(Client, id=client_id)
+            
+        if request.method == "POST":
+            new_password = request.POST.get("new_password", "").strip()
+            # If no password provided or too short, generate a safe one
+            generate = False
+            if not new_password or len(new_password) < 6:
+                import secrets
+                new_password = secrets.token_urlsafe(9)
+                generate = True
 
-        from django.contrib.auth import get_user_model
-        User = get_user_model()
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
 
-        # If no user or current user is superuser, create dedicated non-admin user
-        if not client.user or client.user.is_superuser:
-            base_username = slugify(client.name or "client") or "client"
-            username = base_username
-            suffix = 1
-            while User.objects.filter(username=username).exists():
-                suffix += 1
-                username = f"{base_username}{suffix}"
-            login_user = User.objects.create_user(username=username, password=new_password)
-            client.user = login_user
-            client.save(update_fields=["user"])
-            messages.success(
-                request,
-                f"Client login created. Credentials — Login: {username} | Password: {new_password}"
-            )
-        else:
-            user = client.user
-            user.set_password(new_password)
-            user.save(update_fields=["password"])
-            if generate:
-                messages.success(request, f"Password reset. New Password: {new_password}")
+            # If no user or current user is superuser, create dedicated non-admin user
+            if not client.user or client.user.is_superuser:
+                base_username = slugify(client.name or "client") or "client"
+                username = base_username
+                suffix = 1
+                while User.objects.filter(username=username).exists():
+                    suffix += 1
+                    username = f"{base_username}{suffix}"
+                login_user = User.objects.create_user(username=username, password=new_password)
+                client.user = login_user
+                client.save(update_fields=["user"])
+                messages.success(
+                    request,
+                    f"Client login created. Credentials — Login: {username} | Password: {new_password}"
+                )
             else:
-                messages.success(request, f"Password reset for {user.username}")
-        return redirect("cabinet_manage_clients")
+                user = client.user
+                user.set_password(new_password)
+                user.save(update_fields=["password"])
+                if generate:
+                    messages.success(request, f"Password reset. New Password: {new_password}")
+                else:
+                    messages.success(request, f"Password reset for {user.username}")
+            return redirect("cabinet_manage_clients")
+            
+        return render(request, "cabinet/reset_password.html", {"client": client})
         
-    return render(request, "cabinet/reset_password.html", {"client": client})
-    
     except Exception as e:
         # Log the error for debugging
         import logging
