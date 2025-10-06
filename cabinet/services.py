@@ -90,15 +90,22 @@ class AnalyticsService:
     def get_hashtag_summaries(self) -> List[HashtagSummary]:
         summaries: List[HashtagSummary] = []
         for ch in self.get_client_hashtags():
-            # Get all analytics for this hashtag and aggregate them
+            # Get the latest analytics for each social network for this hashtag
             analytics_qs = HashtagAnalytics.objects.filter(hashtag=ch.hashtag)
             
             if not analytics_qs.exists():
                 continue
             
-            # Aggregate data from all social networks
-            total_views = sum(int(getattr(a, "total_views", 0) or 0) for a in analytics_qs)
-            total_videos = sum(int(getattr(a, "analyzed_medias", 0) or 0) for a in analytics_qs)
+            # Group by social network and get the latest record for each
+            latest_by_network = {}
+            for analytics in analytics_qs:
+                network = analytics.social_network or 'INSTAGRAM'
+                if network not in latest_by_network or analytics.created_at > latest_by_network[network].created_at:
+                    latest_by_network[network] = analytics
+            
+            # Aggregate data from latest records only
+            total_views = sum(int(getattr(a, "total_views", 0) or 0) for a in latest_by_network.values())
+            total_videos = sum(int(getattr(a, "analyzed_medias", 0) or 0) for a in latest_by_network.values())
             
             # Calculate average views
             average_views = total_views / total_videos if total_videos > 0 else 0.0
@@ -120,17 +127,24 @@ class AnalyticsService:
     def get_hashtag_details(self) -> List[HashtagDetail]:
         details: List[HashtagDetail] = []
         for ch in self.get_client_hashtags():
-            # Get all analytics for this hashtag and aggregate them
+            # Get the latest analytics for each social network for this hashtag
             analytics_qs = HashtagAnalytics.objects.filter(hashtag=ch.hashtag)
             
             if not analytics_qs.exists():
                 continue
             
-            # Aggregate data from all social networks
-            total_videos = sum(int(getattr(a, "analyzed_medias", 0) or 0) for a in analytics_qs)
-            total_views = sum(int(getattr(a, "total_views", 0) or 0) for a in analytics_qs)
-            total_likes = sum(int(getattr(a, "total_likes", 0) or 0) for a in analytics_qs)
-            total_comments = sum(int(getattr(a, "total_comments", 0) or 0) for a in analytics_qs)
+            # Group by social network and get the latest record for each
+            latest_by_network = {}
+            for analytics in analytics_qs:
+                network = analytics.social_network or 'INSTAGRAM'
+                if network not in latest_by_network or analytics.created_at > latest_by_network[network].created_at:
+                    latest_by_network[network] = analytics
+            
+            # Aggregate data from latest records only
+            total_videos = sum(int(getattr(a, "analyzed_medias", 0) or 0) for a in latest_by_network.values())
+            total_views = sum(int(getattr(a, "total_views", 0) or 0) for a in latest_by_network.values())
+            total_likes = sum(int(getattr(a, "total_likes", 0) or 0) for a in latest_by_network.values())
+            total_comments = sum(int(getattr(a, "total_comments", 0) or 0) for a in latest_by_network.values())
             
             # Calculate average views
             average_views = total_views / total_videos if total_videos > 0 else 0.0
