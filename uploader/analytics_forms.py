@@ -8,6 +8,16 @@ from cabinet.models import Client
 class ClientAnalyticsForm(forms.ModelForm):
     """Form for manually adding client analytics data"""
     
+    # Explicitly define created_at as editable field
+    created_at = forms.DateTimeField(
+        required=False,
+        widget=forms.DateTimeInput(attrs={
+            'class': 'form-control',
+            'type': 'datetime-local',
+        }),
+        help_text="Date and time when analytics data was collected"
+    )
+    
     class Meta:
         model = HashtagAnalytics
         fields = [
@@ -113,11 +123,6 @@ class ClientAnalyticsForm(forms.ModelForm):
                 'required': True,
                 'placeholder': 'Enter hashtag without #'
             }),
-            'created_at': forms.DateTimeInput(attrs={
-                'class': 'form-control',
-                'type': 'datetime-local',
-                'required': False
-            }),
             'notes': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': '3',
@@ -208,7 +213,6 @@ class ClientAnalyticsForm(forms.ModelForm):
             'tiktok_video_views': 'TikTok Video Views',
             'tiktok_profile_views': 'TikTok Profile Views',
             'hashtag': 'Hashtag',
-            'created_at': 'Date & Time',
             'notes': 'Notes',
             # Advanced metrics labels
             'total_accounts': 'Total Accounts',
