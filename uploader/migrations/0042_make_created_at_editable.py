@@ -7,7 +7,7 @@ import django.utils.timezone
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('uploader', '0041_merge_migrations'),
+        ('uploader', '0032_remove_dolphincookierobottask_account_and_more'),
     ]
 
     operations = [
