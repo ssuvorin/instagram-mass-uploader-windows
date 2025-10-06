@@ -114,10 +114,20 @@ def analytics_collector(request):
         # Handle created_at separately
         created_at_str = request.POST.get('created_at', '')
         if created_at_str:
-            from django.utils.dateparse import parse_datetime
-            parsed_datetime = parse_datetime(created_at_str)
-            if parsed_datetime:
-                analytics.created_at = parsed_datetime
+            try:
+                from django.utils.dateparse import parse_datetime
+                from django.utils import timezone
+                # Parse datetime-local format (YYYY-MM-DDTHH:MM)
+                parsed_datetime = parse_datetime(created_at_str)
+                if parsed_datetime:
+                    # Make timezone aware if it's naive
+                    if timezone.is_naive(parsed_datetime):
+                        parsed_datetime = timezone.make_aware(parsed_datetime)
+                    analytics.created_at = parsed_datetime
+            except Exception as e:
+                # If parsing fails, use current time
+                print(f"Failed to parse created_at: {created_at_str}, error: {e}")
+                pass
         
         analytics.save()
         
