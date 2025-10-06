@@ -1444,7 +1444,7 @@ class ClientAnalytics(models.Model):
     notes = models.TextField(blank=True, default="", help_text="Additional notes about the analytics")
     
     # Timestamps
-    created_at = models.DateTimeField(help_text="Date and time when analytics data was collected")
+    created_at = models.DateTimeField(default=timezone.now, help_text="Date and time when analytics data was collected")
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(
         'auth.User',

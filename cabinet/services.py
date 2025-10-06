@@ -3,7 +3,7 @@ from typing import List, Optional, Dict, Any, Tuple
 from decimal import Decimal, ROUND_HALF_UP
 import os
 import json
-from django.db.models import QuerySet, Sum
+from django.db.models import QuerySet, Sum, Q
 from django.utils import timezone
 from django.db.models.functions import TruncDate, TruncWeek
 from .models import Client, ClientHashtag
@@ -90,8 +90,13 @@ class AnalyticsService:
     def get_hashtag_summaries(self) -> List[HashtagSummary]:
         summaries: List[HashtagSummary] = []
         for ch in self.get_client_hashtags():
+            # Only get Instagram analytics or records without social_network (legacy)
             last_snap: Optional[HashtagAnalytics] = (
-                HashtagAnalytics.objects.filter(hashtag=ch.hashtag)
+                HashtagAnalytics.objects.filter(
+                    hashtag=ch.hashtag
+                ).filter(
+                    Q(social_network='INSTAGRAM') | Q(social_network__isnull=True) | Q(social_network='')
+                )
                 .order_by("-created_at")
                 .first()
             )
@@ -110,8 +115,13 @@ class AnalyticsService:
     def get_hashtag_details(self) -> List[HashtagDetail]:
         details: List[HashtagDetail] = []
         for ch in self.get_client_hashtags():
+            # Only get Instagram analytics or records without social_network (legacy)
             last_snap: Optional[HashtagAnalytics] = (
-                HashtagAnalytics.objects.filter(hashtag=ch.hashtag)
+                HashtagAnalytics.objects.filter(
+                    hashtag=ch.hashtag
+                ).filter(
+                    Q(social_network='INSTAGRAM') | Q(social_network__isnull=True) | Q(social_network='')
+                )
                 .order_by("-created_at")
                 .first()
             )

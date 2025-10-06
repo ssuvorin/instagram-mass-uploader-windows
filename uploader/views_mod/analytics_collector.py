@@ -110,51 +110,6 @@ def analytics_collector(request):
         analytics = form.save(commit=False)
         analytics.is_manual = True
         analytics.created_by = request.user
-        
-        # Handle created_at separately
-        created_at_str = request.POST.get('created_at', '')
-        print(f"DEBUG: Received created_at_str: '{created_at_str}'")
-        if created_at_str:
-            try:
-                from django.utils.dateparse import parse_datetime
-                from django.utils import timezone
-                from datetime import datetime
-                
-                # Try different parsing methods
-                parsed_datetime = None
-                
-                # Method 1: Try parse_datetime (for ISO format)
-                try:
-                    parsed_datetime = parse_datetime(created_at_str)
-                    print(f"DEBUG: parse_datetime result: {parsed_datetime}")
-                except Exception as e:
-                    print(f"DEBUG: parse_datetime failed: {e}")
-                
-                # Method 2: Try manual parsing for datetime-local format (YYYY-MM-DDTHH:MM)
-                if not parsed_datetime:
-                    try:
-                        # datetime-local format: 2025-10-07T01:15
-                        parsed_datetime = datetime.strptime(created_at_str, '%Y-%m-%dT%H:%M')
-                        print(f"DEBUG: strptime result: {parsed_datetime}")
-                    except Exception as e:
-                        print(f"DEBUG: strptime failed: {e}")
-                
-                if parsed_datetime:
-                    # Make timezone aware if it's naive
-                    if timezone.is_naive(parsed_datetime):
-                        parsed_datetime = timezone.make_aware(parsed_datetime)
-                    analytics.created_at = parsed_datetime
-                    print(f"DEBUG: Successfully set created_at to: {analytics.created_at}")
-                else:
-                    print(f"DEBUG: Failed to parse created_at, using current time")
-                    
-            except Exception as e:
-                # If parsing fails, use current time
-                print(f"DEBUG: Exception during created_at parsing: {e}")
-                pass
-        else:
-            print(f"DEBUG: No created_at_str provided, using current time")
-        
         analytics.save()
         
         messages.success(request, f'Аналитика успешно добавлена для {client.name} - {analytics.get_social_network_display()}')

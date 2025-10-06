@@ -128,9 +128,9 @@
             <div class="row">
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label for="created_at" class="form-label">Date & Time</label>
-                        <input type="datetime-local" class="form-control" id="created_at" name="created_at" value="{{ form_data.created_at|default:'' }}">
-                        <div class="form-text">Leave empty to use current date and time</div>
+                        <label for="created_at" class="form-label required-field">Date & Time</label>
+                        <input type="datetime-local" class="form-control" id="created_at" name="created_at" value="{{ form_data.created_at|default:'' }}" required>
+                        <div class="form-text">Specify when this analytics data was collected (pre-filled with current time)</div>
                     </div>
                 </div>
             </div>
