@@ -1499,13 +1499,17 @@ def client_dashboard(request):
     daily_stats = analytics_service.get_daily_stats(days=7)
     weekly_stats = analytics_service.get_weekly_stats(weeks=12)
     
+    # Convert daily_stats to JSON for JavaScript
+    import json
+    daily_stats_json = json.dumps(daily_stats)
+    
     context = {
         "client": client,
         "hashtags": hashtags,
         "details": hashtag_details,  # For backward compatibility
         "network_breakdown": network_breakdown,
         "combined_summary": combined_summary,
-        "daily_stats": daily_stats,
+        "daily_stats": daily_stats_json,  # JSON string for JavaScript
         "weekly_stats": weekly_stats,
         "kpi_total_views": combined_summary.total_views,
         "kpi_total_videos": combined_summary.total_posts,

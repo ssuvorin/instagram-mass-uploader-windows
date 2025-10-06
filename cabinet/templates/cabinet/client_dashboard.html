@@ -350,6 +350,9 @@
 </div>
 
 {% if daily_stats %}
+<!-- Hidden data for JavaScript -->
+<div id="dailyStatsJson" style="display: none;">{{ daily_stats|safe }}</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
