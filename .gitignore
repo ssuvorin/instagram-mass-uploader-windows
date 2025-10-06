@@ -115,6 +115,11 @@ profiles_backup/
 *key*
 *password*
 
+# But keep template files
+!**/templates/**/*password*.html
+!**/templates/**/*secret*.html
+!**/templates/**/*token*.html
+
 # But keep example files
 !*.example
 !*_example.*

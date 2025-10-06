@@ -211,93 +211,49 @@ def delete_client_hashtag(request, item_id: int):
 
 @login_required
 def reset_client_user_password(request, client_id: int):
-    try:
-        if not request.user.is_superuser:
-            return redirect("cabinet_dashboard")
-            
-        client = get_object_or_404(Client, id=client_id)
-            
-        if request.method == "POST":
-            new_password = request.POST.get("new_password", "").strip()
-            # If no password provided or too short, generate a safe one
-            generate = False
-            if not new_password or len(new_password) < 6:
-                import secrets
-                new_password = secrets.token_urlsafe(9)
-                generate = True
-
-            from django.contrib.auth import get_user_model
-            User = get_user_model()
-
-            # If no user or current user is superuser, create dedicated non-admin user
-            if not client.user or client.user.is_superuser:
-                base_username = slugify(client.name or "client") or "client"
-                username = base_username
-                suffix = 1
-                while User.objects.filter(username=username).exists():
-                    suffix += 1
-                    username = f"{base_username}{suffix}"
-                login_user = User.objects.create_user(username=username, password=new_password)
-                client.user = login_user
-                client.save(update_fields=["user"])
-                messages.success(
-                    request,
-                    f"Client login created. Credentials — Login: {username} | Password: {new_password}"
-                )
-            else:
-                user = client.user
-                user.set_password(new_password)
-                user.save(update_fields=["password"])
-                if generate:
-                    messages.success(request, f"Password reset. New Password: {new_password}")
-                else:
-                    messages.success(request, f"Password reset for {user.username}")
-            return redirect("cabinet_manage_clients")
-            
-        return render(request, "cabinet/reset_password.html", {"client": client})
-        
-    except Exception as e:
-        # Log the error for debugging
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f"Error in reset_client_user_password: {str(e)}", exc_info=True)
-        
-        # Return a simple error response for debugging
-        from django.http import HttpResponse
-        return HttpResponse(f"""
-        <h1>Debug Error</h1>
-        <p>Error: {str(e)}</p>
-        <p>Type: {type(e).__name__}</p>
-        <p>Client ID: {client_id}</p>
-        <p>User: {request.user}</p>
-        <p>Is Superuser: {request.user.is_superuser}</p>
-        """, status=500)
-
-
-def debug_reset_password(request, client_id: int):
-    """Simple debug view to test reset password functionality"""
-    from django.http import HttpResponse
+    if not request.user.is_superuser:
+        return redirect("cabinet_dashboard")
     
-    try:
-        client = get_object_or_404(Client, id=client_id)
-        return HttpResponse(f"""
-        <h1>Debug Reset Password</h1>
-        <p>✓ Client ID: {client_id}</p>
-        <p>✓ Client Name: {client.name}</p>
-        <p>✓ Client Agency: {client.agency}</p>
-        <p>✓ Client User: {client.user}</p>
-        <p>✓ User is superuser: {client.user.is_superuser if client.user else 'No user'}</p>
-        <p>✓ Status: OK - No 500 error!</p>
-        <hr>
-        <p><a href="/cabinet/manage/clients/{client_id}/reset-password/">Try Original Reset Password</a></p>
-        """)
-    except Exception as e:
-        return HttpResponse(f"""
-        <h1>Debug Error</h1>
-        <p>✗ Error: {str(e)}</p>
-        <p>✗ Type: {type(e).__name__}</p>
-        <p>✗ Client ID: {client_id}</p>
-        """, status=500)
+    client = get_object_or_404(Client, id=client_id)
+    
+    if request.method == "POST":
+        new_password = request.POST.get("new_password", "").strip()
+        # If no password provided or too short, generate a safe one
+        generate = False
+        if not new_password or len(new_password) < 6:
+            import secrets
+            new_password = secrets.token_urlsafe(9)
+            generate = True
+
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
+        # If no user or current user is superuser, create dedicated non-admin user
+        if not client.user or client.user.is_superuser:
+            base_username = slugify(client.name or "client") or "client"
+            username = base_username
+            suffix = 1
+            while User.objects.filter(username=username).exists():
+                suffix += 1
+                username = f"{base_username}{suffix}"
+            login_user = User.objects.create_user(username=username, password=new_password)
+            client.user = login_user
+            client.save(update_fields=["user"])
+            messages.success(
+                request,
+                f"Client login created. Credentials — Login: {username} | Password: {new_password}"
+            )
+        else:
+            user = client.user
+            user.set_password(new_password)
+            user.save(update_fields=["password"])
+            if generate:
+                messages.success(request, f"Password reset. New Password: {new_password}")
+            else:
+                messages.success(request, f"Password reset for {user.username}")
+        return redirect("cabinet_manage_clients")
+    
+    return render(request, "cabinet/reset_password.html", {"client": client})
 
 
 @login_required
