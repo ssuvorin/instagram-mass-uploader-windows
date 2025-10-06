@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('cabinet', '0005_calculationhistory_client_name'),
-        ('uploader', '0032_remove_dolphincookierobottask_account_and_more'),
+        ('uploader', '0031_remove_dolphinprofilesnapshot_account_and_more'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
