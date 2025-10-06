@@ -11,7 +11,7 @@ import requests
 
 from tiktok_uploader.bot_integration import logger
 
-TOKEN = os.environ.get('TOKEN')
+TOKEN = os.environ.get('DOLPHIN_API_TOKEN')
 
 
 class Profile:
@@ -24,7 +24,7 @@ class Profile:
         url = f"https://dolphin-anty-api.com/browser_profiles/{self.id}?forceDelete=1"
         payload = {}
         headers = {
-            'Authorization': f'Bearer {os.environ.get("TOKEN")}',
+            'Authorization': f'Bearer {os.environ.get("DOLPHIN_API_TOKEN")}',
             'content-type': 'application/json'
         }
         response = requests.request("DELETE", url, headers=headers, data=payload)
@@ -127,7 +127,7 @@ class Profile:
         payload = urllib.parse.urlencode(params)
 
         headers = {
-            'Authorization': f'Bearer {os.environ.get("TOKEN")}',
+            'Authorization': f'Bearer {os.environ.get("DOLPHIN_API_TOKEN")}',
             'Content-Type': 'application/x-www-form-urlencoded'
         }
 
@@ -181,7 +181,7 @@ class Profile:
             headers = {
                 'Content-Type': 'application/json'
             }
-            token = os.environ.get('TOKEN')
+            token = os.environ.get('DOLPHIN_API_TOKEN')
             if token:
                 headers['Authorization'] = f'Bearer {token}'
             conn.request("POST", "/v1.0/export-cookies", payload, headers)
@@ -204,7 +204,7 @@ class Profile:
         url = f"https://sync.dolphin-anty-api.com/?actionType=getCookies&browserProfileId={self.id}"
         headers = {
             'Content-Type': 'application/json',
-            'Authorization': f'Bearer {os.environ.get("TOKEN")}'
+            'Authorization': f'Bearer {os.environ.get("DOLPHIN_API_TOKEN")}'
         }
         res = requests.request("GET", url, headers=headers)
         cookies = res.json().get('data', [])
@@ -218,7 +218,7 @@ class Profile:
         try:
             url = f"https://dolphin-anty-api.com/browser_profiles/{self.id}"
             headers = {
-                'Authorization': f'Bearer {os.environ.get("TOKEN")}',
+                'Authorization': f'Bearer {os.environ.get("DOLPHIN_API_TOKEN")}',
                 'Content-Type': 'application/json'
             }
             res = requests.get(url, headers=headers, timeout=10)

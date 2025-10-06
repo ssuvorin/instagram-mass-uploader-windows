@@ -6,13 +6,19 @@ Warmup Views for TikTok Uploader
 Прогрев имитирует активность реального пользователя для повышения доверия TikTok.
 """
 
+import threading
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.utils import timezone
+from django.db.models import Count, Q
 
 from .models import WarmupTask, WarmupTaskAccount, TikTokAccount
+from .forms import WarmupTaskForm
+
+logger = logging.getLogger('tiktok_uploader')
 
 
 # ============================================================================
@@ -23,24 +29,6 @@ from .models import WarmupTask, WarmupTaskAccount, TikTokAccount
 def warmup_task_list(request):
     """
     Список всех задач прогрева аккаунтов.
-    
-    Features:
-        - Отображение всех warmup задач
-        - Фильтрация по статусу (PENDING, RUNNING, COMPLETED, FAILED)
-        - Отображение прогресса для каждой задачи
-        - Статистика: сколько аккаунтов прогрето, сколько в процессе
-        - Кнопки действий: start, view logs, delete
-    
-    GET параметры:
-        - status: фильтр по статусу задачи
-        - search: поиск по имени задачи
-    
-    Context:
-        - tasks: QuerySet задач прогрева
-        - stats: общая статистика по прогревам
-    
-    Returns:
-        HttpResponse: warmup_task_list.html
     """
     # Получаем параметры фильтрации
     status_filter = request.GET.get('status', '')
@@ -55,6 +43,14 @@ def warmup_task_list(request):
     
     if search_query:
         tasks = tasks.filter(name__icontains=search_query)
+    
+    # Добавляем аннотацию с количеством аккаунтов
+    tasks = tasks.annotate(
+        total_accounts=Count('accounts'),
+        completed_accounts=Count('accounts', filter=Q(accounts__status='COMPLETED')),
+        running_accounts=Count('accounts', filter=Q(accounts__status='RUNNING')),
+        failed_accounts=Count('accounts', filter=Q(accounts__status='FAILED'))
+    )
     
     # Статистика по статусам
     pending_count = WarmupTask.objects.filter(status='PENDING').count()
@@ -79,53 +75,73 @@ def warmup_task_list(request):
 def warmup_task_create(request):
     """
     Создание новой задачи прогрева аккаунтов.
-    
-    POST:
-        - name: название задачи (опционально, генерируется автоматически)
-        - account_ids[]: список ID аккаунтов для прогрева
-        - delay_min_sec: минимальная задержка между действиями (секунды)
-        - delay_max_sec: максимальная задержка между действиями
-        - concurrency: количество параллельных аккаунтов (1-4)
-        
-        Action ranges:
-        - feed_scroll_min_count: минимум прокруток ленты
-        - feed_scroll_max_count: максимум прокруток ленты
-        - like_min_count: минимум лайков
-        - like_max_count: максимум лайков
-        - watch_video_min_count: минимум просмотров видео
-        - watch_video_max_count: максимум просмотров видео
-        - follow_min_count: минимум подписок
-        - follow_max_count: максимум подписок
-        - comment_min_count: минимум комментариев
-        - comment_max_count: максимум комментариев
-    
-    Validation:
-        - Минимум 1 аккаунт выбран
-        - delay_min <= delay_max
-        - *_min_count <= *_max_count для всех диапазонов
-        - concurrency от 1 до 4
-        - Аккаунты не заблокированы
-    
-    Process:
-        1. Создает WarmupTask
-        2. Создает WarmupTaskAccount для каждого выбранного аккаунта
-        3. Валидирует настройки
-        4. Redirect на warmup_task_detail
-    
-    Returns:
-        GET: warmup_task_create.html с формой
-        POST: redirect на warmup_task_detail или форму с ошибками
     """
     if request.method == 'POST':
-        # Здесь будет обработка POST запроса
-        messages.success(request, 'Warmup task creation is not yet implemented')
-        return redirect('tiktok_uploader:warmup_task_list')
+        form = WarmupTaskForm(request.POST)
+        
+        if form.is_valid():
+            # Сохраняем задачу
+            task = form.save(commit=False)
+            
+            # Генерируем имя если не указано
+            if not task.name or task.name == "Warmup Task":
+                task.name = f"Warmup {timezone.now().strftime('%Y-%m-%d %H:%M')}"
+            
+            task.status = 'PENDING'
+            task.save()
+            
+            # Получаем выбранные аккаунты
+            selected_accounts = form.cleaned_data['selected_accounts']
+            
+            # Создаем WarmupTaskAccount для каждого выбранного аккаунта
+            for account in selected_accounts:
+                WarmupTaskAccount.objects.create(
+                    task=task,
+                    account=account,
+                    proxy=account.proxy or account.current_proxy,  # Используем назначенный прокси
+                    status='PENDING'
+                )
+            
+            messages.success(
+                request,
+                f'Warmup task "{task.name}" created successfully with {len(selected_accounts)} account(s).'
+            )
+            return redirect('tiktok_uploader:warmup_task_detail', task_id=task.id)
+        else:
+            # Форма невалидна - показываем ошибки
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        # GET - показываем форму с дефолтными значениями
+        form = WarmupTaskForm(initial={
+            'delay_min_sec': 15,
+            'delay_max_sec': 45,
+            'concurrency': 1,
+            'feed_scroll_min_count': 5,
+            'feed_scroll_max_count': 15,
+            'like_min_count': 3,
+            'like_max_count': 10,
+            'watch_video_min_count': 5,
+            'watch_video_max_count': 20,
+            'follow_min_count': 2,
+            'follow_max_count': 8,
+            'comment_min_count': 0,
+            'comment_max_count': 3,
+        })
     
-    # GET - показываем форму
+    # Получаем аккаунты для отображения
     accounts = TikTokAccount.objects.all().order_by('-created_at')
     
+    # Статистика аккаунтов
+    total_accounts = accounts.count()
+    accounts_with_proxy = accounts.filter(Q(proxy__isnull=False) | Q(current_proxy__isnull=False)).count()
+    accounts_with_dolphin = accounts.filter(dolphin_profile_id__isnull=False).count()
+    
     context = {
+        'form': form,
         'accounts': accounts,
+        'total_accounts': total_accounts,
+        'accounts_with_proxy': accounts_with_proxy,
+        'accounts_with_dolphin': accounts_with_dolphin,
     }
     
     return render(request, 'tiktok_uploader/warmup/create.html', context)
@@ -135,83 +151,48 @@ def warmup_task_create(request):
 def warmup_task_detail(request, task_id):
     """
     Детальная информация о задаче прогрева.
-    
-    Args:
-        task_id (int): ID задачи прогрева
-    
-    Отображает:
-        - Настройки задачи (задержки, диапазоны действий, параллелизм)
-        - Список аккаунтов в задаче с их статусами
-        - Прогресс выполнения (% завершено)
-        - Статистика по каждому аккаунту:
-            * Количество выполненных действий
-            * Время старта/завершения
-            * Статус (PENDING, RUNNING, COMPLETED, FAILED)
-        - Логи выполнения (последние 1000 строк)
-        - Кнопки управления: Start, Stop, Delete
-    
-    Context:
-        - task: WarmupTask объект
-        - accounts: список WarmupTaskAccount
-        - progress: процент завершения
-        - can_start: можно ли запустить (статус PENDING)
-        - logs: отформатированные логи
-    
-    Returns:
-        HttpResponse: warmup_task_detail.html или 404
     """
-    pass
+    task = get_object_or_404(WarmupTask, id=task_id)
+    
+    # Получаем аккаунты задачи
+    task_accounts = task.accounts.select_related('account', 'proxy').all()
+    
+    # Подсчитываем прогресс
+    total = task_accounts.count()
+    completed = task_accounts.filter(status='COMPLETED').count()
+    running = task_accounts.filter(status='RUNNING').count()
+    failed = task_accounts.filter(status='FAILED').count()
+    pending = task_accounts.filter(status='PENDING').count()
+    
+    # Прогресс = (завершенные + провалившиеся) / общее количество
+    # Потому что и completed, и failed - это "обработанные" аккаунты
+    progress_percent = ((completed + failed) / total * 100) if total > 0 else 0
+    
+    # Определяем можно ли запустить задачу
+    can_start = task.status == 'PENDING' and total > 0
+    can_stop = task.status == 'RUNNING'
+    
+    context = {
+        'task': task,
+        'task_accounts': task_accounts,
+        'total_accounts': total,
+        'completed_accounts': completed,
+        'running_accounts': running,
+        'failed_accounts': failed,
+        'pending_accounts': pending,
+        'progress_percent': round(progress_percent, 1),
+        'can_start': can_start,
+        'can_stop': can_stop,
+    }
+    
+    return render(request, 'tiktok_uploader/warmup/detail.html', context)
 
 
 @login_required
 def warmup_task_start(request, task_id):
     """
     Запуск задачи прогрева аккаунтов.
-    
-    Args:
-        task_id (int): ID задачи прогрева
-    
-    Требует:
-        - POST запрос
-        - Задача в статусе PENDING
-        - Минимум 1 аккаунт в задаче
-    
-    Process:
-        1. Проверяет права и статус задачи
-        2. Меняет статус на RUNNING
-        3. Запускает асинхронный worker через Celery (или Thread)
-        4. Worker для каждого аккаунта (с учетом concurrency):
-            a. Открывает Dolphin профиль
-            b. Логинится в TikTok
-            c. Выполняет случайное количество действий из диапазонов:
-                - Прокручивает ленту (For You)
-                - Смотрит видео (5-30 секунд каждое)
-                - Ставит лайки
-                - Подписывается на аккаунты
-                - Оставляет комментарии
-            d. Делает задержки между действиями
-            e. Логирует все действия
-            f. Обновляет статус аккаунта
-        5. После завершения всех аккаунтов меняет статус задачи на COMPLETED
-    
-    Warmup Actions (имитация реального поведения):
-        - Smooth scrolling с инерцией
-        - Случайные паузы на видео
-        - Движения мыши по кривым Безье
-        - Случайный порядок действий
-        - Вариативность времени просмотра
-    
-    Error Handling:
-        - При ошибке аккаунт помечается FAILED
-        - Задача продолжается для остальных аккаунтов
-        - Все ошибки логируются
-    
-    Returns:
-        POST: redirect на warmup_task_detail с сообщением
     """
-    import threading
-    from tiktok_uploader.bot_integration.services import run_warmup_task
-    
     if request.method != 'POST':
         messages.error(request, 'Invalid request method')
         return redirect('tiktok_uploader:warmup_task_detail', task_id=task_id)
@@ -229,19 +210,26 @@ def warmup_task_start(request, task_id):
             messages.error(request, 'No accounts assigned to this task')
             return redirect('tiktok_uploader:warmup_task_detail', task_id=task_id)
         
-        # Запускаем задачу в отдельном потоке
-        def run_warmup_in_background():
-            try:
-                run_warmup_task(task_id)
-            except Exception as e:
-                print(f"Error in background warmup task: {str(e)}")
+        # Меняем статус на RUNNING
+        task.status = 'RUNNING'
+        task.started_at = timezone.now()
+        task.log = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] Task started\n"
+        task.save()
         
-        thread = threading.Thread(target=run_warmup_in_background, daemon=True)
+        # Запускаем задачу в отдельном потоке с изоляцией Django ORM
+        from .bot_integration.services import run_warmup_task_wrapper
+        
+        thread = threading.Thread(
+            target=run_warmup_task_wrapper,
+            args=(task_id,),
+            daemon=True
+        )
         thread.start()
         
-        messages.success(request, f'Warmup task "{task.name}" started')
+        messages.success(request, f'Warmup task "{task.name}" started successfully!')
         
     except Exception as e:
+        logger.error(f"Error starting warmup task {task_id}: {str(e)}")
         messages.error(request, f'Error starting warmup task: {str(e)}')
     
     return redirect('tiktok_uploader:warmup_task_detail', task_id=task_id)
@@ -251,144 +239,174 @@ def warmup_task_start(request, task_id):
 def warmup_task_logs(request, task_id):
     """
     API для получения логов задачи прогрева в реальном времени.
-    
-    Args:
-        task_id (int): ID задачи прогрева
-    
-    GET параметры:
-        - offset: начальная позиция в логах (для подгрузки)
-        - account_id: фильтр по конкретному аккаунту
-        - level: фильтр по уровню (INFO, WARNING, ERROR)
-    
-    Returns:
-        JsonResponse: {
-            logs: "...", (текст логов)
-            task_status: "RUNNING",
-            progress: {
-                completed: 5,
-                running: 2,
-                failed: 1,
-                pending: 2,
-                percent: 50.0
-            },
-            accounts: [
-                {
-                    account_id: 1,
-                    username: "user1",
-                    status: "RUNNING",
-                    actions_completed: {
-                        scrolls: 8,
-                        likes: 5,
-                        videos_watched: 12,
-                        follows: 3,
-                        comments: 1
-                    }
-                }
-            ]
-        }
-    
-    Used for:
-        - Автоматическое обновление страницы деталей задачи
-        - Мониторинг прогресса
-        - Отладка проблем
     """
-    pass
+    try:
+        task = get_object_or_404(WarmupTask, id=task_id)
+        
+        # Получаем аккаунты с их статусами
+        task_accounts = task.accounts.select_related('account').all()
+        
+        accounts_data = []
+        for ta in task_accounts:
+            accounts_data.append({
+                'id': ta.id,
+                'username': ta.account.username,
+                'status': ta.status,
+                'started_at': ta.started_at.strftime('%Y-%m-%d %H:%M:%S') if ta.started_at else None,
+                'completed_at': ta.completed_at.strftime('%Y-%m-%d %H:%M:%S') if ta.completed_at else None,
+                'log': ta.log[-1000:] if ta.log else '',  # Последние 1000 символов
+            })
+        
+        # Подсчитываем прогресс
+        total = len(accounts_data)
+        completed = sum(1 for a in accounts_data if a['status'] == 'COMPLETED')
+        running = sum(1 for a in accounts_data if a['status'] == 'RUNNING')
+        failed = sum(1 for a in accounts_data if a['status'] == 'FAILED')
+        pending = sum(1 for a in accounts_data if a['status'] == 'PENDING')
+        
+        # Прогресс = (завершенные + провалившиеся) / общее количество
+        progress_percent = ((completed + failed) / total * 100) if total > 0 else 0
+        
+        return JsonResponse({
+            'success': True,
+            'task_status': task.status,
+            'logs': task.log[-5000:] if task.log else '',  # Последние 5000 символов
+            'progress': {
+                'total': total,
+                'completed': completed,
+                'running': running,
+                'failed': failed,
+                'pending': pending,
+                'percent': round(progress_percent, 1),
+            },
+            'accounts': accounts_data,
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting warmup logs for task {task_id}: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def force_stop_warmup_task(request, task_id):
+    """
+    Принудительная остановка зависшей задачи прогрева.
+    Используется когда задача имеет статус RUNNING, но фактически не выполняется.
+    """
+    if request.method != 'POST':
+        messages.error(request, 'Invalid request method')
+        return redirect('tiktok_uploader:warmup_task_detail', task_id=task_id)
+    
+    try:
+        task = get_object_or_404(WarmupTask, id=task_id)
+        
+        # Проверяем что задача в статусе RUNNING
+        if task.status != 'RUNNING':
+            messages.warning(request, f'Task is not running (current status: {task.status})')
+            return redirect('tiktok_uploader:warmup_task_detail', task_id=task_id)
+        
+        # Принудительно останавливаем задачу
+        task.status = 'FAILED'
+        task.completed_at = timezone.now()
+        task.log += f"\n[{timezone.now()}] ⚠️ Task force stopped by {request.user.username}"
+        task.save()
+        
+        # Останавливаем все RUNNING аккаунты в задаче
+        stopped_count = 0
+        for warmup_account in task.accounts.filter(status='RUNNING'):
+            warmup_account.status = 'FAILED'
+            warmup_account.completed_at = timezone.now()
+            warmup_account.log += f"\n[{timezone.now()}] ⚠️ Force stopped by {request.user.username}"
+            warmup_account.save()
+            stopped_count += 1
+        
+        logger.warning(f"Warmup task {task_id} ({task.name}) force stopped by user {request.user.username}")
+        messages.warning(
+            request,
+            f'Task "{task.name}" has been force stopped. '
+            f'{stopped_count} running account(s) were also stopped. '
+            f'You can now delete or restart the task.'
+        )
+        
+    except Exception as e:
+        logger.error(f"Error force stopping warmup task {task_id}: {str(e)}")
+        messages.error(request, f'Error stopping task: {str(e)}')
+    
+    return redirect('tiktok_uploader:warmup_task_detail', task_id=task_id)
+
+
+@login_required
+def restart_warmup_task(request, task_id):
+    """
+    Перезапуск задачи прогрева.
+    Сбрасывает статусы и позволяет запустить задачу заново.
+    """
+    if request.method != 'POST':
+        messages.error(request, 'Invalid request method')
+        return redirect('tiktok_uploader:warmup_task_detail', task_id=task_id)
+    
+    try:
+        task = get_object_or_404(WarmupTask, id=task_id)
+        
+        # Проверяем что задача не в процессе выполнения
+        if task.status == 'RUNNING':
+            messages.error(request, 'Cannot restart a task that is currently running.')
+            return redirect('tiktok_uploader:warmup_task_detail', task_id=task_id)
+        
+        # Сбрасываем статус задачи
+        task.status = 'PENDING'
+        task.started_at = None
+        task.completed_at = None
+        task.save(update_fields=['status', 'started_at', 'completed_at'])
+        
+        # Сбрасываем статусы всех аккаунтов
+        for warmup_account in task.accounts.all():
+            warmup_account.status = 'PENDING'
+            warmup_account.started_at = None
+            warmup_account.completed_at = None
+            # Добавляем запись о рестарте в лог
+            warmup_account.log += f"\n[{timezone.now()}] ========== TASK RESTARTED ==========\n"
+            warmup_account.save()
+        
+        logger.info(f"Warmup task {task_id} ({task.name}) restarted by user")
+        messages.success(request, f'Warmup task "{task.name}" has been reset. You can now start it again.')
+        
+    except Exception as e:
+        logger.error(f"Error restarting warmup task {task_id}: {str(e)}")
+        messages.error(request, f'Error restarting task: {str(e)}')
+    
+    return redirect('tiktok_uploader:warmup_task_detail', task_id=task_id)
 
 
 @login_required
 def delete_warmup_task(request, task_id):
     """
     Удаление задачи прогрева.
-    
-    Args:
-        task_id (int): ID задачи
-    
-    Требует:
-        - POST запрос
-        - Задача не в статусе RUNNING
-    
-    Safety:
-        - Проверяет, что задача не выполняется
-        - Каскадно удаляет WarmupTaskAccount записи
-        - Сохраняет логи перед удалением (опционально)
-        - Логирует удаление
-    
-    Confirmation:
-        - Требует подтверждение через модальное окно
-        - Предупреждает, если задача содержит важные логи
-    
-    Returns:
-        POST: redirect на warmup_task_list с сообщением
     """
-    pass
-
-
-# ============================================================================
-# HELPER FUNCTIONS
-# ============================================================================
-
-def _validate_warmup_settings(data):
-    """
-    Валидация настроек прогрева.
+    if request.method != 'POST':
+        messages.error(request, 'Invalid request method')
+        return redirect('tiktok_uploader:warmup_task_detail', task_id=task_id)
     
-    Args:
-        data (dict): Данные формы
+    try:
+        task = get_object_or_404(WarmupTask, id=task_id)
+        
+        # Проверяем что задача не выполняется
+        if task.status == 'RUNNING':
+            messages.error(request, 'Cannot delete a running task. Please wait for it to complete.')
+            return redirect('tiktok_uploader:warmup_task_detail', task_id=task_id)
+        
+        task_name = task.name
+        task.delete()  # Каскадно удалит WarmupTaskAccount
+        
+        messages.success(request, f'Warmup task "{task_name}" deleted successfully.')
+        logger.info(f"Warmup task {task_id} ({task_name}) deleted by user")
+        
+    except Exception as e:
+        logger.error(f"Error deleting warmup task {task_id}: {str(e)}")
+        messages.error(request, f'Error deleting task: {str(e)}')
+        return redirect('tiktok_uploader:warmup_task_detail', task_id=task_id)
     
-    Validates:
-        - Все min <= max диапазоны
-        - Задержки положительные
-        - Concurrency 1-4
-        - Хотя бы одно действие включено
-    
-    Returns:
-        tuple: (is_valid, errors_dict)
-    """
-    pass
-
-
-def _run_warmup_worker(task_id):
-    """
-    Асинхронный worker для выполнения прогрева.
-    
-    Args:
-        task_id (int): ID задачи прогрева
-    
-    Process:
-        Выполняется в отдельном процессе/потоке.
-        Управляет параллельным прогревом аккаунтов с учетом concurrency.
-        Использует ThreadPoolExecutor или Celery для параллелизма.
-    
-    Returns:
-        None (обновляет задачу в БД)
-    """
-    pass
-
-
-def _warmup_single_account(task_id, account_id):
-    """
-    Прогрев одного аккаунта.
-    
-    Args:
-        task_id (int): ID задачи прогрева
-        account_id (int): ID аккаунта
-    
-    Process:
-        1. Получает настройки из WarmupTask
-        2. Открывает Dolphin профиль
-        3. Логинится в TikTok
-        4. Выполняет действия:
-            - feed_scroll: прокрутка ленты For You
-            - watch_video: просмотр видео (случайное время)
-            - like: лайки на видео
-            - follow: подписки на авторов
-            - comment: комментарии (из заготовленного списка)
-        5. Между действиями делает human-like задержки
-        6. Логирует каждое действие
-        7. Обновляет статус WarmupTaskAccount
-    
-    Returns:
-        bool: True если успешно, False если ошибка
-    """
-    pass
-
-
+    return redirect('tiktok_uploader:warmup_task_list')

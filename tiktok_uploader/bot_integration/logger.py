@@ -13,11 +13,20 @@ class Logger:
 
         # Инициализация файла лога
         if not append:
-            if os.path.exists(self._log_file):
-                os.remove(self._log_file)
-            with open(self._log_file, "w") as log:
-                log.write(f'{datetime.today()}\n')
-                log.write(f'Platform: {platform.platform()}\n\n')
+            try:
+                if os.path.exists(self._log_file):
+                    os.remove(self._log_file)
+            except (PermissionError, OSError):
+                # Файл занят другим процессом, продолжаем
+                pass
+            
+            try:
+                with open(self._log_file, "w") as log:
+                    log.write(f'{datetime.today()}\n')
+                    log.write(f'Platform: {platform.platform()}\n\n')
+            except (PermissionError, OSError):
+                # Не можем записать, продолжаем без инициализации
+                pass
 
         # Настройка логгера
         self._log = logging.getLogger('tiktok_bot_log')
@@ -68,4 +77,5 @@ class Logger:
             return str(frame[-1].lineno)
         except:
             return "UNKNOWN"
+
 

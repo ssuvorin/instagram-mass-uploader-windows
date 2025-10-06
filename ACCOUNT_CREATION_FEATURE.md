@@ -278,3 +278,4 @@ class CreateAccountTestCase(TestCase):
 *Дата добавления функции: 4 октября 2025*  
 *Интеграция с ботом TikTokUploadCaptcha*
 
+

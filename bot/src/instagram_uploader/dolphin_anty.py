@@ -2543,7 +2543,7 @@ class DolphinAnty:
         """
         try:
             url = f"{self.sync_api_base}/?actionType=getCookies&browserProfileId={profile_id}"
-            token = self.api_key or os.environ.get("TOKEN") or os.environ.get("DOLPHIN_API_TOKEN")
+            token = self.api_key or os.environ.get("DOLPHIN_API_TOKEN")
             headers = {"Content-Type": "application/json"}
             if token:
                 headers["Authorization"] = f"Bearer {token}"

@@ -3,6 +3,11 @@
 {% block title %}Proxies - TikTok Uploader{% endblock %}
 
 {% block content %}
+<!-- Hidden form for CSRF token -->
+<form id="csrfForm" style="display: none;">
+    {% csrf_token %}
+</form>
+
 <div class="container-fluid mt-4">
     <!-- Хлебные крошки -->
     <nav aria-label="breadcrumb">
@@ -19,8 +24,14 @@
             Proxy Servers
         </h2>
         <div class="btn-group" role="group">
-            <button class="btn btn-outline-warning" title="Validate All Proxies">
-                <i class="bi bi-lightning"></i> Validate All
+            <form method="post" action="{% url 'tiktok_uploader:validate_all_proxies' %}" id="validateAllForm" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-warning" id="validateAllBtn" title="Validate All Proxies">
+                    <i class="bi bi-lightning"></i> Validate All
+                </button>
+            </form>
+            <button type="button" class="btn btn-outline-danger" id="deleteSelectedBtn" onclick="deleteSelected()" style="display: none;">
+                <i class="bi bi-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
             </button>
             <a href="{% url 'tiktok_uploader:import_proxies' %}" class="btn btn-warning">
                 <i class="bi bi-file-earmark-arrow-up"></i> Import
@@ -140,6 +151,9 @@
                 <table class="table table-hover mb-0">
                     <thead>
                         <tr>
+                            <th style="width: 40px;">
+                                <input type="checkbox" class="form-check-input" id="selectAll" title="Select all">
+                            </th>
                             <th>Host:Port</th>
                             <th>Type</th>
                             <th>Country</th>
@@ -154,6 +168,10 @@
                         {% if proxies %}
                             {% for proxy in proxies %}
                             <tr>
+                                <td>
+                                    <input type="checkbox" class="form-check-input proxy-checkbox" 
+                                           value="{{ proxy.id }}" data-proxy-name="{{ proxy.host }}:{{ proxy.port }}">
+                                </td>
                                 <td>
                                     <strong>{{ proxy.host }}:{{ proxy.port }}</strong>
                                     {% if proxy.external_ip %}
@@ -228,7 +246,7 @@
                             {% endfor %}
                         {% else %}
                             <tr>
-                                <td colspan="8" class="text-center text-muted">
+                                <td colspan="9" class="text-center text-muted">
                                     <div class="py-5">
                                         <i class="bi bi-hdd-network fs-1 d-block mb-3"></i>
                                         <p>No proxies found</p>
@@ -246,5 +264,145 @@
         </div>
     </div>
 </div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const validateForm = document.getElementById('validateAllForm');
+    const validateBtn = document.getElementById('validateAllBtn');
+    
+    if (validateForm && validateBtn) {
+        validateForm.addEventListener('submit', function(e) {
+            const totalProxies = {{ total_proxies|default:0 }};
+            
+            if (totalProxies === 0) {
+                e.preventDefault();
+                alert('No proxies to validate. Please add proxies first.');
+                return false;
+            }
+            
+            const confirmed = confirm(
+                `This will validate all ${totalProxies} proxies.\n\n` +
+                `Estimated time: ${Math.ceil(totalProxies / 5 * 10)} seconds (5 parallel threads, ~10 sec per proxy)\n\n` +
+                `Continue?`
+            );
+            
+            if (!confirmed) {
+                e.preventDefault();
+                return false;
+            }
+            
+            // Показываем индикатор загрузки
+            validateBtn.disabled = true;
+            validateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Validating...';
+            
+            // Опционально: показать уведомление
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-info alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+            alertDiv.style.zIndex = '9999';
+            alertDiv.innerHTML = `
+                <strong><i class="bi bi-hourglass-split me-2"></i>Validation in progress...</strong>
+                <br>Please wait, this may take several minutes.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alertDiv);
+        });
+    }
+    
+    // ========================================
+    // Bulk Delete Functionality
+    // ========================================
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const proxyCheckboxes = document.querySelectorAll('.proxy-checkbox');
+    const deleteBtn = document.getElementById('deleteSelectedBtn');
+    const selectedCountSpan = document.getElementById('selectedCount');
+    
+    // Функция обновления счетчика и видимости кнопки
+    function updateDeleteButton() {
+        const checkedCount = document.querySelectorAll('.proxy-checkbox:checked').length;
+        selectedCountSpan.textContent = checkedCount;
+        
+        if (checkedCount > 0) {
+            deleteBtn.style.display = 'inline-block';
+        } else {
+            deleteBtn.style.display = 'none';
+        }
+    }
+    
+    // Select All/None
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            proxyCheckboxes.forEach(cb => {
+                cb.checked = this.checked;
+            });
+            updateDeleteButton();
+        });
+    }
+    
+    // Обновлять счетчик при изменении любого checkbox
+    proxyCheckboxes.forEach(cb => {
+        cb.addEventListener('change', function() {
+            // Снять "Select All" если не все выбраны
+            const allChecked = Array.from(proxyCheckboxes).every(c => c.checked);
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = allChecked;
+            }
+            updateDeleteButton();
+        });
+    });
+    
+    // Начальная проверка
+    updateDeleteButton();
+});
+
+// Функция удаления выбранных прокси
+function deleteSelected() {
+    const selected = Array.from(document.querySelectorAll('.proxy-checkbox:checked'));
+    
+    if (selected.length === 0) {
+        alert('Please select at least one proxy to delete');
+        return;
+    }
+    
+    const proxyNames = selected.map(cb => cb.dataset.proxyName).join(', ');
+    const confirmMsg = `Are you sure you want to delete ${selected.length} proxy/proxies?\n\nProxies: ${proxyNames}\n\nThis action cannot be undone!`;
+    
+    if (!confirm(confirmMsg)) {
+        return;
+    }
+    
+    // Создаем форму и отправляем POST запрос
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{% url "tiktok_uploader:bulk_delete_proxies" %}';
+    
+    // CSRF token из скрытой формы
+    const csrfToken = document.querySelector('#csrfForm [name=csrfmiddlewaretoken]');
+    if (csrfToken) {
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = csrfToken.value;
+        form.appendChild(csrfInput);
+    } else {
+        alert('CSRF token not found. Please refresh the page.');
+        return;
+    }
+    
+    // Добавляем ID выбранных прокси
+    selected.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'proxy_ids';
+        input.value = cb.value;
+        form.appendChild(input);
+    });
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+</script>
+{% endblock %}
+
 {% endblock %}
 

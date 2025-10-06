@@ -10,11 +10,13 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.utils import timezone
+from django.db.models import Q, Count
 import requests
 import re
 
 from ..models import TikTokProxy, TikTokAccount
-from django.db.models import Q
+from ..forms import TikTokProxyForm, BulkProxyImportForm
+from ..utils import validate_proxy, parse_proxy_string
 
 
 # ============================================================================
@@ -118,36 +120,73 @@ def create_proxy(request):
         - proxy_type: HTTP, HTTPS, или SOCKS5
         - ip_change_url: URL для смены IP (опционально)
         - notes: заметки
-        - test_on_create: протестировать после создания (bool)
-    
-    Validation:
-        - Host валидный IP или домен
-        - Port в допустимом диапазоне
-        - Комбинация host:port:username:password уникальна
-        - Прокси тип поддерживается
-    
-    Process:
-        1. Валидирует данные
-        2. Создает TikTokProxy
-        3. Опционально тестирует прокси
-        4. Если тест успешен:
-            - Определяет external_ip
-            - Определяет страну через GeoIP
-            - Устанавливает status=active
-        5. Если тест неудачен:
-            - Устанавливает status=inactive
-            - Сохраняет ошибку в notes
+        - test_on_save: протестировать после создания (bool)
     
     Returns:
         GET: create_proxy.html с формой
         POST: redirect на proxy_list
     """
     if request.method == 'POST':
-        # Здесь будет обработка POST запроса
-        messages.success(request, 'Proxy creation is not yet implemented')
-        return redirect('tiktok_uploader:proxy_list')
+        form = TikTokProxyForm(request.POST)
+        if form.is_valid():
+            proxy = form.save(commit=False)
+            test_on_save = form.cleaned_data.get('test_on_save', True)
+            
+            # Проверка на дубликат
+            existing = TikTokProxy.objects.filter(
+                host=proxy.host,
+                port=proxy.port,
+                username=proxy.username or '',
+                password=proxy.password or ''
+            ).exists()
+            
+            if existing:
+                messages.error(request, f'Proxy {proxy.host}:{proxy.port} already exists!')
+                return render(request, 'tiktok_uploader/proxies/create_proxy.html', {'form': form})
+            
+            # Тестирование прокси если требуется
+            if test_on_save:
+                is_valid, message, geo_info = validate_proxy(
+                    host=proxy.host,
+                    port=proxy.port,
+                    username=proxy.username,
+                    password=proxy.password,
+                    timeout=15,
+                    proxy_type=proxy.proxy_type
+                )
+                
+                if not is_valid:
+                    messages.warning(request, f'Proxy validation failed: {message}. Saved as inactive.')
+                    proxy.status = 'inactive'
+                    proxy.is_active = False
+                else:
+                    proxy.status = 'active'
+                    proxy.is_active = True
+                    
+                    # Обновление геоданных
+                    if geo_info:
+                        if geo_info.get('country'):
+                            proxy.country = geo_info['country']
+                        if geo_info.get('city'):
+                            proxy.city = geo_info['city']
+                        if geo_info.get('external_ip'):
+                            proxy.external_ip = geo_info['external_ip']
+                    
+                    messages.success(request, f'Proxy {proxy.host}:{proxy.port} created and validated successfully!')
+                
+                proxy.last_checked = timezone.now()
+                proxy.last_verified = timezone.now()
+            else:
+                proxy.status = 'inactive'
+                proxy.is_active = False
+                messages.info(request, f'Proxy {proxy.host}:{proxy.port} created without testing.')
+            
+            proxy.save()
+            return redirect('tiktok_uploader:proxy_list')
+    else:
+        form = TikTokProxyForm()
     
-    context = {}
+    context = {'form': form}
     return render(request, 'tiktok_uploader/proxies/create_proxy.html', context)
 
 
@@ -159,21 +198,72 @@ def edit_proxy(request, proxy_id):
     Args:
         proxy_id (int): ID прокси
     
-    Editable fields:
-        - username, password
-        - ip_change_url
-        - notes
-        - status (вручную)
-    
-    Note:
-        host, port, proxy_type нельзя изменить (для сохранения связей).
-        Лучше создать новый прокси.
-    
     Returns:
         GET: edit_proxy.html с формой
         POST: redirect на proxy_list
     """
-    pass
+    proxy = get_object_or_404(TikTokProxy, id=proxy_id)
+    
+    if request.method == 'POST':
+        form = TikTokProxyForm(request.POST, instance=proxy)
+        if form.is_valid():
+            updated_proxy = form.save(commit=False)
+            test_on_save = form.cleaned_data.get('test_on_save', False)
+            
+            # Проверка изменились ли критичные поля
+            connection_changed = (
+                proxy.host != updated_proxy.host or
+                proxy.port != updated_proxy.port or
+                proxy.username != updated_proxy.username or
+                proxy.password != updated_proxy.password or
+                proxy.proxy_type != updated_proxy.proxy_type
+            )
+            
+            # Если изменились критичные поля или запрошено тестирование
+            if (connection_changed or test_on_save):
+                is_valid, message, geo_info = validate_proxy(
+                    host=updated_proxy.host,
+                    port=updated_proxy.port,
+                    username=updated_proxy.username,
+                    password=updated_proxy.password,
+                    timeout=15,
+                    proxy_type=updated_proxy.proxy_type
+                )
+                
+                if not is_valid:
+                    messages.warning(request, f'Proxy validation failed: {message}')
+                    updated_proxy.status = 'inactive'
+                    updated_proxy.is_active = False
+                else:
+                    updated_proxy.status = 'active'
+                    updated_proxy.is_active = True
+                    
+                    # Обновление геоданных
+                    if geo_info:
+                        if geo_info.get('country'):
+                            updated_proxy.country = geo_info['country']
+                        if geo_info.get('city'):
+                            updated_proxy.city = geo_info['city']
+                        if geo_info.get('external_ip'):
+                            updated_proxy.external_ip = geo_info['external_ip']
+                    
+                    messages.success(request, f'Proxy {updated_proxy.host}:{updated_proxy.port} updated and validated!')
+                
+                updated_proxy.last_checked = timezone.now()
+                updated_proxy.last_verified = timezone.now()
+            else:
+                messages.success(request, f'Proxy {updated_proxy.host}:{updated_proxy.port} updated!')
+            
+            updated_proxy.save()
+            return redirect('tiktok_uploader:proxy_list')
+    else:
+        form = TikTokProxyForm(instance=proxy)
+    
+    context = {
+        'form': form,
+        'proxy': proxy,
+    }
+    return render(request, 'tiktok_uploader/proxies/edit_proxy.html', context)
 
 
 @login_required
@@ -184,34 +274,44 @@ def test_proxy(request, proxy_id):
     Args:
         proxy_id (int): ID прокси
     
-    Process:
-        1. Получает прокси из БД
-        2. Выполняет тестовый запрос через прокси:
-            - К https://api.ipify.org (получение IP)
-            - К https://www.tiktok.com (проверка доступа к TikTok)
-        3. Измеряет время отклика
-        4. Определяет external_ip
-        5. Проверяет геолокацию через ip-api.com
-        6. Обновляет статус:
-            - active: если оба запроса успешны
-            - banned: если TikTok недоступен
-            - inactive: если запросы не проходят
-        7. Сохраняет результат в БД
-        8. Логирует результат
-    
     Returns:
-        JsonResponse: {
-            success: true/false,
-            status: "active",
-            external_ip: "1.2.3.4",
-            country: "United States",
-            city: "New York",
-            response_time_ms: 250,
-            tiktok_accessible: true,
-            error: null
-        }
+        redirect: на proxy_list с сообщением о результате
     """
-    pass
+    proxy = get_object_or_404(TikTokProxy, id=proxy_id)
+    
+    is_valid, message, geo_info = validate_proxy(
+        host=proxy.host,
+        port=proxy.port,
+        username=proxy.username,
+        password=proxy.password,
+        timeout=15,
+        proxy_type=proxy.proxy_type
+    )
+    
+    proxy.last_checked = timezone.now()
+    
+    if is_valid:
+        proxy.status = 'active'
+        proxy.is_active = True
+        proxy.last_verified = timezone.now()
+        
+        # Обновление геоданных
+        if geo_info:
+            if geo_info.get('country'):
+                proxy.country = geo_info['country']
+            if geo_info.get('city'):
+                proxy.city = geo_info['city']
+            if geo_info.get('external_ip'):
+                proxy.external_ip = geo_info['external_ip']
+        
+        messages.success(request, f'✅ Proxy {proxy.host}:{proxy.port} is working! {message}')
+    else:
+        proxy.status = 'inactive'
+        proxy.is_active = False
+        messages.error(request, f'❌ Proxy {proxy.host}:{proxy.port} failed: {message}')
+    
+    proxy.save()
+    return redirect('tiktok_uploader:proxy_list')
 
 
 @login_required
@@ -222,37 +322,60 @@ def change_proxy_ip(request, proxy_id):
     Args:
         proxy_id (int): ID прокси
     
-    Requires:
-        - POST запрос
-        - Прокси имеет ip_change_url
-    
-    Process:
-        1. Получает прокси
-        2. Проверяет наличие ip_change_url
-        3. Выполняет GET запрос к ip_change_url
-        4. Ждет 5-10 секунд (обычное время смены IP)
-        5. Тестирует новый IP
-        6. Обновляет external_ip в БД
-        7. Опционально обновляет Dolphin профили с этим прокси
-    
-    Use case:
-        Некоторые прокси провайдеры предоставляют API для смены IP.
-        Это полезно если IP забанен TikTok.
-    
-    API URL examples:
-        - http://proxy-provider.com/api/change?key=XXX&proxy_id=123
-        - http://1.2.3.4:8000/change_ip
-    
     Returns:
-        JsonResponse: {
-            success: true,
-            old_ip: "1.2.3.4",
-            new_ip: "5.6.7.8",
-            country: "United States",
-            message: "IP changed successfully"
-        }
+        redirect: на proxy_list
     """
-    pass
+    proxy = get_object_or_404(TikTokProxy, id=proxy_id)
+    
+    if not proxy.ip_change_url:
+        messages.error(request, f'Proxy {proxy.host}:{proxy.port} does not have IP change URL configured.')
+        return redirect('tiktok_uploader:proxy_list')
+    
+    old_ip = proxy.external_ip
+    
+    try:
+        # Выполняем запрос на смену IP
+        response = requests.get(proxy.ip_change_url, timeout=10)
+        
+        if response.status_code == 200:
+            # Ждем немного для смены IP
+            import time
+            time.sleep(5)
+            
+            # Тестируем новый IP
+            is_valid, message, geo_info = validate_proxy(
+                host=proxy.host,
+                port=proxy.port,
+                username=proxy.username,
+                password=proxy.password,
+                timeout=15,
+                proxy_type=proxy.proxy_type
+            )
+            
+            if is_valid and geo_info.get('external_ip'):
+                new_ip = geo_info['external_ip']
+                proxy.external_ip = new_ip
+                
+                if geo_info.get('country'):
+                    proxy.country = geo_info['country']
+                if geo_info.get('city'):
+                    proxy.city = geo_info['city']
+                
+                proxy.status = 'active'
+                proxy.is_active = True
+                proxy.last_verified = timezone.now()
+                proxy.save()
+                
+                messages.success(request, f'✅ IP changed! {old_ip} → {new_ip}')
+            else:
+                messages.warning(request, f'IP change request sent, but proxy validation failed: {message}')
+        else:
+            messages.error(request, f'IP change request failed with status {response.status_code}')
+            
+    except Exception as e:
+        messages.error(request, f'Error changing IP: {str(e)}')
+    
+    return redirect('tiktok_uploader:proxy_list')
 
 
 @login_required
@@ -263,24 +386,27 @@ def delete_proxy(request, proxy_id):
     Args:
         proxy_id (int): ID прокси
     
-    Requires:
-        - POST запрос
-        - Прокси не используется активно (warning если используется)
-    
-    Safety:
-        - Проверяет активное использование
-        - Отвязывает от аккаунтов (устанавливает NULL)
-        - Предупреждает если есть Dolphin профили с этим прокси
-        - Логирует удаление
-    
-    Confirmation:
-        - Требует подтверждение
-        - Показывает список аккаунтов, которые будут затронуты
-    
     Returns:
-        POST: redirect на proxy_list
+        redirect: на proxy_list
     """
-    pass
+    proxy = get_object_or_404(TikTokProxy, id=proxy_id)
+    
+    # Проверка привязанных аккаунтов
+    accounts_count = proxy.accounts.count()
+    active_accounts_count = proxy.active_accounts.count()
+    
+    if accounts_count > 0 or active_accounts_count > 0:
+        messages.warning(
+            request,
+            f'Proxy {proxy.host}:{proxy.port} is used by {accounts_count} accounts. '
+            f'Please reassign accounts before deleting.'
+        )
+    else:
+        proxy_info = f'{proxy.host}:{proxy.port}'
+        proxy.delete()
+        messages.success(request, f'Proxy {proxy_info} deleted successfully!')
+    
+    return redirect('tiktok_uploader:proxy_list')
 
 
 @login_required
@@ -288,78 +414,212 @@ def import_proxies(request):
     """
     Массовый импорт прокси из файла.
     
-    POST:
-        - file: текстовый файл с прокси
-        - format: формат прокси в файле
-            * 'host_port': host:port
-            * 'host_port_user_pass': host:port:username:password
-            * 'url': protocol://username:password@host:port
-        - proxy_type: тип по умолчанию (если не указан в формате)
-        - test_on_import: тестировать при импорте (bool)
-    
-    Supported formats:
-        1. 1.2.3.4:8080
-        2. 1.2.3.4:8080:user:pass
-        3. http://user:pass@1.2.3.4:8080
-        4. socks5://1.2.3.4:1080
-    
-    Process:
-        1. Парсит файл построчно
-        2. Для каждой строки:
-            - Парсит по формату
-            - Валидирует
-            - Проверяет дубликат
-            - Создает TikTokProxy
-            - Опционально тестирует
-        3. Собирает статистику (добавлено, пропущено, ошибок)
-        4. Отображает результаты
-    
-    Features:
-        - Пропускает пустые строки и комментарии (#)
-        - Автоопределение формата
-        - Параллельное тестирование (если включено)
-        - Прогресс бар
-    
     Returns:
-        GET: import_proxies.html с формой
-        POST: import_proxies.html с результатами или redirect на proxy_list
+        GET: proxy_list.html с формой импорта
+        POST: redirect на proxy_list с результатами
     """
-    pass
+    if request.method == 'POST':
+        form = BulkProxyImportForm(request.POST, request.FILES)
+        if form.is_valid():
+            file = form.cleaned_data['file']
+            import_format = form.cleaned_data['format']
+            default_type = form.cleaned_data['default_type']
+            test_on_import = form.cleaned_data['test_on_import']
+            
+            # Статистика
+            stats = {
+                'total': 0,
+                'added': 0,
+                'skipped': 0,
+                'errors': 0
+            }
+            
+            # Читаем файл
+            try:
+                content = file.read().decode('utf-8')
+                lines = content.strip().split('\n')
+                
+                for line in lines:
+                    line = line.strip()
+                    
+                    # Пропускаем пустые строки и комментарии
+                    if not line or line.startswith('#'):
+                        continue
+                    
+                    stats['total'] += 1
+                    
+                    # Парсим прокси
+                    proxy_data = parse_proxy_string(line, default_type)
+                    
+                    if not proxy_data:
+                        stats['errors'] += 1
+                        continue
+                    
+                    # Проверка на дубликат
+                    existing = TikTokProxy.objects.filter(
+                        host=proxy_data['host'],
+                        port=proxy_data['port'],
+                        username=proxy_data['username'] or '',
+                        password=proxy_data['password'] or ''
+                    ).exists()
+                    
+                    if existing:
+                        stats['skipped'] += 1
+                        continue
+                    
+                    # Создаем прокси
+                    proxy = TikTokProxy(
+                        host=proxy_data['host'],
+                        port=proxy_data['port'],
+                        username=proxy_data['username'],
+                        password=proxy_data['password'],
+                        proxy_type=proxy_data['proxy_type'],
+                        status='inactive',
+                        is_active=False
+                    )
+                    
+                    # Тестирование если требуется
+                    if test_on_import:
+                        is_valid, message, geo_info = validate_proxy(
+                            host=proxy.host,
+                            port=proxy.port,
+                            username=proxy.username,
+                            password=proxy.password,
+                            timeout=15,
+                            proxy_type=proxy.proxy_type
+                        )
+                        
+                        if is_valid:
+                            proxy.status = 'active'
+                            proxy.is_active = True
+                            
+                            if geo_info:
+                                proxy.country = geo_info.get('country')
+                                proxy.city = geo_info.get('city')
+                                proxy.external_ip = geo_info.get('external_ip')
+                            
+                            proxy.last_verified = timezone.now()
+                        
+                        proxy.last_checked = timezone.now()
+                    
+                    proxy.save()
+                    stats['added'] += 1
+                
+                messages.success(
+                    request,
+                    f'✅ Import completed! Added: {stats["added"]}, Skipped: {stats["skipped"]}, '
+                    f'Errors: {stats["errors"]} out of {stats["total"]} total.'
+                )
+                
+            except Exception as e:
+                messages.error(request, f'Error importing proxies: {str(e)}')
+            
+            return redirect('tiktok_uploader:proxy_list')
+    
+    # Для GET запроса показываем форму импорта
+    form = BulkProxyImportForm()
+    context = {
+        'form': form,
+    }
+    return render(request, 'tiktok_uploader/proxies/import_proxies.html', context)
 
 
 @login_required
 def validate_all_proxies(request):
     """
-    Валидация всех прокси в фоновом режиме.
-    
-    POST:
-        - proxy_ids[]: список ID прокси (опционально, иначе все)
-        - update_dolphin: обновить Dolphin профили после валидации (bool)
-    
-    Process:
-        1. Запускает фоновую задачу (Celery или Thread)
-        2. Для каждого прокси:
-            - Выполняет test_proxy
-            - Обновляет статус
-            - Обновляет external_ip и геолокацию
-        3. Использует ThreadPoolExecutor для параллелизма
-        4. Собирает статистику
-        5. Опционально обновляет Dolphin профили
-    
-    Use case:
-        - Периодическая проверка всех прокси
-        - После закупки новых прокси
-        - Проверка после массового бана
+    Валидация всех прокси.
     
     Returns:
-        JsonResponse: {
-            success: true,
-            task_id: "...",
-            total_proxies: 50,
-            message: "Validation started in background"
-        }
+        redirect: на proxy_list с результатами
     """
-    pass
+    import threading
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    
+    # Получаем все прокси или выбранные
+    proxy_ids = request.POST.getlist('proxy_ids[]') if request.method == 'POST' else []
+    
+    if proxy_ids:
+        proxies = TikTokProxy.objects.filter(id__in=proxy_ids)
+    else:
+        proxies = TikTokProxy.objects.all()
+    
+    if not proxies.exists():
+        messages.warning(request, 'No proxies found to validate.')
+        return redirect('tiktok_uploader:proxy_list')
+    
+    total = proxies.count()
+    
+    # Статистика
+    stats = {
+        'total': total,
+        'active': 0,
+        'inactive': 0,
+        'errors': 0
+    }
+    
+    def validate_single_proxy(proxy):
+        """Валидация одного прокси."""
+        try:
+            is_valid, message, geo_info = validate_proxy(
+                host=proxy.host,
+                port=proxy.port,
+                username=proxy.username,
+                password=proxy.password,
+                timeout=15,
+                proxy_type=proxy.proxy_type
+            )
+            
+            proxy.last_checked = timezone.now()
+            
+            if is_valid:
+                proxy.status = 'active'
+                proxy.is_active = True
+                proxy.last_verified = timezone.now()
+                
+                # Обновление геоданных
+                if geo_info:
+                    if geo_info.get('country'):
+                        proxy.country = geo_info['country']
+                    if geo_info.get('city'):
+                        proxy.city = geo_info['city']
+                    if geo_info.get('external_ip'):
+                        proxy.external_ip = geo_info['external_ip']
+                
+                proxy.save()
+                return 'active'
+            else:
+                proxy.status = 'inactive'
+                proxy.is_active = False
+                proxy.save()
+                return 'inactive'
+                
+        except Exception as e:
+            return 'error'
+    
+    # Параллельная валидация (максимум 5 потоков одновременно)
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = {executor.submit(validate_single_proxy, proxy): proxy for proxy in proxies}
+        
+        for future in as_completed(futures):
+            result = future.result()
+            if result == 'active':
+                stats['active'] += 1
+            elif result == 'inactive':
+                stats['inactive'] += 1
+            else:
+                stats['errors'] += 1
+    
+    # Сообщение с результатами
+    messages.success(
+        request,
+        f'✅ Validation completed! '
+        f'Active: {stats["active"]}, '
+        f'Inactive: {stats["inactive"]}, '
+        f'Errors: {stats["errors"]} '
+        f'out of {stats["total"]} total.'
+    )
+    
+    return redirect('tiktok_uploader:proxy_list')
 
 
 @login_required
@@ -466,5 +726,47 @@ def _parse_proxy_string(proxy_string, default_type='HTTP'):
         "http://user:pass@1.2.3.4:8080" → полные данные
     """
     pass
+
+
+@login_required
+def bulk_delete_proxies(request):
+    """
+    Массовое удаление прокси.
+    """
+    if request.method == 'POST':
+        proxy_ids = request.POST.getlist('proxy_ids')
+        
+        if not proxy_ids:
+            messages.error(request, 'No proxies selected for deletion.')
+            return redirect('tiktok_uploader:proxy_list')
+        
+        try:
+            # Получаем прокси для удаления
+            proxies = TikTokProxy.objects.filter(id__in=proxy_ids)
+            count = proxies.count()
+            
+            if count == 0:
+                messages.error(request, 'No proxies found to delete.')
+                return redirect('tiktok_uploader:proxy_list')
+            
+            # Сохраняем host:port для сообщения
+            proxy_names = [f"{p.host}:{p.port}" for p in proxies]
+            
+            # Удаляем прокси
+            proxies.delete()
+            
+            # Формируем сообщение
+            if count == 1:
+                messages.success(request, f'Proxy {proxy_names[0]} has been deleted.')
+            elif count <= 5:
+                proxies_str = ', '.join(proxy_names)
+                messages.success(request, f'{count} proxies deleted: {proxies_str}')
+            else:
+                messages.success(request, f'{count} proxies have been successfully deleted.')
+            
+        except Exception as e:
+            messages.error(request, f'Error deleting proxies: {str(e)}')
+    
+    return redirect('tiktok_uploader:proxy_list')
 
 

@@ -35,6 +35,11 @@
 {% endblock %}
 
 {% block content %}
+<!-- Hidden form for CSRF token -->
+<form id="csrfForm" style="display: none;">
+    {% csrf_token %}
+</form>
+
 <div class="row mb-4">
     <div class="col-md-6">
         <h2 class="fw-bold">
@@ -51,6 +56,9 @@
             <a href="{% url 'tiktok_uploader:refresh_dolphin_proxies' %}" class="btn btn-outline-info">
                 <i class="bi bi-arrow-clockwise"></i> Refresh
             </a>
+            <button type="button" class="btn btn-outline-danger" id="deleteSelectedBtn" onclick="deleteSelected()" style="display: none;">
+                <i class="bi bi-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
+            </button>
         </div>
         <div class="btn-group" role="group">
             <a href="{% url 'tiktok_uploader:import_accounts' %}" class="btn btn-outline-dark">
@@ -108,11 +116,13 @@
             <table class="table table-hover table-tiktok mb-0">
                 <thead>
                     <tr>
+                        <th style="width: 40px;">
+                            <input type="checkbox" class="form-check-input" id="selectAll" title="Select all">
+                        </th>
                         <th>Username</th>
                         <th>Status</th>
                         <th>Dolphin Profile</th>
                         <th>Proxy</th>
-                        <th>Phone</th>
                         <th>Last Used</th>
                         <th>Created</th>
                         <th>Actions</th>
@@ -121,6 +131,10 @@
                 <tbody>
                     {% for account in accounts %}
                     <tr>
+                        <td>
+                            <input type="checkbox" class="form-check-input account-checkbox" 
+                                   value="{{ account.id }}" data-username="{{ account.username }}">
+                        </td>
                         <td>
                             <strong>@{{ account.username }}</strong>
                             {% if account.email %}
@@ -153,13 +167,6 @@
                             </span>
                             {% else %}
                             <span class="badge bg-warning text-dark">No Proxy</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if account.phone_number %}
-                            <small>{{ account.phone_number }}</small>
-                            {% else %}
-                            <span class="text-muted">-</span>
                             {% endif %}
                         </td>
                         <td>
@@ -204,6 +211,97 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const accountCheckboxes = document.querySelectorAll('.account-checkbox');
+    const deleteBtn = document.getElementById('deleteSelectedBtn');
+    const selectedCountSpan = document.getElementById('selectedCount');
+    
+    // Функция обновления счетчика и видимости кнопки
+    function updateDeleteButton() {
+        const checkedCount = document.querySelectorAll('.account-checkbox:checked').length;
+        selectedCountSpan.textContent = checkedCount;
+        
+        if (checkedCount > 0) {
+            deleteBtn.style.display = 'inline-block';
+        } else {
+            deleteBtn.style.display = 'none';
+        }
+    }
+    
+    // Select All/None
+    selectAllCheckbox.addEventListener('change', function() {
+        accountCheckboxes.forEach(cb => {
+            cb.checked = this.checked;
+        });
+        updateDeleteButton();
+    });
+    
+    // Обновлять счетчик при изменении любого checkbox
+    accountCheckboxes.forEach(cb => {
+        cb.addEventListener('change', function() {
+            // Снять "Select All" если не все выбраны
+            const allChecked = Array.from(accountCheckboxes).every(c => c.checked);
+            selectAllCheckbox.checked = allChecked;
+            updateDeleteButton();
+        });
+    });
+    
+    // Начальная проверка
+    updateDeleteButton();
+});
+
+// Функция удаления выбранных аккаунтов
+function deleteSelected() {
+    const selected = Array.from(document.querySelectorAll('.account-checkbox:checked'));
+    
+    if (selected.length === 0) {
+        alert('Please select at least one account to delete');
+        return;
+    }
+    
+    const usernames = selected.map(cb => cb.dataset.username).join(', ');
+    const confirmMsg = `Are you sure you want to delete ${selected.length} account(s)?\n\nAccounts: ${usernames}\n\nThis action cannot be undone!`;
+    
+    if (!confirm(confirmMsg)) {
+        return;
+    }
+    
+    // Создаем форму и отправляем POST запрос
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{% url "tiktok_uploader:bulk_delete_accounts" %}';
+    
+    // CSRF token из скрытой формы
+    const csrfToken = document.querySelector('#csrfForm [name=csrfmiddlewaretoken]');
+    if (csrfToken) {
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = csrfToken.value;
+        form.appendChild(csrfInput);
+    } else {
+        alert('CSRF token not found. Please refresh the page.');
+        return;
+    }
+    
+    // Добавляем ID выбранных аккаунтов
+    selected.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'account_ids';
+        input.value = cb.value;
+        form.appendChild(input);
+    });
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+</script>
 {% endblock %}
 
 

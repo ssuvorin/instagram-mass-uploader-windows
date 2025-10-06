@@ -1,0 +1,29 @@
+[
+  {
+    "name": "sessionid",
+    "value": "your_session_id_here",
+    "domain": ".tiktok.com",
+    "path": "/",
+    "secure": true,
+    "httpOnly": true
+  },
+  {
+    "name": "sid_tt",
+    "value": "your_sid_tt_here",
+    "domain": ".tiktok.com",
+    "path": "/",
+    "secure": true,
+    "httpOnly": true
+  },
+  {
+    "name": "ttwid",
+    "value": "your_ttwid_here",
+    "domain": ".tiktok.com",
+    "path": "/",
+    "secure": true,
+    "httpOnly": false
+  }
+]
+
+
+

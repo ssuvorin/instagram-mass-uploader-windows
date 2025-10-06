@@ -1,0 +1,300 @@
+{% extends "tiktok_uploader/base.html" %}
+
+{% block title %}Add Captions - {{ task.name }} - TikTok Uploader{% endblock %}
+
+{% block extra_css %}
+<style>
+    .caption-card {
+        border: 2px solid #e9ecef;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+    }
+    .caption-card:hover {
+        border-color: #FE2C55;
+        box-shadow: 0 5px 20px rgba(254, 44, 85, 0.15);
+    }
+    .caption-option {
+        background: white;
+        border: 3px solid #e9ecef;
+        border-radius: 15px;
+        padding: 2rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    .caption-option:hover {
+        border-color: #FE2C55;
+        background: rgba(254, 44, 85, 0.05);
+        transform: translateY(-5px);
+    }
+    .caption-option.active {
+        border-color: #FE2C55;
+        background: rgba(254, 44, 85, 0.1);
+    }
+    .caption-icon {
+        font-size: 3rem;
+        color: #FE2C55;
+        margin-bottom: 1rem;
+    }
+    .char-counter {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    .char-counter.warning {
+        color: #ffc107;
+        font-weight: bold;
+    }
+    .char-counter.danger {
+        color: #dc3545;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="fw-bold">
+            <i class="bi bi-file-text" style="color: #FE2C55;"></i>
+            Add Captions to "{{ task.name }}"
+        </h2>
+        <p class="text-muted">Add captions/descriptions for your videos</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'tiktok_uploader:bulk_upload_detail' task_id=task.id %}" class="btn btn-outline-dark">
+            <i class="bi bi-arrow-left"></i> Back to Task
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Caption Input Form -->
+    <div class="col-md-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header" style="background: linear-gradient(135deg, #FE2C55, #000); color: white;">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-pencil-square"></i> Add Captions
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Choose Method -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="caption-option" id="fileOption" onclick="selectMethod('file')">
+                            <i class="bi bi-file-earmark-arrow-up caption-icon"></i>
+                            <h5 class="fw-bold">Upload File</h5>
+                            <p class="text-muted mb-0">Import captions from a .txt file</p>
+                            <small class="text-muted">(One caption per line)</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="caption-option" id="textOption" onclick="selectMethod('text')">
+                            <i class="bi bi-textarea-t caption-icon"></i>
+                            <h5 class="fw-bold">Default Caption</h5>
+                            <p class="text-muted mb-0">Use same caption for all videos</p>
+                            <small class="text-muted">(Applied to every video)</small>
+                        </div>
+                    </div>
+                </div>
+
+                <form method="post" enctype="multipart/form-data" id="captionForm">
+                    {% csrf_token %}
+                    
+                    <!-- File Upload Method -->
+                    <div id="fileMethod" style="display: none;">
+                        <div class="caption-card">
+                            <label for="id_captions_file" class="form-label fw-bold">
+                                <i class="bi bi-upload me-2"></i>Upload Captions File
+                            </label>
+                            <input type="file" 
+                                   name="captions_file" 
+                                   class="form-control form-control-lg" 
+                                   id="id_captions_file" 
+                                   accept=".txt">
+                            <div class="form-text mt-2">
+                                <strong>Format:</strong> Plain text file (.txt), one caption per line<br>
+                                <strong>Example:</strong>
+                                <pre class="bg-light p-2 mt-2" style="border-radius: 10px;">Check out this amazing video! #fyp #viral
+Loving this content! 🔥 #foryou #trending
+Another great video for you! 💯</pre>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Text Input Method -->
+                    <div id="textMethod" style="display: none;">
+                        <div class="caption-card">
+                            <label for="id_caption_text" class="form-label fw-bold">
+                                <i class="bi bi-chat-text me-2"></i>Default Caption
+                            </label>
+                            <textarea name="caption_text" 
+                                      class="form-control" 
+                                      id="id_caption_text" 
+                                      rows="5" 
+                                      placeholder="Enter caption here... (will be used for all videos)"
+                                      oninput="updateCharCount()"></textarea>
+                            <div class="d-flex justify-content-between mt-2">
+                                <div class="form-text">This caption will be used for ALL videos in this task</div>
+                                <span class="char-counter" id="charCount">0 / 2200</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info d-flex align-items-start">
+                        <i class="bi bi-lightbulb-fill me-2 fs-5"></i>
+                        <div>
+                            <strong>Tips:</strong>
+                            <ul class="mb-0 mt-1">
+                                <li>TikTok allows up to 2200 characters per caption</li>
+                                <li>Use hashtags (#) to increase visibility</li>
+                                <li>Mentions (@username) will be automatically detected</li>
+                                <li>Emojis are supported and encouraged! 🎉</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mt-4" id="submitSection" style="display: none;">
+                        <button type="submit" class="btn btn-lg px-5" style="background: linear-gradient(135deg, #FE2C55, #000); color: white;">
+                            <i class="bi bi-check-circle me-2"></i> Save Captions
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Current Status -->
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle"></i> Task Info
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Videos:</strong>
+                    <span class="badge" style="background: linear-gradient(135deg, #FE2C55, #000); color: white;">
+                        {{ videos.count }}
+                    </span>
+                </div>
+                <div class="mb-3">
+                    <strong>Current Captions:</strong>
+                    <span class="badge bg-secondary">{{ captions.count }}</span>
+                </div>
+                <hr>
+                <small class="text-muted">
+                    <i class="bi bi-lightbulb"></i>
+                    {% if captions.count == 0 %}
+                        No captions added yet. Add captions to complete the task setup.
+                    {% else %}
+                        Captions have been added. You can update them anytime before starting the upload.
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+        
+        {% if captions %}
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-list-check"></i> Current Captions
+                </h5>
+            </div>
+            <div class="card-body p-0" style="max-height: 300px; overflow-y: auto;">
+                {% for caption in captions %}
+                <div class="p-3 border-bottom">
+                    <small class="text-muted d-block mb-1">#{{ forloop.counter }}</small>
+                    <div class="small">{{ caption.text|truncatewords:15 }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Navigation -->
+<div class="d-flex justify-content-between mt-4">
+    <a href="{% url 'tiktok_uploader:add_bulk_videos' task_id=task.id %}" class="btn btn-secondary btn-lg">
+        <i class="bi bi-arrow-left"></i> Back to Videos
+    </a>
+    <a href="{% url 'tiktok_uploader:bulk_upload_detail' task_id=task.id %}" class="btn btn-lg" style="background: linear-gradient(135deg, #FE2C55, #000); color: white;">
+        Continue to Task <i class="bi bi-arrow-right"></i>
+    </a>
+</div>
+
+<script>
+let selectedMethod = null;
+
+function selectMethod(method) {
+    selectedMethod = method;
+    
+    // Update option styles
+    document.getElementById('fileOption').classList.remove('active');
+    document.getElementById('textOption').classList.remove('active');
+    
+    // Hide all methods
+    document.getElementById('fileMethod').style.display = 'none';
+    document.getElementById('textMethod').style.display = 'none';
+    document.getElementById('submitSection').style.display = 'none';
+    
+    // Show selected method
+    if (method === 'file') {
+        document.getElementById('fileOption').classList.add('active');
+        document.getElementById('fileMethod').style.display = 'block';
+        document.getElementById('submitSection').style.display = 'block';
+    } else if (method === 'text') {
+        document.getElementById('textOption').classList.add('active');
+        document.getElementById('textMethod').style.display = 'block';
+        document.getElementById('submitSection').style.display = 'block';
+    }
+}
+
+function updateCharCount() {
+    const textarea = document.getElementById('id_caption_text');
+    const counter = document.getElementById('charCount');
+    const length = textarea.value.length;
+    
+    counter.textContent = length + ' / 2200';
+    
+    // Update counter color based on length
+    counter.classList.remove('warning', 'danger');
+    if (length > 2200) {
+        counter.classList.add('danger');
+    } else if (length > 1800) {
+        counter.classList.add('warning');
+    }
+}
+
+// Form validation
+document.getElementById('captionForm').addEventListener('submit', function(e) {
+    if (!selectedMethod) {
+        e.preventDefault();
+        alert('Please select a method to add captions');
+        return false;
+    }
+    
+    if (selectedMethod === 'file') {
+        const fileInput = document.getElementById('id_captions_file');
+        if (!fileInput.files.length) {
+            e.preventDefault();
+            alert('Please select a captions file');
+            return false;
+        }
+    } else if (selectedMethod === 'text') {
+        const textInput = document.getElementById('id_caption_text');
+        if (!textInput.value.trim()) {
+            e.preventDefault();
+            alert('Please enter a caption');
+            return false;
+        }
+    }
+});
+</script>
+{% endblock %}
+
+

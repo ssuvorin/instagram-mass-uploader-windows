@@ -13,6 +13,7 @@ from . import views_follow
 from .views_mod import views_bulk
 from .views_mod import views_proxies
 from .views_mod import views_cookie
+from .views_mod import views_import
 
 app_name = 'tiktok_uploader'
 
@@ -28,9 +29,10 @@ urlpatterns = [
     path('accounts/', views.account_list, name='account_list'),
     path('accounts/<int:account_id>/', views.account_detail, name='account_detail'),
     path('accounts/create/', views.create_account, name='create_account'),
-    path('accounts/import/', views.import_accounts, name='import_accounts'),
+    path('accounts/import/', views_import.import_accounts, name='import_accounts'),
     path('accounts/<int:account_id>/edit/', views.edit_account, name='edit_account'),
     path('accounts/<int:account_id>/delete/', views.delete_account, name='delete_account'),
+    path('accounts/bulk-delete/', views.bulk_delete_accounts, name='bulk_delete_accounts'),
     path('accounts/<int:account_id>/change-proxy/', views.change_account_proxy, name='change_account_proxy'),
     path('accounts/<int:account_id>/create-profile/', views.create_dolphin_profile, name='create_dolphin_profile'),
     path('accounts/bulk-change-proxy/', views.bulk_change_proxy, name='bulk_change_proxy'),
@@ -41,13 +43,14 @@ urlpatterns = [
     # ========================================================================
     path('proxies/', views_proxies.proxy_list, name='proxy_list'),
     path('proxies/create/', views_proxies.create_proxy, name='create_proxy'),
+    path('proxies/import/', views_proxies.import_proxies, name='import_proxies'),
+    path('proxies/validate-all/', views_proxies.validate_all_proxies, name='validate_all_proxies'),
+    path('proxies/cleanup-inactive/', views_proxies.cleanup_inactive_proxies, name='cleanup_inactive_proxies'),
     path('proxies/<int:proxy_id>/edit/', views_proxies.edit_proxy, name='edit_proxy'),
     path('proxies/<int:proxy_id>/test/', views_proxies.test_proxy, name='test_proxy'),
     path('proxies/<int:proxy_id>/change-ip/', views_proxies.change_proxy_ip, name='change_proxy_ip'),
     path('proxies/<int:proxy_id>/delete/', views_proxies.delete_proxy, name='delete_proxy'),
-    path('proxies/import/', views_proxies.import_proxies, name='import_proxies'),
-    path('proxies/validate-all/', views_proxies.validate_all_proxies, name='validate_all_proxies'),
-    path('proxies/cleanup-inactive/', views_proxies.cleanup_inactive_proxies, name='cleanup_inactive_proxies'),
+    path('proxies/bulk-delete/', views_proxies.bulk_delete_proxies, name='bulk_delete_proxies'),
     
     # ========================================================================
     # МАССОВАЯ ЗАГРУЗКА ВИДЕО
@@ -60,6 +63,7 @@ urlpatterns = [
     path('bulk-upload/<int:task_id>/start/', views_bulk.start_bulk_upload, name='start_bulk_upload'),
     path('bulk-upload/<int:task_id>/start-api/', views_bulk.start_bulk_upload_api, name='start_bulk_upload_api'),
     path('bulk-upload/<int:task_id>/delete/', views_bulk.delete_bulk_upload, name='delete_bulk_upload'),
+    path('bulk-upload/<int:task_id>/force-delete/', views_bulk.force_delete_bulk_upload, name='force_delete_bulk_upload'),
     path('bulk-upload/<int:task_id>/logs/', views_bulk.get_bulk_task_logs, name='bulk_task_logs'),
     path('bulk-upload/<int:task_id>/pause/', views_bulk.pause_bulk_upload, name='pause_bulk_upload'),
     path('bulk-upload/<int:task_id>/resume/', views_bulk.resume_bulk_upload, name='resume_bulk_upload'),
@@ -86,6 +90,8 @@ urlpatterns = [
     path('warmup/create/', views_warmup.warmup_task_create, name='warmup_task_create'),
     path('warmup/<int:task_id>/', views_warmup.warmup_task_detail, name='warmup_task_detail'),
     path('warmup/<int:task_id>/start/', views_warmup.warmup_task_start, name='warmup_task_start'),
+    path('warmup/<int:task_id>/force-stop/', views_warmup.force_stop_warmup_task, name='force_stop_warmup_task'),
+    path('warmup/<int:task_id>/restart/', views_warmup.restart_warmup_task, name='restart_warmup_task'),
     path('warmup/<int:task_id>/logs/', views_warmup.warmup_task_logs, name='warmup_task_logs'),
     path('warmup/<int:task_id>/delete/', views_warmup.delete_warmup_task, name='delete_warmup_task'),
     

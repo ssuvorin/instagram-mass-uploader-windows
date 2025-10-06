@@ -38,3 +38,4 @@ def send_message(message):
         except Exception as e:
             logger.error(f'[TELEGRAM] Error sending message: {str(e)}')
 
+

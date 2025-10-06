@@ -123,28 +123,48 @@ def create_bulk_upload(request):
     """
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
+        account_ids = request.POST.getlist('account_ids')
         
         if not name:
             messages.error(request, 'Название задачи обязательно')
-            return render(request, 'tiktok_uploader/bulk_upload/create.html')
+            return render(request, 'tiktok_uploader/bulk_upload/create.html', {
+                'accounts': TikTokAccount.objects.filter(status='ACTIVE'),
+                'available_proxies': TikTokProxy.objects.filter(status='active'),
+            })
+        
+        if not account_ids:
+            messages.error(request, 'Выберите минимум один аккаунт')
+            return render(request, 'tiktok_uploader/bulk_upload/create.html', {
+                'accounts': TikTokAccount.objects.filter(status='ACTIVE'),
+                'available_proxies': TikTokProxy.objects.filter(status='active'),
+            })
         
         # Создаем новую задачу
         try:
             task = BulkUploadTask.objects.create(
                 name=name,
                 status='PENDING',
-                created_by=request.user,
             )
             
-            messages.success(request, f'Задача "{name}" успешно создана!')
-            return redirect('tiktok_uploader:bulk_upload_list')
+            # Создаем связи с аккаунтами
+            from ..models import BulkUploadAccount
+            for account_id in account_ids:
+                account = TikTokAccount.objects.get(id=account_id)
+                BulkUploadAccount.objects.create(
+                    bulk_task=task,
+                    account=account,
+                    proxy=account.proxy  # Используем прокси аккаунта
+                )
+            
+            messages.success(request, f'Задача "{name}" успешно создана с {len(account_ids)} аккаунтом(ами)!')
+            return redirect('tiktok_uploader:add_bulk_videos', task_id=task.id)
             
         except Exception as e:
             messages.error(request, f'Ошибка создания задачи: {str(e)}')
     
     # GET запрос - показать форму
     context = {
-        'available_accounts': TikTokAccount.objects.filter(status='ACTIVE'),
+        'accounts': TikTokAccount.objects.filter(status='ACTIVE'),
         'available_proxies': TikTokProxy.objects.filter(status='active'),
     }
     
@@ -193,18 +213,46 @@ def bulk_upload_detail(request, task_id):
     """
     try:
         task = get_object_or_404(BulkUploadTask, id=task_id)
-        
-        # Базовые данные для отображения
+
+        # Аккаунты задачи с присоединенной информацией об оригинальном аккаунте
+        accounts_qs = (
+            task.accounts
+                .select_related('account')
+                .prefetch_related('assigned_videos')
+                .all()
+        )
+
+        # Видео задачи с присоединенными связями для отображения
+        videos_qs = (
+            task.videos
+                .select_related('assigned_to__account', 'assigned_caption')
+                .all()
+        )
+        unassigned_count = task.videos.filter(assigned_to__isnull=True).count()
+
+        # Прогресс по видео
+        total_videos = videos_qs.count()
+        uploaded_videos = videos_qs.filter(uploaded=True).count()
+        failed_videos = videos_qs.filter(uploaded=False, assigned_to__isnull=False).count() if task.status == 'COMPLETED' else 0
+        progress_percent = int((uploaded_videos / total_videos) * 100) if total_videos else 0
+
         context = {
             'task': task,
-            'accounts': [],
-            'videos': [],
+            'accounts': accounts_qs,
+            'videos': videos_qs,
             'can_start': task.status == 'PENDING',
             'can_edit': task.status in ['PENDING', 'PAUSED'],
+            'unassigned_count': unassigned_count,
+            'progress': {
+                'total': total_videos,
+                'uploaded': uploaded_videos,
+                'failed': failed_videos,
+                'percent': progress_percent,
+            },
         }
-        
+
         return render(request, 'tiktok_uploader/bulk_upload/detail.html', context)
-        
+
     except BulkUploadTask.DoesNotExist:
         messages.error(request, 'Задача не найдена')
         return redirect('tiktok_uploader:bulk_upload_list')
@@ -218,44 +266,68 @@ def bulk_upload_detail(request, task_id):
 def add_bulk_videos(request, task_id):
     """
     Добавление видео в задачу массовой загрузки.
-    
-    Args:
-        task_id (int): ID задачи
-    
-    POST:
-        - video_files[]: массив видео файлов (multiple upload)
-        - OR
-        - video_urls[]: массив URL для скачивания видео
-    
-    Validation:
-        - Задача в статусе PENDING (не запущена)
-        - Видео формат: mp4, mov, avi
-        - Размер каждого видео <= 2GB (лимит TikTok)
-        - Длительность 3 сек - 10 минут (TikTok требования)
-        - Разрешение минимум 720p
-        - Не превышен лимит: 1000 видео на задачу
-    
-    Process:
-        1. Валидирует каждый видео файл
-        2. Сохраняет в media/tiktok/bulk_videos/
-        3. Генерирует thumbnail для preview
-        4. Создает BulkVideo записи
-        5. Проверяет видео ffprobe (длительность, кодеки, разрешение)
-        6. Опционально конвертирует в оптимальный формат для TikTok
-        7. Отображает preview загруженных видео
-    
-    Features:
-        - Drag & drop интерфейс
-        - Progress bar для каждого файла
-        - Preview thumbnails
-        - Возможность удалить перед сохранением
-        - Массовая загрузка (до 50 файлов за раз)
-    
-    Returns:
-        GET: add_bulk_videos.html с формой и списком загруженных
-        POST: redirect на add_bulk_captions или bulk_upload_detail
     """
-    pass
+    from django.contrib import messages
+    from ..models import BulkUploadTask, BulkVideo
+    from ..forms import BulkVideoUploadForm
+    
+    task = get_object_or_404(BulkUploadTask, id=task_id)
+    
+    # Проверяем что задача еще редактируемая
+    if task.status not in ['PENDING']:
+        messages.error(request, f'Cannot add videos to task "{task.name}" as it is already {task.status}')
+        return redirect('tiktok_uploader:bulk_upload_detail', task_id=task.id)
+    
+    if request.method == 'POST':
+        form = BulkVideoUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            # Получаем множественные файлы
+            if 'video_file' in request.FILES:
+                files = request.FILES.getlist('video_file')
+                
+                # Сохраняем каждый файл
+                created_count = 0
+                for video_file in files:
+                    # Базовая валидация размера (TikTok лимит ~2GB)
+                    if video_file.size > 2 * 1024 * 1024 * 1024:  # 2GB
+                        messages.warning(request, f'Skipped {video_file.name}: file too large (max 2GB)')
+                        continue
+                    
+                    # Проверка формата
+                    valid_formats = ['.mp4', '.mov', '.avi', '.mkv', '.webm']
+                    if not any(video_file.name.lower().endswith(fmt) for fmt in valid_formats):
+                        messages.warning(request, f'Skipped {video_file.name}: unsupported format')
+                        continue
+                    
+                    # Создаем запись в БД
+                    BulkVideo.objects.create(
+                        bulk_task=task,
+                        video_file=video_file
+                    )
+                    created_count += 1
+                
+                if created_count > 0:
+                    messages.success(request, f'✅ Added {created_count} video(s) to task "{task.name}"')
+                    
+                    # Проверяем есть ли уже описания
+                    if task.captions.exists():
+                        return redirect('tiktok_uploader:bulk_upload_detail', task_id=task.id)
+                    else:
+                        return redirect('tiktok_uploader:add_bulk_captions', task_id=task.id)
+                else:
+                    messages.error(request, 'No valid videos were uploaded')
+    else:
+        form = BulkVideoUploadForm()
+    
+    # Получаем уже загруженные видео
+    videos = task.videos.all().select_related('assigned_to__account')
+    
+    context = {
+        'form': form,
+        'task': task,
+        'videos': videos,
+    }
+    return render(request, 'tiktok_uploader/bulk_upload/add_videos.html', context)
 
 
 @login_required
@@ -303,7 +375,86 @@ def add_bulk_captions(request, task_id):
         GET: add_bulk_captions.html с формой
         POST: redirect на bulk_upload_detail
     """
-    pass
+    from django.contrib import messages
+    from ..models import BulkUploadTask, VideoCaption
+    
+    task = get_object_or_404(BulkUploadTask, id=task_id)
+    
+    # Проверяем что задача еще редактируемая
+    if task.status not in ['PENDING']:
+        messages.error(request, f'Cannot add captions to task "{task.name}" as it is already {task.status}')
+        return redirect('tiktok_uploader:bulk_upload_detail', task_id=task.id)
+    
+    if request.method == 'POST':
+        # Проверяем что есть видео в задаче
+        if not task.videos.exists():
+            messages.error(request, 'Please add videos first before adding captions')
+            return redirect('tiktok_uploader:add_bulk_videos', task_id=task.id)
+        
+        # Получаем данные из формы
+        captions_file = request.FILES.get('captions_file')
+        caption_text = request.POST.get('caption_text', '').strip()
+        
+        if captions_file:
+            # Импорт из файла
+            try:
+                content = captions_file.read().decode('utf-8')
+                captions = [line.strip() for line in content.splitlines() if line.strip()]
+                
+                # Удаляем старые описания
+                task.captions.all().delete()
+                
+                # Создаем новые описания
+                created_count = 0
+                for caption in captions:
+                    # Валидация длины (TikTok лимит 2200 символов)
+                    if len(caption) > 2200:
+                        messages.warning(request, f'Caption too long ({len(caption)} chars), truncated to 2200')
+                        caption = caption[:2200]
+                    
+                    VideoCaption.objects.create(
+                        bulk_task=task,
+                        text=caption
+                    )
+                    created_count += 1
+                
+                messages.success(request, f'✅ Added {created_count} caption(s) from file')
+                return redirect('tiktok_uploader:bulk_upload_detail', task_id=task.id)
+                
+            except Exception as e:
+                messages.error(request, f'Error reading file: {str(e)}')
+        
+        elif caption_text:
+            # Одно описание для всех видео
+            if len(caption_text) > 2200:
+                messages.warning(request, f'Caption too long ({len(caption_text)} chars), truncated to 2200')
+                caption_text = caption_text[:2200]
+            
+            # Удаляем старые описания
+            task.captions.all().delete()
+            
+            # Создаем одно описание
+            VideoCaption.objects.create(
+                bulk_task=task,
+                text=caption_text
+            )
+            
+            messages.success(request, f'✅ Added default caption for all videos')
+            return redirect('tiktok_uploader:bulk_upload_detail', task_id=task.id)
+        
+        else:
+            messages.error(request, 'Please provide either a captions file or default caption text')
+    
+    # Получаем текущие описания и видео
+    captions = task.captions.all()
+    videos = task.videos.all()
+    
+    context = {
+        'task': task,
+        'captions': captions,
+        'videos': videos,
+    }
+    return render(request, 'tiktok_uploader/bulk_upload/add_captions.html', context)
 
 
 # ============================================================================
@@ -444,6 +595,18 @@ def start_bulk_upload_api(request, task_id):
                 'error': 'No accounts assigned to this task'
             }, status=400)
         
+        # Распределяем НЕназначенные видео между аккаунтами (round-robin)
+        from ..models import BulkVideo
+        unassigned_videos = list(task.videos.filter(assigned_to__isnull=True).order_by('id'))
+        accounts_list = list(task.accounts.all().select_related('account'))
+        if unassigned_videos and accounts_list:
+            acc_count = len(accounts_list)
+            idx = 0
+            for video in unassigned_videos:
+                video.assigned_to = accounts_list[idx % acc_count]
+                video.save(update_fields=['assigned_to'])
+                idx += 1
+        
         # Запускаем задачу в отдельном потоке, чтобы не блокировать HTTP запрос
         def run_upload_in_background():
             try:
@@ -497,7 +660,28 @@ def pause_bulk_upload(request, task_id):
     Returns:
         POST: JsonResponse с результатом
     """
-    pass
+    from django.http import JsonResponse
+    from django.core.cache import cache
+    from ..models import BulkUploadTask
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+    
+    try:
+        task = get_object_or_404(BulkUploadTask, id=task_id)
+        if task.status != 'RUNNING':
+            return JsonResponse({'success': False, 'error': f'Task is not running (status: {task.status})'}, status=400)
+        
+        # Set pause flag for workers
+        cache.set(f"bulk_upload_pause_{task_id}", True, timeout=60 * 60)
+        
+        task.status = 'PAUSED'
+        task.save(update_fields=['status'])
+        
+        return JsonResponse({'success': True, 'message': 'Task paused'})
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 @login_required
@@ -521,7 +705,40 @@ def resume_bulk_upload(request, task_id):
     Returns:
         POST: JsonResponse с результатом
     """
-    pass
+    from django.http import JsonResponse
+    from django.core.cache import cache
+    from ..models import BulkUploadTask
+    import threading
+    from tiktok_uploader.bot_integration.services import run_bulk_upload_task
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+    
+    try:
+        task = get_object_or_404(BulkUploadTask, id=task_id)
+        if task.status != 'PAUSED':
+            return JsonResponse({'success': False, 'error': f'Task is not paused (status: {task.status})'}, status=400)
+        
+        # Clear pause flag
+        cache.delete(f"bulk_upload_pause_{task_id}")
+        
+        # Set status to RUNNING and restart background worker
+        task.status = 'RUNNING'
+        task.save(update_fields=['status'])
+        
+        def run_upload_in_background():
+            try:
+                run_bulk_upload_task(task_id)
+            except Exception as e:
+                print(f"Error resuming background upload task: {str(e)}")
+        
+        thread = threading.Thread(target=run_upload_in_background, daemon=True)
+        thread.start()
+        
+        return JsonResponse({'success': True, 'message': 'Task resumed'})
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 @login_required
@@ -550,8 +767,68 @@ def delete_bulk_upload(request, task_id):
     Returns:
         POST: redirect на bulk_upload_list
     """
-    pass
+    from django.contrib import messages
+    
+    if request.method != 'POST':
+        messages.error(request, 'Invalid request method')
+        return redirect('tiktok_uploader:bulk_upload_list')
+    
+    try:
+        task = get_object_or_404(BulkUploadTask, id=task_id)
+        
+        # Проверяем что задача не выполняется
+        if task.status == 'RUNNING':
+            messages.error(request, f'Cannot delete running task "{task.name}". Please stop it first.')
+            return redirect('tiktok_uploader:bulk_upload_detail', task_id=task.id)
+        
+        task_name = task.name
+        
+        # Удаляем задачу (каскадно удалятся связанные объекты)
+        task.delete()
+        
+        messages.success(request, f'Task "{task_name}" has been deleted successfully.')
+        
+    except Exception as e:
+        messages.error(request, f'Error deleting task: {str(e)}')
+    
+    return redirect('tiktok_uploader:bulk_upload_list')
 
+
+@login_required
+def force_delete_bulk_upload(request, task_id):
+    """
+    Форсированное удаление задачи даже если она RUNNING.
+    - Ставит флаг остановки в кеше
+    - Переводит задачу в статус FAILED
+    - Удаляет задачу и связанные объекты
+    """
+    from django.contrib import messages
+    from django.core.cache import cache
+    
+    if request.method != 'POST':
+        messages.error(request, 'Invalid request method')
+        return redirect('tiktok_uploader:bulk_upload_detail', task_id=task_id)
+    
+    try:
+        task = get_object_or_404(BulkUploadTask, id=task_id)
+        
+        # Сигнал воркерам немедленно завершиться
+        cache.set(f"bulk_upload_force_stop_{task_id}", True, timeout=60 * 10)
+        cache.set(f"bulk_upload_pause_{task_id}", True, timeout=60 * 10)
+        
+        # Переводим в FAILED для истории
+        task.status = 'FAILED'
+        task.save(update_fields=['status'])
+        task_name = task.name
+        
+        # Удаляем задачу
+        task.delete()
+        messages.success(request, f'Task "{task_name}" forcibly stopped and deleted.')
+    except Exception as e:
+        messages.error(request, f'Error force-deleting task: {str(e)}')
+        return redirect('tiktok_uploader:bulk_upload_detail', task_id=task_id)
+    
+    return redirect('tiktok_uploader:bulk_upload_list')
 
 @login_required
 def get_bulk_task_logs(request, task_id):

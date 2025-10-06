@@ -32,24 +32,38 @@ class Dolphin:
 
     def __init__(self):
         self.profiles: list[Profile] = []
-        self.set_profiles()
-        self.auth()
+        try:
+            self.auth()
+            self.set_profiles()
+        except Exception as e:
+            logger.warning(f"[DOLPHIN] Init warning: {str(e)}. Continuing with empty profile list.")
+            # Продолжаем работу даже если auth/set_profiles упали
+            # Это позволит создавать новые профили даже если Dolphin desktop не запущен
 
     def auth(self):
-        conn = http.client.HTTPConnection("127.0.0.1", 3001)
-        payload = json.dumps({
-            "token": os.environ.get('TOKEN')
-        })
-        headers = {
-            'Content-Type': 'application/json'
-        }
-        conn.request("POST", "/v1.0/auth/login-with-token", payload, headers)
-        res = conn.getresponse()
-        data = json.loads(res.read())
-        if data['success'] == True:
-            logger.info('Successfully logged into dolphin via token')
-        else:
-            logger.error('Failed to login into dolphin')
+        try:
+            conn = http.client.HTTPConnection("127.0.0.1", 3001, timeout=5)
+            payload = json.dumps({
+                "token": os.environ.get('DOLPHIN_API_TOKEN')
+            })
+            headers = {
+                'Content-Type': 'application/json'
+            }
+            conn.request("POST", "/v1.0/auth/login-with-token", payload, headers)
+            res = conn.getresponse()
+            raw_data = res.read()
+            
+            if not raw_data:
+                logger.warning('[DOLPHIN] Auth response is empty, Dolphin desktop may not be running')
+                return
+            
+            data = json.loads(raw_data)
+            if data.get('success') == True:
+                logger.info('Successfully logged into dolphin via token')
+            else:
+                logger.error(f'Failed to login into dolphin: {data}')
+        except Exception as e:
+            logger.warning(f'[DOLPHIN] Auth failed (Dolphin desktop may not be running): {str(e)}')
 
     def start_profiles(self):
         for profile in self.profiles:
@@ -60,11 +74,17 @@ class Dolphin:
             profile.stop()
 
     def _get_profiles(self):
-        result = requests.get(
-            'https://dolphin-anty-api.com/browser_profiles?',
-            headers={'Authorization': f'Bearer {os.environ.get("TOKEN")}'}
-        )
-        return result.json()
+        try:
+            result = requests.get(
+                'https://dolphin-anty-api.com/browser_profiles?',
+                headers={'Authorization': f'Bearer {os.environ.get("DOLPHIN_API_TOKEN")}'},
+                timeout=10
+            )
+            result.raise_for_status()
+            return result.json()
+        except Exception as e:
+            logger.warning(f'[DOLPHIN] Failed to get profiles: {str(e)}')
+            return {'data': []}
 
     def set_profiles(self):
         for i in self._get_profiles()['data']:
@@ -161,7 +181,7 @@ class Dolphin:
                 payload = profile_data
 
         headers = {
-            'Authorization': f'Bearer {os.environ.get("TOKEN")}',
+            'Authorization': f'Bearer {os.environ.get("DOLPHIN_API_TOKEN")}',
             'content-type': 'application/json'
         }
 
@@ -181,7 +201,7 @@ class Dolphin:
     def __get_ua(self, platform='windows'):
         url = f'https://dolphin-anty-api.com/fingerprints/useragent?browser_type=anty&browser_version=120&platform={platform}'
         headers = {
-            'Authorization': f'Bearer {os.environ.get("TOKEN")}',
+            'Authorization': f'Bearer {os.environ.get("DOLPHIN_API_TOKEN")}',
             'content-type': 'application/json'
         }
         res = requests.get(url, headers=headers)
@@ -190,7 +210,7 @@ class Dolphin:
     def __get_WEBGLinfo(self, platform='windows'):
         url = f'https://anty-api.com/fingerprints/webgl?browser_type=anty&browser_version=137&platform={platform}'
         headers = {
-            'Authorization': f'Bearer {os.environ.get("TOKEN")}',
+            'Authorization': f'Bearer {os.environ.get("DOLPHIN_API_TOKEN")}',
             'content-type': 'application/json'
         }
         res = requests.get(url, headers=headers)
@@ -210,7 +230,7 @@ class Dolphin:
         """Унифицированный метод для API запросов к Dolphin Anty"""
         url = f"https://dolphin-anty-api.com{endpoint}"
         headers = {
-            'Authorization': f'Bearer {os.environ.get("TOKEN")}',
+            'Authorization': f'Bearer {os.environ.get("DOLPHIN_API_TOKEN")}',
             'Content-Type': 'application/json'
         }
 
@@ -257,7 +277,7 @@ class Dolphin:
         """
         url = f"http://localhost:3001/v1.0/cookies/import"
         headers = {
-            "Authorization": f"Bearer {os.environ.get("TOKEN")}",
+            "Authorization": f"Bearer {os.environ.get("DOLPHIN_API_TOKEN")}",
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
@@ -291,7 +311,7 @@ class Dolphin:
                 "Accept": "application/json",
             }
             body = dict(payload)
-            body["Authorization"] = f"Bearer {os.environ.get("TOKEN")}"
+            body["Authorization"] = f"Bearer {os.environ.get("DOLPHIN_API_TOKEN")}"
             if local_login and local_password:
                 body.update({"login": local_login, "password": local_password})
             resp_fb = requests.post(url, headers=headers_fallback, json=body, timeout=timeout_seconds)
@@ -318,7 +338,7 @@ class Dolphin:
                     "Content-Type": "application/json",
                 }
                 body_low = dict(payload)
-                body_low["Authorization"] = f"Bearer {os.environ.get("TOKEN")}"
+                body_low["Authorization"] = f"Bearer {os.environ.get("DOLPHIN_API_TOKEN")}"
                 conn = http.client.HTTPConnection("127.0.0.1", 3001, timeout=timeout_seconds)
                 conn.request("POST", "/v1.0/cookies/import", json.dumps(body_low), headers_low)
                 resp_low = conn.getresponse()
@@ -350,7 +370,7 @@ class Dolphin:
         Returns dict with success, found, missing.
         """
         try:
-            from src.dolphin.profile import Profile
+            from .profile import Profile
             req = required or {"sessionid", "sessionid_ss", "tt_webid_v2", "tt_csrf_token"}
             temp_prof = Profile(id=profile_id, name=str(profile_id))
             exported = temp_prof.export_cookies() or []
@@ -365,7 +385,7 @@ class Dolphin:
         """Проверяет, существует ли профиль"""
         try:
             headers = {
-                'Authorization': f'Bearer {os.environ.get("TOKEN")}',
+                'Authorization': f'Bearer {os.environ.get("DOLPHIN_API_TOKEN")}',
                 'Content-Type': 'application/json'
             }
 
@@ -427,7 +447,7 @@ class Dolphin:
 
             headers = {
                 'Content-Type': 'application/json',
-                'Authorization': f'Bearer {os.environ.get("TOKEN")}'
+                'Authorization': f'Bearer {os.environ.get("DOLPHIN_API_TOKEN")}'
             }
 
             for method_config in methods:
@@ -583,7 +603,7 @@ class Dolphin:
         try:
             url = f'https://dolphin-anty-api.com/fingerprints/useragent?browser_type=anty&browser_version={browser_version}&platform={os_platform}'
             headers = {
-                'Authorization': f'Bearer {os.environ.get("TOKEN")}',
+                'Authorization': f'Bearer {os.environ.get("DOLPHIN_API_TOKEN")}',
                 'Content-Type': 'application/json'
             }
             response = requests.get(url, headers=headers, timeout=10)
@@ -601,7 +621,7 @@ class Dolphin:
         try:
             url = f'https://anty-api.com/fingerprints/webgl?browser_type=anty&browser_version={browser_version}&platform={os_platform}'
             headers = {
-                'Authorization': f'Bearer {os.environ.get("TOKEN")}',
+                'Authorization': f'Bearer {os.environ.get("DOLPHIN_API_TOKEN")}',
                 'Content-Type': 'application/json'
             }
             response = requests.get(url, headers=headers, timeout=10)

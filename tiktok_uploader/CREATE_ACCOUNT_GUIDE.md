@@ -266,3 +266,4 @@ for i, data in enumerate(accounts_data):
 - Руководство пользователя: `tiktok_uploader/USER_JOURNEY_GUIDE.md`
 - Модели данных: `tiktok_uploader/models.py`
 
+

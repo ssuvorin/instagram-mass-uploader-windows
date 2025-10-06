@@ -1,0 +1,226 @@
+{% extends "tiktok_uploader/base.html" %}
+
+{% block title %}Add Videos - {{ task.name }} - TikTok Uploader{% endblock %}
+
+{% block extra_css %}
+<style>
+    .upload-zone {
+        border: 3px dashed #FE2C55;
+        border-radius: 20px;
+        padding: 3rem 2rem;
+        text-align: center;
+        background: rgba(254, 44, 85, 0.05);
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    .upload-zone:hover {
+        background: rgba(254, 44, 85, 0.1);
+        border-color: #000;
+        transform: translateY(-2px);
+    }
+    .upload-icon {
+        font-size: 4rem;
+        color: #FE2C55;
+        margin-bottom: 1rem;
+    }
+    .video-item {
+        padding: 1rem;
+        border-bottom: 1px solid #e9ecef;
+        transition: background 0.2s ease;
+    }
+    .video-item:hover {
+        background: rgba(254, 44, 85, 0.05);
+    }
+    .video-item:last-child {
+        border-bottom: none;
+    }
+    .badge-tiktok {
+        background: linear-gradient(135deg, #FE2C55, #000);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="fw-bold">
+            <i class="bi bi-camera-video" style="color: #FE2C55;"></i>
+            Add Videos to "{{ task.name }}"
+        </h2>
+        <p class="text-muted">Upload videos to be included in this bulk upload task</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'tiktok_uploader:bulk_upload_detail' task_id=task.id %}" class="btn btn-outline-dark">
+            <i class="bi bi-arrow-left"></i> Back to Task
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Upload Form -->
+    <div class="col-md-7">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header" style="background: linear-gradient(135deg, #FE2C55, #000); color: white;">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-upload"></i> Upload Videos
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" id="uploadForm">
+                    {% csrf_token %}
+                    
+                    <div class="upload-zone" onclick="document.getElementById('id_video_file').click()">
+                        <i class="bi bi-cloud-upload upload-icon"></i>
+                        <h4 class="fw-bold mb-2">Click to select videos</h4>
+                        <p class="text-muted mb-0">or drag and drop files here</p>
+                        <p class="small text-muted mt-2">
+                            <strong>Supported formats:</strong> MP4, MOV, AVI, MKV, WEBM<br>
+                            <strong>Max size:</strong> 2GB per file
+                        </p>
+                    </div>
+                    
+                    <input type="file" 
+                           name="video_file" 
+                           class="form-control d-none" 
+                           id="id_video_file" 
+                           multiple 
+                           accept="video/*"
+                           onchange="showSelectedFiles(this)">
+                    
+                    <div id="selectedFiles" class="mt-3"></div>
+                    
+                    <div class="alert alert-info mt-3 d-flex align-items-start">
+                        <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+                        <div>
+                            <strong>Note:</strong> Videos will be evenly distributed among your selected accounts.
+                            <br><small class="mt-1 d-block">Each account will upload its assigned videos with your configured settings.</small>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <button type="submit" class="btn btn-lg px-5" style="background: linear-gradient(135deg, #FE2C55, #000); color: white;" id="uploadBtn" disabled>
+                            <i class="bi bi-upload me-2"></i> Upload Videos
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Current Videos List -->
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-collection"></i> Current Videos
+                    </h5>
+                    <span class="badge badge-tiktok">{{ videos.count }}</span>
+                </div>
+            </div>
+            <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
+                {% if videos %}
+                    {% for video in videos %}
+                    <div class="video-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="flex-grow-1">
+                                <div class="fw-bold text-truncate" style="max-width: 250px;">
+                                    <i class="bi bi-file-play"></i>
+                                    {{ video.video_file.name|slice:"20:" }}
+                                </div>
+                                <small class="text-muted">
+                                    {% if video.assigned_account %}
+                                        Assigned to: <strong>{{ video.assigned_account.account.username }}</strong>
+                                    {% else %}
+                                        <span class="fst-italic">Not assigned yet</span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-circle"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-film fs-1 text-muted mb-3 d-block"></i>
+                    <p class="text-muted mb-1">No videos uploaded yet</p>
+                    <p class="small text-muted">Upload videos using the form on the left</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Navigation Buttons -->
+<div class="d-flex justify-content-between mt-4">
+    <a href="{% url 'tiktok_uploader:bulk_upload_detail' task_id=task.id %}" class="btn btn-secondary btn-lg">
+        <i class="bi bi-arrow-left"></i> Back to Task
+    </a>
+    {% if videos.exists %}
+    <a href="{% url 'tiktok_uploader:add_bulk_captions' task_id=task.id %}" class="btn btn-lg" style="background: linear-gradient(135deg, #FE2C55, #000); color: white;">
+        Next: Add Captions <i class="bi bi-arrow-right"></i>
+    </a>
+    {% endif %}
+</div>
+
+<script>
+function showSelectedFiles(input) {
+    const filesDiv = document.getElementById('selectedFiles');
+    const uploadBtn = document.getElementById('uploadBtn');
+    
+    if (input.files.length > 0) {
+        let html = '<div class="alert alert-success"><i class="bi bi-check-circle me-2"></i><strong>' + input.files.length + ' file(s) selected:</strong><ul class="mb-0 mt-2">';
+        
+        for (let i = 0; i < Math.min(input.files.length, 10); i++) {
+            const file = input.files[i];
+            const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+            html += '<li>' + file.name + ' (' + sizeMB + ' MB)</li>';
+        }
+        
+        if (input.files.length > 10) {
+            html += '<li class="text-muted">... and ' + (input.files.length - 10) + ' more files</li>';
+        }
+        
+        html += '</ul></div>';
+        filesDiv.innerHTML = html;
+        uploadBtn.disabled = false;
+    } else {
+        filesDiv.innerHTML = '';
+        uploadBtn.disabled = true;
+    }
+}
+
+// Drag and drop support
+const uploadZone = document.querySelector('.upload-zone');
+const fileInput = document.getElementById('id_video_file');
+
+uploadZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadZone.style.background = 'rgba(254, 44, 85, 0.15)';
+    uploadZone.style.borderColor = '#000';
+});
+
+uploadZone.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    uploadZone.style.background = 'rgba(254, 44, 85, 0.05)';
+    uploadZone.style.borderColor = '#FE2C55';
+});
+
+uploadZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadZone.style.background = 'rgba(254, 44, 85, 0.05)';
+    uploadZone.style.borderColor = '#FE2C55';
+    
+    fileInput.files = e.dataTransfer.files;
+    showSelectedFiles(fileInput);
+});
+</script>
+{% endblock %}
+
+

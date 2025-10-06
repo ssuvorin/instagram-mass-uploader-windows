@@ -1,0 +1,389 @@
+{% extends "tiktok_uploader/base.html" %}
+
+{% block title %}Warmup Task #{{ task.id }} - TikTok Uploader{% endblock %}
+
+{% block extra_css %}
+<style>
+    .log-container {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 15px;
+        border-radius: 8px;
+        max-height: 400px;
+        overflow-y: auto;
+        font-family: 'Courier New', monospace;
+        font-size: 0.875rem;
+    }
+    .progress-circle {
+        width: 120px;
+        height: 120px;
+        position: relative;
+    }
+    .account-log {
+        background: #f8f9fa;
+        border-left: 3px solid #007bff;
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Breadcrumbs -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'tiktok_uploader:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'tiktok_uploader:warmup_task_list' %}">Warmup Tasks</a></li>
+            <li class="breadcrumb-item active">Task #{{ task.id }}</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">
+                <i class="bi bi-fire me-2"></i>
+                {{ task.name }}
+            </h2>
+            <div class="d-flex align-items-center">
+                {% if task.status == 'PENDING' %}
+                    <span class="badge bg-warning me-2">PENDING</span>
+                {% elif task.status == 'RUNNING' %}
+                    <span class="badge bg-primary me-2">
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                        RUNNING
+                    </span>
+                {% elif task.status == 'COMPLETED' %}
+                    <span class="badge bg-success me-2">COMPLETED</span>
+                {% elif task.status == 'FAILED' %}
+                    <span class="badge bg-danger me-2">FAILED</span>
+                {% endif %}
+                <small class="text-muted">Created: {{ task.created_at|date:"Y-m-d H:i" }}</small>
+            </div>
+        </div>
+        <div>
+            {% if can_start %}
+                <form method="post" action="{% url 'tiktok_uploader:warmup_task_start' task.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success btn-lg" onclick="return confirm('Start warmup task?')">
+                        <i class="bi bi-play-fill"></i> Start Warmup
+                    </button>
+                </form>
+            {% endif %}
+            {% if task.status == 'RUNNING' %}
+                <form method="post" action="{% url 'tiktok_uploader:force_stop_warmup_task' task.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-lg" onclick="return confirm('⚠️ Force stop this task?\n\nThis will mark the task as FAILED and stop all running accounts.\n\nUse this if the task is stuck or not actually running.')">
+                        <i class="bi bi-stop-circle"></i> Force Stop
+                    </button>
+                </form>
+            {% endif %}
+            {% if task.status == 'COMPLETED' or task.status == 'FAILED' %}
+                <form method="post" action="{% url 'tiktok_uploader:restart_warmup_task' task.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning btn-lg" onclick="return confirm('Restart this warmup task? All progress will be reset.')">
+                        <i class="bi bi-arrow-clockwise"></i> Restart Task
+                    </button>
+                </form>
+            {% endif %}
+            {% if task.status != 'RUNNING' %}
+                <form method="post" action="{% url 'tiktok_uploader:delete_warmup_task' task.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Delete this task? This cannot be undone.')">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column: Progress & Settings -->
+        <div class="col-lg-4">
+            <!-- Progress Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-graph-up"></i> Progress</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="progress-circle mx-auto mb-3">
+                        <svg viewBox="0 0 120 120">
+                            <circle cx="60" cy="60" r="54" fill="none" stroke="#e9ecef" stroke-width="12"/>
+                            <circle cx="60" cy="60" r="54" fill="none" stroke="#28a745" stroke-width="12"
+                                    stroke-dasharray="{{ progress_percent|floatformat:1 }} 339.292"
+                                    transform="rotate(-90 60 60)" stroke-linecap="round"/>
+                            <text x="60" y="70" text-anchor="middle" font-size="24" font-weight="bold" fill="#333">
+                                {{ progress_percent|floatformat:0 }}%
+                            </text>
+                        </svg>
+                    </div>
+                    <div class="row text-center">
+                        <div class="col-6 mb-2">
+                            <strong class="text-success d-block">{{ completed_accounts }}</strong>
+                            <small class="text-muted">Completed</small>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <strong class="text-primary d-block">{{ running_accounts }}</strong>
+                            <small class="text-muted">Running</small>
+                        </div>
+                        <div class="col-6">
+                            <strong class="text-danger d-block">{{ failed_accounts }}</strong>
+                            <small class="text-muted">Failed</small>
+                        </div>
+                        <div class="col-6">
+                            <strong class="text-warning d-block">{{ pending_accounts }}</strong>
+                            <small class="text-muted">Pending</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-gear"></i> Settings</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless mb-0">
+                        <tr>
+                            <td class="text-muted">Concurrency:</td>
+                            <td class="text-end"><strong>{{ task.concurrency }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Delay Range:</td>
+                            <td class="text-end"><strong>{{ task.delay_min_sec }}-{{ task.delay_max_sec }}s</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Feed Scrolls:</td>
+                            <td class="text-end"><strong>{{ task.feed_scroll_min_count }}-{{ task.feed_scroll_max_count }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Likes:</td>
+                            <td class="text-end"><strong>{{ task.like_min_count }}-{{ task.like_max_count }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Videos:</td>
+                            <td class="text-end"><strong>{{ task.watch_video_min_count }}-{{ task.watch_video_max_count }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Follows:</td>
+                            <td class="text-end"><strong>{{ task.follow_min_count }}-{{ task.follow_max_count }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Comments:</td>
+                            <td class="text-end"><strong>{{ task.comment_min_count }}-{{ task.comment_max_count }}</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Accounts & Logs -->
+        <div class="col-lg-8">
+            <!-- Accounts Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-people"></i> Accounts ({{ total_accounts }})</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Proxy</th>
+                                    <th>Status</th>
+                                    <th>Started</th>
+                                    <th>Completed</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ta in task_accounts %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'tiktok_uploader:account_detail' ta.account.id %}" class="text-decoration-none">
+                                            {{ ta.account.username }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        {% if ta.proxy %}
+                                            <small class="text-success">
+                                                <i class="bi bi-shield-check"></i>
+                                                {{ ta.proxy.host }}
+                                            </small>
+                                        {% else %}
+                                            <small class="text-muted">-</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if ta.status == 'PENDING' %}
+                                            <span class="badge bg-secondary">Pending</span>
+                                        {% elif ta.status == 'RUNNING' %}
+                                            <span class="badge bg-primary">
+                                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                                Running
+                                            </span>
+                                        {% elif ta.status == 'COMPLETED' %}
+                                            <span class="badge bg-success">Completed</span>
+                                        {% elif ta.status == 'FAILED' %}
+                                            <span class="badge bg-danger">Failed</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if ta.started_at %}
+                                            <small>{{ ta.started_at|date:"H:i:s" }}</small>
+                                        {% else %}
+                                            <small class="text-muted">-</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if ta.completed_at %}
+                                            <small>{{ ta.completed_at|date:"H:i:s" }}</small>
+                                        {% else %}
+                                            <small class="text-muted">-</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="showAccountLog({{ ta.id }}, '{{ ta.account.username }}')">
+                                            <i class="bi bi-file-text"></i> Logs
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">No accounts</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Task Logs Card -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-file-earmark-text"></i> Task Logs</h5>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="refreshLogs()">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="log-container" id="taskLogs">
+                        {{ task.log|default:"No logs yet"|linebreaks }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Account Log Modal -->
+<div class="modal fade" id="accountLogModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="accountLogModalLabel">Account Logs</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="log-container" id="accountLogContent">
+                    Loading...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-refresh if task is running
+{% if task.status == 'RUNNING' %}
+    setInterval(function() {
+        refreshLogs();
+    }, 5000);  // Refresh every 5 seconds
+{% endif %}
+
+function refreshLogs() {
+    fetch("{% url 'tiktok_uploader:warmup_task_logs' task.id %}")
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update task logs
+                document.getElementById('taskLogs').textContent = data.logs || 'No logs yet';
+                
+                // Update progress bar and counters
+                if (data.progress) {
+                    const percent = data.progress.percent;
+                    const circumference = 339.292;
+                    const dashArray = (percent * circumference / 100).toFixed(1) + ' ' + circumference;
+                    
+                    // Update progress circle
+                    const progressCircle = document.querySelector('.progress-circle circle:nth-child(2)');
+                    if (progressCircle) {
+                        progressCircle.setAttribute('stroke-dasharray', dashArray);
+                    }
+                    
+                    // Update percentage text
+                    const percentText = document.querySelector('.progress-circle text');
+                    if (percentText) {
+                        percentText.textContent = Math.round(percent) + '%';
+                    }
+                    
+                    // Update counters
+                    const counters = {
+                        '.text-success': data.progress.completed,
+                        '.text-primary': data.progress.running,
+                        '.text-danger': data.progress.failed,
+                        '.text-warning': data.progress.pending
+                    };
+                    
+                    for (const [selector, value] of Object.entries(counters)) {
+                        const element = document.querySelector('.card-body ' + selector);
+                        if (element) {
+                            element.textContent = value;
+                        }
+                    }
+                }
+                
+                // If task completed or failed, reload page to update UI
+                if (data.task_status !== '{{ task.status }}') {
+                    location.reload();
+                }
+            }
+        })
+        .catch(error => console.error('Error refreshing logs:', error));
+}
+
+function showAccountLog(accountId, username) {
+    const modal = new bootstrap.Modal(document.getElementById('accountLogModal'));
+    document.getElementById('accountLogModalLabel').textContent = 'Logs: ' + username;
+    document.getElementById('accountLogContent').textContent = 'Loading...';
+    
+    // Fetch account-specific logs from the API
+    fetch("{% url 'tiktok_uploader:warmup_task_logs' task.id %}")
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.accounts) {
+                const account = data.accounts.find(a => a.id === accountId);
+                if (account && account.log) {
+                    document.getElementById('accountLogContent').textContent = account.log;
+                } else {
+                    document.getElementById('accountLogContent').textContent = 'No logs for this account';
+                }
+            }
+        })
+        .catch(error => {
+            document.getElementById('accountLogContent').textContent = 'Error loading logs';
+            console.error('Error:', error);
+        });
+    
+    modal.show();
+}
+</script>
+{% endblock %}
+

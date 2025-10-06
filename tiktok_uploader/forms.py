@@ -12,7 +12,7 @@ import re
 
 from .models import (
     TikTokAccount, TikTokProxy, BulkUploadTask,
-    WarmupTask, FollowTask, FollowCategory, FollowTarget,
+    WarmupTask, WarmupTaskAccount, FollowTask, FollowCategory, FollowTarget,
     CookieRobotTask, BulkVideo, VideoCaption
 )
 
@@ -26,18 +26,39 @@ class TikTokAccountForm(forms.ModelForm):
     Форма создания/редактирования TikTok аккаунта.
     """
     
+    # Дополнительные поля для cookies
+    cookies_json = forms.CharField(
+        label='Cookies (JSON format)',
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 5,
+            'placeholder': '[{"name": "sessionid", "value": "...", "domain": ".tiktok.com"}, ...]'
+        }),
+        help_text='Paste cookies in JSON format (array of cookie objects)'
+    )
+    
+    cookies_file = forms.FileField(
+        label='Or upload cookies file',
+        required=False,
+        widget=forms.FileInput(attrs={
+            'class': 'form-control',
+            'accept': '.json,.txt'
+        }),
+        help_text='Upload cookies as JSON file'
+    )
+    
     class Meta:
         model = TikTokAccount
         fields = [
             'username', 'password', 'email', 'email_password',
-            'phone_number', 'proxy', 'locale', 'client', 'notes'
+            'proxy', 'locale', 'client', 'notes'
         ]
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Username'}),
-            'password': forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Password'}),
+            'password': forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Password'}, render_value=True),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'email@example.com'}),
-            'email_password': forms.PasswordInput(attrs={'class': 'form-control'}),
-            'phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+1234567890'}),
+            'email_password': forms.PasswordInput(attrs={'class': 'form-control'}, render_value=True),
             'proxy': forms.Select(attrs={'class': 'form-select'}),
             'locale': forms.Select(attrs={'class': 'form-select'}, choices=[
                 ('en_US', 'English (US)'),
@@ -53,6 +74,23 @@ class TikTokAccountForm(forms.ModelForm):
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Устанавливаем queryset для прокси (все прокси, сортировка по ID)
+        self.fields['proxy'].queryset = TikTokProxy.objects.all().order_by('-id')
+        self.fields['proxy'].required = False
+        self.fields['proxy'].empty_label = "-- No Proxy --"
+        
+        # Устанавливаем queryset для клиента, если cabinet доступен
+        try:
+            from cabinet.models import Client
+            self.fields['client'].queryset = Client.objects.all().order_by('name')
+            self.fields['client'].required = False
+            self.fields['client'].empty_label = "-- No Client --"
+        except ImportError:
+            # Если cabinet не доступен, оставляем пустой queryset
+            pass
+    
     def clean_username(self):
         """Валидация username: только буквы, цифры, точки, подчеркивания."""
         username = self.cleaned_data.get('username')
@@ -60,12 +98,36 @@ class TikTokAccountForm(forms.ModelForm):
             raise ValidationError('Username can only contain letters, numbers, dots, and underscores.')
         return username
     
-    def clean_phone_number(self):
-        """Валидация номера телефона."""
-        phone = self.cleaned_data.get('phone_number')
-        if phone and not re.match(r'^\+?[\d\s\-\(\)]+$', phone):
-            raise ValidationError('Invalid phone number format.')
-        return phone
+    def clean(self):
+        """Валидация и обработка cookies."""
+        cleaned_data = super().clean()
+        cookies_json = cleaned_data.get('cookies_json')
+        cookies_file = cleaned_data.get('cookies_file')
+        
+        # Обработка cookies из текстового поля или файла
+        cookies_data = None
+        
+        if cookies_file:
+            # Читаем cookies из файла
+            try:
+                import json
+                file_content = cookies_file.read().decode('utf-8')
+                cookies_data = json.loads(file_content)
+                cleaned_data['_cookies_data'] = cookies_data
+            except json.JSONDecodeError:
+                raise ValidationError({'cookies_file': 'Invalid JSON format in cookies file.'})
+            except Exception as e:
+                raise ValidationError({'cookies_file': f'Error reading cookies file: {str(e)}'})
+        elif cookies_json:
+            # Парсим cookies из текстового поля
+            try:
+                import json
+                cookies_data = json.loads(cookies_json)
+                cleaned_data['_cookies_data'] = cookies_data
+            except json.JSONDecodeError:
+                raise ValidationError({'cookies_json': 'Invalid JSON format. Please provide valid JSON array.'})
+        
+        return cleaned_data
 
 
 class BulkAccountImportForm(forms.Form):
@@ -503,5 +565,191 @@ class CookieRobotTaskForm(forms.ModelForm):
             'delay_max_sec': forms.NumberInput(attrs={'class': 'form-control', 'value': 30}),
             'concurrency': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 4, 'value': 2}),
         }
+
+
+# ============================================================================
+# WARMUP TASKS (ПРОГРЕВ АККАУНТОВ)
+# ============================================================================
+
+class WarmupTaskForm(forms.ModelForm):
+    """
+    Форма создания задачи прогрева TikTok аккаунтов.
+    Позволяет выбрать аккаунты и настроить параметры прогрева.
+    """
+    
+    selected_accounts = forms.ModelMultipleChoiceField(
+        queryset=TikTokAccount.objects.all().order_by('-created_at'),
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
+        required=True,
+        label="Select Accounts to Warmup",
+        help_text="Select one or more accounts for warmup"
+    )
+    
+    class Meta:
+        model = WarmupTask
+        fields = [
+            'name',
+            'delay_min_sec', 'delay_max_sec',
+            'concurrency',
+            'feed_scroll_min_count', 'feed_scroll_max_count',
+            'like_min_count', 'like_max_count',
+            'watch_video_min_count', 'watch_video_max_count',
+            'follow_min_count', 'follow_max_count',
+            'comment_min_count', 'comment_max_count',
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g., Daily Warmup Task'
+            }),
+            'delay_min_sec': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 5,
+                'max': 300,
+            }),
+            'delay_max_sec': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 5,
+                'max': 300,
+            }),
+            'concurrency': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 1,
+                'max': 4,
+            }),
+            'feed_scroll_min_count': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+            }),
+            'feed_scroll_max_count': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+            }),
+            'like_min_count': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+            }),
+            'like_max_count': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+            }),
+            'watch_video_min_count': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+            }),
+            'watch_video_max_count': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+            }),
+            'follow_min_count': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+            }),
+            'follow_max_count': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+            }),
+            'comment_min_count': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+            }),
+            'comment_max_count': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+            }),
+        }
+        labels = {
+            'name': 'Task Name',
+            'delay_min_sec': 'Min Delay (seconds)',
+            'delay_max_sec': 'Max Delay (seconds)',
+            'concurrency': 'Parallel Accounts (1-4)',
+            'feed_scroll_min_count': 'Min Feed Scrolls',
+            'feed_scroll_max_count': 'Max Feed Scrolls',
+            'like_min_count': 'Min Likes',
+            'like_max_count': 'Max Likes',
+            'watch_video_min_count': 'Min Video Watches',
+            'watch_video_max_count': 'Max Video Watches',
+            'follow_min_count': 'Min Follows',
+            'follow_max_count': 'Max Follows',
+            'comment_min_count': 'Min Comments',
+            'comment_max_count': 'Max Comments',
+        }
+    
+    def clean(self):
+        """
+        Валидация диапазонов: min <= max для всех параметров.
+        """
+        cleaned_data = super().clean()
+        
+        # Проверка задержек
+        delay_min = cleaned_data.get('delay_min_sec')
+        delay_max = cleaned_data.get('delay_max_sec')
+        if delay_min and delay_max and delay_min > delay_max:
+            raise ValidationError({
+                'delay_max_sec': 'Max delay must be >= Min delay'
+            })
+        
+        # Проверка прокруток ленты
+        feed_min = cleaned_data.get('feed_scroll_min_count')
+        feed_max = cleaned_data.get('feed_scroll_max_count')
+        if feed_min and feed_max and feed_min > feed_max:
+            raise ValidationError({
+                'feed_scroll_max_count': 'Max scrolls must be >= Min scrolls'
+            })
+        
+        # Проверка лайков
+        like_min = cleaned_data.get('like_min_count')
+        like_max = cleaned_data.get('like_max_count')
+        if like_min and like_max and like_min > like_max:
+            raise ValidationError({
+                'like_max_count': 'Max likes must be >= Min likes'
+            })
+        
+        # Проверка просмотров
+        watch_min = cleaned_data.get('watch_video_min_count')
+        watch_max = cleaned_data.get('watch_video_max_count')
+        if watch_min and watch_max and watch_min > watch_max:
+            raise ValidationError({
+                'watch_video_max_count': 'Max watches must be >= Min watches'
+            })
+        
+        # Проверка подписок
+        follow_min = cleaned_data.get('follow_min_count')
+        follow_max = cleaned_data.get('follow_max_count')
+        if follow_min and follow_max and follow_min > follow_max:
+            raise ValidationError({
+                'follow_max_count': 'Max follows must be >= Min follows'
+            })
+        
+        # Проверка комментариев
+        comment_min = cleaned_data.get('comment_min_count')
+        comment_max = cleaned_data.get('comment_max_count')
+        if comment_min and comment_max and comment_min > comment_max:
+            raise ValidationError({
+                'comment_max_count': 'Max comments must be >= Min comments'
+            })
+        
+        # Проверка параллельности
+        concurrency = cleaned_data.get('concurrency')
+        if concurrency and (concurrency < 1 or concurrency > 4):
+            raise ValidationError({
+                'concurrency': 'Concurrency must be between 1 and 4'
+            })
+        
+        # Проверка что хотя бы одно действие включено
+        has_actions = any([
+            feed_max and feed_max > 0,
+            like_max and like_max > 0,
+            watch_max and watch_max > 0,
+            follow_max and follow_max > 0,
+            comment_max and comment_max > 0,
+        ])
+        
+        if not has_actions:
+            raise ValidationError(
+                'At least one action type must be enabled (set max count > 0)'
+            )
+        
+        return cleaned_data
 
 

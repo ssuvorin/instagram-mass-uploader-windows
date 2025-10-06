@@ -166,11 +166,13 @@
                             </a>
                             
                             {% if task.status != 'RUNNING' %}
-                            <a href="{% url 'tiktok_uploader:delete_bulk_upload' task.id %}" 
-                               class="btn btn-danger"
-                               onclick="return confirm('Delete task {{ task.name }}?')">
-                                <i class="bi bi-trash"></i>
-                            </a>
+                            <form method="post" action="{% url 'tiktok_uploader:delete_bulk_upload' task.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger"
+                                        onclick="return confirm('Delete task {{ task.name }}?')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
                             {% endif %}
                         </div>
                     </div>

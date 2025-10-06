@@ -9,7 +9,7 @@ Services Layer for Bot Integration
 import os
 import json
 import time
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from playwright.sync_api import sync_playwright
 
 from django.utils import timezone
@@ -162,15 +162,17 @@ def run_bulk_upload_task(task_id: int) -> Dict[str, Any]:
     Returns:
         dict: Результат выполнения задачи
     """
-    from tiktok_uploader.models import BulkUploadTask, BulkUploadAccount
+    from tiktok_uploader.models import BulkUploadTask, BulkUploadAccount, BulkVideo
     
     try:
         task = BulkUploadTask.objects.get(id=task_id)
         
-        # Обновляем статус задачи
+        # Обновляем статус задачи и инициализируем логи
         task.status = 'RUNNING'
         task.started_at = timezone.now()
-        task.save(update_fields=['status', 'started_at'])
+        task.log = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] 🚀 Bulk upload task started\n"
+        task.log += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] Total accounts: {len(task.accounts.all())}\n"
+        task.save(update_fields=['status', 'started_at', 'log'])
         
         # Отправляем уведомление о старте
         send_message(f'Bulk upload task "{task.name}" started')
@@ -178,121 +180,199 @@ def run_bulk_upload_task(task_id: int) -> Dict[str, Any]:
         # Инициализируем Dolphin
         dolphin = Dolphin()
         
-        # Получаем все аккаунты задачи
-        bulk_accounts = task.accounts.all()
+        # Получаем все аккаунты задачи ДО входа в Playwright контекст
+        # Используем select_related и prefetch_related для prefetch связанных объектов
+        bulk_accounts = list(
+            task.accounts.select_related('account', 'account__proxy')
+            .prefetch_related('assigned_videos')
+            .all()
+        )
+
+        # Предварительно собираем список видео для каждого аккаунта (без ORM внутри Playwright)
+        # Ключ: BulkUploadAccount.id -> список словарей с данными видео
+        precomputed_videos_by_account: Dict[int, List[Dict[str, Any]]] = {}
+        for bulk_account in bulk_accounts:
+            videos_data: List[Dict[str, Any]] = []
+            # ВАЖНО: не вызывать ORM в Playwright, фильтруем сейчас
+            assigned_videos = list(bulk_account.assigned_videos.all())
+            for v in assigned_videos:
+                if getattr(v, 'uploaded', False):
+                    continue
+                caption = v.get_effective_caption()
+                hashtags = v.get_effective_hashtags()
+                full_description = f"{caption} {hashtags}".strip()
+                try:
+                    video_name = os.path.basename(v.video_file.name)
+                    video_path = v.video_file.path
+                except Exception:
+                    # Если файл недоступен, пропускаем, отметим fail в логах во время апдейта
+                    continue
+                videos_data.append({
+                    'id': v.id,
+                    'name': video_name,
+                    'path': video_path,
+                    'description': full_description,
+                })
+            precomputed_videos_by_account[bulk_account.id] = videos_data
         
         results = {
             "success": True,
-            "total_accounts": bulk_accounts.count(),
+            "total_accounts": len(bulk_accounts),
             "processed": 0,
             "successful": 0,
             "failed": 0,
             "errors": []
         }
         
+        # Список для сбора результатов (обновим БД после Playwright)
+        accounts_results = []
+        
         # Запускаем Playwright для автоматизации
         with sync_playwright() as playwright:
             for bulk_account in bulk_accounts:
                 account = bulk_account.account
+                start_time = timezone.now()
                 
-                # Обновляем статус аккаунта
-                bulk_account.status = 'RUNNING'
-                bulk_account.started_at = timezone.now()
-                bulk_account.save(update_fields=['status', 'started_at'])
+                # Подготавливаем результат для этого аккаунта
+                account_result = {
+                    'bulk_account_id': bulk_account.id,
+                    'account_username': account.username,
+                    'status': 'RUNNING',
+                    'started_at': start_time,
+                    'completed_at': None,
+                    'log': bulk_account.log + f"\n[{start_time.strftime('%Y-%m-%d %H:%M:%S')}] 🔄 Starting upload for {account.username}\n",
+                    'uploaded_success_count': 0,
+                    'uploaded_fail_count': 0
+                }
+                logger.info(f"[UPLOAD] Starting upload for account {account.username}")
                 
                 try:
                     # Получаем профиль Dolphin
                     if not account.dolphin_profile_id:
                         logger.error(f"No Dolphin profile for account {account.username}")
-                        bulk_account.status = 'FAILED'
-                        bulk_account.log += f"\n[{timezone.now()}] No Dolphin profile configured"
-                        bulk_account.save()
+                        account_result['status'] = 'FAILED'
+                        account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ❌ No Dolphin profile\n"
+                        account_result['completed_at'] = timezone.now()
+                        accounts_results.append(account_result)
                         results["failed"] += 1
                         continue
+                    
+                    account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ✓ Dolphin profile found: {account.dolphin_profile_id}\n"
                     
                     profile = dolphin.get_profile_by_name(account.username)
                     if not profile:
                         logger.error(f"Dolphin profile not found for {account.username}")
-                        bulk_account.status = 'FAILED'
-                        bulk_account.log += f"\n[{timezone.now()}] Dolphin profile not found"
-                        bulk_account.save()
+                        account_result['status'] = 'FAILED'
+                        account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ❌ Profile not found in Dolphin\n"
+                        account_result['completed_at'] = timezone.now()
+                        accounts_results.append(account_result)
                         results["failed"] += 1
                         continue
+                    
+                    account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ✓ Profile loaded from Dolphin\n"
                     
                     # Создаем объект Email для получения кодов
                     email_obj = None
                     if account.email and account.email_password:
                         email_obj = Email(account.email, account.email_password)
+                        account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ✓ Email configured for verification\n"
                     
                     # Создаем объект Auth
+                    account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] 🔐 Starting authentication...\n"
+                    
+                    # Callback для обновления пароля в БД (НЕ делаем .save() здесь!)
+                    def update_password_callback(username, new_password):
+                        account_result['new_password'] = new_password
+                        account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] 🔑 Password will be updated in database\n"
+                        logger.info(f"[PASSWORD_UPDATE] Password changed for {username}, will update DB after Playwright")
+                    
+                    # Callback для обновления статуса аккаунта (НЕ делаем .save() здесь!)
+                    def update_status_callback(username, status, error_message):
+                        account_result['new_status'] = status
+                        account_result['status_reason'] = error_message
+                        account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ⚠️ Status will be updated to: {status}\n"
+                        account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}]    Reason: {error_message}\n"
+                        logger.warning(f"[STATUS_UPDATE] {username} -> {status}: {error_message}")
+                    
                     auth = Auth(
                         login=account.username,
                         password=account.password,
                         email=email_obj,
                         profile=profile,
                         playwright=playwright,
-                        db=None  # Используем Django ORM вместо SQLite
+                        db=None,  # Используем Django ORM вместо SQLite
+                        password_update_callback=update_password_callback,
+                        status_update_callback=update_status_callback
                     )
                     
                     # Создаем Uploader
                     uploader = Uploader(auth)
+                    account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ✅ Uploader initialized\n"
+                    account_result['reset_status_to_active'] = True  # Сброс статуса при успешном входе
                     
-                    # Получаем видео для этого аккаунта
-                    videos_to_upload = []
-                    for video_obj in bulk_account.assigned_videos.filter(uploaded=False):
-                        caption = video_obj.get_effective_caption()
-                        hashtags = video_obj.get_effective_hashtags()
-                        
-                        # Объединяем описание и хештеги
-                        full_description = f"{caption} {hashtags}".strip()
-                        
+                    # Получаем видео для этого аккаунта (из предварительно подготовленных данных)
+                    videos_to_upload: List[Tuple[Video, Dict[str, Any]]] = []
+                    pre_videos = precomputed_videos_by_account.get(bulk_account.id, [])
+                    for vdata in pre_videos:
                         video = Video(
-                            name=os.path.basename(video_obj.video_file.name),
-                            path=video_obj.video_file.path,
-                            description=full_description,
-                            music=None  # TODO: добавить поддержку музыки если нужно
+                            name=vdata['name'],
+                            path=vdata['path'],
+                            description=vdata['description'],
+                            music=None
                         )
-                        videos_to_upload.append((video, video_obj))
+                        videos_to_upload.append((video, vdata))
                     
                     # Загружаем видео
                     if videos_to_upload:
-                        for video, video_obj in videos_to_upload:
+                        account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] 📹 Found {len(videos_to_upload)} videos to upload\n"
+                        
+                        # Список успешно загруженных видео id для последующего обновления БД
+                        uploaded_video_ids: List[int] = []
+                        for video, vdata in videos_to_upload:
                             try:
+                                account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ⬆️ Uploading: {video.name}\n"
+                                
                                 # Аутентификация происходит внутри upload_videos
                                 uploader.upload_videos([video])
                                 
-                                # Отмечаем видео как загруженное
-                                video_obj.uploaded = True
-                                video_obj.save(update_fields=['uploaded'])
+                                # Копим id для обновления после Playwright
+                                if 'id' in vdata:
+                                    uploaded_video_ids.append(vdata['id'])
                                 
-                                bulk_account.uploaded_success_count += 1
-                                bulk_account.log += f"\n[{timezone.now()}] Uploaded: {video.name}"
+                                account_result['uploaded_success_count'] += 1
+                                account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ✅ Uploaded: {video.name}\n"
+                                logger.info(f"[UPLOAD] Successfully uploaded {video.name} for {account.username}")
                                 
                                 # Задержка между загрузками
-                                delay = time.randint(task.delay_min_sec, task.delay_max_sec)
+                                import random
+                                delay = random.randint(task.delay_min_sec, task.delay_max_sec)
+                                account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ⏳ Delay: {delay}s\n"
                                 time.sleep(delay)
                                 
                             except Exception as ve:
                                 logger.error(f"Error uploading video {video.name}: {str(ve)}")
                                 logger.log_err()
-                                bulk_account.uploaded_failed_count += 1
-                                bulk_account.log += f"\n[{timezone.now()}] Failed: {video.name} - {str(ve)}"
+                                account_result['uploaded_fail_count'] += 1
+                                account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ❌ Failed: {video.name} - {str(ve)}\n"
                         
-                        bulk_account.status = 'COMPLETED'
+                        account_result['status'] = 'COMPLETED'
+                        # Сохраняем список успешно загруженных видео для обновления после Playwright
+                        if uploaded_video_ids:
+                            account_result['uploaded_video_ids'] = uploaded_video_ids
+                        account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ✅ All videos processed\n"
+                        account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}]    Success: {account_result['uploaded_success_count']}, Failed: {account_result['uploaded_fail_count']}\n"
                         results["successful"] += 1
                     else:
-                        bulk_account.status = 'COMPLETED'
-                        bulk_account.log += f"\n[{timezone.now()}] No videos to upload"
+                        logger.warning(f"No videos assigned to {account.username}")
+                        account_result['status'] = 'COMPLETED'
+                        account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ⚠️ No videos to upload\n"
                         results["successful"] += 1
-                    
-                    # Отмечаем аккаунт как использованный
-                    account.mark_as_used()
                     
                 except Exception as e:
                     logger.error(f"Error processing account {account.username}: {str(e)}")
                     logger.log_err()
-                    bulk_account.status = 'FAILED'
-                    bulk_account.log += f"\n[{timezone.now()}] Error: {str(e)}"
+                    account_result['status'] = 'FAILED'
+                    account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ❌ Error: {str(e)}\n"
                     results["failed"] += 1
                     results["errors"].append({
                         "account": account.username,
@@ -300,14 +380,67 @@ def run_bulk_upload_task(task_id: int) -> Dict[str, Any]:
                     })
                 
                 finally:
-                    bulk_account.completed_at = timezone.now()
-                    bulk_account.save()
+                    account_result['completed_at'] = timezone.now()
+                    accounts_results.append(account_result)
                     results["processed"] += 1
+        
+        # ПОСЛЕ выхода из Playwright контекста - обновляем БД
+        logger.info(f"[UPLOAD] Updating database for {len(accounts_results)} accounts")
+        
+        # Обновляем лог задачи сводной информацией
+        task.log += f"\n[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] 📊 Processing results:\n"
+        
+        for result in accounts_results:
+            try:
+                bulk_acc = BulkUploadAccount.objects.get(id=result['bulk_account_id'])
+                bulk_acc.status = result['status']
+                bulk_acc.started_at = result['started_at']
+                bulk_acc.completed_at = result['completed_at']
+                bulk_acc.uploaded_success_count = result['uploaded_success_count']
+                bulk_acc.uploaded_failed_count = result['uploaded_fail_count']
+                bulk_acc.log = result['log']
+                bulk_acc.save()
+
+                # Обновляем статус выгруженных видео, если есть
+                uploaded_ids = result.get('uploaded_video_ids')
+                if uploaded_ids:
+                    try:
+                        BulkVideo.objects.filter(id__in=uploaded_ids).update(uploaded=True)
+                    except Exception as ve:
+                        logger.error(f"Error updating uploaded flags for videos {uploaded_ids}: {ve}")
+                
+                # Обновляем пароль если он был изменен
+                if result.get('new_password'):
+                    bulk_acc.account.password = result['new_password']
+                    bulk_acc.account.save(update_fields=['password'])
+                    logger.info(f"[PASSWORD_UPDATE] Password updated for {bulk_acc.account.username}")
+                
+                # Обновляем статус аккаунта
+                if result.get('new_status'):
+                    bulk_acc.account.status = result['new_status']
+                    bulk_acc.account.save(update_fields=['status'])
+                    logger.info(f"[STATUS_UPDATE] {bulk_acc.account.username} status updated to {result['new_status']}")
+                
+                # Сбрасываем статус на ACTIVE при успешном входе
+                if result.get('reset_status_to_active') and result['status'] == 'COMPLETED':
+                    bulk_acc.account.status = 'ACTIVE'
+                    bulk_acc.account.save(update_fields=['status'])
+                    logger.info(f"[STATUS_RESET] {bulk_acc.account.username} status reset to ACTIVE")
+                
+                # Добавляем в общий лог задачи
+                status_emoji = "✅" if result['status'] == 'COMPLETED' else "❌"
+                task.log += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}]    {status_emoji} {result['account_username']}: {result['uploaded_success_count']} uploaded, {result['uploaded_fail_count']} failed\n"
+                
+            except Exception as e:
+                logger.error(f"Error updating bulk account {result['bulk_account_id']}: {str(e)}")
+                task.log += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}]    ⚠️ Error updating {result.get('account_username', 'unknown')}\n"
         
         # Обновляем статус задачи
         task.status = 'COMPLETED'
         task.completed_at = timezone.now()
-        task.save(update_fields=['status', 'completed_at'])
+        task.log += f"\n[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] 🎉 Task completed!\n"
+        task.log += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}]    Total processed: {results['processed']}, Successful: {results['successful']}, Failed: {results['failed']}\n"
+        task.save(update_fields=['status', 'completed_at', 'log'])
         
         # Отправляем уведомление о завершении
         send_message(
@@ -343,6 +476,26 @@ def run_bulk_upload_task(task_id: int) -> Dict[str, Any]:
 # WARMUP SERVICE
 # ============================================================================
 
+def run_warmup_task_wrapper(task_id: int):
+    """
+    Wrapper для запуска задачи прогрева в отдельном потоке.
+    Создает новое подключение к БД для изоляции от async контекста Playwright.
+    """
+    from django.db import connection
+    
+    # Закрываем текущее подключение чтобы создать новое в потоке
+    connection.close()
+    
+    try:
+        run_warmup_task(task_id)
+    except Exception as e:
+        logger.error(f"Error in warmup task wrapper {task_id}: {str(e)}")
+        logger.log_err()
+    finally:
+        # Закрываем подключение после завершения
+        connection.close()
+
+
 def run_warmup_task(task_id: int) -> Dict[str, Any]:
     """
     Запускает задачу прогрева аккаунтов.
@@ -359,106 +512,205 @@ def run_warmup_task(task_id: int) -> Dict[str, Any]:
     try:
         task = WarmupTask.objects.get(id=task_id)
         
-        # Обновляем статус задачи
+        # Обновляем статус задачи и инициализируем логи
         task.status = 'RUNNING'
-        task.save(update_fields=['status'])
+        task.started_at = timezone.now()
+        task.log = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] 🚀 Task started\n"
+        task.log += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] Total accounts: {len(task.accounts.all())}\n"
+        task.save(update_fields=['status', 'started_at', 'log'])
         
         # Отправляем уведомление
-        send_message(f'Warmup task "{task.name}" started')
+        # send_message(f'Warmup task "{task.name}" started')
         
         # Инициализируем Dolphin
         dolphin = Dolphin()
         
-        # Получаем аккаунты задачи
-        warmup_accounts = task.accounts.all()
+        # Получаем аккаунты задачи ДО входа в Playwright контекст
+        # Используем select_related для prefetch связанных объектов
+        warmup_accounts = list(task.accounts.select_related('account', 'account__proxy').all())
         
         results = {
             "success": True,
-            "total_accounts": warmup_accounts.count(),
+            "total_accounts": len(warmup_accounts),
             "processed": 0,
             "successful": 0,
             "failed": 0
         }
+        
+        # Собираем результаты в памяти для обновления БД после Playwright
+        accounts_results = []
         
         # Запускаем Playwright
         with sync_playwright() as playwright:
             for warmup_account in warmup_accounts:
                 account = warmup_account.account
                 
-                # Обновляем статус
-                warmup_account.status = 'RUNNING'
-                warmup_account.started_at = timezone.now()
-                warmup_account.save(update_fields=['status', 'started_at'])
+                # Подготавливаем результат для этого аккаунта
+                start_time = timezone.now()
+                account_result = {
+                    'warmup_account_id': warmup_account.id,
+                    'account_username': account.username,
+                    'status': 'RUNNING',
+                    'started_at': start_time,
+                    'completed_at': None,
+                    'log': warmup_account.log + f"\n[{start_time.strftime('%Y-%m-%d %H:%M:%S')}] 🔄 Starting warmup for {account.username}\n"
+                }
+                logger.info(f"[WARMUP] Starting warmup for account {account.username}")
                 
                 try:
                     # Получаем профиль Dolphin
                     if not account.dolphin_profile_id:
                         logger.error(f"No Dolphin profile for account {account.username}")
-                        warmup_account.status = 'FAILED'
-                        warmup_account.log += f"\n[{timezone.now()}] No Dolphin profile"
-                        warmup_account.save()
+                        account_result['status'] = 'FAILED'
+                        account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ❌ No Dolphin profile\n"
+                        account_result['completed_at'] = timezone.now()
+                        accounts_results.append(account_result)
                         results["failed"] += 1
                         continue
+                    
+                    account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ✓ Dolphin profile found: {account.dolphin_profile_id}\n"
                     
                     profile = dolphin.get_profile_by_name(account.username)
                     if not profile:
                         logger.error(f"Dolphin profile not found for {account.username}")
-                        warmup_account.status = 'FAILED'
-                        warmup_account.log += f"\n[{timezone.now()}] Profile not found"
-                        warmup_account.save()
+                        account_result['status'] = 'FAILED'
+                        account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ❌ Profile not found in Dolphin\n"
+                        account_result['completed_at'] = timezone.now()
+                        accounts_results.append(account_result)
                         results["failed"] += 1
                         continue
+                    
+                    account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ✓ Profile loaded from Dolphin\n"
                     
                     # Создаем Email объект
                     email_obj = None
                     if account.email and account.email_password:
                         email_obj = Email(account.email, account.email_password)
+                        account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ✓ Email configured for code verification\n"
                     
                     # Создаем Auth
+                    account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] 🔐 Starting authentication...\n"
+                    
+                    # Callback для обновления пароля в БД (НЕ делаем .save() здесь!)
+                    def update_password_callback(username, new_password):
+                        account_result['new_password'] = new_password
+                        account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] 🔑 Password will be updated in database\n"
+                        logger.info(f"[PASSWORD_UPDATE] Password changed for {username}, will update DB after Playwright")
+                    
+                    # Callback для обновления статуса аккаунта (НЕ делаем .save() здесь!)
+                    def update_status_callback(username, status, error_message):
+                        account_result['new_status'] = status
+                        account_result['status_reason'] = error_message
+                        account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ⚠️ Status will be updated to: {status}\n"
+                        account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}]    Reason: {error_message}\n"
+                        logger.warning(f"[STATUS_UPDATE] {username} -> {status}: {error_message}")
+                    
                     auth = Auth(
                         login=account.username,
                         password=account.password,
                         email=email_obj,
                         profile=profile,
                         playwright=playwright,
-                        db=None
+                        db=None,
+                        password_update_callback=update_password_callback,
+                        status_update_callback=update_status_callback
                     )
                     
                     # Аутентификация
                     page = auth.authenticate()
                     
                     if page and not isinstance(page, int):
+                        account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ✅ Authentication successful\n"
+                        
+                        # Сбрасываем статус на ACTIVE при успешном входе
+                        account_result['reset_status_to_active'] = True
+                        
                         # Создаем Booster и запускаем прогрев
+                        account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] 🔥 Starting warmup activities...\n"
                         booster = Booster(auth)
+                        
+                        # Логируем настройки прогрева
+                        account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}]    - Feed scrolls: {task.feed_scroll_min_count}-{task.feed_scroll_max_count}\n"
+                        account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}]    - Likes: {task.like_min_count}-{task.like_max_count}\n"
+                        account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}]    - Videos: {task.watch_video_min_count}-{task.watch_video_max_count}\n"
+                        
                         booster.start(page)
                         
-                        # Отмечаем аккаунт как прогретый
-                        account.mark_as_warmed()
-                        
-                        warmup_account.status = 'COMPLETED'
-                        warmup_account.log += f"\n[{timezone.now()}] Warmup completed successfully"
+                        # Отмечаем результат как успешный (БД обновим позже)
+                        account_result['status'] = 'COMPLETED'
+                        account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ✅ Warmup completed successfully\n"
+                        account_result['mark_as_warmed'] = True  # Флаг для обновления аккаунта
                         results["successful"] += 1
+                        logger.info(f"[WARMUP] Account {account.username} warmed up successfully")
                     else:
                         logger.error(f"Failed to authenticate {account.username}")
-                        warmup_account.status = 'FAILED'
-                        warmup_account.log += f"\n[{timezone.now()}] Authentication failed"
+                        account_result['status'] = 'FAILED'
+                        account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ❌ Authentication failed\n"
                         results["failed"] += 1
                     
                 except Exception as e:
                     logger.error(f"Error warming up {account.username}: {str(e)}")
                     logger.log_err()
-                    warmup_account.status = 'FAILED'
-                    warmup_account.log += f"\n[{timezone.now()}] Error: {str(e)}"
+                    account_result['status'] = 'FAILED'
+                    account_result['log'] += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] ❌ Error: {str(e)}\n"
                     results["failed"] += 1
                 
                 finally:
-                    warmup_account.completed_at = timezone.now()
-                    warmup_account.save()
+                    account_result['completed_at'] = timezone.now()
+                    accounts_results.append(account_result)
                     results["processed"] += 1
+        
+        # ПОСЛЕ выхода из Playwright контекста - обновляем БД
+        logger.info(f"[WARMUP] Updating database for {len(accounts_results)} accounts")
+        
+        # Обновляем лог задачи сводной информацией
+        task.log += f"\n[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] 📊 Processing results:\n"
+        
+        for result in accounts_results:
+            try:
+                warmup_acc = WarmupTaskAccount.objects.get(id=result['warmup_account_id'])
+                warmup_acc.status = result['status']
+                warmup_acc.started_at = result['started_at']
+                warmup_acc.completed_at = result['completed_at']
+                warmup_acc.log = result['log']
+                warmup_acc.save()
+                
+                # Добавляем в общий лог задачи
+                status_emoji = "✅" if result['status'] == 'COMPLETED' else "❌"
+                task.log += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}]    {status_emoji} {result['account_username']}: {result['status']}\n"
+                
+                # Отмечаем аккаунт как прогретый если нужно
+                if result.get('mark_as_warmed'):
+                    warmup_acc.account.mark_as_warmed()
+                
+                # Обновляем пароль если он был изменен
+                if result.get('new_password'):
+                    warmup_acc.account.password = result['new_password']
+                    warmup_acc.account.save(update_fields=['password'])
+                    logger.info(f"[PASSWORD_UPDATE] Password updated for {warmup_acc.account.username}")
+                
+                # Обновляем статус аккаунта
+                if result.get('new_status'):
+                    warmup_acc.account.status = result['new_status']
+                    warmup_acc.account.save(update_fields=['status'])
+                    logger.info(f"[STATUS_UPDATE] {warmup_acc.account.username} status updated to {result['new_status']}")
+                
+                # Сбрасываем статус на ACTIVE при успешном входе
+                if result.get('reset_status_to_active'):
+                    warmup_acc.account.status = 'ACTIVE'
+                    warmup_acc.account.save(update_fields=['status'])
+                    logger.info(f"[STATUS_RESET] {warmup_acc.account.username} status reset to ACTIVE")
+                
+            except Exception as e:
+                logger.error(f"Error updating warmup account {result['warmup_account_id']}: {str(e)}")
+                task.log += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}]    ⚠️ Error updating {result.get('account_username', 'unknown')}\n"
         
         # Обновляем статус задачи
         task.status = 'COMPLETED'
-        task.save(update_fields=['status'])
+        task.completed_at = timezone.now()
+        task.log += f"\n[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] 🎉 Task completed!\n"
+        task.log += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}]    Successful: {results['successful']}, Failed: {results['failed']}\n"
+        task.save(update_fields=['status', 'completed_at', 'log'])
         
         send_message(
             f'Warmup task "{task.name}" completed\n'
@@ -474,6 +726,7 @@ def run_warmup_task(task_id: int) -> Dict[str, Any]:
         try:
             task = WarmupTask.objects.get(id=task_id)
             task.status = 'FAILED'
+            task.completed_at = timezone.now()
             task.save()
         except:
             pass
@@ -565,4 +818,5 @@ def export_cookies_from_profile(account) -> Optional[List[Dict[str, Any]]]:
         logger.error(f"Error exporting cookies from {account.username}: {str(e)}")
         logger.log_err()
         return None
+
 

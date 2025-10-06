@@ -868,7 +868,7 @@ def refresh_cookies_from_profiles(request):
 
     # Read Dolphin API settings
     # Accept both env var names to match different setups
-    api_key = os.environ.get('DOLPHIN_API_TOKEN') or os.environ.get('TOKEN') or ''
+    api_key = os.environ.get('DOLPHIN_API_TOKEN') or ''
     if not api_key:
         messages.error(request, 'DOLPHIN_API_TOKEN is not configured. Cannot refresh cookies.')
         return redirect('bulk_cookie_robot')

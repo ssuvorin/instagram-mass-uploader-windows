@@ -1,0 +1,182 @@
+{% extends "tiktok_uploader/base.html" %}
+
+{% block title %}Edit Proxy - TikTok Uploader{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Хлебные крошки -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'tiktok_uploader:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'tiktok_uploader:proxy_list' %}">Proxies</a></li>
+            <li class="breadcrumb-item active">Edit</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-pencil-square me-2"></i>
+                        Edit Proxy Server: {{ proxy.host }}:{{ proxy.port }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <!-- Основные данные прокси -->
+                        <h6 class="mb-3">Proxy Details</h6>
+
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label for="{{ form.host.id_for_label }}" class="form-label">Host (IP or Domain) *</label>
+                                {{ form.host }}
+                                {% if form.host.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.host.errors }}
+                                </div>
+                                {% endif %}
+                                <small class="form-text text-muted">IP address or domain name of the proxy server</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ form.port.id_for_label }}" class="form-label">Port *</label>
+                                {{ form.port }}
+                                {% if form.port.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.port.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.proxy_type.id_for_label }}" class="form-label">Proxy Type *</label>
+                            {{ form.proxy_type }}
+                            {% if form.proxy_type.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.proxy_type.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <hr>
+
+                        <!-- Аутентификация -->
+                        <h6 class="mb-3">Authentication (Optional)</h6>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.username.id_for_label }}" class="form-label">Username</label>
+                                {{ form.username }}
+                                {% if form.username.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.username.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.password.id_for_label }}" class="form-label">Password</label>
+                                {{ form.password }}
+                                {% if form.password.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.password.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Дополнительные настройки -->
+                        <h6 class="mb-3">Additional Settings</h6>
+
+                        <div class="mb-3">
+                            <label for="{{ form.ip_change_url.id_for_label }}" class="form-label">IP Change URL (Optional)</label>
+                            {{ form.ip_change_url }}
+                            {% if form.ip_change_url.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.ip_change_url.errors }}
+                            </div>
+                            {% endif %}
+                            <small class="form-text text-muted">URL to request IP rotation (if supported by provider)</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">Notes</label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.notes.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="test_on_save" name="test_on_save">
+                            <label class="form-check-label" for="test_on_save">
+                                Re-test proxy connection after saving changes
+                            </label>
+                        </div>
+
+                        <hr>
+
+                        <!-- Current Status -->
+                        <div class="alert alert-info">
+                            <strong>Current Status:</strong>
+                            {% if proxy.status == 'active' %}
+                                <span class="badge bg-success">Active</span>
+                            {% elif proxy.status == 'inactive' %}
+                                <span class="badge bg-secondary">Inactive</span>
+                            {% elif proxy.status == 'banned' %}
+                                <span class="badge bg-danger">Banned</span>
+                            {% else %}
+                                <span class="badge bg-warning">{{ proxy.get_status_display }}</span>
+                            {% endif %}
+                            
+                            {% if proxy.external_ip %}
+                                <br><strong>External IP:</strong> {{ proxy.external_ip }}
+                            {% endif %}
+                            {% if proxy.country %}
+                                <br><strong>Location:</strong> {{ proxy.city|default:"" }}{% if proxy.city and proxy.country %}, {% endif %}{{ proxy.country }}
+                            {% endif %}
+                            {% if proxy.last_verified %}
+                                <br><strong>Last Verified:</strong> {{ proxy.last_verified|date:"Y-m-d H:i:s" }}
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'tiktok_uploader:proxy_list' %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg"></i> Update Proxy
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Связанные аккаунты -->
+            {% if proxy.accounts.exists %}
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h6><i class="bi bi-person-fill me-2"></i>Linked Accounts ({{ proxy.accounts.count }})</h6>
+                    <ul class="mb-0">
+                        {% for account in proxy.accounts.all|slice:":10" %}
+                        <li>{{ account.username }} - <span class="badge bg-{{ account.status|lower }}">{{ account.get_status_display }}</span></li>
+                        {% endfor %}
+                        {% if proxy.accounts.count > 10 %}
+                        <li class="text-muted">... and {{ proxy.accounts.count|add:"-10" }} more</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

@@ -16,13 +16,15 @@ from tiktok_uploader.bot_integration.tiktok.locators import Pages, Login, Error,
 
 class Auth:
 
-    def __init__(self, login, password, email: Email, profile: Profile, playwright, db: DataBase = None):
+    def __init__(self, login, password, email: Email, profile: Profile, playwright, db: DataBase = None, password_update_callback=None, status_update_callback=None):
         self.login = login
         self.password = password
         self.email = email
         self.profile = profile
         self.playwright = playwright
         self.db = db
+        self.password_update_callback = password_update_callback  # Callback для обновления пароля в Django
+        self.status_update_callback = status_update_callback  # Callback для обновления статуса аккаунта
 
     def authenticate(self):
         """
@@ -66,7 +68,28 @@ class Auth:
         try:
             return self._auth(page)
         except Exception as e:
-            logger.error(f'Failed to log into {self.login}. Reason: {e}')
+            error_msg = str(e)
+            logger.error(f'Failed to log into {self.login}. Reason: {error_msg}')
+            
+            # Обновляем статус аккаунта через callback
+            if self.status_update_callback:
+                try:
+                    # Определяем статус на основе ошибки
+                    status = 'INACTIVE'
+                    if 'suspend' in error_msg.lower() or 'ban' in error_msg.lower():
+                        status = 'SUSPENDED'
+                    elif 'captcha' in error_msg.lower():
+                        status = 'CAPTCHA_REQUIRED'
+                    elif 'verification' in error_msg.lower() or 'verify' in error_msg.lower():
+                        status = 'PHONE_VERIFICATION_REQUIRED'
+                    elif 'block' in error_msg.lower():
+                        status = 'BLOCKED'
+                    
+                    self.status_update_callback(self.login, status, error_msg)
+                    logger.warning(f'⚠️ Account {self.login} status updated to {status}')
+                except Exception as cb_error:
+                    logger.error(f'❌ Failed to update account status for {self.login}: {str(cb_error)}')
+            
             return 1
 
     def _forgot_password(self, page):
@@ -124,10 +147,18 @@ class Auth:
         random.shuffle(new_password)
         new_password = ''.join(new_password)
         if new_password != self.password:
+            old_password = self.password
             self.password = str(new_password)
-            # self.db.update('Accounts', {"password": self.password}, where="username = ?",
-            #                params=(self.login,))
-            logger.info(f'Password for {self.login} changed to {new_password}')
+            
+            # Обновляем пароль в Django через callback
+            if self.password_update_callback:
+                try:
+                    self.password_update_callback(self.login, new_password)
+                    logger.info(f'✅ Password for {self.login} updated in database: {old_password} -> {new_password}')
+                except Exception as e:
+                    logger.error(f'❌ Failed to update password in database for {self.login}: {str(e)}')
+            else:
+                logger.info(f'Password for {self.login} changed to {new_password}')
         else:
             self.__remake_password()
 
@@ -186,6 +217,23 @@ class Auth:
             err = page.locator(Error.error_description).inner_text()
             if err:
                 logger.error(f'Failed to log into {self.login}. Reason: {err}')
+                
+                # Обновляем статус на основе ошибки
+                if self.status_update_callback:
+                    try:
+                        status = 'INACTIVE'
+                        if 'suspend' in err.lower() or 'ban' in err.lower():
+                            status = 'SUSPENDED'
+                        elif 'incorrect' in err.lower() or 'wrong' in err.lower():
+                            status = 'BLOCKED'
+                        elif 'verification' in err.lower() or 'verify' in err.lower():
+                            status = 'PHONE_VERIFICATION_REQUIRED'
+                        
+                        self.status_update_callback(self.login, status, err)
+                        logger.warning(f'⚠️ Account {self.login} status updated to {status}')
+                    except Exception as cb_error:
+                        logger.error(f'❌ Failed to update account status: {str(cb_error)}')
+                
                 if ('Maximum number of attempts reached. Try again later.' in err) or (
                         'match our records. Try again.' in err):
                     return self._forgot_password(page)
@@ -236,24 +284,21 @@ class Auth:
 
             # Проверяем messages_button с ожиданием до 15 сек
             try:
-                page.wait_for_selector(CheckAuth.messages_button, state="visible", timeout=30000)
+                page.wait_for_selector(CheckAuth.messages_button, state="visible", timeout=15000)
                 logger.debug('Messages button found: logged in')
                 return True
             except:
-                logger.debug('Messages button not found within 30s')
+                logger.debug('Messages button not found within 15s')
 
             # Проверяем activity_button с ожиданием до 15 сек
             try:
-                page.wait_for_selector(CheckAuth.activity_button, state="visible", timeout=30000)
+                page.wait_for_selector(CheckAuth.activity_button, state="visible", timeout=15000)
                 logger.debug('Activity button found: logged in')
                 return True
             except:
-                logger.debug('Activity button not found within 30s, checking next')
+                logger.debug('Activity button not found within 15s, checking next')
 
             logger.debug('Page elements indicate not logged in')
-            if os.environ.get('DEBUG'):
-                os.makedirs(os.path.abspath(__file__).replace('src\\tiktok\\auth.py', 'debug_screenshots'), exist_ok=True)
-                page.screenshot(path=os.path.abspath(__file__).replace('src\\tiktok\\auth.py', 'debug_screenshots') + '\\' + f'{self.login}_{str(time.time())}' + '.jpg')
             return False
 
         except Exception as e:

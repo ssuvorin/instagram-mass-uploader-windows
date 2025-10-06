@@ -16,6 +16,7 @@ from .models import (
     TikTokAccount, TikTokProxy, BulkUploadTask, BulkUploadAccount, BulkVideo,
     WarmupTask, FollowTask, CookieRobotTask
 )
+from .forms import TikTokAccountForm
 
 
 # ============================================================================
@@ -214,7 +215,7 @@ def create_account(request):
     from tiktok_uploader.bot_integration.services import create_dolphin_profile_for_account
     
     if request.method == 'POST':
-        form = TikTokAccountForm(request.POST)
+        form = TikTokAccountForm(request.POST, request.FILES)
         create_dolphin = request.POST.get('create_dolphin_profile') == 'on'
         
         if form.is_valid():
@@ -230,6 +231,31 @@ def create_account(request):
                     account.current_proxy = account.proxy
                 
                 account.save()
+                
+                # Обрабатываем cookies если они были предоставлены
+                cookies_data = form.cleaned_data.get('_cookies_data')
+                if cookies_data:
+                    try:
+                        import json
+                        from tiktok_uploader.bot_integration.dolphin.dolphin import Dolphin
+                        
+                        # Если есть Dolphin профиль, импортируем cookies
+                        if account.dolphin_profile_id:
+                            dolphin = Dolphin()
+                            result = dolphin.import_cookies_local(
+                                profile_id=account.dolphin_profile_id,
+                                cookies=cookies_data
+                            )
+                            if result.get('success'):
+                                messages.success(request, f'Cookies imported successfully into Dolphin profile!')
+                            else:
+                                messages.warning(request, f'Account created but cookies import failed: {result.get("error")}')
+                        else:
+                            # Сохраняем cookies для последующего использования
+                            # (они будут импортированы при создании Dolphin профиля)
+                            messages.info(request, 'Cookies will be imported when Dolphin profile is created')
+                    except Exception as e:
+                        messages.warning(request, f'Account created but error processing cookies: {str(e)}')
                 
                 messages.success(
                     request, 
@@ -276,7 +302,7 @@ def create_account(request):
         form = TikTokAccountForm()
     
     # Получаем список прокси для выбора
-    proxies = TikTokProxy.objects.filter(is_active=True).order_by('-created_at')
+    proxies = TikTokProxy.objects.filter(is_active=True).order_by('-id')  # Сортируем по ID, так как created_at может быть NULL
     
     # Получаем список клиентов (если есть)
     try:
@@ -353,7 +379,85 @@ def edit_account(request, account_id):
         GET: edit_account.html с формой
         POST: redirect на account_detail
     """
-    pass
+    account = get_object_or_404(TikTokAccount, id=account_id)
+    
+    if request.method == 'POST':
+        print(f"[EDIT ACCOUNT] POST request for account: {account.username}")
+        print(f"[EDIT ACCOUNT] POST data: {dict(request.POST)}")
+        
+        form = TikTokAccountForm(request.POST, request.FILES, instance=account)
+        
+        print(f"[EDIT ACCOUNT] Form is_valid: {form.is_valid()}")
+        if not form.is_valid():
+            print(f"[EDIT ACCOUNT] Form errors: {form.errors}")
+            print(f"[EDIT ACCOUNT] Form cleaned_data: {form.cleaned_data if hasattr(form, 'cleaned_data') else 'N/A'}")
+        
+        if form.is_valid():
+            # Сохраняем Dolphin profile ID чтобы не потерять
+            preserved_profile_id = account.dolphin_profile_id
+            
+            # Логируем что пришло из формы
+            selected_proxy_id = form.cleaned_data.get('proxy')
+            print(f"[EDIT ACCOUNT DEBUG] Selected proxy ID from form: {selected_proxy_id}")
+            
+            account = form.save(commit=False)
+            
+            # Восстанавливаем Dolphin profile ID
+            if preserved_profile_id:
+                account.dolphin_profile_id = preserved_profile_id
+            
+            # Синхронизируем current_proxy с proxy (всегда!)
+            account.current_proxy = account.proxy
+            
+            print(f"[EDIT ACCOUNT DEBUG] After form save - proxy: {account.proxy}, current_proxy: {account.current_proxy}")
+            
+            account.save()
+            
+            print(f"[EDIT ACCOUNT DEBUG] After account.save() - proxy: {account.proxy}, current_proxy: {account.current_proxy}")
+            
+            # Обработка cookies если были загружены
+            cookies_json = form.cleaned_data.get('cookies_json')
+            cookies_file = form.cleaned_data.get('cookies_file')
+            
+            if (cookies_json or cookies_file) and account.dolphin_profile_id:
+                try:
+                    # Импорт cookies в Dolphin профиль
+                    from tiktok_uploader.bot_integration.dolphin.dolphin import Dolphin
+                    from tiktok_uploader.bot_integration.dolphin.profile import Profile
+                    
+                    dolphin = Dolphin()
+                    profile_data = dolphin.get_profile_by_name(account.username)
+                    
+                    if profile_data:
+                        profile = Profile(profile_data['id'], dolphin)
+                        
+                        # Парсим cookies
+                        if cookies_file:
+                            import json
+                            cookies_content = cookies_file.read().decode('utf-8')
+                            cookies = json.loads(cookies_content)
+                        else:
+                            import json
+                            cookies = json.loads(cookies_json)
+                        
+                        # Импортируем cookies
+                        profile.import_cookies(cookies, 'https://www.tiktok.com')
+                        messages.success(request, f'Cookies imported successfully for {account.username}!')
+                        
+                except Exception as e:
+                    messages.warning(request, f'Failed to import cookies: {str(e)}')
+            
+            messages.success(request, f'Account {account.username} updated successfully!')
+            return redirect('tiktok_uploader:account_detail', account_id=account.id)
+    else:
+        form = TikTokAccountForm(instance=account)
+    
+    context = {
+        'form': form,
+        'account': account,
+    }
+    
+    return render(request, 'tiktok_uploader/accounts/edit_account.html', context)
 
 
 @login_required
@@ -378,7 +482,56 @@ def delete_account(request, account_id):
     Returns:
         POST: redirect на account_list с сообщением
     """
-    pass
+    if request.method == 'POST':
+        account = get_object_or_404(TikTokAccount, id=account_id)
+        username = account.username
+        account.delete()
+        messages.success(request, f'Account @{username} has been deleted.')
+        return redirect('tiktok_uploader:account_list')
+    
+    return redirect('tiktok_uploader:account_list')
+
+
+@login_required
+def bulk_delete_accounts(request):
+    """
+    Массовое удаление TikTok аккаунтов.
+    """
+    if request.method == 'POST':
+        account_ids = request.POST.getlist('account_ids')
+        
+        if not account_ids:
+            messages.error(request, 'No accounts selected for deletion.')
+            return redirect('tiktok_uploader:account_list')
+        
+        try:
+            # Получаем аккаунты для удаления
+            accounts = TikTokAccount.objects.filter(id__in=account_ids)
+            count = accounts.count()
+            
+            if count == 0:
+                messages.error(request, 'No accounts found to delete.')
+                return redirect('tiktok_uploader:account_list')
+            
+            # Сохраняем usernames для сообщения
+            usernames = [acc.username for acc in accounts]
+            
+            # Удаляем аккаунты
+            accounts.delete()
+            
+            # Формируем сообщение
+            if count == 1:
+                messages.success(request, f'Account @{usernames[0]} has been deleted.')
+            elif count <= 5:
+                usernames_str = ', '.join([f'@{u}' for u in usernames])
+                messages.success(request, f'{count} accounts deleted: {usernames_str}')
+            else:
+                messages.success(request, f'{count} accounts have been successfully deleted.')
+            
+        except Exception as e:
+            messages.error(request, f'Error deleting accounts: {str(e)}')
+    
+    return redirect('tiktok_uploader:account_list')
 
 
 @login_required

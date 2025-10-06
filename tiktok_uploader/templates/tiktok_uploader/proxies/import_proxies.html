@@ -1,0 +1,183 @@
+{% extends "tiktok_uploader/base.html" %}
+
+{% block title %}Import Proxies - TikTok Uploader{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Хлебные крошки -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'tiktok_uploader:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'tiktok_uploader:proxy_list' %}">Proxies</a></li>
+            <li class="breadcrumb-item active">Import</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-earmark-arrow-up me-2"></i>
+                        Import Proxies from File
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <!-- Файл прокси -->
+                        <div class="mb-4">
+                            <label for="{{ form.file.id_for_label }}" class="form-label">Proxy List File *</label>
+                            {{ form.file }}
+                            {% if form.file.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.file.errors }}
+                            </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Upload a .txt file with one proxy per line
+                            </small>
+                        </div>
+
+                        <!-- Формат -->
+                        <div class="mb-4">
+                            <label for="{{ form.format.id_for_label }}" class="form-label">Proxy Format</label>
+                            {{ form.format }}
+                            {% if form.format.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.format.errors }}
+                            </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Select proxy format or use auto-detect
+                            </small>
+                        </div>
+
+                        <!-- Тип по умолчанию -->
+                        <div class="mb-4">
+                            <label for="{{ form.default_type.id_for_label }}" class="form-label">Default Proxy Type</label>
+                            {{ form.default_type }}
+                            {% if form.default_type.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.default_type.errors }}
+                            </div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Used when type is not specified in the proxy string
+                            </small>
+                        </div>
+
+                        <!-- Опции -->
+                        <div class="form-check mb-4">
+                            <input class="form-check-input" type="checkbox" id="{{ form.test_on_import.id_for_label }}" name="test_on_import">
+                            <label class="form-check-label" for="{{ form.test_on_import.id_for_label }}">
+                                Test proxies after import
+                            </label>
+                            <div class="form-text">
+                                <small>⚠️ Testing will significantly slow down the import process (5-15 sec per proxy)</small>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'tiktok_uploader:proxy_list' %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-upload"></i> Import Proxies
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Информационный блок -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Supported Proxy Formats</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-3">Your .txt file can contain proxies in any of these formats:</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>1. Basic Format (host:port)</h6>
+                            <pre class="bg-light p-2 rounded"><code>192.168.1.1:8080
+proxy.example.com:3128
+10.0.0.1:8888</code></pre>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6>2. With Authentication</h6>
+                            <pre class="bg-light p-2 rounded"><code>192.168.1.1:8080:username:password
+proxy.example.com:3128:user:pass</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h6>3. URL Format (HTTP/HTTPS)</h6>
+                            <pre class="bg-light p-2 rounded"><code>http://192.168.1.1:8080
+https://user:pass@proxy.example.com:3128</code></pre>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6>4. URL Format (SOCKS5)</h6>
+                            <pre class="bg-light p-2 rounded"><code>socks5://192.168.1.1:1080
+socks5://user:pass@proxy.example.com:1080</code></pre>
+                        </div>
+                    </div>
+
+                    <hr class="my-3">
+
+                    <h6>Additional Features:</h6>
+                    <ul class="mb-0">
+                        <li><strong>Comments:</strong> Lines starting with <code>#</code> will be ignored</li>
+                        <li><strong>Empty Lines:</strong> Blank lines will be skipped automatically</li>
+                        <li><strong>Mixed Formats:</strong> You can mix different formats in one file</li>
+                        <li><strong>Duplicates:</strong> Duplicate proxies will be automatically skipped</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Пример файла -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-file-text me-2"></i>Example File Content</h6>
+                </div>
+                <div class="card-body">
+                    <pre class="bg-light p-3 rounded mb-0"><code># TikTok Proxies
+# Updated: 2025-10-05
+
+# US Proxies
+192.168.1.1:8080:user1:pass1
+192.168.1.2:8080:user2:pass2
+
+# EU Proxies
+https://user3:pass3@proxy.example.com:3128
+socks5://10.0.0.1:1080
+
+# Asian Proxies (no auth)
+203.0.113.1:8080
+203.0.113.2:8080</code></pre>
+                </div>
+            </div>
+
+            <!-- Tips -->
+            <div class="alert alert-info mt-4">
+                <h6><i class="bi bi-lightbulb me-2"></i>Import Tips:</h6>
+                <ul class="mb-0">
+                    <li><strong>Large Files:</strong> For 100+ proxies, disable testing during import for faster processing</li>
+                    <li><strong>Testing:</strong> You can test all proxies later using "Test All" button on proxy list page</li>
+                    <li><strong>Encoding:</strong> Make sure your file is UTF-8 encoded</li>
+                    <li><strong>Performance:</strong> Import without testing takes ~1 second per 100 proxies</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

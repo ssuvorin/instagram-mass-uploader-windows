@@ -65,6 +65,10 @@ class TikTokProxy(models.Model):
         help_text="Внешний IP-адрес при использовании прокси"
     )
     
+    # Метаданные
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
+    
     class Meta:
         verbose_name = "TikTok Proxy"
         verbose_name_plural = "TikTok Proxies"
@@ -319,6 +323,14 @@ class BulkUploadAccount(models.Model):
         on_delete=models.CASCADE, 
         related_name='bulk_uploads'
     )
+    proxy = models.ForeignKey(
+        TikTokProxy,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='bulk_used_in',
+        help_text="Прокси, используемый для этой задачи"
+    )
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     uploaded_success_count = models.IntegerField(default=0)
@@ -468,8 +480,12 @@ class WarmupTask(models.Model):
     
     # Логи
     log = models.TextField(blank=True, default="")
+    
+    # Метаданные
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
     
     class Meta:
         verbose_name = "Warmup Task"
@@ -500,6 +516,14 @@ class WarmupTaskAccount(models.Model):
         TikTokAccount,
         on_delete=models.CASCADE,
         related_name='warmup_tasks'
+    )
+    proxy = models.ForeignKey(
+        TikTokProxy,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='warmup_used_in',
+        help_text="Прокси, используемый для прогрева"
     )
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
@@ -549,7 +573,13 @@ class FollowTarget(models.Model):
         related_name='targets'
     )
     username = models.CharField(max_length=100, help_text="TikTok username (без @)")
+    user_id = models.CharField(max_length=100, null=True, blank=True, help_text="TikTok user ID")
+    full_name = models.CharField(max_length=255, blank=True, default="", help_text="Полное имя пользователя")
+    is_private = models.BooleanField(default=False, help_text="Приватный ли аккаунт")
+    is_verified = models.BooleanField(default=False, help_text="Верифицирован ли аккаунт")
+    profile_pic_url = models.URLField(blank=True, default="", help_text="URL аватарки")
     added_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         verbose_name = "Follow Target"
@@ -633,9 +663,18 @@ class FollowTaskAccount(models.Model):
         on_delete=models.CASCADE,
         related_name='follow_tasks'
     )
+    proxy = models.ForeignKey(
+        TikTokProxy,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='follow_used_in',
+        help_text="Прокси, используемый для подписок"
+    )
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     follow_count = models.IntegerField(default=0)
+    last_target_id = models.IntegerField(null=True, blank=True, help_text="ID последнего обработанного таргета")
     log = models.TextField(blank=True, default="")
     
     started_at = models.DateTimeField(null=True, blank=True)
@@ -706,6 +745,14 @@ class CookieRobotTaskAccount(models.Model):
         TikTokAccount,
         on_delete=models.CASCADE,
         related_name='cookie_tasks'
+    )
+    proxy = models.ForeignKey(
+        TikTokProxy,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='cookie_used_in',
+        help_text="Прокси, используемый для обновления cookies"
     )
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')

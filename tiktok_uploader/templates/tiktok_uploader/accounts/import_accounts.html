@@ -1,0 +1,360 @@
+{% extends "tiktok_uploader/base.html" %}
+
+{% block title %}Import TikTok Accounts{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="{% url 'tiktok_uploader:account_list' %}" class="text-decoration-none text-muted">
+                <i class="bi bi-arrow-left"></i> Back to Accounts
+            </a>
+            <h2 class="mb-0 mt-2">
+                <i class="bi bi-file-earmark-arrow-up"></i> Import TikTok Accounts
+            </h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Form -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-upload"></i> Upload Accounts File</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Format Info -->
+                    <div class="alert alert-info">
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <i class="bi bi-info-circle-fill fs-3"></i>
+                            </div>
+                            <div>
+                                <h6 class="alert-heading fw-bold">Supported File Formats</h6>
+                                <p class="mb-2">Upload a text file (.txt) with one account per line in the following format:</p>
+                                
+                                <div class="mt-3">
+                                    <h6 class="fw-bold">Format 1: Basic (username:password)</h6>
+                                    <code class="d-block bg-dark text-white p-2 rounded">username1:password123</code>
+                                    <small class="text-muted">Minimum required: username and password</small>
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <h6 class="fw-bold">Format 2: With Email (username:password:email:email_password)</h6>
+                                    <code class="d-block bg-dark text-white p-2 rounded">username2:password456:user@email.com:emailpass789</code>
+                                    <small class="text-muted">For accounts with email verification</small>
+                                </div>
+                                
+                                <div class="alert alert-warning mt-3 mb-0">
+                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                    <strong>Important:</strong>
+                                    <ul class="mb-0 mt-2">
+                                        <li>Use colon (:) as separator</li>
+                                        <li>One account per line</li>
+                                        <li>Empty lines and lines starting with # will be skipped</li>
+                                        <li>TikTok does not support 2FA in this module</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Import Form -->
+                    <form method="post" enctype="multipart/form-data" id="importForm">
+                        {% csrf_token %}
+                        
+                        <!-- File Upload -->
+                        <div class="mb-4">
+                            <label for="accounts_file" class="form-label fw-bold">
+                                <i class="bi bi-file-text"></i> Accounts File *
+                            </label>
+                            <input 
+                                type="file" 
+                                class="form-control" 
+                                id="accounts_file" 
+                                name="accounts_file" 
+                                accept=".txt"
+                                required
+                            >
+                            <small class="text-muted">Select a .txt file with account credentials</small>
+                        </div>
+
+                        <!-- Client Selection (Optional) -->
+                        <div class="mb-4">
+                            <label for="client_id" class="form-label fw-bold">
+                                <i class="bi bi-building"></i> Client (Optional)
+                            </label>
+                            <select class="form-select" id="client_id" name="client_id">
+                                <option value="">-- No Client --</option>
+                                {% for client in clients %}
+                                <option value="{{ client.id }}">{{ client.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Assign imported accounts to a specific client</small>
+                        </div>
+
+                        <!-- Locale Selection -->
+                        <div class="mb-4">
+                            <label for="profile_locale" class="form-label fw-bold">
+                                <i class="bi bi-globe"></i> Account Locale
+                            </label>
+                            <select class="form-select" id="profile_locale" name="profile_locale">
+                                <option value="en_US" selected>🇺🇸 English (United States)</option>
+                                <option value="ru_RU">🇷🇺 Русский (Russia)</option>
+                                <option value="es_ES">🇪🇸 Español (Spain)</option>
+                                <option value="pt_BR">🇧🇷 Português (Brazil)</option>
+                                <option value="de_DE">🇩🇪 Deutsch (Germany)</option>
+                                <option value="fr_FR">🇫🇷 Français (France)</option>
+                            </select>
+                            <small class="text-muted">Default locale for all imported accounts</small>
+                        </div>
+
+                        <hr>
+
+                        <!-- Proxy Settings -->
+                        <h5 class="mb-3"><i class="bi bi-shield-lock"></i> Proxy Settings</h5>
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Proxy Assignment Mode</label>
+                            <div class="form-check">
+                                <input 
+                                    class="form-check-input" 
+                                    type="radio" 
+                                    name="proxy_selection" 
+                                    id="proxy_locale" 
+                                    value="locale_only" 
+                                    checked
+                                >
+                                <label class="form-check-label" for="proxy_locale">
+                                    <strong>Match Locale (Recommended)</strong>
+                                    <br>
+                                    <small class="text-muted">
+                                        Assign proxies from the same country as selected locale
+                                    </small>
+                                </label>
+                            </div>
+                            <div class="form-check mt-2">
+                                <input 
+                                    class="form-check-input" 
+                                    type="radio" 
+                                    name="proxy_selection" 
+                                    id="proxy_any" 
+                                    value="any"
+                                >
+                                <label class="form-check-label" for="proxy_any">
+                                    <strong>Any Available</strong>
+                                    <br>
+                                    <small class="text-muted">
+                                        Use any available proxy regardless of location
+                                    </small>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-4" id="proxyLocaleStrictDiv">
+                            <div class="form-check">
+                                <input 
+                                    class="form-check-input" 
+                                    type="checkbox" 
+                                    id="proxy_locale_strict" 
+                                    name="proxy_locale_strict" 
+                                    value="1"
+                                >
+                                <label class="form-check-label" for="proxy_locale_strict">
+                                    <strong>Strict Locale Matching</strong>
+                                    <br>
+                                    <small class="text-muted">
+                                        Only use proxies from exact locale country (skip accounts if not enough proxies)
+                                    </small>
+                                </label>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Dolphin Profile Settings -->
+                        <h5 class="mb-3"><i class="bi bi-window"></i> Dolphin Anty Profiles</h5>
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Profile Creation Mode</label>
+                            <div class="form-check">
+                                <input 
+                                    class="form-check-input" 
+                                    type="radio" 
+                                    name="profile_mode" 
+                                    id="profile_create" 
+                                    value="create_profiles" 
+                                    checked
+                                >
+                                <label class="form-check-label" for="profile_create">
+                                    <strong>Create Dolphin Profiles</strong>
+                                    <br>
+                                    <small class="text-muted">
+                                        Automatically create Dolphin Anty browser profiles for each account
+                                    </small>
+                                </label>
+                            </div>
+                            <div class="form-check mt-2">
+                                <input 
+                                    class="form-check-input" 
+                                    type="radio" 
+                                    name="profile_mode" 
+                                    id="profile_skip" 
+                                    value="skip_profiles"
+                                >
+                                <label class="form-check-label" for="profile_skip">
+                                    <strong>Skip Profile Creation</strong>
+                                    <br>
+                                    <small class="text-muted">
+                                        Only import account data, profiles can be created later
+                                    </small>
+                                </label>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Submit Button -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                                <i class="bi bi-cloud-upload"></i> Start Import
+                            </button>
+                            <a href="{% url 'tiktok_uploader:account_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar - Stats -->
+        <div class="col-lg-4">
+            <!-- Proxy Stats -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="bi bi-bar-chart"></i> Available Proxies</h6>
+                </div>
+                <div class="card-body">
+                    {% if proxy_stats %}
+                        <table class="table table-sm table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Country</th>
+                                    <th class="text-end">Count</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for country, count in proxy_stats.items %}
+                                <tr>
+                                    <td>{{ country }}</td>
+                                    <td class="text-end">
+                                        <span class="badge bg-primary">{{ count }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p class="text-muted mb-0">
+                            <i class="bi bi-exclamation-circle"></i> No available proxies found.
+                            <a href="{% url 'tiktok_uploader:create_proxy' %}">Add proxies</a>
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Tips -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="bi bi-lightbulb"></i> Import Tips</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li class="mb-2">
+                            <strong>Prepare your file:</strong> Ensure each line has valid credentials
+                        </li>
+                        <li class="mb-2">
+                            <strong>Proxies:</strong> Have enough proxies for your accounts (1:1 ratio recommended)
+                        </li>
+                        <li class="mb-2">
+                            <strong>Locale matching:</strong> Use locale-matched proxies for better account safety
+                        </li>
+                        <li class="mb-2">
+                            <strong>Dolphin profiles:</strong> Creating profiles now saves time later
+                        </li>
+                        <li>
+                            <strong>Updates:</strong> Existing accounts will be updated with new data
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-5">
+                <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5>Importing Accounts...</h5>
+                <p class="text-muted mb-0">
+                    Please wait while we process your file.<br>
+                    This may take a few moments.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('importForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+    
+    // Show loading modal on submit
+    form.addEventListener('submit', function(e) {
+        const fileInput = document.getElementById('accounts_file');
+        
+        if (!fileInput.files || !fileInput.files[0]) {
+            e.preventDefault();
+            alert('Please select a file to import!');
+            return false;
+        }
+        
+        // Show loading modal
+        loadingModal.show();
+        submitBtn.disabled = true;
+    });
+    
+    // Toggle strict locale checkbox visibility
+    const proxyLocaleRadio = document.getElementById('proxy_locale');
+    const proxyAnyRadio = document.getElementById('proxy_any');
+    const strictDiv = document.getElementById('proxyLocaleStrictDiv');
+    
+    function toggleStrictLocale() {
+        if (proxyLocaleRadio.checked) {
+            strictDiv.style.display = 'block';
+        } else {
+            strictDiv.style.display = 'none';
+        }
+    }
+    
+    proxyLocaleRadio.addEventListener('change', toggleStrictLocale);
+    proxyAnyRadio.addEventListener('change', toggleStrictLocale);
+    
+    // Initial state
+    toggleStrictLocale();
+});
+</script>
+{% endblock %}
+
