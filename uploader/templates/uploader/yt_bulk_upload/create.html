@@ -8,6 +8,19 @@
     .btn-danger { background: linear-gradient(135deg, #ff0000, #cc0000); border: none; }
     .btn-danger:hover { background: linear-gradient(135deg, #cc0000, #990000); }
     .bg-danger { background: linear-gradient(135deg, #ff0000, #cc0000) !important; }
+    
+    .badge-custom {
+        display: inline-block;
+        padding: 0.25em 0.4em;
+        font-size: 0.75em;
+        font-weight: 700;
+        line-height: 1;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;
+        border-radius: 0.25rem;
+        border: 1px solid transparent;
+    }
 </style>
 {% endblock %}
 
@@ -48,18 +61,56 @@
                     <div class="mb-3">
                         <label class="form-label fw-bold">{{ form.selected_accounts.label }}</label>
                         
-                        {% if form.client_filter.field.choices %}
-                        <div class="mb-3">
-                            <label for="{{ form.client_filter.id_for_label }}" class="form-label">
-                                {{ form.client_filter.label }}
-                            </label>
-                            {{ form.client_filter }}
+                        <!-- Filter Controls -->
+                        <div class="row mb-3">
+                            {% if form.client_filter.field.choices %}
+                            <div class="col-md-2">
+                                <div class="client-filter-wrapper">
+                                    {{ form.client_filter }}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if form.tag_filter.field.choices %}
+                            <div class="col-md-2">
+                                <div class="tag-filter-wrapper">
+                                    {{ form.tag_filter }}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="col-md-4">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control" id="account-search" placeholder="Search accounts...">
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-outline-secondary" id="select-all">
+                                        <i class="bi bi-check-all"></i> Select All
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" id="deselect-all">
+                                        <i class="bi bi-x-square"></i> Deselect All
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        {% endif %}
                         
-                        <div class="row">
+                        <div class="row" id="accounts-container">
                             {% for account in form.selected_accounts.field.queryset %}
-                            <div class="col-md-6 mb-3">
+                            <div class="col-lg-6 col-md-12 account-item mb-3" 
+                                 data-username="{{ account.email|lower }}"
+                                 data-has-proxy="{{ account.proxy|yesno:'true,false' }}"
+                                 data-proxy-active="{% if account.proxy %}{{ account.proxy.is_active|yesno:'true,false' }}{% else %}false{% endif %}"
+                                 data-proxy-status="{% if account.proxy %}{{ account.proxy.status|lower }}{% else %}none{% endif %}"
+                                 data-has-dolphin="{{ account.dolphin_profile_id|yesno:'true,false' }}"
+                                 data-last-login="{{ account.last_login|default:'never' }}"
+                                 data-account-id="{{ account.id }}"
+                                 data-status="{{ account.status|lower }}"
+                                 data-client-id="{% if account.client %}{{ account.client.id }}{% endif %}"
+                                 data-tag-id="{% if account.tag %}{{ account.tag.id }}{% endif %}">
                                 <div class="card h-100">
                                     <div class="card-body">
                                         <div class="form-check">
@@ -87,6 +138,13 @@
                                                     {% if account.dolphin_profile_id %}
                                                     <span class="badge bg-info me-1">
                                                         <i class="bi bi-laptop"></i> Dolphin
+                                                    </span>
+                                                    {% endif %}
+                                                    
+                                                    <!-- Tag -->
+                                                    {% if account.tag %}
+                                                    <span class="badge-custom me-1" style="background-color: {{ account.tag.color }}; color: white; border-color: {{ account.tag.color }};">
+                                                        <i class="bi bi-tag me-1"></i>{{ account.tag.name }}
                                                     </span>
                                                     {% endif %}
                                                 </div>
@@ -157,5 +215,154 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('account-search');
+    const clientFilter = document.getElementById('client-filter');
+    const tagFilter = document.getElementById('tag-filter');
+    const selectAllBtn = document.getElementById('select-all');
+    const deselectAllBtn = document.getElementById('deselect-all');
+    const accountItems = document.querySelectorAll('.account-item');
+    
+    // Debounce function for search
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+    
+    // Filter and search function
+    function filterAndSearch() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const clientValue = clientFilter ? clientFilter.value : '';
+        const tagValue = tagFilter ? tagFilter.value : '';
+        
+        let visibleCount = 0;
+        
+        accountItems.forEach(item => {
+            const username = item.dataset.username || '';
+            const clientId = item.dataset.clientId || '';
+            const tagId = item.dataset.tagId || '';
+            
+            let show = true;
+            
+            // Search filter
+            if (searchTerm && !username.includes(searchTerm)) {
+                show = false;
+            }
+            
+            // Client filter
+            if (clientValue && show) {
+                if (clientValue === 'no_client') {
+                    if (clientId !== '') {
+                        show = false;
+                    }
+                } else if (clientValue !== '') {
+                    if (clientId !== clientValue) {
+                        show = false;
+                    }
+                }
+            }
+            
+            // Tag filter
+            if (tagValue && show) {
+                if (tagValue === 'no_tag') {
+                    if (tagId !== '') {
+                        show = false;
+                    }
+                } else if (tagValue !== '') {
+                    if (tagId !== tagValue) {
+                        show = false;
+                    }
+                }
+            }
+            
+            if (show) {
+                item.style.display = 'block';
+                visibleCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+        
+        // Update select all button state
+        const visibleCheckboxes = Array.from(accountItems)
+            .filter(item => item.style.display !== 'none')
+            .map(item => item.querySelector('input[type="checkbox"]'));
+        
+        const checkedVisible = visibleCheckboxes.filter(cb => cb.checked);
+        
+        if (selectAllBtn) {
+            selectAllBtn.textContent = checkedVisible.length === visibleCheckboxes.length ? 
+                '<i class="bi bi-check-all"></i> Deselect All' : 
+                '<i class="bi bi-check-all"></i> Select All';
+        }
+    }
+    
+    // Event listeners
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce(filterAndSearch, 300));
+    }
+    
+    if (clientFilter) {
+        clientFilter.addEventListener('change', filterAndSearch);
+    }
+    
+    if (tagFilter) {
+        tagFilter.addEventListener('change', filterAndSearch);
+    }
+    
+    // Select all functionality
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', function() {
+            const visibleCheckboxes = Array.from(accountItems)
+                .filter(item => item.style.display !== 'none')
+                .map(item => item.querySelector('input[type="checkbox"]'));
+            
+            const allChecked = visibleCheckboxes.every(cb => cb.checked);
+            
+            visibleCheckboxes.forEach(checkbox => {
+                checkbox.checked = !allChecked;
+            });
+            
+            filterAndSearch();
+        });
+    }
+    
+    if (deselectAllBtn) {
+        deselectAllBtn.addEventListener('click', function() {
+            const visibleCheckboxes = Array.from(accountItems)
+                .filter(item => item.style.display !== 'none')
+                .map(item => item.querySelector('input[type="checkbox"]'));
+            
+            visibleCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            
+            filterAndSearch();
+        });
+    }
+    
+    // Update select all button when individual checkboxes change
+    accountItems.forEach(item => {
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        if (checkbox) {
+            checkbox.addEventListener('change', filterAndSearch);
+        }
+    });
+    
+    // Initial filter
+    filterAndSearch();
+});
+</script>
 {% endblock %}
 

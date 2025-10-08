@@ -27,6 +27,13 @@ class YouTubeShortsBulkUploadTaskForm(forms.ModelForm):
         label="Filter by client"
     )
     
+    tag_filter = forms.ChoiceField(
+        choices=[],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'tag-filter'}),
+        label="Filter by tag"
+    )
+    
     selected_accounts = forms.ModelMultipleChoiceField(
         queryset=None,
         widget=forms.CheckboxSelectMultiple,
@@ -58,9 +65,17 @@ class YouTubeShortsBulkUploadTaskForm(forms.ModelForm):
         except ImportError:
             self.fields['client_filter'].choices = [('', 'All clients (cabinet app not available)')]
         
+        # Set tag filter choices
+        from uploader.models import Tag
+        tags = Tag.objects.all().order_by('name')
+        tag_choices = [('', 'All tags'), ('no_tag', 'Without tag')]
+        tag_choices.extend([(str(tag.id), tag.name) for tag in tags])
+        self.fields['tag_filter'].choices = tag_choices
+        
         # Set queryset dynamically for fresh data
         self.fields['selected_accounts'].queryset = (
             YouTubeAccount.objects.all()
+            .select_related('proxy', 'client', 'tag')
             .order_by('-created_at')
             .annotate(
                 uploaded_success_total=Coalesce(Sum('bulk_uploads__uploaded_success_count'), Value(0)),
