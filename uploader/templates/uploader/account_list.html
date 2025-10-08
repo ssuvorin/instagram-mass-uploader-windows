@@ -41,6 +41,9 @@
     </div>
     <div class="col-md-6 text-end">
         <div class="btn-group me-2" role="group">
+            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#columnSettingsModal" title="Manage Columns">
+                <i class="bi bi-layout-three-columns"></i> Columns
+            </button>
             <a href="{% url 'bulk_change_proxy' %}" class="btn btn-outline-warning" title="Bulk Change Proxy">
                 <i class="bi bi-shield-lock"></i> Bulk Proxy
             </a>
@@ -148,16 +151,16 @@
                         <th style="width: 40px;">
                             <input type="checkbox" id="selectAll" class="form-check-input" title="Select All">
                         </th>
-                        <th>Username</th>
-                        <th>Status</th>
-                        <th>Tag</th>
-                        <th>Dolphin Profile</th>
-                        <th>Proxy</th>
-                        <th>Uploaded</th>
-                        <th>Failed</th>
-                        <th>Last Used</th>
-                        <th>Last Warmed</th>
-                        <th>Actions</th>
+                        <th data-column="username">Username</th>
+                        <th data-column="status">Status</th>
+                        <th data-column="tag">Tag</th>
+                        <th data-column="dolphin">Dolphin Profile</th>
+                        <th data-column="proxy">Proxy</th>
+                        <th data-column="uploaded">Uploaded</th>
+                        <th data-column="failed">Failed</th>
+                        <th data-column="last-used">Last Used</th>
+                        <th data-column="last-warmed">Last Warmed</th>
+                        <th data-column="actions">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -166,8 +169,8 @@
                         <td>
                             <input type="checkbox" class="form-check-input account-checkbox" value="{{ account.id }}" data-username="{{ account.username }}">
                         </td>
-                        <td>{{ account.username }}</td>
-                        <td>
+                        <td data-column="username">{{ account.username }}</td>
+                        <td data-column="status">
                             {% if account.status == 'ACTIVE' %}
                             <span class="badge badge-active">Active</span>
                             {% elif account.status == 'BLOCKED' %}
@@ -186,7 +189,7 @@
                             <span class="badge badge-inactive">Unknown</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td data-column="tag">
                             {% if account.tag %}
                             <span class="badge" style="background-color: {{ account.tag.color }}; color: white;">
                                 <i class="bi bi-tag me-1"></i>{{ account.tag.name }}
@@ -195,14 +198,14 @@
                             <span class="text-muted">—</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td data-column="dolphin">
                             {% if account.dolphin_profile_id %}
                             <span class="badge bg-success">✓ Configured</span>
                             {% else %}
                             <span class="badge bg-secondary">Not Set</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td data-column="proxy">
                             {% if account.proxy %}
                             <span class="badge badge-proxy" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ account.proxy.proxy_type }}://{{ account.proxy.host }}:{{ account.proxy.port }}">
                                 <i class="bi bi-geo-alt me-1"></i>
@@ -217,27 +220,27 @@
                             <span class="text-muted">None</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td data-column="uploaded">
                             <span class="badge bg-success">{{ account.uploaded_success_total }}</span>
                         </td>
-                        <td>
+                        <td data-column="failed">
                             <span class="badge bg-danger">{{ account.uploaded_failed_total }}</span>
                         </td>
-                        <td>
+                        <td data-column="last-used">
                             {% if account.last_used %}
                             {{ account.last_used|date:"Y-m-d H:i" }}
                             {% else %}
                             <span class="text-muted">Never</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td data-column="last-warmed">
                             {% if account.last_warmed %}
                             {{ account.last_warmed|date:"Y-m-d H:i" }}
                             {% else %}
                             <span class="text-muted">Never</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td data-column="actions">
                             <div class="btn-group">
                                 <a href="{% url 'account_detail' account_id=account.id %}" class="btn btn-sm btn-info" title="View Details">
                                     <i class="bi bi-eye"></i>
@@ -298,6 +301,103 @@
                     <i class="bi bi-arrow-right"></i>
                 </button>
                 {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Column Settings Modal -->
+<div class="modal fade" id="columnSettingsModal" tabindex="-1" aria-labelledby="columnSettingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="columnSettingsModalLabel">
+                    <i class="bi bi-layout-three-columns"></i> Manage Columns
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3">Select which columns to display in the accounts table:</p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input column-toggle" type="checkbox" value="username" id="col-username" checked>
+                            <label class="form-check-label" for="col-username">
+                                Username
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input column-toggle" type="checkbox" value="status" id="col-status" checked>
+                            <label class="form-check-label" for="col-status">
+                                Status
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input column-toggle" type="checkbox" value="tag" id="col-tag" checked>
+                            <label class="form-check-label" for="col-tag">
+                                Tag
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input column-toggle" type="checkbox" value="dolphin" id="col-dolphin" checked>
+                            <label class="form-check-label" for="col-dolphin">
+                                Dolphin Profile
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input column-toggle" type="checkbox" value="proxy" id="col-proxy" checked>
+                            <label class="form-check-label" for="col-proxy">
+                                Proxy
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input column-toggle" type="checkbox" value="uploaded" id="col-uploaded" checked>
+                            <label class="form-check-label" for="col-uploaded">
+                                Uploaded
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input column-toggle" type="checkbox" value="failed" id="col-failed" checked>
+                            <label class="form-check-label" for="col-failed">
+                                Failed
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input column-toggle" type="checkbox" value="last-used" id="col-last-used" checked>
+                            <label class="form-check-label" for="col-last-used">
+                                Last Used
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input column-toggle" type="checkbox" value="last-warmed" id="col-last-warmed" checked>
+                            <label class="form-check-label" for="col-last-warmed">
+                                Last Warmed
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input column-toggle" type="checkbox" value="actions" id="col-actions" checked>
+                            <label class="form-check-label" for="col-actions">
+                                Actions
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="selectAllColumns">
+                        <i class="bi bi-check-square"></i> Select All
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="deselectAllColumns">
+                        <i class="bi bi-square"></i> Deselect All
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="applyColumnSettings">
+                    <i class="bi bi-check"></i> Apply Settings
+                </button>
             </div>
         </div>
     </div>
@@ -498,6 +598,88 @@ function bulkDeleteAccounts() {
 	document.body.appendChild(form);
 	form.submit();
 }
+
+// Column Management
+const COLUMN_STORAGE_KEY = 'account_list_visible_columns';
+
+// Default visible columns
+const DEFAULT_VISIBLE_COLUMNS = ['username', 'status', 'tag', 'dolphin', 'proxy', 'uploaded', 'failed', 'last-used', 'last-warmed', 'actions'];
+
+// Load column settings from localStorage
+function loadColumnSettings() {
+	const saved = localStorage.getItem(COLUMN_STORAGE_KEY);
+	if (saved) {
+		try {
+			return JSON.parse(saved);
+		} catch (e) {
+			console.warn('Failed to parse saved column settings, using defaults');
+		}
+	}
+	return DEFAULT_VISIBLE_COLUMNS;
+}
+
+// Save column settings to localStorage
+function saveColumnSettings(visibleColumns) {
+	localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(visibleColumns));
+}
+
+// Show/hide columns based on settings
+function applyColumnVisibility(visibleColumns) {
+	const columns = document.querySelectorAll('[data-column]');
+	columns.forEach(column => {
+		const columnName = column.getAttribute('data-column');
+		if (visibleColumns.includes(columnName)) {
+			column.style.display = '';
+		} else {
+			column.style.display = 'none';
+		}
+	});
+}
+
+// Initialize column management
+document.addEventListener('DOMContentLoaded', function() {
+	// Load and apply saved column settings
+	const visibleColumns = loadColumnSettings();
+	applyColumnVisibility(visibleColumns);
+	
+	// Update checkboxes in modal to match current settings
+	const checkboxes = document.querySelectorAll('.column-toggle');
+	checkboxes.forEach(checkbox => {
+		checkbox.checked = visibleColumns.includes(checkbox.value);
+	});
+	
+	// Select All / Deselect All buttons
+	document.getElementById('selectAllColumns').addEventListener('click', function() {
+		checkboxes.forEach(checkbox => checkbox.checked = true);
+	});
+	
+	document.getElementById('deselectAllColumns').addEventListener('click', function() {
+		checkboxes.forEach(checkbox => checkbox.checked = false);
+	});
+	
+	// Apply settings button
+	document.getElementById('applyColumnSettings').addEventListener('click', function() {
+		const visibleColumns = Array.from(checkboxes)
+			.filter(checkbox => checkbox.checked)
+			.map(checkbox => checkbox.value);
+		
+		// Ensure at least one column is visible
+		if (visibleColumns.length === 0) {
+			alert('At least one column must be visible!');
+			return;
+		}
+		
+		// Apply visibility
+		applyColumnVisibility(visibleColumns);
+		
+		// Save settings
+		saveColumnSettings(visibleColumns);
+		
+		// Close modal
+		const modal = bootstrap.Modal.getInstance(document.getElementById('columnSettingsModal'));
+		modal.hide();
+	});
+});
 </script>
 
 <!-- CSRF Token для JavaScript -->
