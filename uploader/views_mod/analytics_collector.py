@@ -6,16 +6,21 @@ from django.http import JsonResponse
 from ..analytics_forms import ClientAnalyticsForm
 from ..models import HashtagAnalytics
 from cabinet.models import Client, ClientHashtag
+import logging
+import traceback
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
 @require_http_methods(["GET", "POST"])
 def analytics_collector(request):
     """UI: Collect manual analytics data for clients - similar to hashtag analyzer"""
-    # Only superusers can access analytics collector
-    if not request.user.is_superuser:
-        messages.error(request, 'Доступ запрещен. Только администраторы могут собирать аналитику.')
-        return redirect('dashboard')
+    try:
+        # Only superusers can access analytics collector
+        if not request.user.is_superuser:
+            messages.error(request, 'Доступ запрещен. Только администраторы могут собирать аналитику.')
+            return redirect('dashboard')
     
     # Get all clients for dropdown
     clients = Client.objects.all().order_by('name')
@@ -131,6 +136,22 @@ def analytics_collector(request):
             'form_social_network': social_network,
             'form_data': form_data,
         })
+        return render(request, 'uploader/analytics/collector.html', context)
+    
+    except Exception as e:
+        logger.error(f"Error in analytics_collector: {str(e)}")
+        logger.error(traceback.format_exc())
+        messages.error(request, f'Произошла ошибка: {str(e)}')
+        
+        # Return to form with error
+        clients = Client.objects.all().order_by('name')
+        form = ClientAnalyticsForm()
+        context = {
+            'clients': clients,
+            'active_tab': 'analytics',
+            'form': form,
+            'form_data': {},
+        }
         return render(request, 'uploader/analytics/collector.html', context)
 
 

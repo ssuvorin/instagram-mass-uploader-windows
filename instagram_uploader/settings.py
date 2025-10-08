@@ -218,14 +218,14 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
             'level': 'INFO',
-            # 'filters': ['mask_secrets', 'truncate_long', 'deduplicate'],
+            'filters': ['mask_secrets', 'truncate_long', 'deduplicate'],
         },
         'file': {
             'class': 'logging.FileHandler',
             'filename': os.path.join(BASE_DIR, 'django.log'),
             'formatter': 'verbose',
             'level': 'INFO',
-            # 'filters': ['mask_secrets', 'truncate_long'],
+            'filters': ['mask_secrets', 'truncate_long'],
         },
         'null': {
             'class': 'logging.NullHandler',
@@ -264,8 +264,8 @@ LOGGING = {
             'propagate': False,
         },
         'django.request': {
-            'handlers': ['null'],
-            'level': 'WARNING',
+            'handlers': ['console', 'file'],
+            'level': 'ERROR',
             'propagate': False,
         },
         'django.server': {
