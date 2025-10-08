@@ -44,12 +44,16 @@ from bot.src.videos import get_videos_list, get_videos_by_folders
 from bot.src.instagram_uploader.util import random_delay, realistic_type, human_action
 
 # Настройка логирования
+# Get the project root directory for django.log
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+django_log_path = os.path.join(project_root, 'django.log')
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),  # Вывод в консоль
-        logging.FileHandler('bot/log.txt', encoding='utf-8')  # Вывод в файл
+        logging.FileHandler(django_log_path, encoding='utf-8')  # Вывод в django.log
     ]
 )
 logger = logging.getLogger(__name__)

@@ -6,13 +6,17 @@ import os
 # If FORCE_LOG_TO_STDERR or COOKIE_ROBOT_ISOLATED is set, redirect stream logs to stderr
 _stream = sys.stderr if os.environ.get('FORCE_LOG_TO_STDERR') == '1' or os.environ.get('COOKIE_ROBOT_ISOLATED') == '1' else sys.stdout
 
+# Get the project root directory for django.log
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+django_log_path = os.path.join(project_root, 'django.log')
+
 # Configure root logger
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(_stream),
-        logging.FileHandler('bot/log.txt', encoding='utf-8')
+        logging.FileHandler(django_log_path, encoding='utf-8')
     ]
 )
 
@@ -27,7 +31,7 @@ if not logger.handlers:
     console_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
     logger.addHandler(console_handler)
     
-    # Add file handler
-    file_handler = logging.FileHandler('bot/log.txt', encoding='utf-8')
+    # Add file handler - write to django.log instead of bot/log.txt
+    file_handler = logging.FileHandler(django_log_path, encoding='utf-8')
     file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
     logger.addHandler(file_handler) 

@@ -5,6 +5,22 @@ import random
 import json
 
 
+class Tag(models.Model):
+    """Tags for categorizing Instagram accounts"""
+    name = models.CharField(max_length=50, unique=True)
+    color = models.CharField(max_length=7, default='#6c757d', help_text="Hex color code for UI display")
+    description = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Tag"
+        verbose_name_plural = "Tags"
+        ordering = ['name']
+    
+    def __str__(self):
+        return self.name
+
+
 class Proxy(models.Model):
     PROXY_TYPE_CHOICES = [
         ('HTTP', 'HTTP'),
@@ -91,6 +107,8 @@ class InstagramAccount(models.Model):
     phone_number = models.CharField(max_length=32, null=True, blank=True)
     # Link to client from integrated cabinet
     client = models.ForeignKey('cabinet.Client', on_delete=models.SET_NULL, null=True, blank=True, related_name='accounts')
+    # Tag for categorizing account (only one tag per account)
+    tag = models.ForeignKey(Tag, on_delete=models.SET_NULL, null=True, blank=True, related_name='accounts', help_text="Tag for categorizing this account")
     # Locale in Dolphin-style, e.g. ru_BY, en_IN, es_CL, es_MX, pt_BR
     locale = models.CharField(max_length=5, default='ru_BY', help_text="Dolphin-style locale, e.g. ru_BY en_IN es_CL es_MX pt_BR")
 

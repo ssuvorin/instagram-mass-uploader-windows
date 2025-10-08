@@ -50,11 +50,16 @@
 						<div class="me-3">
 							<i class="bi bi-info-circle-fill fs-3"></i>
 						</div>
-						<div>
-							<h6 class="alert-heading">Expected Formats</h6>
-							<p class="mb-0">
+						<div class="flex-grow-1">
+							<h6 class="alert-heading mb-0">
+								<a class="text-decoration-none text-primary fw-bold" data-bs-toggle="collapse" href="#expectedFormats" role="button" aria-expanded="false" aria-controls="expectedFormats">
+									Expected Formats <i class="bi bi-chevron-down"></i>
+								</a>
+							</h6>
+							<p class="mb-2 mt-2">
 								Upload a text file with each account on a new line in one of these formats:
 							</p>
+							<div class="collapse mt-2" id="expectedFormats">
 							
 							<div class="mt-3">
 								<h6 class="fw-bold">Format 1: Basic Format</h6>
@@ -102,11 +107,12 @@
 							<div class="mt-3">
 								<h6 class="fw-bold">Format 7: Email + JSON cookies array</h6>
 								<code>username:password:email:email_password:[{ "name": "sessionid", "value": "...", "domain": ".instagram.com" }, ...]</code>
-								<p class="small text-muted mt-1">Paste a JSON array of cookie objects as the last segment. Colons inside JSON are supported; they won’t break parsing.</p>
+								<p class="small text-muted mt-1">Paste a JSON array of cookie objects as the last segment. Colons inside JSON are supported; they won't break parsing.</p>
 								<ul class="small text-muted mt-1 mb-0">
 									<li><strong>Required cookie fields</strong>: <code>name</code>, <code>value</code>. Optional: <code>domain</code>, <code>path</code>, <code>httpOnly</code>, <code>secure</code>.</li>
 									<li>Cookies are treated as <strong>web cookies</strong> and will be saved and imported into Dolphin profile (when created).</li>
 								</ul>
+							</div>
 							</div>
 						</div>
 					</div>
@@ -158,6 +164,17 @@
 							{% endfor %}
 						</select>
 						<div class="form-text">Выберите клиента, к которому будут привязаны импортируемые аккаунты.</div>
+					</div>
+
+					<div class="mb-4">
+						<label for="tags" class="form-label">Assign Tag (optional)</label>
+						<select class="form-select" id="tags" name="tags">
+							<option value="">— Without tag —</option>
+							{% for tag in tags %}
+								<option value="{{ tag.id }}">{{ tag.name }}</option>
+							{% endfor %}
+						</select>
+						<div class="form-text">Выберите тег, который будет присвоен всем импортируемым аккаунтам.</div>
 					</div>
 
 					<div class="mb-4">
@@ -215,6 +232,21 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+	// Handle collapse toggle for Expected Formats
+	const collapseElement = document.getElementById('expectedFormats');
+	const toggleLink = document.querySelector('[data-bs-toggle="collapse"]');
+	const chevronIcon = toggleLink.querySelector('i');
+	
+	collapseElement.addEventListener('show.bs.collapse', function () {
+		chevronIcon.classList.remove('bi-chevron-down');
+		chevronIcon.classList.add('bi-chevron-up');
+	});
+	
+	collapseElement.addEventListener('hide.bs.collapse', function () {
+		chevronIcon.classList.remove('bi-chevron-up');
+		chevronIcon.classList.add('bi-chevron-down');
+	});
+
 	const form = document.getElementById('importForm');
 	const submitBtn = document.getElementById('submitBtn');
 	const loadingModalEl = document.getElementById('loadingModal');

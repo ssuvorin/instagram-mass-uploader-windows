@@ -557,7 +557,8 @@ class AsyncLogger:
         }
         
         color = level_colors.get(level.upper(), '\033[0m')
-        return f"{color}[{level.upper()}]{'\033[0m'}"
+        reset_color = '\033[0m'
+        return f"{color}[{level.upper()}]{reset_color}"
 
 # Асинхронный обработчик аккаунта
 class AsyncAccountProcessor:

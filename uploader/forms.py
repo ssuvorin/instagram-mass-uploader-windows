@@ -15,6 +15,7 @@ from .models import (
     BioLinkChangeTask,
     WarmupTask,
     WarmupTaskAccount,
+    Tag,
 )
 from django.db.models import Sum, Value
 from django.db.models.functions import Coalesce
@@ -90,10 +91,19 @@ class ProxyForm(forms.ModelForm):
 
 
 class InstagramAccountForm(forms.ModelForm):
+    tag = forms.ModelChoiceField(
+        queryset=Tag.objects.all().order_by('name'),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        required=False,
+        empty_label="— Without tag —",
+        label="Tag",
+        help_text="Select a tag to categorize this account"
+    )
+    
     class Meta:
         model = InstagramAccount
         fields = ['username', 'password', 'email_username', 'email_password', 
-                  'tfa_secret', 'proxy', 'status', 'notes', 'dolphin_profile_id', 'phone_number', 'locale']
+                  'tfa_secret', 'proxy', 'status', 'notes', 'dolphin_profile_id', 'phone_number', 'locale', 'tag']
         widgets = {
             'password': forms.PasswordInput(render_value=True),
             'email_password': forms.PasswordInput(render_value=True),
@@ -167,6 +177,13 @@ class BulkUploadTaskForm(forms.ModelForm):
         label="Filter by client"
     )
     
+    tag_filter = forms.ChoiceField(
+        choices=[],  # Will be set in __init__
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'tag-filter'}),
+        label="Filter by tag"
+    )
+    
     selected_accounts = forms.ModelMultipleChoiceField(
         queryset=None,  # Will be set in __init__
         widget=forms.CheckboxSelectMultiple,
@@ -209,6 +226,12 @@ class BulkUploadTaskForm(forms.ModelForm):
         except ImportError:
             # If cabinet app is not available, set empty choices but keep visible for debugging
             self.fields['client_filter'].choices = [('', 'All clients (cabinet app not available)')]
+        
+        # Set tag filter choices
+        tags = Tag.objects.all().order_by('name')
+        tag_choices = [('', 'All tags'), ('no_tag', 'Without tag')]
+        tag_choices.extend([(str(tag.id), tag.name) for tag in tags])
+        self.fields['tag_filter'].choices = tag_choices
         
         # Set queryset dynamically to get fresh data from database
         # Sort by creation date descending (newest first) for better UX
@@ -579,6 +602,58 @@ class FollowTaskForm(forms.ModelForm):
 
 # New: WarmupTask form
 from .models import WarmupTask, WarmupTaskAccount  # noqa: E402
+
+
+class AccountImportForm(forms.Form):
+    """Form for importing Instagram accounts with tag assignment"""
+    accounts_file = forms.FileField(
+        widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.txt'}),
+        required=True,
+        label="Accounts File",
+        help_text="Text file with Instagram accounts. Each account on a new line."
+    )
+    
+    client = forms.ModelChoiceField(
+        queryset=None,
+        required=False,
+        empty_label="— Without client —",
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label="Assign to Client (optional)",
+        help_text="Выберите клиента, к которому будут привязаны импортируемые аккаунты."
+    )
+    
+    tags = forms.ModelChoiceField(
+        queryset=Tag.objects.all().order_by('name'),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        required=False,
+        empty_label="— Without tag —",
+        label="Assign Tag (optional)",
+        help_text="Выберите тег, который будет присвоен всем импортируемым аккаунтам."
+    )
+    
+    locale = forms.ChoiceField(
+        choices=[
+            ('ru_BY', 'ru_BY (Русский интерфейс, регион BY)'),
+            ('en_IN', 'en_IN (English interface, India)'),
+            ('es_CL', 'es_CL (Español, Chile)'),
+            ('es_MX', 'es_MX (Español, México)'),
+            ('pt_BR', 'pt_BR (Português, Brasil)'),
+            ('el_GR', 'el_GR (Ελληνικά, Ελλάδα)'),
+            ('de_DE', 'de_DE (Deutsch, Deutschland)'),
+        ],
+        initial='ru_BY',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label="Dolphin Profile Locale",
+        help_text="Локаль профиля Dolphin. Используется для Accept-Language/TZ/Гео."
+    )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        try:
+            from cabinet.models import Client
+            self.fields['client'].queryset = Client.objects.all().order_by('name')
+        except ImportError:
+            self.fields['client'].queryset = Client.objects.none()
 
 
 class WarmupTaskForm(forms.ModelForm):

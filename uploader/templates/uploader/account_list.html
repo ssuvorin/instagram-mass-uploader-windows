@@ -73,11 +73,11 @@
         <div class="card-body">
             <form method="get" action="{% url 'account_list' %}">
                 <div class="row">
-                    <div class="col-md-5 mb-3">
+                    <div class="col-md-4 mb-3">
                         <label for="search" class="form-label">Search</label>
                         <input type="text" name="q" id="search" class="form-control" value="{{ search_query }}" placeholder="Search by username or email">
                     </div>
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-3 mb-3">
                         <label for="status" class="form-label">Status</label>
                         <select name="status" id="status" class="form-select">
                             <option value="">All Statuses</option>
@@ -90,7 +90,17 @@
                             <option value="SUSPENDED" {% if status_filter == 'SUSPENDED' %}selected{% endif %}>Suspended</option>
                         </select>
                     </div>
-                    <div class="col-md-3 mb-3 d-flex align-items-end">
+                    <div class="col-md-3 mb-3">
+                        <label for="tag" class="form-label">Tag</label>
+                        <select name="tag" id="tag" class="form-select">
+                            <option value="">All Tags</option>
+                            <option value="no_tag" {% if tag_filter == 'no_tag' %}selected{% endif %}>Without tag</option>
+                            {% for tag in tags %}
+                                <option value="{{ tag.id }}" {% if tag_filter == tag.id|stringformat:"s" %}selected{% endif %}>{{ tag.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2 mb-3 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
                     </div>
                 </div>
@@ -140,6 +150,7 @@
                         </th>
                         <th>Username</th>
                         <th>Status</th>
+                        <th>Tag</th>
                         <th>Dolphin Profile</th>
                         <th>Proxy</th>
                         <th>Uploaded</th>
@@ -173,6 +184,15 @@
                             <span class="badge badge-suspended">🚫 Suspended</span>
                             {% else %}
                             <span class="badge badge-inactive">Unknown</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if account.tag %}
+                            <span class="badge" style="background-color: {{ account.tag.color }}; color: white;">
+                                <i class="bi bi-tag me-1"></i>{{ account.tag.name }}
+                            </span>
+                            {% else %}
+                            <span class="text-muted">—</span>
                             {% endif %}
                         </td>
                         <td>
@@ -239,7 +259,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="10" class="text-center py-4">
+                        <td colspan="11" class="text-center py-4">
                             <i class="bi bi-person-x fs-1 text-muted mb-3 d-block"></i>
                             <p class="text-muted">No accounts found</p>
                             <a href="{% url 'create_account' %}" class="btn btn-primary btn-sm">Create New Account</a>

@@ -8,6 +8,7 @@ def account_list(request):
     """List all Instagram accounts"""
     status_filter = request.GET.get('status', '')
     search_query = request.GET.get('q', '')
+    tag_filter = request.GET.get('tag', '')
     client_id = request.GET.get('client_id')
     client_name = request.GET.get('client_name')
     agency_id = request.GET.get('agency_id')
@@ -30,6 +31,13 @@ def account_list(request):
             Q(email_username__icontains=search_query) |
             Q(notes__icontains=search_query)
         )
+
+    # Tag filtering
+    if tag_filter:
+        if tag_filter == 'no_tag':
+            accounts = accounts.filter(tag__isnull=True)
+        else:
+            accounts = accounts.filter(tag_id=tag_filter)
 
     # Optional filtering by client/agency for cabinet deep links
     try:
@@ -61,10 +69,16 @@ def account_list(request):
         except Exception:
             accounts = accounts.none()
     
+    # Get tags for filter dropdown
+    from uploader.models import Tag
+    tags = Tag.objects.all().order_by('name')
+    
     context = {
         'accounts': accounts,
         'status_filter': status_filter,
         'search_query': search_query,
+        'tag_filter': tag_filter,
+        'tags': tags,
         'client_id': client_id or '',
         'client_name': client_name or '',
         'agency_id': agency_id or '',
@@ -419,6 +433,16 @@ def import_accounts(request):
                 selected_client = CabinetClient.objects.filter(id=int(client_id_str)).first()
         except Exception:
             selected_client = None
+        
+        # Optional tags selection
+        selected_tag = None
+        try:
+            tag_id = request.POST.get('tags')
+            if tag_id:
+                from uploader.models import Tag
+                selected_tag = Tag.objects.filter(id=int(tag_id)).first()
+        except Exception:
+            selected_tag = None
         
         # Helpers for cookie classification and extraction
         def _detect_mobile_cookies(cookies_str: str, device_info: str | None) -> bool:
@@ -841,6 +865,11 @@ def import_accounts(request):
                         account.save(update_fields=['locale'])
                 except Exception:
                     pass
+                
+                # Assign tag to account
+                if selected_tag:
+                    account.tag = selected_tag
+                    account.save(update_fields=['tag'])
                  
                 if created:
                     logger.info(f"[SUCCESS] Created new account: {username}")
@@ -1034,9 +1063,12 @@ def import_accounts(request):
         return redirect('account_list')
      
     clients = CabinetClient.objects.select_related('agency').all()
+    from uploader.models import Tag
+    tags = Tag.objects.all().order_by('name')
     context = {
         'active_tab': 'import_accounts',
         'clients': clients,
+        'tags': tags,
     }
     return render(request, 'uploader/import_accounts.html', context)
 

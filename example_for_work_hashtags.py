@@ -6,10 +6,18 @@ from datetime import datetime
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-# Настройка логирования
+# Настройка логирования - пишем в django.log
+import os
+project_root = os.path.dirname(os.path.abspath(__file__))
+django_log_path = os.path.join(project_root, 'django.log')
+
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
+    level=logging.INFO,
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler(django_log_path, encoding='utf-8')
+    ]
 )
 logger = logging.getLogger(__name__)
 

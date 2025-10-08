@@ -279,44 +279,44 @@ LOGGING = {
             'propagate': False,
         },
         'uploader.middleware': {
-            'handlers': ['console'],
+            'handlers': ['console', 'file'],
             'level': os.getenv('REQUEST_LOG_LEVEL', 'INFO'),
             'propagate': False,
         },
         'uploader.bulk_tasks': {
-            'handlers': ['console'],
+            'handlers': ['console', 'file'],
             'level': os.getenv('BULK_LOG_LEVEL', 'INFO'),
             'propagate': False,
         },
         # Instagrapi and HTTP request loggers - reduced verbosity to avoid huge JSON dumps
         'instagrapi': {
-            'handlers': ['console'],
+            'handlers': ['console', 'file'],
             'level': os.getenv('INSTAGRAPI_LOG_LEVEL', 'WARNING'),
             'propagate': False,
         },
         'public_request': {
-            'handlers': ['console'],
+            'handlers': ['console', 'file'],
             'level': os.getenv('IG_HTTP_LOG_LEVEL', 'WARNING'),
             'propagate': False,
         },
         'private_request': {
-            'handlers': ['console'],
+            'handlers': ['console', 'file'],
             'level': os.getenv('IG_HTTP_LOG_LEVEL', 'WARNING'),
             'propagate': False,
         },
         # Our auth/avatar services
         'insta.auth': {
-            'handlers': ['console'],
+            'handlers': ['console', 'file'],
             'level': 'DEBUG',
             'propagate': False,
         },
         'insta.avatar': {
-            'handlers': ['console'],
+            'handlers': ['console', 'file'],
             'level': 'DEBUG',
             'propagate': False,
         },
         'insta.follow': {
-            'handlers': ['console'],
+            'handlers': ['console', 'file'],
             'level': 'DEBUG',
             'propagate': False,
         },

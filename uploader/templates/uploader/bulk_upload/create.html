@@ -666,6 +666,13 @@
                                             </div>
                                             {% endif %}
                                         </div>
+                                        <div class="col-md-2">
+                                            {% if form.tag_filter.field.choices %}
+                                            <div class="client-filter-wrapper">
+                                                {{ form.tag_filter }}
+                                            </div>
+                                            {% endif %}
+                                        </div>
                                         <div class="col-md-6">
                                             <div class="d-flex justify-content-end align-items-center gap-2">
                                                 <div class="view-toggle">
@@ -761,6 +768,7 @@
                                          data-account-id="{{ account.id }}"
                                          data-status="{{ account.status|lower }}"
                                          data-client-id="{% if account.client %}{{ account.client.id }}{% endif %}"
+                                         data-tag-id="{% if account.tag %}{{ account.tag.id }}{% endif %}"
                                           {% with dev=account.device %}
                                           data-has-mobile-session="{% if dev and dev.session_settings %}true{% else %}false{% endif %}"
                                           {% endwith %}>
@@ -882,6 +890,13 @@
                                                         {% endif %}
                                                         {% endwith %}
 
+                                                        <!-- Tag -->
+                                                        {% if account.tag %}
+                                                        <span class="badge-custom" style="background-color: {{ account.tag.color }}; color: white; border-color: {{ account.tag.color }};">
+                                                            <i class="bi bi-tag me-1"></i>{{ account.tag.name }}
+                                                        </span>
+                                                        {% endif %}
+                                                        
                                                         <!-- Upload counters (aggregated across tasks) -->
                                                         <span class="badge-custom" style="background: rgba(40, 167, 69, 0.1); color: #28a745; border-color: rgba(40, 167, 69, 0.3);">
                                                             <i class="bi bi-upload me-1"></i>{{ account.uploaded_success_total }} uploaded
@@ -1065,6 +1080,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const mobileSessionWarning = document.getElementById('mobileSessionWarning');
     const mobileSessionCountEl = document.getElementById('mobileSessionCount');
     const clientFilter = document.getElementById('client-filter');
+    const tagFilter = document.getElementById('tag-filter');
     
     // State
     let currentView = 'card';
@@ -1092,6 +1108,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Client filter functionality
     if (clientFilter) {
         clientFilter.addEventListener('change', function() {
+            filterAndPaginate();
+        });
+    }
+    
+    // Tag filter functionality
+    if (tagFilter) {
+        tagFilter.addEventListener('change', function() {
             filterAndPaginate();
         });
     }
@@ -1264,6 +1287,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const status = item.dataset.status || '';
                 const hasMobileSession = item.dataset.hasMobileSession === 'true';
                 const clientId = item.dataset.clientId || '';
+                const tagId = item.dataset.tagId || '';
                 
                 // Search filter
                 if (searchTerm && !username.includes(searchTerm)) {
@@ -1285,6 +1309,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
                 // Если клиент не выбран (пустое значение), показываем все аккаунты
+                
+                // Tag filter
+                if (tagFilter && tagFilter.value) {
+                    if (tagFilter.value === 'no_tag') {
+                        // Показываем только аккаунты без тега
+                        if (tagId !== '') {
+                            return false;
+                        }
+                    } else {
+                        // Показываем только аккаунты с выбранным тегом
+                        if (tagId !== tagFilter.value) {
+                            return false;
+                        }
+                    }
+                }
+                // Если тег не выбран (пустое значение), показываем все аккаунты
                 
                 // Category filter
                 switch(currentFilter) {

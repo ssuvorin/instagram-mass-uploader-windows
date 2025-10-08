@@ -6,10 +6,17 @@ import os
 import sys
 
 # Setup basic logging
+# Get the project root directory for django.log
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+django_log_path = os.path.join(project_root, 'django.log')
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler(sys.stdout)]
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler(django_log_path, encoding='utf-8')
+    ]
 )
 logger = logging.getLogger(__name__)
 
