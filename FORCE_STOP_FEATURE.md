@@ -291,3 +291,4 @@ Use this if the task is stuck or not actually running.
 ❌ Задача уже завершена (COMPLETED/FAILED)  
 
 
+

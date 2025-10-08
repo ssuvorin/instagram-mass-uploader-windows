@@ -387,19 +387,23 @@ def run_bulk_upload_task(task_id: int) -> Dict[str, Any]:
         # ПОСЛЕ выхода из Playwright контекста - обновляем БД
         logger.info(f"[UPLOAD] Updating database for {len(accounts_results)} accounts")
         
-        # Обновляем лог задачи сводной информацией
-        task.log += f"\n[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] 📊 Processing results:\n"
+        # Копим дополнение к логу задачи локально (на случай удаления задачи)
+        task_log_append_parts: List[str] = []
+        task_log_append_parts.append(f"\n[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] 📊 Processing results:\n")
         
         for result in accounts_results:
             try:
-                bulk_acc = BulkUploadAccount.objects.get(id=result['bulk_account_id'])
-                bulk_acc.status = result['status']
-                bulk_acc.started_at = result['started_at']
-                bulk_acc.completed_at = result['completed_at']
-                bulk_acc.uploaded_success_count = result['uploaded_success_count']
-                bulk_acc.uploaded_failed_count = result['uploaded_fail_count']
-                bulk_acc.log = result['log']
-                bulk_acc.save()
+                # Атомарное обновление BulkUploadAccount без загрузки объекта
+                updated_rows = BulkUploadAccount.objects.filter(id=result['bulk_account_id']).update(
+                    status=result['status'],
+                    started_at=result['started_at'],
+                    completed_at=result['completed_at'],
+                    uploaded_success_count=result['uploaded_success_count'],
+                    uploaded_failed_count=result['uploaded_fail_count'],
+                    log=result['log']
+                )
+                if updated_rows == 0:
+                    raise LookupError("BulkUploadAccount matching query does not exist.")
 
                 # Обновляем статус выгруженных видео, если есть
                 uploaded_ids = result.get('uploaded_video_ids')
@@ -409,38 +413,48 @@ def run_bulk_upload_task(task_id: int) -> Dict[str, Any]:
                     except Exception as ve:
                         logger.error(f"Error updating uploaded flags for videos {uploaded_ids}: {ve}")
                 
-                # Обновляем пароль если он был изменен
+                # Обновляем пароль/статус аккаунта по username, чтобы не зависеть от наличия связи
                 if result.get('new_password'):
-                    bulk_acc.account.password = result['new_password']
-                    bulk_acc.account.save(update_fields=['password'])
-                    logger.info(f"[PASSWORD_UPDATE] Password updated for {bulk_acc.account.username}")
+                    from tiktok_uploader.models import TikTokAccount
+                    TikTokAccount.objects.filter(username=result['account_username']).update(password=result['new_password'])
+                    logger.info(f"[PASSWORD_UPDATE] Password updated for {result['account_username']}")
                 
-                # Обновляем статус аккаунта
                 if result.get('new_status'):
-                    bulk_acc.account.status = result['new_status']
-                    bulk_acc.account.save(update_fields=['status'])
-                    logger.info(f"[STATUS_UPDATE] {bulk_acc.account.username} status updated to {result['new_status']}")
+                    from tiktok_uploader.models import TikTokAccount
+                    TikTokAccount.objects.filter(username=result['account_username']).update(status=result['new_status'])
+                    logger.info(f"[STATUS_UPDATE] {result['account_username']} status updated to {result['new_status']}")
                 
-                # Сбрасываем статус на ACTIVE при успешном входе
                 if result.get('reset_status_to_active') and result['status'] == 'COMPLETED':
-                    bulk_acc.account.status = 'ACTIVE'
-                    bulk_acc.account.save(update_fields=['status'])
-                    logger.info(f"[STATUS_RESET] {bulk_acc.account.username} status reset to ACTIVE")
+                    from tiktok_uploader.models import TikTokAccount
+                    TikTokAccount.objects.filter(username=result['account_username']).update(status='ACTIVE')
+                    logger.info(f"[STATUS_RESET] {result['account_username']} status reset to ACTIVE")
                 
-                # Добавляем в общий лог задачи
+                # Добавляем строку в общий лог задачи (копим локально)
                 status_emoji = "✅" if result['status'] == 'COMPLETED' else "❌"
-                task.log += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}]    {status_emoji} {result['account_username']}: {result['uploaded_success_count']} uploaded, {result['uploaded_fail_count']} failed\n"
+                task_log_append_parts.append(
+                    f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}]    {status_emoji} {result['account_username']}: {result['uploaded_success_count']} uploaded, {result['uploaded_fail_count']} failed\n"
+                )
                 
             except Exception as e:
                 logger.error(f"Error updating bulk account {result['bulk_account_id']}: {str(e)}")
-                task.log += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}]    ⚠️ Error updating {result.get('account_username', 'unknown')}\n"
+                task_log_append_parts.append(
+                    f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}]    ⚠️ Error updating {result.get('account_username', 'unknown')}\n"
+                )
         
         # Обновляем статус задачи
-        task.status = 'COMPLETED'
-        task.completed_at = timezone.now()
-        task.log += f"\n[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] 🎉 Task completed!\n"
-        task.log += f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}]    Total processed: {results['processed']}, Successful: {results['successful']}, Failed: {results['failed']}\n"
-        task.save(update_fields=['status', 'completed_at', 'log'])
+        # Формируем финальный лог
+        task_log_append_parts.append(f"\n[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] 🎉 Task completed!\n")
+        task_log_append_parts.append(
+            f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}]    Total processed: {results['processed']}, Successful: {results['successful']}, Failed: {results['failed']}\n"
+        )
+        final_log = (task.log or '') + ''.join(task_log_append_parts)
+
+        # Безопасно обновляем задачу, если она ещё существует
+        BulkUploadTask.objects.filter(id=task_id).update(
+            status='COMPLETED',
+            completed_at=timezone.now(),
+            log=final_log
+        )
         
         # Отправляем уведомление о завершении
         send_message(
@@ -456,14 +470,13 @@ def run_bulk_upload_task(task_id: int) -> Dict[str, Any]:
         logger.error(f"Critical error in bulk upload task {task_id}: {str(e)}")
         logger.log_err()
         
-        # Обновляем статус задачи на Failed
+        # Обновляем статус задачи на Failed (защищенно)
         try:
-            task = BulkUploadTask.objects.get(id=task_id)
-            task.status = 'FAILED'
-            task.completed_at = timezone.now()
-            task.log += f"\n[{timezone.now()}] Critical error: {str(e)}"
-            task.save()
-        except:
+            BulkUploadTask.objects.filter(id=task_id).update(
+                status='FAILED',
+                completed_at=timezone.now()
+            )
+        except Exception:
             pass
         
         return {

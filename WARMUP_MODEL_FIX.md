@@ -207,3 +207,4 @@ class WarmupTaskAdmin(admin.ModelAdmin):
 - ✅ Вычислять длительность выполнения задач
 
 
+

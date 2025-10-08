@@ -189,3 +189,4 @@ print(f"Suspended accounts: {suspended.count()}")
 **Проблема `SynchronousOnlyOperation` при обновлении статусов полностью решена!** ✅
 
 
+

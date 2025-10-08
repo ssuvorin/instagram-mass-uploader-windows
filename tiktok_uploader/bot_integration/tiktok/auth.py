@@ -277,7 +277,7 @@ class Auth:
 
         try:
             self.__reload_page(page)
-            page.goto(Pages.main, wait_until="load", timeout=60000)
+            page.goto(Pages.main, wait_until="load", timeout=80000)
             time.sleep(random.uniform(2, 5))
 
             self.__pass_got_it(page)
