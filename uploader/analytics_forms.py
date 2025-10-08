@@ -259,6 +259,28 @@ class ClientAnalyticsForm(forms.ModelForm):
         if not hashtag or hashtag.strip() == '':
             raise ValidationError('Hashtag is required. Please select a hashtag from the dropdown.')
         
+        # Ensure all numeric fields have default values (replace None with 0)
+        numeric_fields = [
+            'analyzed_medias', 'total_views', 'total_likes', 'total_comments',
+            'total_shares', 'total_followers', 'instagram_stories_views',
+            'instagram_reels_views', 'youtube_subscribers', 'youtube_watch_time',
+            'tiktok_video_views', 'tiktok_profile_views', 'total_accounts',
+            'max_videos_per_account', 'max_views_per_video', 'max_views_per_account',
+            'max_likes_per_video', 'max_likes_per_account'
+        ]
+        float_fields = [
+            'growth_rate', 'avg_videos_per_account', 'avg_views_per_video',
+            'avg_views_per_account', 'avg_likes_per_video', 'avg_likes_per_account'
+        ]
+        
+        for field in numeric_fields:
+            if cleaned_data.get(field) is None or cleaned_data.get(field) == '':
+                cleaned_data[field] = 0
+        
+        for field in float_fields:
+            if cleaned_data.get(field) is None or cleaned_data.get(field) == '':
+                cleaned_data[field] = 0.0
+        
         # Set default values for platform-specific fields that are not relevant
         if social_network == 'INSTAGRAM':
             # Clear YouTube and TikTok fields
