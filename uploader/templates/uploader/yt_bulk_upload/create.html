@@ -4,24 +4,783 @@
 
 {% block extra_css %}
 <style>
-    .text-danger { color: #ff0000 !important; }
-    .btn-danger { background: linear-gradient(135deg, #ff0000, #cc0000); border: none; }
-    .btn-danger:hover { background: linear-gradient(135deg, #cc0000, #990000); }
-    .bg-danger { background: linear-gradient(135deg, #ff0000, #cc0000) !important; }
+    /* Account selection improvements (mirrors Instagram UI) */
+    .accounts-controls {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.25rem;
+        border-radius: 12px 12px 0 0;
+        border-bottom: none;
+    }
+    
+    .accounts-controls .form-control {
+        border-radius: 25px;
+        border: 2px solid rgba(255,255,255,0.3);
+        background: rgba(255,255,255,0.1);
+        color: white;
+        padding-left: 2.5rem;
+    }
+    
+    .accounts-controls .form-control::placeholder {
+        color: rgba(255,255,255,0.7);
+    }
+    
+    .accounts-controls .form-control:focus {
+        background: rgba(255,255,255,0.2);
+        border-color: rgba(255,255,255,0.6);
+        box-shadow: 0 0 0 0.2rem rgba(255,255,255,0.25);
+        color: white;
+    }
+    
+    .search-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: rgba(255,255,255,0.7);
+        z-index: 10;
+    }
+    
+    .search-wrapper {
+        position: relative;
+    }
+    
+    .client-filter-wrapper {
+        position: relative;
+    }
+    
+    .client-filter-wrapper select {
+        border-radius: 25px;
+        border: 2px solid rgba(255,255,255,0.3);
+        background: rgba(255,255,255,0.1);
+        color: white;
+        padding: 0.5rem 1rem;
+        width: 100%;
+    }
+    
+    .client-filter-wrapper select:focus {
+        background: rgba(255,255,255,0.2);
+        border-color: rgba(255,255,255,0.6);
+        box-shadow: 0 0 0 0.2rem rgba(255,255,255,0.25);
+        color: white;
+    }
+    
+    .client-filter-wrapper select option {
+        background: #667eea;
+        color: white;
+    }
+    
+    .controls-row {
+        margin-bottom: 1rem;
+    }
+    
+    .filter-pills {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 0.75rem;
+    }
+    
+    .filter-pill {
+        background: rgba(255,255,255,0.15);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        user-select: none;
+    }
+    
+    .filter-pill:hover {
+        background: rgba(255,255,255,0.25);
+        border-color: rgba(255,255,255,0.5);
+    }
+    
+    .filter-pill.active {
+        background: white;
+        color: #667eea;
+        border-color: white;
+        font-weight: 600;
+    }
+    
+    .bulk-actions {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    .bulk-action-btn {
+        background: rgba(255,255,255,0.15);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: white;
+        padding: 0.4rem 0.8rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .bulk-action-btn:hover {
+        background: rgba(255,255,255,0.25);
+        border-color: rgba(255,255,255,0.5);
+    }
+    
+    .view-toggle {
+        background: rgba(255,255,255,0.15);
+        border: 1px solid rgba(255,255,255,0.3);
+        border-radius: 20px;
+        padding: 0.25rem;
+        display: flex;
+    }
+    
+    .view-toggle-btn {
+        background: transparent;
+        border: none;
+        color: rgba(255,255,255,0.7);
+        padding: 0.4rem 0.8rem;
+        border-radius: 15px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .view-toggle-btn.active {
+        background: white;
+        color: #667eea;
+    }
+    
+    .accounts-grid {
+        padding: 1rem;
+        max-height: 600px;
+        overflow-y: auto;
+        background: #f8f9fb;
+        border-radius: 0 0 12px 12px;
+        position: relative;
+    }
+    
+    .compact-mode .accounts-grid {
+        padding: 0.5rem;
+    }
+    
+    .account-item {
+        margin-bottom: 0.75rem;
+        transition: all 0.3s ease;
+    }
+    
+    .compact-mode .account-item {
+        margin-bottom: 0.5rem;
+    }
+    
+    .account-item:hover {
+        transform: translateY(-1px);
+    }
+    
+    /* Regular card view */
+    .account-card {
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        background: white;
+        transition: all 0.3s ease;
+        padding: 1rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        cursor: pointer;
+    }
+    
+    /* Compact card view */
+    .compact-mode .account-card {
+        padding: 0.6rem;
+        border-radius: 8px;
+        border-width: 1px;
+    }
+    
+    .account-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+    }
+    
+    .compact-mode .account-card::before {
+        height: 3px;
+    }
+    
+    .account-card:hover {
+        border-color: #667eea;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.15);
+    }
+    
+    .compact-mode .account-card:hover {
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+    }
+    
+    .account-card:hover::before {
+        transform: scaleX(1);
+    }
+    
+    .account-card.selected {
+        border-color: #667eea;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+    }
+    
+    .account-card.selected::before {
+        transform: scaleX(1);
+    }
+    
+    .account-checkbox {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+    
+    .custom-checkbox {
+        width: 24px;
+        height: 24px;
+        border: 2px solid #dee2e6;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        background: white;
+        flex-shrink: 0;
+    }
+    
+    .compact-mode .custom-checkbox {
+        width: 20px;
+        height: 20px;
+        border-width: 1px;
+        border-radius: 4px;
+    }
+    
+    .custom-checkbox i {
+        color: white;
+        font-size: 14px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .compact-mode .custom-checkbox i {
+        font-size: 12px;
+    }
+    
+    .account-checkbox:checked ~ .account-card .custom-checkbox {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-color: #667eea;
+    }
+    
+    .account-checkbox:checked ~ .account-card .custom-checkbox i {
+        opacity: 1;
+    }
+    
+    .account-info {
+        display: flex;
+        align-items: center;
+        flex: 1;
+    }
+    
+    .account-details {
+        margin-left: 1rem;
+        flex: 1;
+    }
+    
+    .compact-mode .account-details {
+        margin-left: 0.75rem;
+    }
+    
+    .account-username {
+        font-weight: 600;
+        color: #2d3748;
+        margin-bottom: 0.25rem;
+        font-size: 1rem;
+    }
+    
+    .compact-mode .account-username {
+        font-size: 0.9rem;
+        margin-bottom: 0.15rem;
+    }
+    
+    .account-stats {
+        color: #718096;
+        font-size: 0.875rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .compact-mode .account-stats {
+        font-size: 0.75rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .account-badges {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .compact-mode .account-badges {
+        gap: 0.25rem;
+        margin-top: 0.25rem;
+    }
     
     .badge-custom {
-        display: inline-block;
-        padding: 0.25em 0.4em;
-        font-size: 0.75em;
-        font-weight: 700;
-        line-height: 1;
-        text-align: center;
-        white-space: nowrap;
-        vertical-align: baseline;
-        border-radius: 0.25rem;
-        border: 1px solid transparent;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        border: 1px solid;
     }
+    
+    .compact-mode .badge-custom {
+        padding: 0.15rem 0.5rem;
+        border-radius: 8px;
+        font-size: 0.65rem;
+    }
+    
+    .badge-proxy {
+        background: rgba(34, 197, 94, 0.1);
+        color: #059669;
+        border-color: rgba(34, 197, 94, 0.3);
+    }
+    
+    .badge-dolphin {
+        background: rgba(59, 130, 246, 0.1);
+        color: #2563eb;
+        border-color: rgba(59, 130, 246, 0.3);
+    }
+    
+    .badge-premium {
+        background: rgba(245, 158, 11, 0.1);
+        color: #d97706;
+        border-color: rgba(245, 158, 11, 0.3);
+    }
+    
+    .accounts-summary {
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .summary-left {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .selected-count {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #667eea;
+    }
+    
+    .total-count {
+        color: #718096;
+        font-size: 0.875rem;
+    }
+    
+    .summary-stats {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.8rem;
+        color: #718096;
+    }
+    
+    .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    /* List view mode */
+    .list-mode .account-item { margin-bottom: 0.25rem; }
+    .list-mode .account-card { padding: 0.75rem 1rem; border-radius: 6px; border-width: 1px; }
+    .list-mode .account-info { justify-content: space-between; }
+    .list-mode .account-details { margin-left: 0.75rem; display: flex; align-items: center; justify-content: space-between; width: 100%; }
+    .list-mode .account-username { margin-bottom: 0; font-size: 0.9rem; }
+    .list-mode .account-stats { display: none; }
+    .list-mode .account-badges { margin-top: 0; gap: 0.25rem; }
+    .list-mode .badge-custom { padding: 0.1rem 0.4rem; font-size: 0.6rem; }
+    
+    /* Virtual scrolling optimization */
+    .virtual-container { height: 100%; overflow: hidden; }
+    .virtual-spacer { pointer-events: none; }
+    
+    /* Empty state improvements */
+    .empty-state { text-align: center; padding: 3rem 1rem; background: white; border-radius: 12px; border: 2px dashed #e9ecef; }
+    .empty-state i { font-size: 4rem; color: #cbd5e0; margin-bottom: 1rem; }
+    .no-results { text-align: center; padding: 2rem; color: #718096; }
+    
+    /* Scrollbar styling */
+    .accounts-grid::-webkit-scrollbar { width: 8px; }
+    .accounts-grid::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+    .accounts-grid::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 4px; }
+    .accounts-grid::-webkit-scrollbar-thumb:hover { background: #a0aec0; }
+    
+    /* Pagination */
+    .pagination-info { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: white; border-top: 1px solid #e9ecef; border-radius: 0 0 12px 12px; font-size: 0.875rem; color: #718096; }
+    .page-size-selector { display: flex; align-items: center; gap: 0.5rem; }
+    .page-size-selector select { border: 1px solid #e9ecef; border-radius: 6px; padding: 0.25rem 0.5rem; font-size: 0.8rem; }
+    
+    /* Keyboard shortcuts hint */
+    .shortcuts-hint { position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.8); color: white; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.75rem; opacity: 0; transform: translateY(100%); transition: all 0.3s ease; z-index: 1000; }
+    .shortcuts-hint.show { opacity: 1; transform: translateY(0); }
+    
+    /* Performance optimization */
+    .account-item.hidden { display: none !important; }
+    
+    /* Loading spinner */
+    .loading-spinner { display: flex; justify-content: center; align-items: center; padding: 2rem; color: #667eea; }
+    .spinner { width: 2rem; height: 2rem; border: 2px solid #e9ecef; border-top: 2px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Elements
+    const searchInput = document.getElementById('accountSearch');
+    const accountItems = document.querySelectorAll('.account-item');
+    const accountCheckboxes = document.querySelectorAll('.account-checkbox');
+    const accountCards = document.querySelectorAll('.account-card');
+    const selectedCountEl = document.getElementById('selectedCount');
+    const totalCountEl = document.getElementById('totalCount');
+    const proxyCountEl = document.getElementById('proxyCount');
+    const dolphinCountEl = document.getElementById('dolphinCount');
+    const noResults = document.getElementById('noResults');
+    const accountsWidget = document.getElementById('accountsWidget');
+    const accountsContainer = document.getElementById('accountsContainer');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const paginationInfo = document.getElementById('paginationInfo');
+    const paginationText = document.getElementById('paginationText');
+    const shortcutsHint = document.getElementById('shortcutsHint');
+    const mobileSessionWarning = document.getElementById('mobileSessionWarning');
+    const mobileSessionCountEl = document.getElementById('mobileSessionCount');
+    const clientFilter = document.getElementById('client-filter');
+    const tagFilter = document.getElementById('tag-filter');
+    
+    // State
+    let currentView = 'card';
+    let currentFilter = 'all';
+    let currentPage = 1;
+    let pageSize = 50;
+    let totalAccounts = accountItems.length;
+    let filteredAccounts = [...accountItems];
+    let visibleAccounts = [];
+    
+    // Initialize
+    updateAccountsDisplay();
+    
+    // Search functionality
+    searchInput.addEventListener('input', debounce(function() {
+        filterAndPaginate();
+    }, 300));
+    
+    // Client filter functionality
+    if (clientFilter) {
+        clientFilter.addEventListener('change', function() {
+            filterAndPaginate();
+        });
+    }
+    
+    // Tag filter functionality
+    if (tagFilter) {
+        tagFilter.addEventListener('change', function() {
+            filterAndPaginate();
+        });
+    }
+    
+    // View toggle
+    document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            currentView = this.dataset.view;
+            updateViewMode();
+        });
+    });
+    
+    // Filter pills
+    document.querySelectorAll('.filter-pill').forEach(pill => {
+        pill.addEventListener('click', function() {
+            document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+            this.classList.add('active');
+            
+            currentFilter = this.dataset.filter;
+            filterAndPaginate();
+        });
+    });
+    
+    // Bulk actions
+    document.getElementById('selectAll').addEventListener('click', function() {
+        visibleAccounts.forEach(item => {
+            const checkbox = item.querySelector('.account-checkbox');
+            checkbox.checked = true;
+            updateCardSelection(checkbox);
+        });
+        updateCounter();
+    });
+    
+    document.getElementById('selectNone').addEventListener('click', function() {
+        accountCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+            updateCardSelection(checkbox);
+        });
+        updateCounter();
+    });
+    
+    document.getElementById('selectRandom').addEventListener('click', function() {
+        // First clear all
+        accountCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+            updateCardSelection(checkbox);
+        });
+        
+        // Then select 10 random visible accounts
+        const shuffled = [...visibleAccounts].sort(() => 0.5 - Math.random());
+        const selected = shuffled.slice(0, Math.min(10, shuffled.length));
+        
+        selected.forEach(item => {
+            const checkbox = item.querySelector('.account-checkbox');
+            checkbox.checked = true;
+            updateCardSelection(checkbox);
+        });
+        
+        updateCounter();
+    });
+    
+    // Page size selector
+    document.getElementById('pageSize').addEventListener('change', function() {
+        pageSize = this.value === 'all' ? 9999 : parseInt(this.value);
+        currentPage = 1;
+        filterAndPaginate();
+    });
+    
+    // Individual checkbox changes
+    accountCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateCardSelection(this);
+            updateCounter();
+        });
+        updateCardSelection(checkbox);
+    });
+    
+    // Functions
+    function updateViewMode() {
+        accountsWidget.className = accountsWidget.className.replace(/\b(compact-mode|list-mode)\b/g, '');
+        
+        if (currentView === 'compact') {
+            accountsWidget.classList.add('compact-mode');
+            updateColumnClasses('col-lg-4 col-md-6');
+        } else if (currentView === 'list') {
+            accountsWidget.classList.add('list-mode');
+            updateColumnClasses('col-12');
+        } else {
+            updateColumnClasses('col-lg-6 col-md-12');
+        }
+    }
+    
+    function updateColumnClasses(newClasses) {
+        accountItems.forEach(item => {
+            item.className = 'account-item ' + newClasses;
+            if (item.dataset.username) {
+                item.setAttribute('data-username', item.dataset.username);
+                item.setAttribute('data-has-proxy', item.dataset.hasProxy);
+                item.setAttribute('data-proxy-active', item.dataset.proxyActive);
+                item.setAttribute('data-proxy-status', item.dataset.proxyStatus);
+                item.setAttribute('data-has-dolphin', item.dataset.hasDolphin);
+                item.setAttribute('data-last-login', item.dataset.lastLogin);
+                item.setAttribute('data-account-id', item.dataset.accountId);
+                item.setAttribute('data-has-mobile-session', item.dataset.hasMobileSession);
+            }
+        });
+    }
+    
+    function filterAndPaginate() {
+        loadingSpinner.style.display = 'flex';
+        
+        setTimeout(() => {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            
+            // Apply filters
+            filteredAccounts = Array.from(accountItems).filter(item => {
+                const username = item.dataset.username || '';
+                const hasProxy = item.dataset.hasProxy === 'true';
+                const hasDolphin = item.dataset.hasDolphin === 'true';
+                const lastLogin = item.dataset.lastLogin;
+                const status = item.dataset.status || '';
+                const hasMobileSession = item.dataset.hasMobileSession === 'true';
+                const clientId = item.dataset.clientId || '';
+                const tagId = item.dataset.tagId || '';
+                
+                // Search filter
+                if (searchTerm && !username.includes(searchTerm)) {
+                    return false;
+                }
+                
+                // Client filter
+                if (clientFilter && clientFilter.value) {
+                    if (clientFilter.value === 'no_client') {
+                        if (clientId !== '') { return false; }
+                    } else {
+                        if (clientId !== clientFilter.value) { return false; }
+                    }
+                }
+                
+                // Tag filter
+                if (tagFilter && tagFilter.value) {
+                    if (tagFilter.value === 'no_tag') {
+                        if (tagId !== '') { return false; }
+                    } else {
+                        if (tagId !== tagFilter.value) { return false; }
+                    }
+                }
+                
+                // Category filter
+                switch(currentFilter) {
+                    case 'active':
+                        return status === 'active';
+                    case 'proxy':
+                        return hasProxy;
+                    case 'dolphin':
+                        return hasDolphin;
+                    case 'ready':
+                        return status === 'active';
+                    case 'phone_verification_required':
+                        return status === 'phone_verification_required';
+                    case 'human_verification_required':
+                        return status === 'human_verification_required';
+                    case 'blocked':
+                        return status === 'blocked';
+                    case 'limited':
+                        return status === 'limited';
+                    case 'recent':
+                        return lastLogin !== 'never';
+                    default:
+                        return true;
+                }
+            });
+            
+            // Calculate pagination
+            const totalFiltered = filteredAccounts.length;
+            const totalPages = Math.ceil(totalFiltered / pageSize);
+            const startIndex = (currentPage - 1) * pageSize;
+            const endIndex = Math.min(startIndex + pageSize, totalFiltered);
+            
+            visibleAccounts = filteredAccounts.slice(startIndex, endIndex);
+            
+            // Hide all accounts first
+            accountItems.forEach(item => { item.classList.add('hidden'); });
+            
+            // Show visible accounts
+            visibleAccounts.forEach(item => { item.classList.remove('hidden'); });
+            
+            // Update pagination info
+            updatePaginationInfo(startIndex + 1, endIndex, totalFiltered);
+            
+            // Show/hide no results
+            noResults.style.display = totalFiltered === 0 && (searchTerm || currentFilter !== 'all') ? 'block' : 'none';
+            
+            loadingSpinner.style.display = 'none';
+            updateCounter();
+        }, 100);
+    }
+    
+    function updatePaginationInfo(start, end, total) {
+        if (total === 0) {
+            paginationText.textContent = 'No accounts found';
+        } else {
+            paginationText.textContent = `Showing ${start}-${end} of ${total} accounts`;
+        }
+    }
+    
+    function updateCardSelection(checkbox) {
+        const card = checkbox.nextElementSibling;
+        if (checkbox.checked) { card.classList.add('selected'); }
+        else { card.classList.remove('selected'); }
+    }
+    
+    function updateCounter() {
+        const checkedBoxes = Array.from(accountCheckboxes).filter(cb => cb.checked);
+        const selectedProxy = checkedBoxes.filter(cb => cb.closest('.account-item').dataset.hasProxy === 'true').length;
+        const selectedDolphin = checkedBoxes.filter(cb => cb.closest('.account-item').dataset.hasDolphin === 'true').length;
+        
+        const activeCount = Array.from(accountItems).filter(item => item.dataset.status === 'active').length;
+        const selectedActive = checkedBoxes.filter(cb => cb.closest('.account-item').dataset.status === 'active').length;
+        const selectedNonActive = checkedBoxes.filter(cb => cb.closest('.account-item').dataset.status !== 'active').length;
+        
+        const problemsCount = Array.from(accountItems).filter(item => {
+            const status = item.dataset.status;
+            const hasProxy = item.dataset.hasProxy === 'true';
+            const invalidProxy = hasProxy && item.dataset.proxyActive === 'false';
+            return status === 'blocked' || status === 'limited' || 
+                   status === 'phone_verification_required' || 
+                   status === 'human_verification_required' || invalidProxy;
+        }).length;
+        
+        selectedCountEl.textContent = checkedBoxes.length;
+        totalCountEl.textContent = `of ${totalAccounts} accounts selected`;
+        proxyCountEl.textContent = selectedProxy;
+        dolphinCountEl.textContent = selectedDolphin;
+        
+        const activeCountEl = document.getElementById('activeCount');
+        const problemsCountEl = document.getElementById('problemsCount');
+        if (activeCountEl) activeCountEl.textContent = activeCount;
+        if (problemsCountEl) problemsCountEl.textContent = problemsCount;
+        
+        // Update mobile session warning (uses device flag)
+        const checkedMobileSessionBoxes = checkedBoxes.filter(cb => cb.closest('.account-item').dataset.hasMobileSession === 'true');
+        mobileSessionCountEl.textContent = checkedMobileSessionBoxes.length;
+        mobileSessionWarning.classList.toggle('d-none', checkedMobileSessionBoxes.length === 0);
+    }
+    
+    function validateAccountSelection() {
+        const checkedBoxes = Array.from(accountCheckboxes).filter(cb => cb.checked);
+        if (checkedBoxes.length === 0) {
+            alert('Please select at least one account before proceeding.');
+            return false;
+        }
+        return true;
+    }
+    
+    function updateAccountsDisplay() {
+        filterAndPaginate();
+        updateCounter();
+    }
+    
+    // Debounce function
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => { clearTimeout(timeout); func(...args); };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+});
+</script>
 {% endblock %}
 
 {% block content %}
@@ -42,11 +801,9 @@
 
 <div class="row">
     <div class="col-md-12">
-        <div class="card mb-4 shadow-sm">
-            <div class="card-header bg-danger text-white">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-1-circle me-2"></i>Step 1: Select YouTube Accounts
-                </h5>
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Step 1: Select Accounts</h5>
             </div>
             <div class="card-body">
                 <form method="post">
@@ -57,114 +814,313 @@
                         Select multiple YouTube accounts to use for uploading Shorts. Videos will be distributed among these channels.
                     </div>
                     
-                    <!-- Account Selection -->
+                    <!-- Account Selection (Instagram-like UI) -->
                     <div class="mb-3">
                         <label class="form-label fw-bold">{{ form.selected_accounts.label }}</label>
                         
-                        <!-- Filter Controls -->
-                        <div class="row mb-3">
-                            {% if form.client_filter.field.choices %}
-                            <div class="col-md-2">
-                                <div class="client-filter-wrapper">
-                                    {{ form.client_filter }}
+                        <div class="accounts-summary" id="accountsSummary">
+                            <div class="summary-left">
+                                <div>
+                                    <div class="selected-count" id="selectedCount">0</div>
+                                    <div class="total-count" id="totalCount">of {{ form.selected_accounts.field.queryset.count }} accounts selected</div>
+                                </div>
+                                <div class="summary-stats" id="summaryStats">
+                                    <div class="stat-item">
+                                        <i class="bi bi-check-circle text-success"></i>
+                                        <span id="activeCount">{{ form.selected_accounts.field.queryset|length }}</span> active
+                                    </div>
+                                    <div class="stat-item">
+                                        <i class="bi bi-shield-check"></i>
+                                        <span id="proxyCount">0</span> with proxy
+                                    </div>
+                                    <div class="stat-item">
+                                        <i class="bi bi-laptop"></i>
+                                        <span id="dolphinCount">0</span> dolphin
+                                    </div>
+                                    <div class="stat-item">
+                                        <i class="bi bi-exclamation-triangle text-warning"></i>
+                                        <span id="problemsCount">0</span> issues
+                                    </div>
                                 </div>
                             </div>
-                            {% endif %}
-                            
-                            {% if form.tag_filter.field.choices %}
-                            <div class="col-md-2">
-                                <div class="tag-filter-wrapper">
-                                    {{ form.tag_filter }}
-                                </div>
-                            </div>
-                            {% endif %}
-                            
-                            <div class="col-md-4">
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                    <input type="text" class="form-control" id="account-search" placeholder="Search accounts...">
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-4">
-                                <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-outline-secondary" id="select-all">
-                                        <i class="bi bi-check-all"></i> Select All
-                                    </button>
-                                    <button type="button" class="btn btn-outline-secondary" id="deselect-all">
-                                        <i class="bi bi-x-square"></i> Deselect All
-                                    </button>
-                                </div>
+                            <div class="page-size-selector">
+                                <label>Show:</label>
+                                <select id="pageSize">
+                                    <option value="20">20</option>
+                                    <option value="50" selected>50</option>
+                                    <option value="100">100</option>
+                                    <option value="all">All</option>
+                                </select>
                             </div>
                         </div>
                         
-                        <div class="row" id="accounts-container">
-                            {% for account in form.selected_accounts.field.queryset %}
-                            <div class="col-lg-6 col-md-12 account-item mb-3" 
-                                 data-username="{{ account.email|lower }}"
-                                 data-has-proxy="{{ account.proxy|yesno:'true,false' }}"
-                                 data-proxy-active="{% if account.proxy %}{{ account.proxy.is_active|yesno:'true,false' }}{% else %}false{% endif %}"
-                                 data-proxy-status="{% if account.proxy %}{{ account.proxy.status|lower }}{% else %}none{% endif %}"
-                                 data-has-dolphin="{{ account.dolphin_profile_id|yesno:'true,false' }}"
-                                 data-last-login="{{ account.last_login|default:'never' }}"
-                                 data-account-id="{{ account.id }}"
-                                 data-status="{{ account.status|lower }}"
-                                 data-client-id="{% if account.client %}{{ account.client.id }}{% endif %}"
-                                 data-tag-id="{% if account.tag %}{{ account.tag.id }}{% endif %}">
-                                <div class="card h-100">
-                                    <div class="card-body">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" 
-                                                   name="selected_accounts" value="{{ account.id }}" 
-                                                   id="account_{{ account.id }}">
-                                            <label class="form-check-label w-100" for="account_{{ account.id }}">
-                                                <div class="d-flex justify-content-between align-items-start">
-                                                    <div>
-                                                        <strong>{{ account.email }}</strong>
-                                                        {% if account.channel_name %}
-                                                        <div class="text-muted small">{{ account.channel_name }}</div>
-                                                        {% endif %}
-                                                    </div>
-                                                    <span class="badge bg-{{ account.status|lower }}">
-                                                        {{ account.get_status_display }}
-                                                    </span>
+                        <div class="card border-0 shadow-sm" id="accountsWidget">
+                            <div class="accounts-controls">
+                                <div class="controls-row">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-4">
+                                            <div class="search-wrapper">
+                                                <i class="bi bi-search search-icon"></i>
+                                                <input type="text" id="accountSearch" class="form-control" placeholder="Search accounts by email...">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            {% if form.client_filter.field.choices %}
+                                            <div class="client-filter-wrapper">
+                                                {{ form.client_filter }}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-2">
+                                            {% if form.tag_filter.field.choices %}
+                                            <div class="client-filter-wrapper">
+                                                {{ form.tag_filter }}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="d-flex justify-content-end align-items-center gap-2">
+                                                <div class="view-toggle">
+                                                    <button type="button" class="view-toggle-btn active" data-view="card">
+                                                        <i class="bi bi-grid-3x3-gap"></i> Cards
+                                                    </button>
+                                                    <button type="button" class="view-toggle-btn" data-view="compact">
+                                                        <i class="bi bi-list"></i> Compact
+                                                    </button>
+                                                    <button type="button" class="view-toggle-btn" data-view="list">
+                                                        <i class="bi bi-list-ul"></i> List
+                                                    </button>
                                                 </div>
-                                                <div class="mt-2">
-                                                    {% if account.proxy %}
-                                                    <span class="badge bg-success me-1">
-                                                        <i class="bi bi-shield-check"></i> Proxy
-                                                    </span>
-                                                    {% endif %}
-                                                    {% if account.dolphin_profile_id %}
-                                                    <span class="badge bg-info me-1">
-                                                        <i class="bi bi-laptop"></i> Dolphin
-                                                    </span>
-                                                    {% endif %}
-                                                    
-                                                    <!-- Tag -->
-                                                    {% if account.tag %}
-                                                    <span class="badge-custom me-1" style="background-color: {{ account.tag.color }}; color: white; border-color: {{ account.tag.color }};">
-                                                        <i class="bi bi-tag me-1"></i>{{ account.tag.name }}
-                                                    </span>
-                                                    {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="controls-row">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <div class="filter-pills">
+                                                <div class="filter-pill active" data-filter="all">
+                                                    <i class="bi bi-check-all me-1"></i>All
                                                 </div>
-                                            </label>
+                                                <div class="filter-pill" data-filter="active">
+                                                    <i class="bi bi-check-circle me-1"></i>Active
+                                                </div>
+                                                <div class="filter-pill" data-filter="proxy">
+                                                    <i class="bi bi-shield-check me-1"></i>With Proxy
+                                                </div>
+                                                <div class="filter-pill" data-filter="dolphin">
+                                                    <i class="bi bi-laptop me-1"></i>Dolphin
+                                                </div>
+                                                <div class="filter-pill" data-filter="ready">
+                                                    <i class="bi bi-star me-1"></i>Ready
+                                                </div>
+                                                <div class="filter-pill" data-filter="phone_verification_required">
+                                                    <i class="bi bi-phone me-1"></i>Phone Verification
+                                                </div>
+                                                <div class="filter-pill" data-filter="human_verification_required">
+                                                    <i class="bi bi-person-check me-1"></i>Human Verification
+                                                </div>
+                                                <div class="filter-pill" data-filter="blocked">
+                                                    <i class="bi bi-x-circle me-1"></i>Blocked
+                                                </div>
+                                                <div class="filter-pill" data-filter="limited">
+                                                    <i class="bi bi-exclamation-triangle me-1"></i>Limited
+                                                </div>
+                                                <div class="filter-pill" data-filter="recent">
+                                                    <i class="bi bi-clock me-1"></i>Recently Used
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="bulk-actions justify-content-end">
+                                                <div class="bulk-action-btn" id="selectAll">
+                                                    <i class="bi bi-check-all"></i> Select All
+                                                </div>
+                                                <div class="bulk-action-btn" id="selectNone">
+                                                    <i class="bi bi-x"></i> Clear
+                                                </div>
+                                                <div class="bulk-action-btn" id="selectRandom">
+                                                    <i class="bi bi-shuffle"></i> Random 10
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            {% empty %}
-                            <div class="col-12">
-                                <div class="alert alert-warning">
-                                    <i class="bi bi-exclamation-triangle me-2"></i>
-                                    No YouTube accounts found. Please add accounts first.
+                            
+                            <div class="alert alert-warning d-none" id="mobileSessionWarning">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                Some selected accounts have a device session. Consider using them accordingly.
+                                <span class="ms-2 small text-muted">Count: <span id="mobileSessionCount">0</span></span>
+                            </div>
+
+                            <div class="accounts-grid" id="accountsGrid">
+                                <div class="loading-spinner" id="loadingSpinner" style="display: none;">
+                                    <div class="spinner"></div>
+                                    <span class="ms-2">Loading accounts...</span>
+                                </div>
+                                
+                                <div class="row" id="accountsContainer">
+                                    {% for account in form.selected_accounts.field.queryset %}
+                                    <div class="col-lg-6 col-md-12 account-item" 
+                                         data-username="{{ account.email|lower }}"
+                                         data-has-proxy="{{ account.proxy|yesno:'true,false' }}"
+                                         data-proxy-active="{% if account.proxy %}{{ account.proxy.is_active|yesno:'true,false' }}{% else %}false{% endif %}"
+                                         data-proxy-status="{% if account.proxy %}{{ account.proxy.status|lower }}{% else %}none{% endif %}"
+                                         data-has-dolphin="{{ account.dolphin_profile_id|yesno:'true,false' }}"
+                                         data-last-login="{{ account.last_used|default:'never' }}"
+                                         data-account-id="{{ account.id }}"
+                                         data-status="{{ account.status|lower }}"
+                                         data-client-id="{% if account.client %}{{ account.client.id }}{% endif %}"
+                                         data-tag-id="{% if account.tag %}{{ account.tag.id }}{% endif %}"
+                                          {% with dev=account.device %}
+                                          data-has-mobile-session="{% if dev and dev.session_settings %}true{% else %}false{% endif %}"
+                                          {% endwith %}>
+                                        <input class="account-checkbox" type="checkbox" 
+                                               name="selected_accounts" value="{{ account.id }}" 
+                                               id="account_{{ account.id }}">
+                                        <label class="account-card" for="account_{{ account.id }}">
+                                            <div class="account-info">
+                                                <div class="custom-checkbox">
+                                                    <i class="bi bi-check"></i>
+                                                </div>
+                                                <div class="account-details">
+                                                    <div class="account-username">{{ account.email }}</div>
+                                                    <div class="account-stats">
+                                                        {% if account.status == 'ACTIVE' %}
+                                                            <i class="bi bi-check-circle-fill text-success me-1"></i>
+                                                            <span class="text-success fw-medium">Active Account</span>
+                                                        {% elif account.status == 'PHONE_VERIFICATION_REQUIRED' %}
+                                                            <i class="bi bi-phone-fill text-warning me-1"></i>
+                                                            <span class="text-warning fw-medium">Phone Verification Required</span>
+                                                        {% elif account.status == 'HUMAN_VERIFICATION_REQUIRED' %}
+                                                            <i class="bi bi-person-check-fill text-warning me-1"></i>
+                                                            <span class="text-warning fw-medium">Human Verification Required</span>
+                                                        {% elif account.status == 'SUSPENDED' %}
+                                                            <i class="bi bi-x-circle-fill text-danger me-1"></i>
+                                                            <span class="text-danger fw-medium">Account Suspended</span>
+                                                        {% elif account.status == 'BLOCKED' %}
+                                                            <i class="bi bi-x-circle-fill text-danger me-1"></i>
+                                                            <span class="text-danger fw-medium">Blocked Account</span>
+                                                        {% elif account.status == 'LIMITED' %}
+                                                            <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>
+                                                            <span class="text-warning fw-medium">Limited Account</span>
+                                                        {% elif account.status == 'INACTIVE' %}
+                                                            <i class="bi bi-pause-circle-fill text-muted me-1"></i>
+                                                            <span class="text-muted fw-medium">Inactive Account</span>
+                                                        {% else %}
+                                                            <i class="bi bi-question-circle-fill text-secondary me-1"></i>
+                                                            <span class="text-secondary fw-medium">{{ account.get_status_display }}</span>
+                                                        {% endif %}
+                                                        
+                                                        {% if account.last_used %}
+                                                        <span class="mx-2 text-muted">•</span>
+                                                        <i class="bi bi-clock text-muted me-1"></i>
+                                                        <small class="text-muted">Last used: {{ account.last_used|timesince }} ago</small>
+                                                        {% else %}
+                                                        <span class="mx-2 text-muted">•</span>
+                                                        <small class="text-muted">Never used</small>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="account-badges">
+                                                        {% if account.status == 'PHONE_VERIFICATION_REQUIRED' %}
+                                                        <span class="badge-custom" style="background: rgba(249, 115, 22, 0.1); color: #c2410c; border-color: rgba(249, 115, 22, 0.3);">
+                                                            <i class="bi bi-phone me-1"></i>Phone Verification
+                                                        </span>
+                                                        {% elif account.status == 'HUMAN_VERIFICATION_REQUIRED' %}
+                                                        <span class="badge-custom" style="background: rgba(245, 158, 11, 0.1); color: #d97706; border-color: rgba(245, 158, 11, 0.3);">
+                                                            <i class="bi bi-person-check me-1"></i>Human Verification
+                                                        </span>
+                                                        {% elif account.status == 'SUSPENDED' %}
+                                                        <span class="badge-custom" style="background: rgba(239, 68, 68, 0.1); color: #dc2626; border-color: rgba(239, 68, 68, 0.3);">
+                                                            <i class="bi bi-x-circle me-1"></i>Suspended
+                                                        </span>
+                                                        {% elif account.status == 'BLOCKED' %}
+                                                        <span class="badge-custom" style="background: rgba(239, 68, 68, 0.1); color: #dc2626; border-color: rgba(239, 68, 68, 0.3);">
+                                                            <i class="bi bi-x-circle me-1"></i>Blocked
+                                                        </span>
+                                                        {% elif account.status == 'LIMITED' %}
+                                                        <span class="badge-custom" style="background: rgba(245, 158, 11, 0.1); color: #d97706; border-color: rgba(245, 158, 11, 0.3);">
+                                                            <i class="bi bi-exclamation-triangle me-1"></i>Limited
+                                                        </span>
+                                                        {% elif account.status == 'INACTIVE' %}
+                                                        <span class="badge-custom" style="background: rgba(156, 163, 175, 0.1); color: #6b7280; border-color: rgba(156, 163, 175, 0.3);">
+                                                            <i class="bi bi-pause-circle me-1"></i>Inactive
+                                                        </span>
+                                                        {% endif %}
+                                                        
+                                                        {% if account.proxy %}
+                                                            {% if account.proxy.is_active %}
+                                                            <span class="badge-custom badge-proxy">
+                                                                <i class="bi bi-shield-check me-1"></i>Proxy OK
+                                                            </span>
+                                                            {% else %}
+                                                            <span class="badge-custom" style="background: rgba(239, 68, 68, 0.1); color: #dc2626; border-color: rgba(239, 68, 68, 0.3);">
+                                                                <i class="bi bi-exclamation-octagon me-1"></i>Proxy Inactive
+                                                            </span>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                        
+                                                        {% if account.dolphin_profile_id %}
+                                                        <span class="badge-custom badge-dolphin">
+                                                            <i class="bi bi-laptop me-1"></i>Dolphin
+                                                        </span>
+                                                        {% endif %}
+                                                        
+                                                        {% if account.tag %}
+                                                        <span class="badge-custom" style="background-color: {{ account.tag.color }}; color: white; border-color: {{ account.tag.color }};">
+                                                            <i class="bi bi-tag me-1"></i>{{ account.tag.name }}
+                                                        </span>
+                                                        {% endif %}
+                                                        
+                                                        <span class="badge-custom" style="background: rgba(40, 167, 69, 0.1); color: #28a745; border-color: rgba(40, 167, 69, 0.3);">
+                                                            <i class="bi bi-upload me-1"></i>{{ account.uploaded_success_total }} uploaded
+                                                        </span>
+                                                        <span class="badge-custom" style="background: rgba(220, 53, 69, 0.1); color: #dc3545; border-color: rgba(220, 53, 69, 0.3);">
+                                                            <i class="bi bi-x-circle me-1"></i>{{ account.uploaded_failed_total }} failed
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    {% empty %}
+                                    <div class="col-12">
+                                        <div class="empty-state">
+                                            <i class="bi bi-person-x"></i>
+                                            <h5 class="text-muted mt-3 mb-2">No active accounts found</h5>
+                                            <p class="text-muted mb-3">Create some YouTube accounts to start bulk uploading</p>
+                                            <a href="{% url 'yt_account_create' %}" class="btn btn-primary">
+                                                <i class="bi bi-plus-circle me-2"></i>Add Account
+                                            </a>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                
+                                <div class="no-results" id="noResults" style="display: none;">
+                                    <i class="bi bi-search"></i>
+                                    <p class="mb-0">No accounts found matching your search</p>
                                 </div>
                             </div>
-                            {% endfor %}
+                            
+                            <div class="pagination-info" id="paginationInfo">
+                                <span id="paginationText">Showing 1-50 of {{ form.selected_accounts.field.queryset.count }} accounts</span>
+                                <div id="paginationControls" style="display: none;">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="prevPage" disabled>
+                                        <i class="bi bi-chevron-left"></i> Previous
+                                    </button>
+                                    <span class="mx-2" id="pageInfo">Page 1 of 1</span>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="nextPage" disabled>
+                                        Next <i class="bi bi-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         
                         {% if form.selected_accounts.errors %}
-                        <div class="text-danger mt-2">
+                        <div class="invalid-feedback d-block mt-2">
                             {% for error in form.selected_accounts.errors %}
                             {{ error }}
                             {% endfor %}
@@ -206,7 +1162,7 @@
                     </div>
                     
                     <div class="mt-4">
-                        <button type="submit" class="btn btn-danger btn-lg">
+                        <button type="submit" class="btn btn-danger btn-lg" onclick="return validateAccountSelection()">
                             <i class="bi bi-arrow-right me-2"></i>Next: Add Videos
                         </button>
                     </div>
@@ -215,154 +1171,5 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('account-search');
-    const clientFilter = document.getElementById('client-filter');
-    const tagFilter = document.getElementById('tag-filter');
-    const selectAllBtn = document.getElementById('select-all');
-    const deselectAllBtn = document.getElementById('deselect-all');
-    const accountItems = document.querySelectorAll('.account-item');
-    
-    // Debounce function for search
-    function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
-    
-    // Filter and search function
-    function filterAndSearch() {
-        const searchTerm = searchInput.value.toLowerCase();
-        const clientValue = clientFilter ? clientFilter.value : '';
-        const tagValue = tagFilter ? tagFilter.value : '';
-        
-        let visibleCount = 0;
-        
-        accountItems.forEach(item => {
-            const username = item.dataset.username || '';
-            const clientId = item.dataset.clientId || '';
-            const tagId = item.dataset.tagId || '';
-            
-            let show = true;
-            
-            // Search filter
-            if (searchTerm && !username.includes(searchTerm)) {
-                show = false;
-            }
-            
-            // Client filter
-            if (clientValue && show) {
-                if (clientValue === 'no_client') {
-                    if (clientId !== '') {
-                        show = false;
-                    }
-                } else if (clientValue !== '') {
-                    if (clientId !== clientValue) {
-                        show = false;
-                    }
-                }
-            }
-            
-            // Tag filter
-            if (tagValue && show) {
-                if (tagValue === 'no_tag') {
-                    if (tagId !== '') {
-                        show = false;
-                    }
-                } else if (tagValue !== '') {
-                    if (tagId !== tagValue) {
-                        show = false;
-                    }
-                }
-            }
-            
-            if (show) {
-                item.style.display = 'block';
-                visibleCount++;
-            } else {
-                item.style.display = 'none';
-            }
-        });
-        
-        // Update select all button state
-        const visibleCheckboxes = Array.from(accountItems)
-            .filter(item => item.style.display !== 'none')
-            .map(item => item.querySelector('input[type="checkbox"]'));
-        
-        const checkedVisible = visibleCheckboxes.filter(cb => cb.checked);
-        
-        if (selectAllBtn) {
-            selectAllBtn.textContent = checkedVisible.length === visibleCheckboxes.length ? 
-                '<i class="bi bi-check-all"></i> Deselect All' : 
-                '<i class="bi bi-check-all"></i> Select All';
-        }
-    }
-    
-    // Event listeners
-    if (searchInput) {
-        searchInput.addEventListener('input', debounce(filterAndSearch, 300));
-    }
-    
-    if (clientFilter) {
-        clientFilter.addEventListener('change', filterAndSearch);
-    }
-    
-    if (tagFilter) {
-        tagFilter.addEventListener('change', filterAndSearch);
-    }
-    
-    // Select all functionality
-    if (selectAllBtn) {
-        selectAllBtn.addEventListener('click', function() {
-            const visibleCheckboxes = Array.from(accountItems)
-                .filter(item => item.style.display !== 'none')
-                .map(item => item.querySelector('input[type="checkbox"]'));
-            
-            const allChecked = visibleCheckboxes.every(cb => cb.checked);
-            
-            visibleCheckboxes.forEach(checkbox => {
-                checkbox.checked = !allChecked;
-            });
-            
-            filterAndSearch();
-        });
-    }
-    
-    if (deselectAllBtn) {
-        deselectAllBtn.addEventListener('click', function() {
-            const visibleCheckboxes = Array.from(accountItems)
-                .filter(item => item.style.display !== 'none')
-                .map(item => item.querySelector('input[type="checkbox"]'));
-            
-            visibleCheckboxes.forEach(checkbox => {
-                checkbox.checked = false;
-            });
-            
-            filterAndSearch();
-        });
-    }
-    
-    // Update select all button when individual checkboxes change
-    accountItems.forEach(item => {
-        const checkbox = item.querySelector('input[type="checkbox"]');
-        if (checkbox) {
-            checkbox.addEventListener('change', filterAndSearch);
-        }
-    });
-    
-    // Initial filter
-    filterAndSearch();
-});
-</script>
 {% endblock %}
 

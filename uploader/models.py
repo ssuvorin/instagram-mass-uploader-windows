@@ -971,6 +971,16 @@ class YouTubeAccount(models.Model):
         related_name='youtube_accounts'
     )
     
+    # Tag for categorizing account (only one tag per account)
+    tag = models.ForeignKey(
+        Tag,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='youtube_accounts',
+        help_text="Tag for categorizing this account"
+    )
+    
     # Locale for browser profile
     locale = models.CharField(
         max_length=5,
