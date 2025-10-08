@@ -39,10 +39,23 @@ def delete_superuser(username):
         print("❌ Удаление отменено")
         return False
     
-    # Удаляем пользователя
-    user.delete()
-    print(f"✅ Суперпользователь '{username}' успешно удален")
-    return True
+    # Удаляем пользователя с обработкой ошибок
+    try:
+        user.delete()
+        print(f"✅ Суперпользователь '{username}' успешно удален")
+        return True
+    except Exception as e:
+        print(f"❌ Ошибка при удалении суперпользователя '{username}': {e}")
+        print("\n💡 Это может быть связано с ограничениями внешних ключей или отсутствующими колонками в БД.")
+        print("Попробуйте альтернативный метод:")
+        print(f"1. Подключитесь к базе данных напрямую")
+        print(f"2. Выполните: DELETE FROM auth_user WHERE username = '{username}';")
+        print("3. Или используйте Django shell:")
+        print(f"   python manage.py shell")
+        print(f"   >>> from django.contrib.auth import get_user_model")
+        print(f"   >>> User = get_user_model()")
+        print(f"   >>> User.objects.filter(username='{username}').delete()")
+        return False
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:

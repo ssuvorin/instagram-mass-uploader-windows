@@ -39,9 +39,20 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING('Deletion cancelled'))
                 return
         
-        # Delete the user
-        user.delete()
-        
-        self.stdout.write(self.style.SUCCESS(
-            f'Successfully deleted superuser "{username}"'
-        ))
+        # Delete the user with proper error handling
+        try:
+            user.delete()
+            self.stdout.write(self.style.SUCCESS(
+                f'Successfully deleted superuser "{username}"'
+            ))
+        except Exception as e:
+            self.stderr.write(self.style.ERROR(
+                f'Error deleting superuser "{username}": {e}'
+            ))
+            self.stdout.write(
+                'This might be due to foreign key constraints or missing database columns.\n'
+                'Try using the alternative method:\n'
+                f'1. Connect to your database directly\n'
+                f'2. Run: DELETE FROM auth_user WHERE username = \'{username}\';\n'
+                f'3. Or use: python delete_superuser.py {username}'
+            )
