@@ -218,6 +218,15 @@ class YouTubeAccountImportForm(forms.Form):
         help_text="Выберите клиента, к которому будут привязаны импортируемые аккаунты."
     )
     
+    tags = forms.ModelChoiceField(
+        queryset=None,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        required=False,
+        empty_label="— Without tag —",
+        label="Assign Tag (optional)",
+        help_text="Выберите тег, который будет присвоен всем импортируемым аккаунтам."
+    )
+    
     locale = forms.ChoiceField(
         choices=[
             ('ru_BY', 'ru_BY (Русский интерфейс, регион BY)'),
@@ -250,6 +259,10 @@ class YouTubeAccountImportForm(forms.Form):
         # Set client queryset
         from cabinet.models import Client
         self.fields['client'].queryset = Client.objects.all().order_by('name')
+        
+        # Set tag queryset
+        from uploader.models import Tag
+        self.fields['tags'].queryset = Tag.objects.all().order_by('name')
     
     def clean_accounts_file(self):
         """Validate and parse the accounts file"""

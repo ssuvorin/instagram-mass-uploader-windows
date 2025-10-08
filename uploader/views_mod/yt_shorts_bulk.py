@@ -518,6 +518,7 @@ def yt_accounts_import(request):
             
             # Get form data
             selected_client = form.cleaned_data.get('client')
+            selected_tag = form.cleaned_data.get('tags')
             selected_locale = form.cleaned_data.get('locale', 'ru_BY')
             proxy_selection = form.cleaned_data.get('proxy_selection', 'locale_only')
             
@@ -636,6 +637,7 @@ def yt_accounts_import(request):
                         recovery_email=account_data['recovery_email'],
                         status='ACTIVE',
                         client=selected_client,
+                        tag=selected_tag,
                         locale=selected_locale,
                         proxy=assigned_proxy,
                         current_proxy=assigned_proxy
