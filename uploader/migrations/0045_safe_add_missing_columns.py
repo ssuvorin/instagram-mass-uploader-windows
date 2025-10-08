@@ -25,26 +25,26 @@ def safe_add_columns(apps, schema_editor):
             AND column_name='notes'
         """)
         notes_exists = cursor.fetchone() is not None
-    
-    # Add updated_at if it doesn't exist
-    if not updated_at_exists:
-        cursor.execute("""
-            ALTER TABLE uploader_hashtaganalytics 
-            ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-        """)
-        print("Added updated_at column to HashtagAnalytics")
-    else:
-        print("updated_at column already exists in HashtagAnalytics")
-    
-    # Add notes if it doesn't exist
-    if not notes_exists:
-        cursor.execute("""
-            ALTER TABLE uploader_hashtaganalytics 
-            ADD COLUMN notes TEXT DEFAULT ''
-        """)
-        print("Added notes column to HashtagAnalytics")
-    else:
-        print("notes column already exists in HashtagAnalytics")
+        
+        # Add updated_at if it doesn't exist
+        if not updated_at_exists:
+            cursor.execute("""
+                ALTER TABLE uploader_hashtaganalytics 
+                ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            """)
+            print("Added updated_at column to HashtagAnalytics")
+        else:
+            print("updated_at column already exists in HashtagAnalytics")
+        
+        # Add notes if it doesn't exist
+        if not notes_exists:
+            cursor.execute("""
+                ALTER TABLE uploader_hashtaganalytics 
+                ADD COLUMN notes TEXT DEFAULT ''
+            """)
+            print("Added notes column to HashtagAnalytics")
+        else:
+            print("notes column already exists in HashtagAnalytics")
 
 
 def reverse_safe_add_columns(apps, schema_editor):
@@ -69,22 +69,22 @@ def reverse_safe_add_columns(apps, schema_editor):
             AND column_name='notes'
         """)
         notes_exists = cursor.fetchone() is not None
-    
-    # Remove updated_at if it exists
-    if updated_at_exists:
-        cursor.execute("""
-            ALTER TABLE uploader_hashtaganalytics 
-            DROP COLUMN updated_at
-        """)
-        print("Removed updated_at column from HashtagAnalytics")
-    
-    # Remove notes if it exists
-    if notes_exists:
-        cursor.execute("""
-            ALTER TABLE uploader_hashtaganalytics 
-            DROP COLUMN notes
-        """)
-        print("Removed notes column from HashtagAnalytics")
+        
+        # Remove updated_at if it exists
+        if updated_at_exists:
+            cursor.execute("""
+                ALTER TABLE uploader_hashtaganalytics 
+                DROP COLUMN updated_at
+            """)
+            print("Removed updated_at column from HashtagAnalytics")
+        
+        # Remove notes if it exists
+        if notes_exists:
+            cursor.execute("""
+                ALTER TABLE uploader_hashtaganalytics 
+                DROP COLUMN notes
+            """)
+            print("Removed notes column from HashtagAnalytics")
 
 
 class Migration(migrations.Migration):
