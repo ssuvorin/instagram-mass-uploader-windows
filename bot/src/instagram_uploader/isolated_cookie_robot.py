@@ -144,9 +144,9 @@ def main():
         
         try:
             # Выполняем Cookie Robot с увеличенным таймаутом
-            # Увеличиваем таймаут до 15 минут, чтобы Cookie Robot мог пройти все сайты
+            # Увеличиваем таймаут до 20 минут, чтобы Cookie Robot мог пройти все сайты
             # Даже если некоторые сайты медленные или зависают
-            timeout_seconds = max(params['duration'] + 600, 900)  # Минимум 15 минут
+            timeout_seconds = max(params['duration'] + 900, 1200)  # Минимум 20 минут
             
             coro = run_cookie_robot_isolated(params)
             task = loop.create_task(coro)

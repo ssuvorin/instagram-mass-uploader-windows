@@ -192,6 +192,7 @@ class DolphinAnty:
         data: Any = None,
         headers: Dict[str, Any] = None,
         json_data: Any = None,
+        timeout: int = 60,
     ) -> Any:
         if endpoint.startswith("http://") or endpoint.startswith("https://"):
             url = endpoint
@@ -202,21 +203,65 @@ class DolphinAnty:
         if headers:
             hdrs.update(headers)
 
-        # For PATCH requests with proxy data, use form data (urlencoded)
-        if method.lower() == "patch" and data and isinstance(data, dict) and any(key.startswith("proxy[") for key in data.keys()):
-            hdrs["Content-Type"] = "application/x-www-form-urlencoded"
-            resp = requests.request(method, url, params=params, data=data, headers=hdrs)
-        elif headers and headers.get("Content-Type") == "application/x-www-form-urlencoded":
-            resp = requests.request(method, url, params=params, data=data, headers=hdrs)
-        else:
-            # Prefer explicit json_data if provided, fall back to data
-            if json_data is not None:
-                resp = requests.request(method, url, params=params, json=json_data, headers=hdrs)
-            else:
-                resp = requests.request(method, url, params=params, json=data, headers=hdrs)
+        # Retry logic with exponential backoff for rate limiting
+        max_retries = 3
+        base_delay = 1
+        
+        for attempt in range(max_retries):
+            try:
+                # For PATCH requests with proxy data, use form data (urlencoded)
+                if method.lower() == "patch" and data and isinstance(data, dict) and any(key.startswith("proxy[") for key in data.keys()):
+                    hdrs["Content-Type"] = "application/x-www-form-urlencoded"
+                    resp = requests.request(method, url, params=params, data=data, headers=hdrs, timeout=timeout)
+                elif headers and headers.get("Content-Type") == "application/x-www-form-urlencoded":
+                    resp = requests.request(method, url, params=params, data=data, headers=hdrs, timeout=timeout)
+                else:
+                    # Prefer explicit json_data if provided, fall back to data
+                    if json_data is not None:
+                        resp = requests.request(method, url, params=params, json=json_data, headers=hdrs, timeout=timeout)
+                    else:
+                        resp = requests.request(method, url, params=params, json=data, headers=hdrs, timeout=timeout)
 
-        resp.raise_for_status()
-        return resp.json()
+                # Handle rate limiting (429) according to documentation
+                if resp.status_code == 429:
+                    if attempt < max_retries - 1:
+                        # Get retry delay from headers if available
+                        retry_after = resp.headers.get('Retry-After')
+                        if retry_after:
+                            delay = int(retry_after)
+                        else:
+                            delay = base_delay * (2 ** attempt)
+                        
+                        logger.warning(f"[RATE_LIMIT] Rate limited (429), retrying in {delay} seconds (attempt {attempt + 1}/{max_retries})")
+                        time.sleep(delay)
+                        continue
+                    else:
+                        logger.error(f"[RATE_LIMIT] Rate limited (429) after {max_retries} attempts")
+                        resp.raise_for_status()
+                
+                resp.raise_for_status()
+                return resp.json()
+                
+            except requests.exceptions.Timeout as e:
+                logger.warning(f"[TIMEOUT] Request timeout on attempt {attempt + 1}/{max_retries}: {e}")
+                if attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)
+                    logger.info(f"[RETRY] Retrying in {delay} seconds...")
+                    time.sleep(delay)
+                    continue
+                else:
+                    logger.error(f"[TIMEOUT] Request failed after {max_retries} attempts")
+                    raise
+            except requests.exceptions.RequestException as e:
+                logger.warning(f"[REQUEST_ERROR] Request error on attempt {attempt + 1}/{max_retries}: {e}")
+                if attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)
+                    logger.info(f"[RETRY] Retrying in {delay} seconds...")
+                    time.sleep(delay)
+                    continue
+                else:
+                    logger.error(f"[REQUEST_ERROR] Request failed after {max_retries} attempts")
+                    raise
 
 
     def authenticate(self):
@@ -909,51 +954,107 @@ class DolphinAnty:
         
         # Step 3: Start the profile directly (no Remote API validation to avoid 403 errors)
         logger.info(f"[RETRY] [Step 2/3] Sending request to start profile {profile_id}")
-        try:
-            resp = requests.get(url, params=params, headers=headers, timeout=30)
-            
-            if resp.status_code == 200:
-                try:
-                    data = resp.json()
-                    if data.get("success") and isinstance(data.get("automation"), dict):
-                        automation_data = data["automation"]
-                        logger.info(f"[OK] [Step 3/3] Profile {profile_id} started successfully")
-                        logger.info(f"🔗 Connection details: port={automation_data.get('port')}, wsEndpoint={automation_data.get('wsEndpoint')}")
-                        return True, automation_data
-                    else:
-                        logger.error(f"[FAIL] API returned success=false or missing automation data: {data}")
-                        if "error" in data:
-                            logger.error(f"[EXPLODE] API Error: {data['error']}")
-                        return False, None
-                except json.JSONDecodeError:
-                    logger.error(f"[FAIL] Invalid JSON response from Dolphin API: {resp.text[:200]}")
-                    return False, None
-            elif resp.status_code == 404:
-                logger.error(f"[FAIL] Profile {profile_id} not found (HTTP 404)")
-                logger.error("💡 The profile may have been deleted from Dolphin Anty or doesn't exist")
-                return False, None
-            elif resp.status_code == 400:
-                logger.error(f"[FAIL] Bad request (HTTP 400): {resp.text[:200]}")
-                logger.error("💡 Check if profile is already running or has invalid configuration")
-                return False, None
-            else:
-                logger.error(f"[FAIL] Start profile failed with HTTP {resp.status_code}: {resp.text[:200]}")
-                return False, None
+        # Retry logic with exponential backoff
+        max_retries = 3
+        base_delay = 3
+        
+        for attempt in range(max_retries):
+            try:
+                logger.info(f"[START_PROFILE] Attempt {attempt + 1}/{max_retries} for profile {profile_id}")
+                resp = requests.get(url, params=params, headers=headers, timeout=120)
                 
-        except requests.exceptions.Timeout:
-            logger.error(f"[FAIL] Timeout (30s) starting profile {profile_id}")
-            logger.error("💡 Profile may be taking too long to start, try again later")
-            return False, None
-        except requests.exceptions.ConnectionError as e:
-            logger.error(f"[FAIL] Connection error starting profile {profile_id}: {e}")
-            logger.error("💡 Make sure Dolphin Anty application is running")
-            return False, None
-        except requests.exceptions.RequestException as e:
-            logger.error(f"[FAIL] Request error starting profile {profile_id}: {e}")
-            return False, None
-        except Exception as e:
-            logger.error(f"[FAIL] Unexpected error starting profile {profile_id}: {e}")
-            return False, None
+                if resp.status_code == 200:
+                    try:
+                        data = resp.json()
+                        if data.get("success") and isinstance(data.get("automation"), dict):
+                            automation_data = data["automation"]
+                            logger.info(f"[OK] [Step 3/3] Profile {profile_id} started successfully")
+                            logger.info(f"🔗 Connection details: port={automation_data.get('port')}, wsEndpoint={automation_data.get('wsEndpoint')}")
+                            return True, automation_data
+                        else:
+                            logger.error(f"[FAIL] API returned success=false or missing automation data: {data}")
+                            if "error" in data:
+                                logger.error(f"[EXPLODE] API Error: {data['error']}")
+                            if attempt < max_retries - 1:
+                                delay = base_delay * (2 ** attempt)
+                                logger.info(f"[START_PROFILE] Retrying in {delay} seconds...")
+                                time.sleep(delay)
+                                continue
+                            return False, None
+                    except json.JSONDecodeError:
+                        logger.error(f"[FAIL] Invalid JSON response from Dolphin API: {resp.text[:200]}")
+                        if attempt < max_retries - 1:
+                            delay = base_delay * (2 ** attempt)
+                            logger.info(f"[START_PROFILE] Retrying in {delay} seconds...")
+                            time.sleep(delay)
+                            continue
+                        return False, None
+                elif resp.status_code == 404:
+                    logger.error(f"[FAIL] Profile {profile_id} not found (HTTP 404)")
+                    logger.error("💡 The profile may have been deleted from Dolphin Anty or doesn't exist")
+                    return False, None
+                elif resp.status_code == 400:
+                    logger.error(f"[FAIL] Bad request (HTTP 400): {resp.text[:200]}")
+                    logger.error("💡 Check if profile is already running or has invalid configuration")
+                    if attempt < max_retries - 1:
+                        delay = base_delay * (2 ** attempt)
+                        logger.info(f"[START_PROFILE] Retrying in {delay} seconds...")
+                        time.sleep(delay)
+                        continue
+                    return False, None
+                else:
+                    logger.error(f"[FAIL] Start profile failed with HTTP {resp.status_code}: {resp.text[:200]}")
+                    if attempt < max_retries - 1:
+                        delay = base_delay * (2 ** attempt)
+                        logger.info(f"[START_PROFILE] Retrying in {delay} seconds...")
+                        time.sleep(delay)
+                        continue
+                    return False, None
+                    
+            except requests.exceptions.Timeout as e:
+                logger.warning(f"[START_PROFILE] Timeout on attempt {attempt + 1}/{max_retries} for profile {profile_id}: {e}")
+                if attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)
+                    logger.info(f"[START_PROFILE] Retrying in {delay} seconds...")
+                    time.sleep(delay)
+                    continue
+                else:
+                    logger.error(f"[FAIL] Timeout (120s) starting profile {profile_id} after {max_retries} attempts")
+                    logger.error("💡 Profile may be taking too long to start, try again later")
+                    return False, None
+            except requests.exceptions.ConnectionError as e:
+                logger.warning(f"[START_PROFILE] Connection error on attempt {attempt + 1}/{max_retries} for profile {profile_id}: {e}")
+                if attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)
+                    logger.info(f"[START_PROFILE] Retrying in {delay} seconds...")
+                    time.sleep(delay)
+                    continue
+                else:
+                    logger.error(f"[FAIL] Connection error starting profile {profile_id}: {e}")
+                    logger.error("💡 Make sure Dolphin Anty application is running")
+                    return False, None
+            except requests.exceptions.RequestException as e:
+                logger.warning(f"[START_PROFILE] Request error on attempt {attempt + 1}/{max_retries} for profile {profile_id}: {e}")
+                if attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)
+                    logger.info(f"[START_PROFILE] Retrying in {delay} seconds...")
+                    time.sleep(delay)
+                    continue
+                else:
+                    logger.error(f"[FAIL] Request error starting profile {profile_id}: {e}")
+                    return False, None
+            except Exception as e:
+                logger.warning(f"[START_PROFILE] Unexpected error on attempt {attempt + 1}/{max_retries} for profile {profile_id}: {e}")
+                if attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)
+                    logger.info(f"[START_PROFILE] Retrying in {delay} seconds...")
+                    time.sleep(delay)
+                    continue
+                else:
+                    logger.error(f"[FAIL] Unexpected error starting profile {profile_id}: {e}")
+                    return False, None
+        
+        return False, None
 
     def stop_profile(self, profile_id: Union[str, int]) -> bool:
         """
@@ -2577,29 +2678,55 @@ class DolphinAnty:
         logger.warning(f"[GET_COOKIES] No cookies found for profile {profile_id}")
         return []
 
-    def export_cookies(self, profile_id: Union[str, int], timeout_seconds: int = 15) -> List[Dict[str, Any]]:
+    def export_cookies(self, profile_id: Union[str, int], timeout_seconds: int = 60) -> List[Dict[str, Any]]:
         """
         Exact sample from docs: GET with headers only.
+        Increased timeout to 60 seconds for better reliability.
+        Added retry logic with exponential backoff.
         """
-        try:
-            url = f"{self.sync_api_base}/?actionType=getCookies&browserProfileId={profile_id}"
-            token = self.api_key or os.environ.get("TOKEN") or os.environ.get("DOLPHIN_API_TOKEN")
-            headers = {"Content-Type": "application/json"}
-            if token:
-                headers["Authorization"] = f"Bearer {token}"
-            res = requests.request("GET", url, headers=headers, timeout=timeout_seconds)
-            res.raise_for_status()
-            payload = res.json()
-            if isinstance(payload, dict) and "data" in payload:
-                cookies_data = payload.get("data") or []
-                logger.info(f"[EXPORT_COOKIES] Success! Got {len(cookies_data)} cookies for profile {profile_id}")
-                return cookies_data
-            if isinstance(payload, list):
-                logger.info(f"[EXPORT_COOKIES] Success! Got {len(payload)} cookies for profile {profile_id}")
-                return payload
-            logger.warning(f"[EXPORT_COOKIES] Unexpected payload format for profile {profile_id}: {type(payload)}")
-        except Exception as e:
-            logger.error(f"[FAIL] export_cookies sync call failed for {profile_id}: {e}")
+        max_retries = 3
+        base_delay = 2
+        
+        for attempt in range(max_retries):
+            try:
+                url = f"{self.sync_api_base}/?actionType=getCookies&browserProfileId={profile_id}"
+                token = self.api_key or os.environ.get("TOKEN") or os.environ.get("DOLPHIN_API_TOKEN")
+                headers = {"Content-Type": "application/json"}
+                if token:
+                    headers["Authorization"] = f"Bearer {token}"
+                
+                logger.info(f"[EXPORT_COOKIES] Attempt {attempt + 1}/{max_retries} for profile {profile_id}")
+                res = requests.request("GET", url, headers=headers, timeout=timeout_seconds)
+                res.raise_for_status()
+                payload = res.json()
+                if isinstance(payload, dict) and "data" in payload:
+                    cookies_data = payload.get("data") or []
+                    logger.info(f"[EXPORT_COOKIES] Success! Got {len(cookies_data)} cookies for profile {profile_id}")
+                    return cookies_data
+                if isinstance(payload, list):
+                    logger.info(f"[EXPORT_COOKIES] Success! Got {len(payload)} cookies for profile {profile_id}")
+                    return payload
+                logger.warning(f"[EXPORT_COOKIES] Unexpected payload format for profile {profile_id}: {type(payload)}")
+                return []
+                
+            except requests.exceptions.Timeout as e:
+                logger.warning(f"[EXPORT_COOKIES] Timeout on attempt {attempt + 1}/{max_retries} for profile {profile_id}: {e}")
+                if attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)
+                    logger.info(f"[EXPORT_COOKIES] Retrying in {delay} seconds...")
+                    time.sleep(delay)
+                    continue
+                else:
+                    logger.error(f"[FAIL] export_cookies sync call failed for {profile_id} after {max_retries} attempts: {e}")
+            except Exception as e:
+                logger.error(f"[FAIL] export_cookies sync call failed for {profile_id}: {e}")
+                if attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)
+                    logger.info(f"[EXPORT_COOKIES] Retrying in {delay} seconds...")
+                    time.sleep(delay)
+                    continue
+                else:
+                    logger.error(f"[FAIL] export_cookies sync call failed for {profile_id} after {max_retries} attempts: {e}")
         return []
 
     def update_cookies(self, profile_id: Union[str, int], cookies: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -2628,7 +2755,7 @@ class DolphinAnty:
             logger.error(f"[FAIL] Failed to delete cookies for profile {profile_id}: {e}")
             return {"success": False, "error": str(e)}
 
-    def get_cookies_local_export(self, profile_id: Union[str, int], timeout_seconds: int = 15) -> List[Dict[str, Any]]:
+    def get_cookies_local_export(self, profile_id: Union[str, int], timeout_seconds: int = 60) -> List[Dict[str, Any]]:
         """
         Retrieve cookies for a browser profile via Local API export endpoint.
         Tries GET with query param, then POST with JSON body as fallback.
@@ -2678,7 +2805,7 @@ class DolphinAnty:
             logger.error(f"[FAIL] Local export cookies failed for profile {profile_id}: {e}")
         return []
 
-    def get_cookies_via_sync_api(self, profile_id: Union[str, int], timeout_seconds: int = 15) -> List[Dict[str, Any]]:
+    def get_cookies_via_sync_api(self, profile_id: Union[str, int], timeout_seconds: int = 60) -> List[Dict[str, Any]]:
         """
         Fallback method - redirects to the working export_cookies method.
         """

@@ -284,8 +284,8 @@ def run_cookie_robot_task(task_id):
         task.log += log_message + "\n"
         logger.info(log_message)
         
-        # Add retries for transient start/connect errors
-        backoffs = [0, 2, 5]
+        # Add retries for transient start/connect errors with longer delays
+        backoffs = [0, 5, 15, 30]  # Increased delays: 0s, 5s, 15s, 30s
         result = None
         for attempt, delay in enumerate(backoffs, start=1):
             if delay:
