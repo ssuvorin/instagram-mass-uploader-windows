@@ -12,11 +12,6 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.AddField(
-            model_name='hashtaganalytics',
-            name='updated_at',
-            field=models.DateTimeField(auto_now=True),
-        ),
-        migrations.AddField(
             model_name='youtubeaccount',
             name='tag',
             field=models.ForeignKey(blank=True, help_text='Tag for categorizing this account', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='youtube_accounts', to='uploader.tag'),
