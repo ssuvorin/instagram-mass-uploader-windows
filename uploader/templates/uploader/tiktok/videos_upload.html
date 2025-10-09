@@ -305,11 +305,11 @@
                 {% csrf_token %}
                 <input type="hidden" name="server_url" id="server-url-input-step0" value="{{ api_base }}">
                 <div class="row g-3 align-items-end">
-                    <div class="col-sm-6 col-md-4">
+                    <div class="col-sm-6 col-md-3">
                         <label for="count" class="form-label">Number of Accounts</label>
                         <input type="number" class="form-control" id="count" name="count" value="20" min="1" max="500" required>
                     </div>
-                    <div class="col-sm-6 col-md-4">
+                    <div class="col-sm-6 col-md-3">
                         <label for="client_id" class="form-label">Client</label>
                         <select class="form-select" id="client_id" name="client_id">
                             <option value="">-- Not selected --</option>
@@ -318,7 +318,16 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-sm-6 col-md-4">
+                    <div class="col-sm-6 col-md-3">
+                        <label for="tags" class="form-label">Tag</label>
+                        <select class="form-select" id="tags" name="tags">
+                            <option value="">-- Not selected --</option>
+                            {% for tag in tags %}
+                            <option value="{{ tag.id }}">{{ tag.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-sm-6 col-md-3">
                         <label for="order" class="form-label">Order</label>
                         <select class="form-select" id="order" name="order">
                             <option value="newest" selected>Newest</option>
@@ -603,6 +612,7 @@ document.getElementById('prepare-accounts-form').addEventListener('submit', asyn
             body: JSON.stringify({
                 count: parseInt(count || 0),
                 client_id: document.getElementById('client_id').value || undefined,
+                tags: document.getElementById('tags').value || undefined,
                 order: document.getElementById('order').value || 'newest'
             })
         });

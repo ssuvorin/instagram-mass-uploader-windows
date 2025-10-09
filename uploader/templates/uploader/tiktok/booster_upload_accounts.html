@@ -103,6 +103,29 @@
                                 <br>2) <code>username:password:email:same_password:[json_cookies_array]</code> or <code>username:password:email:password:[json_cookies_array]</code>
                             </div>
                         </div>
+                        
+                        <div class="mb-3">
+                            <label for="client_id" class="form-label">Assign to Client (optional)</label>
+                            <select class="form-select" id="client_id" name="client_id">
+                                <option value="">— Without client —</option>
+                                {% for c in clients %}
+                                    <option value="{{ c.id }}">{{ c.name }} {% if c.agency %}(Agency: {{ c.agency.name }}){% endif %}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Выберите клиента, к которому будут привязаны импортируемые аккаунты.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="tags" class="form-label">Assign Tag (optional)</label>
+                            <select class="form-select" id="tags" name="tags">
+                                <option value="">— Without tag —</option>
+                                {% for tag in tags %}
+                                    <option value="{{ tag.id }}">{{ tag.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Выберите тег, который будет присвоен всем импортируемым аккаунтам.</div>
+                        </div>
+                        
                         <input type="hidden" name="server_url" id="server-url-input" value="{{ api_base }}">
                         <button type="submit" class="btn tiktok-btn-modern"><i class="bi bi-upload"></i> Upload</button>
                     </form>

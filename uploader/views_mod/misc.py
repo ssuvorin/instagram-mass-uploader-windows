@@ -1748,6 +1748,15 @@ def _tiktok_api_context(request=None) -> dict:
     except Exception:
         clients_list = []
 
+    # Optional: include tags for selection in UI
+    tags_list = []
+    try:
+        from uploader.models import Tag  # local import to avoid circulars at module import time
+        # Limit fields to reduce memory footprint
+        tags_list = list(Tag.objects.all().values('id', 'name'))
+    except Exception:
+        tags_list = []
+
     return {
         'active_tab': 'tiktok',
         'api_base': selected_api_base,
@@ -1755,6 +1764,7 @@ def _tiktok_api_context(request=None) -> dict:
         'selected_server': selected_server,
         'server_count': len(servers),
         'clients': clients_list,
+        'tags': tags_list,
     }
 
 
@@ -1940,8 +1950,33 @@ def tiktok_booster_proxy_upload_accounts(request):
         except Exception:
             normalized_bytes = content_bytes
 
+        # Prepare form data with client and tag information
+        data = {}
+        
+        # Client selection
+        client_id = request.POST.get('client_id')
+        if client_id:
+            try:
+                from cabinet.models import Client as CabinetClient
+                client_obj = CabinetClient.objects.filter(id=int(client_id)).first()
+                if client_obj:
+                    data['client'] = client_obj.name
+            except Exception:
+                pass
+        
+        # Tag selection
+        tag_id = request.POST.get('tags')
+        if tag_id:
+            try:
+                from uploader.models import Tag
+                tag_obj = Tag.objects.filter(id=int(tag_id)).first()
+                if tag_obj:
+                    data['tag'] = tag_obj.name
+            except Exception:
+                pass
+
         files = {'file': (file.name, normalized_bytes)}
-        resp = requests.post(f"{api_base}/booster/upload_accounts", files=files, timeout=30)
+        resp = requests.post(f"{api_base}/booster/upload_accounts", files=files, data=data, timeout=30)
         try:
             data = resp.json()
         except Exception:
@@ -2157,6 +2192,26 @@ def tiktok_booster_proxy_prepare_accounts(request):
                     client_name = None
         if client_name:
             payload['client'] = client_name
+        
+        # Tag selection: accept tag_id or tag_name; transform to name string for upstream
+        tag_name = None
+        try:
+            tag_name = (payload.get('tag') or '').strip() if isinstance(payload.get('tag'), str) else None
+        except Exception:
+            tag_name = None
+        if not tag_name:
+            tag_id = request.POST.get('tags') or request.POST.get('tag_id') or (payload.get('tag_id') if isinstance(payload.get('tag_id'), (str,int)) else None)
+            if tag_id:
+                try:
+                    from uploader.models import Tag
+                    obj = Tag.objects.filter(id=int(tag_id)).first()
+                    if obj:
+                        tag_name = obj.name
+                except Exception:
+                    tag_name = None
+        if tag_name:
+            payload['tag'] = tag_name
+            
         # Ensure required keys exist
         if 'cookie_robot' not in payload:
             payload['cookie_robot'] = False
@@ -3378,9 +3433,27 @@ def tiktok_videos_proxy_prepare_accounts(request):
             count_val = int(count_val)
         except Exception:
             count_val = 0
+        # Resolve tag name
+        tag_name = None
+        # Prefer explicit tag string from payload
+        if isinstance(payload_in.get('tag'), str) and payload_in.get('tag').strip():
+            tag_name = payload_in.get('tag').strip()
+        else:
+            tag_id = payload_in.get('tags') or payload_in.get('tag_id') or request.POST.get('tags') or request.POST.get('tag_id')
+            if tag_id:
+                try:
+                    from uploader.models import Tag
+                    obj = Tag.objects.filter(id=int(tag_id)).first()
+                    if obj:
+                        tag_name = obj.name
+                except Exception:
+                    tag_name = None
+        
         upstream_payload = {'count': count_val, 'order': order_val}
         if client_name:
             upstream_payload['client'] = client_name
+        if tag_name:
+            upstream_payload['tag'] = tag_name
         resp = requests.post(
             f"{api_base}/upload/prepare_accounts",
             json=upstream_payload,

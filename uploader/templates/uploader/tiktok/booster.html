@@ -468,6 +468,15 @@
                         {% endfor %}
                     </select>
                 </div>
+                <div class="col-md-4">
+                    <label class="form-label">Tag</label>
+                    <select id="tag-select" class="form-select">
+                        <option value="">-- Not selected --</option>
+                        {% for tag in tags %}
+                        <option value="{{ tag.id }}">{{ tag.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
             <form id="booster-proxies-form" enctype="multipart/form-data" class="mb-3">
                 {% csrf_token %}
@@ -1288,7 +1297,8 @@
         try {
             const useCookieRobot = document.getElementById('use-cookie-robot').checked;
             const clientId = document.getElementById('client-select').value || '';
-            const res = await fetch('{% url "api_tiktok_booster_prepare_accounts" %}', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ use_cookie_robot: useCookieRobot, client_id: clientId }) });
+            const tagId = document.getElementById('tag-select').value || '';
+            const res = await fetch('{% url "api_tiktok_booster_prepare_accounts" %}', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ use_cookie_robot: useCookieRobot, client_id: clientId, tags: tagId }) });
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || 'Prepare failed');
             addLog('Prepare accounts: OK', 'info');
