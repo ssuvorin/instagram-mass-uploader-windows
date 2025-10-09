@@ -15,7 +15,13 @@
 			<i class="bi bi-arrow-left"></i> Back to Accounts
 		</a>
 		<h2 class="mb-0 mt-2">Import Account Bundle</h2>
-		<p class="text-muted mb-0">Формат: одна строка с секциями через <code>|</code>: креды, UA, device ids, cookies/headers, proxy</p>
+        <p class="text-muted mb-0">Форматы (1 строка на аккаунт, секции через <code>|</code>):</p>
+        <ul class="text-muted small mb-0">
+            <li><b>Новый</b>: <code>username:pass:email:email_pass | user_agent | proxy | ip | locale</code></li>
+            <li><b>Прокси</b>: <code>user:pass@host:port</code> или <code>http:host:port:user:pass</code> или <code>host:port:user:pass</code></li>
+            <li><b>Locale</b>: <code>es-CL</code> или <code>es_CL</code> (нормализуется)</li>
+            <li><b>Legacy</b> (поддерживается): <code>creds | UA | device_ids | cookies/headers | proxy</code></li>
+        </ul>
 	</div>
 </div>
 
@@ -33,16 +39,19 @@
 						</div>
 						<div>
 							<h6 class="alert-heading">Expected Format</h6>
-							<p class="mb-2">Пример строки:</p>
-							<pre class="small bg-light p-2 rounded overflow-auto bundle-example">login:pass:email:emailpass|Instagram 364.0.0.18.86 Android (..)|android-xxx;device_guid;phone_id;ad_id|Authorization=Bearer IGT:2:...; IG-U-DS-USER-ID=...; X-MID=...; ...|https:host:10000:proxyuser:proxypass</pre>
+                            <p class="mb-2">Примеры:</p>
+                            <pre class="small bg-light p-2 rounded overflow-auto bundle-example">login:pass:email:emailpass | Instagram 400.0.0.27.75 (iPhone...) | proxyuser:proxypass@93.190.141.105:9999 | 186.40.219.32 | es-CL
+login:pass | Instagram 269.0.0.18.75 Android (29/10; 640dpi; 1440x3040; samsung; SM-G973F; beyond1; exynos9820) | http:190.2.142.241:9999:proxy:pass | 186.189.71.110 | es_CL
+login:pass:email:emailpass|Instagram 364.0.0.18.86 Android (...)|android-xxx;device_guid;phone_id;ad_id|Authorization=Bearer IGT:2:...; IG-U-DS-USER-ID=...; X-MID=...; ...|https:host:10000:proxyuser:proxypass</pre>
 
-							<ul class="mb-0">
-								<li><b>Creds</b>: <code>login:password[:email][:email_password]</code></li>
-								<li><b>UA</b>: строка Instagram Android (необязательно)</li>
-								<li><b>Device IDs</b>: <code>android-&lt;id&gt;;device_guid;phone_id;advertising_id</code> (необязательно)</li>
-								<li><b>Cookies/headers</b>: <code>name=value; ...; Authorization=Bearer IGT:2:&lt;base64&gt;</code> (необязательно)</li>
-								<li><b>Proxy</b>: <code>scheme:host:port:username:password</code> или <code>host:port:user:pass</code> (необязательно)</li>
-							</ul>
+                            <ul class="mb-0">
+                                <li><b>Creds</b>: <code>login:password[:email][:email_password]</code></li>
+                                <li><b>User-Agent</b>: Instagram мобильный UA (строго сохраняется для instagrapi)</li>
+                                <li><b>Proxy</b>: поддерживаются все распространённые формы</li>
+                                <li><b>IP</b>: внешний IP прокси (опционально)</li>
+                                <li><b>Locale</b>: например, <code>es-CL</code>; влияет на гео в instagrapi</li>
+                                <li><b>Legacy</b>: можно указать cookies/headers и device ids — будут импортированы</li>
+                            </ul>
 						</div>
 					</div>
 				</div>

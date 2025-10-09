@@ -116,6 +116,36 @@ class IGClientFactory:
             except Exception:
                 pass
 
+        # Also set language explicitly based on locale/user_agent hints
+        try:
+            lang = None
+            # Prefer device_config.language if present
+            if device_config and isinstance(device_config, dict):
+                lang = device_config.get('language')
+            # Fallback from locale
+            if not lang and locale:
+                lang = locale.split('_')[0].lower()
+            if not lang and locale and '-' in locale:
+                lang = locale.split('-')[0].lower()
+            if lang and hasattr(cl, 'set_language'):
+                cl.set_language(lang)  # type: ignore[attr-defined]
+        except Exception:
+            pass
+
+        # Strengthen headers to match device and language consistently
+        try:
+            if hasattr(cl, 'private') and hasattr(cl.private, 'session'):
+                sess = cl.private.session
+                if user_agent:
+                    sess.headers['User-Agent'] = user_agent
+                if locale:
+                    # Map locale to Accept-Language like 'es-CL,es;q=0.9'
+                    loc_norm = locale.replace('_', '-')
+                    base = loc_norm.split('-')[0]
+                    sess.headers['Accept-Language'] = f"{loc_norm},{base};q=0.9"
+        except Exception:
+            pass
+
         if tz_offset is not None:
             try:
                 cl.set_timezone_offset(tz_offset)

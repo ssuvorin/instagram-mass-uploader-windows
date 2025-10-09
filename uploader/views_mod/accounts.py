@@ -1655,16 +1655,23 @@ def import_accounts_ua_cookies(request):
 
 def import_accounts_bundle(request):
 	"""
-	Import accounts in the single-line "account-bundle" format for unofficial clients.
+	Import accounts in the single-line bundle format.
 
-	Expected general structure (sections separated by |):
-	- creds: "login:password[:email][:email_password]"
-	- ua: "Instagram <ver> Android (...)" or similar
-	- device ids: "android-xxxx;device_guid;phone_id;advertising_id" (optional)
-	- cookies/headers: "name=value; other=value; Authorization=Bearer IGT:2:<base64>" (optional)
-	- proxy: "scheme:host:port:username:password" (optional)
+	Supported formats (sections separated by |):
+	1) New (preferred):
+	   login:password:email:email_password | user_agent | proxy | ip | locale
+	   - proxy examples:
+	     user:pass@host:port
+	     http:host:port:user:pass
+	     host:port:user:pass
+	   - ip: external IP of proxy (optional)
+	   - locale: e.g. es-CL / es_CL (will be normalized to underscore)
 
-	Parser is resilient: it detects segments by content, not position.
+	2) Legacy (still accepted):
+	   creds | UA | device_ids | cookies/headers | proxy
+	   Where cookies may include Authorization=Bearer IGT:2:...
+
+	Parser is resilient and will attempt to auto-detect provided structure.
 	"""
 	if request.method == 'POST' and request.FILES.get('accounts_file'):
 		accounts_file = request.FILES['accounts_file']
@@ -1695,6 +1702,14 @@ def import_accounts_bundle(request):
 				# Or host:port:login:pass without scheme
 				if colon_count >= 3 and '=' not in s and ' ' not in s:
 					return True
+				# Or user:pass@host:port form (at least one '@' and a colon in host:port)
+				if '@' in s:
+					try:
+						creds, hp = s.rsplit('@', 1)
+						if ':' in hp and creds:
+							return True
+					except Exception:
+						return False
 				return False
 			except Exception:
 				return False
@@ -1712,7 +1727,24 @@ def import_accounts_bundle(request):
 				port = None
 				username = None
 				password = None
-				if s.lower().startswith(('http:', 'https:', 'socks5:')):
+				# user:pass@host:port
+				if '@' in s and not s.lower().startswith(('http@', 'https@', 'socks5@')):
+					try:
+						cred_part, hostpart = s.rsplit('@', 1)
+						# cred_part could itself contain ':' multiple times; split only on first
+						if ':' in cred_part:
+							username, password = cred_part.split(':', 1)
+						else:
+							username = cred_part
+							password = None
+						# hostpart: host:port
+						if ':' in hostpart:
+							host, port = hostpart.split(':', 1)
+						else:
+							return None
+					except Exception:
+						return None
+				elif s.lower().startswith(('http:', 'https:', 'socks5:')):
 					scheme = parts[0].lower()
 					if scheme == 'https':
 						proxy_type = 'HTTPS'
@@ -1827,7 +1859,7 @@ def import_accounts_bundle(request):
 				continue
 			try:
 				s = raw.strip()
-				segments = [p for p in s.split('|')]
+				segments = [p.strip() for p in s.split('|')]
 				# creds: always left part before first |
 				left = segments[0] if segments else ''
 				cred_parts = left.split(':')
@@ -1839,58 +1871,111 @@ def import_accounts_bundle(request):
 				password = cred_parts[1].strip()
 				email_username = cred_parts[2].strip() if len(cred_parts) >= 3 else None
 				email_password = cred_parts[3].strip() if len(cred_parts) >= 4 else None
-
-				# detect proxy segment (prefer last matching)
-				proxy_idx = None
-				for idx in range(len(segments) - 1, -1, -1):
-					if _is_proxy_segment(segments[idx]):
-						proxy_idx = idx
-						break
-
-				# detect cookies start: from left to right, first seg containing '=' (name=value)
-				cookies_idx = None
-				for idx in range(1, len(segments)):
-					seg = (segments[idx] or '').strip()
-					if '=' in seg:
-						cookies_idx = idx
-						break
-
-				# UA: first segment with "Instagram" word
-				ua_idx = None
-				for idx in range(1, len(segments)):
-					if 'instagram' in (segments[idx] or '').lower():
-						ua_idx = idx
-						break
-
-				ua_string = (segments[ua_idx].strip() if ua_idx is not None else '') or ''
-				device_info_raw = None
-				if ua_idx is not None and cookies_idx is not None and (cookies_idx - ua_idx) > 1:
-					# Device info should be strictly between UA and cookies
-					mid_parts = segments[ua_idx + 1:cookies_idx]
-					joined = '|'.join([p for p in mid_parts if p is not None]).strip()
-					device_info_raw = joined or None
-
-				cookies_raw = None
-				if cookies_idx is not None:
-					end_idx = proxy_idx if proxy_idx is not None else len(segments)
-					cookies_raw = '|'.join(segments[cookies_idx:end_idx]).strip() or None
-
+				# Try NEW format first: creds | ua | proxy | ip | locale
+				ua_string = ''
 				proxy_data = None
-				if proxy_idx is not None:
-					proxy_data = _parse_proxy(segments[proxy_idx])
+				ip_value = None
+				locale_value = None
+				new_format_ok = False
+				if len(segments) >= 4:
+					# quick heuristics: second seg looks like UA; third looks like proxy; last 1-2 look like ip/locale
+					ua_candidate = segments[1] if len(segments) > 1 else ''
+					proxy_candidate = segments[2] if len(segments) > 2 else ''
+					last_seg = segments[-1] if segments else ''
+					prev_last_seg = segments[-2] if len(segments) >= 2 else ''
+					# IP detector
+					def _is_ip(sval: str) -> bool:
+						try:
+							parts = sval.split('.')
+							if len(parts) != 4:
+								return False
+							for p in parts:
+								iv = int(p)
+								if iv < 0 or iv > 255:
+									return False
+							return True
+						except Exception:
+							return False
+					# locale detector: xx-YY or xx_YY
+					def _is_locale(sval: str) -> bool:
+						import re as _re
+						return bool(_re.match(r'^[a-z]{2}[-_][A-Z]{2}$', sval or ''))
+					if ua_candidate and _is_proxy_segment(proxy_candidate):
+						# Determine positions of ip/locale
+						if _is_locale(last_seg) and _is_ip(prev_last_seg):
+							ua_string = ua_candidate
+							proxy_data = _parse_proxy(proxy_candidate)
+							ip_value = prev_last_seg
+							locale_value = last_seg
+							new_format_ok = True
+						elif _is_ip(last_seg) and _is_locale(prev_last_seg):
+							ua_string = ua_candidate
+							proxy_data = _parse_proxy(proxy_candidate)
+							ip_value = last_seg
+							locale_value = prev_last_seg
+							new_format_ok = True
 
-				# Parse cookies list and extract useful values
-				parsed_cookies_list: list[dict] = _parse_cookies(cookies_raw or '') if cookies_raw else []
-				ds_user_id = _extract_cookie_value(parsed_cookies_list, 'ds_user_id')
-				sessionid = _extract_cookie_value(parsed_cookies_list, 'sessionid')
-				mid_val = _extract_cookie_value(parsed_cookies_list, 'mid') or _extract_cookie_value(parsed_cookies_list, 'X-MID')
-				ig_u_rur_val = _extract_cookie_value(parsed_cookies_list, 'IG-U-RUR') or _extract_cookie_value(parsed_cookies_list, 'rur')
-				ig_www_claim_val = _extract_cookie_value(parsed_cookies_list, 'X-IG-WWW-Claim')
-				# If Authorization bearer present, try decode to enrich
-				if cookies_raw and 'Authorization=Bearer IGT:2:' in cookies_raw:
-					dec = _decode_igt_bearer(cookies_raw)
-					ds_user_id = ds_user_id or dec.get('ds_user_id')
-					sessionid = sessionid or dec.get('sessionid')
+				device_info_raw = None
+				parsed_cookies_list: list[dict] = []
+				ds_user_id = None
+				sessionid = None
+				mid_val = None
+				ig_u_rur_val = None
+				ig_www_claim_val = None
+
+				if not new_format_ok:
+					# Legacy format autodetection
+					# detect proxy segment (prefer last matching)
+					proxy_idx = None
+					for idx in range(len(segments) - 1, -1, -1):
+						if _is_proxy_segment(segments[idx]):
+							proxy_idx = idx
+							break
+
+					# detect cookies start: from left to right, first seg containing '=' (name=value)
+					cookies_idx = None
+					for idx in range(1, len(segments)):
+						seg = (segments[idx] or '').strip()
+						if '=' in seg:
+							cookies_idx = idx
+							break
+
+					# UA: first segment with "Instagram" word
+					ua_idx = None
+					for idx in range(1, len(segments)):
+						if 'instagram' in (segments[idx] or '').lower():
+							ua_idx = idx
+							break
+
+					ua_string = (segments[ua_idx].strip() if ua_idx is not None else '') or ''
+					if ua_idx is not None and cookies_idx is not None and (cookies_idx - ua_idx) > 1:
+						# Device info should be strictly between UA and cookies
+						mid_parts = segments[ua_idx + 1:cookies_idx]
+						joined = '|'.join([p for p in mid_parts if p is not None]).strip()
+						device_info_raw = joined or None
+
+					cookies_raw = None
+					if cookies_idx is not None:
+						end_idx = proxy_idx if proxy_idx is not None else len(segments)
+						cookies_raw = '|'.join(segments[cookies_idx:end_idx]).strip() or None
+
+					proxy_data = None
+					if proxy_idx is not None:
+						proxy_data = _parse_proxy(segments[proxy_idx])
+
+					# Parse cookies list and extract useful values
+					parsed_cookies_list = _parse_cookies(cookies_raw or '') if cookies_raw else []
+					ds_user_id = _extract_cookie_value(parsed_cookies_list, 'ds_user_id')
+					sessionid = _extract_cookie_value(parsed_cookies_list, 'sessionid')
+					mid_val = _extract_cookie_value(parsed_cookies_list, 'mid') or _extract_cookie_value(parsed_cookies_list, 'X-MID')
+					ig_u_rur_val = _extract_cookie_value(parsed_cookies_list, 'IG-U-RUR') or _extract_cookie_value(parsed_cookies_list, 'rur')
+					ig_www_claim_val = _extract_cookie_value(parsed_cookies_list, 'X-IG-WWW-Claim')
+					# If Authorization bearer present, try decode to enrich
+					cookies_raw = '|'.join(segments[cookies_idx:]) if cookies_idx is not None else ''
+					if cookies_raw and 'Authorization=Bearer IGT:2:' in cookies_raw:
+						dec = _decode_igt_bearer(cookies_raw)
+						ds_user_id = ds_user_id or dec.get('ds_user_id')
+						sessionid = sessionid or dec.get('sessionid')
 
 				# Create/update account
 				defaults = {
@@ -1900,6 +1985,14 @@ def import_accounts_bundle(request):
 					'status': 'ACTIVE',
 					'notes': (f"UA: {ua_string[:200]}" if ua_string else ""),
 				}
+				# Optional: locale from new format
+				if locale_value:
+					try:
+						loc = (locale_value or '').strip()
+						loc = loc.replace('-', '_')
+						defaults['locale'] = loc
+					except Exception:
+						pass
 				# Optional client assignment
 				try:
 					client_id_str = request.POST.get('client_id')
@@ -1922,70 +2015,296 @@ def import_accounts_bundle(request):
 				try:
 					from uploader.models import InstagramDevice
 					dev_obj, _ = InstagramDevice.objects.get_or_create(account=account)
-					uuids_dict = {}
+					# Build device_settings to lock API app_version and locale
+					device_settings = dict(getattr(dev_obj, 'device_settings', {}) or {})
+					# Extract app_version from UA if present (Instagram x.y.z...)
 					try:
-						if device_info_raw:
+						import re as _re
+						m = _re.search(r'Instagram\s+([0-9.]+)', ua_string or '', flags=_re.I)
+						if m:
+							device_settings['app_version'] = m.group(1)
+					except Exception:
+						pass
+					# Extract resolution and DPI from UA if present (e.g., scale=3.66; 1284x2778)
+					try:
+						import re as _re
+						m_res = _re.search(r'(\d{3,5})x(\d{3,5})', ua_string or '')
+						if m_res:
+							device_settings['resolution'] = f"{m_res.group(1)}x{m_res.group(2)}"
+						m_scale = _re.search(r'scale\s*=\s*([\d\.]+)', (ua_string or ''), flags=_re.I)
+						if m_scale:
+							try:
+								scale_val = float(m_scale.group(1))
+								approx_dpi = int(round(scale_val * 160))
+								device_settings['dpi'] = f"{approx_dpi}dpi"
+							except Exception:
+								pass
+						# Extract iOS device model and OS from UA parentheses
+						inside = _re.search(r'\(([^)]*)\)', ua_string or '')
+						if inside:
+							ua_tokens = [p.strip() for p in inside.group(1).split(';') if p.strip()]
+							if ua_tokens:
+								device_settings['ios_model'] = ua_tokens[0]
+								# iOS version token like "iOS 12_5_4"
+								for tok in ua_tokens[1:]:
+									if tok.lower().startswith('ios'):
+										device_settings['ios_version'] = tok.split(' ', 1)[-1]
+										break
+								# trailing numeric token may be version_code-like
+								for tok in reversed(ua_tokens):
+									if tok.isdigit() and len(tok) >= 6:
+										device_settings['version_code'] = tok
+										break
+					except Exception:
+						pass
+					# Persist locale/country if provided
+					if locale_value:
+						try:
+							loc_norm = (locale_value or '').replace('-', '_')
+							device_settings['locale'] = loc_norm
+							# country code: part after underscore
+							cc = loc_norm.split('_')[-1]
+							device_settings['country'] = cc
+							# language code (first part)
+							lang_code = loc_norm.split('_', 1)[0].lower()
+							device_settings['language'] = lang_code
+						except Exception:
+							pass
+					else:
+						# Fallback: try to extract locale from UA parentheses: e.g. (...; es_CL; es-CL; ...)
+						try:
+							import re as _re
+							inside = _re.search(r'\(([^)]*)\)', ua_string or '')
+							if inside:
+								parts = [p.strip() for p in inside.group(1).split(';')]
+								for tok in parts:
+									if _re.match(r'^[a-z]{2}[-_][A-Z]{2}$', tok):
+										loc_norm = tok.replace('-', '_')
+										device_settings['locale'] = loc_norm
+										cc = loc_norm.split('_')[-1]
+										device_settings['country'] = cc
+										device_settings['language'] = loc_norm.split('_', 1)[0].lower()
+										# Also update account locale below after device save
+										locale_value = tok
+										break
+						except Exception:
+							pass
+					# Extract Apple device model (iPhone/iPad) and mark manufacturer
+					try:
+						import re as _re
+						inside = _re.search(r'\(([^)]*)\)', ua_string or '')
+						if inside:
+							first_tok = inside.group(1).split(';')[0].strip()
+							if first_tok.lower().startswith(('iphone', 'ipad', 'ipod')):
+								device_settings['model'] = first_tok
+								device_settings['device'] = first_tok
+								device_settings['manufacturer'] = 'apple'
+					except Exception:
+						pass
+
+					# Capture network segment like "NW/1" if present in the line segments
+					try:
+						for _seg in segments[1:]:
+							_s = (_seg or '').strip()
+							if _s.upper().startswith('NW/') and len(_s) <= 6:
+								device_settings['network'] = _s.upper()
+								break
+					except Exception:
+						pass
+
+					# Ensure stable device UUIDs (uuid/phone_id/client_session_id/android_device_id)
+					try:
+						import hashlib, uuid as _uuid
+						need_ids = not all([
+							device_settings.get('uuid'),
+							device_settings.get('phone_id'),
+							device_settings.get('client_session_id'),
+							device_settings.get('android_device_id'),
+						])
+						if need_ids:
+							seed_parts = [username or '', ua_string or '']
+							try:
+								seed_parts.append(proxy_data.get('username') or '')
+							except Exception:
+								pass
+							seed = '|'.join(seed_parts)
+							h = hashlib.sha1(seed.encode('utf-8')).hexdigest()
+							# Build deterministic UUIDs
+							uid = str(_uuid.UUID(h[0:32]))
+							pid = str(_uuid.uuid5(_uuid.NAMESPACE_DNS, h[8:]))
+							csid = str(_uuid.uuid5(_uuid.NAMESPACE_URL, h[16:]))
+							adid = 'android-' + h[0:16]
+							device_settings.setdefault('uuid', uid)
+							device_settings.setdefault('phone_id', pid)
+							device_settings.setdefault('client_session_id', csid)
+							device_settings.setdefault('android_device_id', adid)
+					except Exception:
+						pass
+
+					# If UA looks like Apple/iOS – convert to Android UA for instagrapi
+					try:
+						def _is_apple_ua(s: str) -> bool:
+							ls = (s or '').lower()
+							return ('iphone' in ls) or ('ipad' in ls) or ('ipod' in ls) or ('ios' in ls)
+						is_apple = _is_apple_ua(ua_string)
+						if is_apple:
+							# Choose Android defaults if missing
+							app_ver = device_settings.get('app_version') or '269.0.0.18.75'
+							android_version = str(device_settings.get('android_version') or 29)
+							android_release = device_settings.get('android_release') or '10'
+							dpi_val = device_settings.get('dpi') or '640dpi'
+							res_val = device_settings.get('resolution') or '1440x3040'
+							man = device_settings.get('manufacturer') or 'samsung'
+							model = device_settings.get('model') or 'SM-G973F'
+							dev = device_settings.get('device') or 'beyond1'
+							cpu = device_settings.get('cpu') or 'exynos9820'
+							loc = device_settings.get('locale') or (locale_value or 'en_US')
+							ver_code = device_settings.get('version_code') or '314665256'
+							# Normalize locale formatting to underscore
+							loc = str(loc).replace('-', '_')
+							android_ua = (
+								f"Instagram {app_ver} "
+								f"Android ({android_version}/{android_release}; {dpi_val}; {res_val}; {man}; {model}; {dev}; {cpu}; {loc}; {ver_code})"
+							)
+							# Overwrite device settings to Android profile
+							device_settings['app_version'] = app_ver
+							device_settings['android_version'] = int(android_version) if str(android_version).isdigit() else 29
+							device_settings['android_release'] = android_release
+							device_settings['dpi'] = dpi_val
+							device_settings['resolution'] = res_val
+							device_settings['manufacturer'] = man
+							device_settings['model'] = model
+							device_settings['device'] = dev
+							device_settings['cpu'] = cpu
+							device_settings['locale'] = loc
+							device_settings['version_code'] = ver_code
+							device_settings['user_agent'] = android_ua
+							# Persist UA replacement: keep original for reference
+							ua_replaced = android_ua
+						else:
+							ua_replaced = None
+					except Exception:
+						ua_replaced = None
+					# Backfill UUIDs if present from legacy device_info_raw
+					if device_info_raw:
+						try:
 							di_parts = [p for p in device_info_raw.split(';') if p]
 							if di_parts:
-								uuids_dict['android_device_id'] = di_parts[0]
+								device_settings.setdefault('android_device_id', di_parts[0])
 							if len(di_parts) >= 2:
-								uuids_dict['phone_id'] = di_parts[1]
+								device_settings.setdefault('phone_id', di_parts[1])
 							if len(di_parts) >= 3:
-								uuids_dict['uuid'] = di_parts[2]
+								device_settings.setdefault('uuid', di_parts[2])
 							if len(di_parts) >= 4:
-								uuids_dict['client_session_id'] = di_parts[3]
+								device_settings.setdefault('client_session_id', di_parts[3])
+						except Exception:
+							pass
+					# Save device and session snapshot (minimal in new format)
+					if ua_string:
+						# Pick UA for API: converted Android UA if we built it, else original
+						ua_for_api = (ua_replaced or ua_string)
+						dev_obj.user_agent = dev_obj.user_agent or ua_for_api
+					if device_settings:
+						dev_obj.device_settings = device_settings
+					# Minimal session_settings to carry UA for API-only flows
+					sess = dict(getattr(dev_obj, 'session_settings', {}) or {})
+					if ua_string:
+						# keep both original and effective UA
+						sess['user_agent'] = (ua_replaced or ua_string)
+						if ua_replaced:
+							sess['original_user_agent'] = ua_string
+					dev_obj.session_settings = sess
+					dev_obj.save(update_fields=['device_settings', 'session_settings', 'user_agent', 'updated_at'])
+					# If we auto-derived locale from UA and account lacks it, persist to account
+					try:
+						if locale_value and (not account.locale or account.locale.strip() == ''):
+							loc_norm = locale_value.replace('-', '_')
+							account.locale = loc_norm
+							account.save(update_fields=['locale'])
 					except Exception:
-						uuids_dict = {}
-					settings_snapshot = {
-						'uuids': uuids_dict,
-						'mobile_user_agent': ua_string or '',
-						'user_agent': ua_string or '',
-						'mid': mid_val,
-						'ig_u_rur': ig_u_rur_val,
-						'ig_www_claim': ig_www_claim_val,
-						'authorization_data': {
-							'ds_user_id': ds_user_id,
-							'sessionid': sessionid,
-						},
-						'last_login': int(time.time()),
-					}
-					dev_obj.session_settings = settings_snapshot
-					if ua_string and not dev_obj.user_agent:
-						dev_obj.user_agent = ua_string
-					dev_obj.save(update_fields=['session_settings', 'user_agent', 'updated_at'])
+						pass
 				except Exception as se:
 					logger.warning(f"[BUNDLE] Could not persist device session for {username}: {se}")
 
-				# Persist cookies for reference (treated as WEB cookies)
-				try:
-					from uploader.models import InstagramCookies
-					if parsed_cookies_list:
+				# Persist cookies for reference if legacy format provided
+				if parsed_cookies_list:
+					try:
+						from uploader.models import InstagramCookies
 						InstagramCookies.objects.update_or_create(
 							account=account,
 							defaults={'cookies_data': parsed_cookies_list, 'is_valid': True}
 						)
-				except Exception as ce:
-					logger.warning(f"[BUNDLE] Failed to persist cookies for {username}: {ce}")
+					except Exception as ce:
+						logger.warning(f"[BUNDLE] Failed to persist cookies for {username}: {ce}")
 
-				# Assign a free active proxy from pool if account has none (ignore proxy in bundle)
+				# Attach proxy from bundle (preferred). If absent, fallback to free pool.
 				try:
 					assigned_proxy = None
-					prev_acc = existing_map.get(username)
-					if prev_acc and (prev_acc.current_proxy or prev_acc.proxy):
-						assigned_proxy = prev_acc.current_proxy or prev_acc.proxy
-						logger.info(f"[BUNDLE] Reusing existing proxy for {username}: {assigned_proxy}")
-					elif not (account.current_proxy or account.proxy):
-						avail = Proxy.objects.filter(is_active=True, assigned_account__isnull=True)
-						if avail.exists():
-							assigned_proxy = avail.order_by('?').first()
+					if proxy_data and proxy_data.get('host') and proxy_data.get('port'):
+						# Normalize country from locale if present
+						proxy_country = None
+						try:
+							if locale_value:
+								proxy_country = locale_value.replace('-', '_').split('_')[-1]
+						except Exception:
+							proxy_country = None
+						assigned_proxy, _ = Proxy.objects.get_or_create(
+							host=proxy_data['host'],
+							port=int(proxy_data['port']),
+							username=proxy_data.get('username') or None,
+							password=proxy_data.get('password') or None,
+							defaults={
+								'proxy_type': proxy_data.get('proxy_type') or 'HTTP',
+								'status': 'active',
+								'is_active': True,
+								'external_ip': ip_value,
+								'country': proxy_country,
+							}
+						)
+						# Update mutable fields if existing
+						updates = []
+						if ip_value and assigned_proxy.external_ip != ip_value:
+							assigned_proxy.external_ip = ip_value
+							updates.append('external_ip')
+						if proxy_country and assigned_proxy.country != proxy_country:
+							assigned_proxy.country = proxy_country
+							updates.append('country')
+						if assigned_proxy.status != 'active':
+							assigned_proxy.status = 'active'
+							updates.append('status')
+						if assigned_proxy.is_active is False:
+							assigned_proxy.is_active = True
+							updates.append('is_active')
+						if assigned_proxy.assigned_account_id != account.id:
+							assigned_proxy.assigned_account = account
+							updates.append('assigned_account')
+						if updates:
+							assigned_proxy.save(update_fields=updates)
+						# Bind to account
+						account.proxy = assigned_proxy
+						account.current_proxy = assigned_proxy
+						account.save(update_fields=['proxy', 'current_proxy'])
+					else:
+						# Fallback: reuse previous or assign free
+						prev_acc = existing_map.get(username)
+						if prev_acc and (prev_acc.current_proxy or prev_acc.proxy):
+							assigned_proxy = prev_acc.current_proxy or prev_acc.proxy
 							account.proxy = assigned_proxy
 							account.current_proxy = assigned_proxy
 							account.save(update_fields=['proxy', 'current_proxy'])
-							assigned_proxy.assigned_account = account
-							assigned_proxy.save(update_fields=['assigned_account'])
-							logger.info(f"[BUNDLE] Assigned free proxy {assigned_proxy} to {username}")
-						else:
-							logger.warning(f"[BUNDLE] No free proxies available to assign for {username}")
+							logger.info(f"[BUNDLE] Reusing existing proxy for {username}: {assigned_proxy}")
+						elif not (account.current_proxy or account.proxy):
+							avail = Proxy.objects.filter(is_active=True, assigned_account__isnull=True)
+							if avail.exists():
+								assigned_proxy = avail.order_by('?').first()
+								account.proxy = assigned_proxy
+								account.current_proxy = assigned_proxy
+								account.save(update_fields=['proxy', 'current_proxy'])
+								assigned_proxy.assigned_account = account
+								assigned_proxy.save(update_fields=['assigned_account'])
+								logger.info(f"[BUNDLE] Assigned free proxy {assigned_proxy} to {username}")
+							else:
+								logger.warning(f"[BUNDLE] No free proxies available to assign for {username}")
 				except Exception as pe:
 					logger.warning(f"[BUNDLE] Proxy assignment failed for {username}: {pe}")
 
