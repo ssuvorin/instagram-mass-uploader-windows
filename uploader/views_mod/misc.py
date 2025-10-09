@@ -1964,14 +1964,14 @@ def tiktok_booster_proxy_upload_accounts(request):
             except Exception:
                 pass
         
-        # Tag selection
+        # Tag selection - only add if tag is selected
         tag_id = request.POST.get('tags')
         if tag_id:
             try:
                 from uploader.models import Tag
                 tag_obj = Tag.objects.filter(id=int(tag_id)).first()
-                if tag_obj:
-                    data['tag'] = tag_obj.name
+                if tag_obj and tag_obj.name.strip():
+                    data['tag'] = tag_obj.name.strip()
             except Exception:
                 pass
 
@@ -2209,8 +2209,9 @@ def tiktok_booster_proxy_prepare_accounts(request):
                         tag_name = obj.name
                 except Exception:
                     tag_name = None
-        if tag_name:
-            payload['tag'] = tag_name
+        # Only add tag to payload if it's not empty
+        if tag_name and tag_name.strip():
+            payload['tag'] = tag_name.strip()
             
         # Ensure required keys exist
         if 'cookie_robot' not in payload:
@@ -3452,8 +3453,9 @@ def tiktok_videos_proxy_prepare_accounts(request):
         upstream_payload = {'count': count_val, 'order': order_val}
         if client_name:
             upstream_payload['client'] = client_name
-        if tag_name:
-            upstream_payload['tag'] = tag_name
+        # Only add tag to payload if it's not empty
+        if tag_name and tag_name.strip():
+            upstream_payload['tag'] = tag_name.strip()
         resp = requests.post(
             f"{api_base}/upload/prepare_accounts",
             json=upstream_payload,

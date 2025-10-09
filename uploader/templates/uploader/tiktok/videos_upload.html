@@ -603,19 +603,24 @@ document.getElementById('prepare-accounts-form').addEventListener('submit', asyn
     btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Preparing...';
     resultBox.classList.add('d-none');
     try {
-        const response = await fetch('{% url "api_tiktok_videos_prepare_accounts" %}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            },
-            body: JSON.stringify({
+            const requestBody = {
                 count: parseInt(count || 0),
                 client_id: document.getElementById('client_id').value || undefined,
-                tags: document.getElementById('tags').value || undefined,
                 order: document.getElementById('order').value || 'newest'
-            })
-        });
+            };
+            const tagSelect = document.getElementById('tags');
+            const tagName = tagSelect.selectedIndex > 0 ? tagSelect.options[tagSelect.selectedIndex].text : null;
+            if (tagName) {
+                requestBody.tag = tagName;
+            }
+            const response = await fetch('{% url "api_tiktok_videos_prepare_accounts" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify(requestBody)
+            });
         const data = await response.json();
         if (response.ok) {
             resultBox.innerHTML = `<pre class="text-success">${JSON.stringify(data, null, 2)}</pre>`;

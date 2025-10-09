@@ -1297,8 +1297,13 @@
         try {
             const useCookieRobot = document.getElementById('use-cookie-robot').checked;
             const clientId = document.getElementById('client-select').value || '';
-            const tagId = document.getElementById('tag-select').value || '';
-            const res = await fetch('{% url "api_tiktok_booster_prepare_accounts" %}', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ use_cookie_robot: useCookieRobot, client_id: clientId, tags: tagId }) });
+            const tagSelect = document.getElementById('tag-select');
+            const tagName = tagSelect.selectedIndex > 0 ? tagSelect.options[tagSelect.selectedIndex].text : null;
+            const requestBody = { use_cookie_robot: useCookieRobot, client_id: clientId };
+            if (tagName) {
+                requestBody.tag = tagName;
+            }
+            const res = await fetch('{% url "api_tiktok_booster_prepare_accounts" %}', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || 'Prepare failed');
             addLog('Prepare accounts: OK', 'info');
