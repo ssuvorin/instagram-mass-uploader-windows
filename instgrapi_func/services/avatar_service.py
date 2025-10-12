@@ -8,7 +8,7 @@ from .auth_service import IGAuthService
 from .session_store import DjangoDeviceSessionStore
 from .device_service import ensure_persistent_device
 import logging
-from instagrapi.exceptions import ChallengeRequired, PleaseWaitFewMinutes, LoginRequired  # type: ignore
+from instagrapi.exceptions import ChallengeRequired, PleaseWaitFewMinutes, LoginRequired, PhotoNotUpload  # type: ignore
 
 log = logging.getLogger('insta.avatar')
 
@@ -153,8 +153,57 @@ class AvatarService:
         except LoginRequired as e:
             log.debug("LoginRequired on change picture for %s: %s", username, e)
             if on_log:
-                on_log(f"login required: {e}")
-            return False, None
+                on_log(f"session expired, attempting to restore...")
+            log.info(f"LoginRequired on change picture for {username}, attempting session restoration")
+            
+            # Use existing authentication logic from bulk upload
+            if not self._restore_session_and_login(cl, username, password, on_log):
+                log.error(f"Session restoration failed for {username}")
+                return False, None
+            
+            # Retry avatar change after session restoration
+            try:
+                result = cl.account_change_picture(image_path_obj)
+                log.debug("Profile picture changed after session restore for %s, result: %s", username, result)
+                if on_log:
+                    on_log(f"picture changed after session restore (user: {getattr(result, 'username', 'unknown')})")
+                log.info(f"picture changed after session restore for {username} (user: {getattr(result, 'username', 'unknown')})")
+            except Exception as retry_e:
+                log.error(f"Avatar change retry failed for {username}: {retry_e}")
+                if on_log:
+                    on_log(f"avatar change retry failed: {retry_e}")
+                return False, None
+        except PhotoNotUpload as e:
+            # Check if PhotoNotUpload contains login_required
+            error_str = str(e)
+            if "login_required" in error_str.lower():
+                log.debug("PhotoNotUpload with login_required for %s: %s", username, e)
+                if on_log:
+                    on_log(f"session expired (PhotoNotUpload), attempting to restore...")
+                log.info(f"PhotoNotUpload with login_required for {username}, attempting session restoration")
+                
+                # Use existing authentication logic from bulk upload
+                if not self._restore_session_and_login(cl, username, password, on_log):
+                    log.error(f"Session restoration failed for {username}")
+                    return False, None
+                
+                # Retry avatar change after session restoration
+                try:
+                    result = cl.account_change_picture(image_path_obj)
+                    log.debug("Profile picture changed after session restore for %s, result: %s", username, result)
+                    if on_log:
+                        on_log(f"picture changed after session restore (user: {getattr(result, 'username', 'unknown')})")
+                    log.info(f"picture changed after session restore for {username} (user: {getattr(result, 'username', 'unknown')})")
+                except Exception as retry_e:
+                    log.error(f"Avatar change retry failed for {username}: {retry_e}")
+                    if on_log:
+                        on_log(f"avatar change retry failed: {retry_e}")
+                    return False, None
+            else:
+                log.debug("PhotoNotUpload without login_required for %s: %s", username, e)
+                if on_log:
+                    on_log(f"photo upload failed: {e}")
+                return False, None
         except Exception as e:
             # Check if this is a challenge disguised as another exception
             error_str = str(e)
@@ -223,4 +272,92 @@ class AvatarService:
             log.debug("Fetching settings failed for %s: %s", username, e)
             if on_log:
                 on_log(f"fetch settings failed: {e}")
-            return True, None 
+            return True, None
+
+    def _restore_session_and_login(self, cl: Client, username: str, password: str, on_log: Optional[Callable[[str], None]] = None) -> bool:
+        """Restore session and login using existing logic from bulk upload"""
+        from instgrapi_func.services.session_store import SessionStore
+        from instgrapi_func.services.auth_service import CompositeProvider, TOTPProvider, AutoIMAPEmailProvider
+        
+        # Get session settings from database
+        session_store = SessionStore()
+        persisted_settings = session_store.load(username)
+        
+        # Try to restore session from bundle
+        session_restored = False
+        
+        if persisted_settings and persisted_settings.get('authorization_data', {}).get('sessionid'):
+            sessionid = persisted_settings['authorization_data']['sessionid']
+            # Decode URL-encoded sessionid
+            import urllib.parse
+            sessionid = urllib.parse.unquote(sessionid)
+            if isinstance(sessionid, str) and len(sessionid) > 30:
+                try:
+                    log.info(f"[SESSION] Attempting to restore session for {username}")
+                    if on_log:
+                        on_log(f"Restoring session from bundle...")
+                    
+                    result = cl.login_by_sessionid(sessionid)
+                    if result:
+                        log.info(f"[SESSION] Successfully restored session for {username}")
+                        if on_log:
+                            on_log("Session restored successfully")
+                        session_restored = True
+                    else:
+                        log.warning(f"[SESSION] Failed to restore session for {username}")
+                        if on_log:
+                            on_log("Session restoration failed")
+                except Exception as e:
+                    log.warning(f"[SESSION] Session restoration error for {username}: {e}")
+                    if on_log:
+                        on_log(f"Session restoration error: {e}")
+        
+        # Auth: use restored session or fallback to login with TOTP/email
+        if not session_restored:
+            provider = CompositeProvider([
+                TOTPProvider(None),  # Will be set by auth service
+                AutoIMAPEmailProvider(None, None, on_log=on_log),  # Will be set by auth service
+            ])
+            auth = IGAuthService(provider)
+            if not auth.ensure_logged_in(cl, username, password, on_log=on_log):
+                if on_log:
+                    on_log("Authentication failed")
+                return False
+        else:
+            # Verify restored session is valid
+            try:
+                user_info = cl.user_info_v1(cl.user_id)
+                if user_info and user_info.username == username:
+                    log.info(f"[SESSION] Session verified for {username}")
+                    if on_log:
+                        on_log("Session verified")
+                else:
+                    log.warning(f"[SESSION] Session verification failed for {username}")
+                    if on_log:
+                        on_log("Session verification failed, falling back to login")
+                    # Fallback to login
+                    provider = CompositeProvider([
+                        TOTPProvider(None),
+                        AutoIMAPEmailProvider(None, None, on_log=on_log),
+                    ])
+                    auth = IGAuthService(provider)
+                    if not auth.ensure_logged_in(cl, username, password, on_log=on_log):
+                        if on_log:
+                            on_log("Authentication failed")
+                        return False
+            except Exception as e:
+                log.warning(f"[SESSION] Session verification error for {username}: {e}")
+                if on_log:
+                    on_log(f"Session verification error: {e}")
+                # Fallback to login
+                provider = CompositeProvider([
+                    TOTPProvider(None),
+                    AutoIMAPEmailProvider(None, None, on_log=on_log),
+                ])
+                auth = IGAuthService(provider)
+                if not auth.ensure_logged_in(cl, username, password, on_log=on_log):
+                    if on_log:
+                        on_log("Authentication failed")
+                    return False
+        
+        return True 

@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cabinet Theme - mr.Booster Inspired Design Demo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        /* Cabinet Theme Colors */
+        :root {
+          /* Primary Brand Colors */
+          --cabinet-white: #FFFFFF;
+          --cabinet-canary: #FFE608;
+          --cabinet-night: #0D0D0E;
+          
+          /* Accent Colors */
+          --cabinet-slate-blue: #8167FF;
+          --cabinet-green-yellow: #ACF639;
+          --cabinet-bittersweet: #FF4F52;
+          --cabinet-electric-blue: #4DE6F4;
+          
+          /* Semantic Colors */
+          --cabinet-success: var(--cabinet-green-yellow);
+          --cabinet-warning: var(--cabinet-canary);
+          --cabinet-danger: var(--cabinet-bittersweet);
+          --cabinet-info: var(--cabinet-electric-blue);
+          --cabinet-primary: var(--cabinet-slate-blue);
+        }
+
+        .cabinet-theme {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--cabinet-white);
+            color: var(--cabinet-night);
+            line-height: 1.6;
+        }
+
+        .color-demo {
+            padding: 2rem;
+            margin: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            color: var(--cabinet-night);
+        }
+
+        .color-white { background-color: var(--cabinet-white); border: 1px solid #ddd; }
+        .color-canary { background-color: var(--cabinet-canary); }
+        .color-night { background-color: var(--cabinet-night); color: white; }
+        .color-slate-blue { background-color: var(--cabinet-slate-blue); color: white; }
+        .color-green-yellow { background-color: var(--cabinet-green-yellow); }
+        .color-bittersweet { background-color: var(--cabinet-bittersweet); color: white; }
+        .color-electric-blue { background-color: var(--cabinet-electric-blue); }
+
+        .btn-demo {
+            margin: 0.5rem;
+        }
+    </style>
+</head>
+<body class="cabinet-theme">
+    <div class="container py-5">
+        <h1 class="text-center mb-5">Cabinet Theme - mr.Booster Inspired Design</h1>
+        <p class="text-center text-muted mb-5">Modern minimalist design inspired by <a href="https://mrbooster.com/" target="_blank">mr.Booster</a> marketing agency</p>
+        
+        <div class="row mb-5">
+            <div class="col-12">
+                <h2>Primary Brand Colors</h2>
+            </div>
+            <div class="col-md-4">
+                <div class="color-demo color-white">
+                    <h4>Clear White</h4>
+                    <p>#FFFFFF</p>
+                    <p>RGB: 255, 255, 255</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="color-demo color-canary">
+                    <h4>Canary Yellow</h4>
+                    <p>#FFE608</p>
+                    <p>RGB: 255, 230, 8</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="color-demo color-night">
+                    <h4>Night Black</h4>
+                    <p>#0D0D0E</p>
+                    <p>RGB: 13, 13, 14</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-5">
+            <div class="col-12">
+                <h2>Accent Colors</h2>
+            </div>
+            <div class="col-md-3">
+                <div class="color-demo color-slate-blue">
+                    <h4>Slate Blue</h4>
+                    <p>#8167FF</p>
+                    <p>RGB: 129, 103, 255</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="color-demo color-green-yellow">
+                    <h4>Green Yellow</h4>
+                    <p>#ACF639</p>
+                    <p>RGB: 172, 246, 57</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="color-demo color-bittersweet">
+                    <h4>Bittersweet</h4>
+                    <p>#FF4F52</p>
+                    <p>RGB: 255, 79, 82</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="color-demo color-electric-blue">
+                    <h4>Electric Blue</h4>
+                    <p>#4DE6F4</p>
+                    <p>RGB: 77, 230, 244</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-5">
+            <div class="col-12">
+                <h2>Button Examples</h2>
+            </div>
+            <div class="col-12 text-center">
+                <button class="btn btn-primary btn-demo">Primary (Slate Blue)</button>
+                <button class="btn btn-success btn-demo">Success (Green Yellow)</button>
+                <button class="btn btn-warning btn-demo">Warning (Canary Yellow)</button>
+                <button class="btn btn-danger btn-demo">Danger (Bittersweet)</button>
+                <button class="btn btn-info btn-demo">Info (Electric Blue)</button>
+            </div>
+        </div>
+
+        <div class="row mb-5">
+            <div class="col-12">
+                <h2>Badge Examples</h2>
+            </div>
+            <div class="col-12 text-center">
+                <span class="badge bg-primary me-2">Primary</span>
+                <span class="badge bg-success me-2">Success</span>
+                <span class="badge bg-warning me-2">Warning</span>
+                <span class="badge bg-danger me-2">Danger</span>
+                <span class="badge bg-info me-2">Info</span>
+            </div>
+        </div>
+
+        <div class="row mb-5">
+            <div class="col-12">
+                <h2>Alert Examples</h2>
+            </div>
+            <div class="col-12">
+                <div class="alert alert-success" role="alert">
+                    <strong>Success!</strong> This is a success alert with Green Yellow color.
+                </div>
+                <div class="alert alert-warning" role="alert">
+                    <strong>Warning!</strong> This is a warning alert with Canary Yellow color.
+                </div>
+                <div class="alert alert-danger" role="alert">
+                    <strong>Danger!</strong> This is a danger alert with Bittersweet color.
+                </div>
+                <div class="alert alert-info" role="alert">
+                    <strong>Info!</strong> This is an info alert with Electric Blue color.
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-5">
+            <div class="col-12">
+                <h2>Text Color Examples</h2>
+            </div>
+            <div class="col-12">
+                <p class="text-primary">Primary text color (Slate Blue)</p>
+                <p class="text-success">Success text color (Green Yellow)</p>
+                <p class="text-warning">Warning text color (Canary Yellow)</p>
+                <p class="text-danger">Danger text color (Bittersweet)</p>
+                <p class="text-info">Info text color (Electric Blue)</p>
+            </div>
+        </div>
+
+        <div class="row mb-5">
+            <div class="col-12">
+                <h2>Chart Examples with mr.Booster Colors</h2>
+            </div>
+            <div class="col-md-6">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h5 class="chart-title">Sample Bar Chart</h5>
+                    </div>
+                    <canvas id="sampleBarChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h5 class="chart-title">Sample Line Chart</h5>
+                    </div>
+                    <canvas id="sampleLineChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Sample data for charts
+        const barData = {
+            labels: ['Instagram', 'YouTube', 'TikTok', 'Facebook', 'Twitter'],
+            datasets: [{
+                label: 'Posts',
+                data: [65, 59, 80, 81, 56],
+                backgroundColor: ['#8167FF', '#FFE608', '#ACF639', '#FF4F52', '#4DE6F4'],
+                borderColor: '#0D0D0E',
+                borderWidth: 1
+            }]
+        };
+
+        const lineData = {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+            datasets: [{
+                label: 'Views',
+                data: [12, 19, 3, 5, 2, 3],
+                borderColor: '#8167FF',
+                backgroundColor: 'rgba(129, 103, 255, 0.1)',
+                tension: 0.4
+            }, {
+                label: 'Engagement',
+                data: [2, 3, 20, 5, 1, 4],
+                borderColor: '#FFE608',
+                backgroundColor: 'rgba(255, 230, 8, 0.1)',
+                tension: 0.4
+            }]
+        };
+
+        // Create charts
+        document.addEventListener('DOMContentLoaded', function() {
+            new Chart(document.getElementById('sampleBarChart'), {
+                type: 'bar',
+                data: barData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#0D0D0E',
+                                font: {
+                                    family: 'Inter, sans-serif'
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#0D0D0E'
+                            },
+                            grid: {
+                                color: 'rgba(13, 13, 14, 0.1)'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: '#0D0D0E'
+                            },
+                            grid: {
+                                color: 'rgba(13, 13, 14, 0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+
+            new Chart(document.getElementById('sampleLineChart'), {
+                type: 'line',
+                data: lineData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#0D0D0E',
+                                font: {
+                                    family: 'Inter, sans-serif'
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#0D0D0E'
+                            },
+                            grid: {
+                                color: 'rgba(13, 13, 14, 0.1)'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: '#0D0D0E'
+                            },
+                            grid: {
+                                color: 'rgba(13, 13, 14, 0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+
+    <script>
+        // Override Bootstrap colors with brand colors
+        document.addEventListener('DOMContentLoaded', function() {
+            const style = document.createElement('style');
+            style.textContent = `
+                .btn-primary { background-color: var(--cabinet-primary) !important; border-color: var(--cabinet-primary) !important; }
+                .btn-success { background-color: var(--cabinet-success) !important; border-color: var(--cabinet-success) !important; color: var(--cabinet-night) !important; }
+                .btn-warning { background-color: var(--cabinet-warning) !important; border-color: var(--cabinet-warning) !important; color: var(--cabinet-night) !important; }
+                .btn-danger { background-color: var(--cabinet-danger) !important; border-color: var(--cabinet-danger) !important; }
+                .btn-info { background-color: var(--cabinet-info) !important; border-color: var(--cabinet-info) !important; color: var(--cabinet-night) !important; }
+                
+                .bg-primary { background-color: var(--cabinet-primary) !important; }
+                .bg-success { background-color: var(--cabinet-success) !important; }
+                .bg-warning { background-color: var(--cabinet-warning) !important; }
+                .bg-danger { background-color: var(--cabinet-danger) !important; }
+                .bg-info { background-color: var(--cabinet-info) !important; }
+                
+                .alert-success { background-color: rgba(172, 246, 57, 0.1) !important; border-left: 4px solid var(--cabinet-success) !important; }
+                .alert-warning { background-color: rgba(255, 230, 8, 0.1) !important; border-left: 4px solid var(--cabinet-warning) !important; }
+                .alert-danger { background-color: rgba(255, 79, 82, 0.1) !important; border-left: 4px solid var(--cabinet-danger) !important; }
+                .alert-info { background-color: rgba(77, 230, 244, 0.1) !important; border-left: 4px solid var(--cabinet-info) !important; }
+                
+                .text-primary { color: var(--cabinet-primary) !important; }
+                .text-success { color: var(--cabinet-success) !important; }
+                .text-warning { color: var(--cabinet-warning) !important; }
+                .text-danger { color: var(--cabinet-danger) !important; }
+                .text-info { color: var(--cabinet-info) !important; }
+            `;
+            document.head.appendChild(style);
+        });
+    </script>
+</body>
+</html>

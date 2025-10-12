@@ -588,10 +588,14 @@ class AsyncAccountProcessor:
             # Use asyncio.create_task to properly handle the coroutine
             try:
                 import asyncio
-                # Create a task to properly handle the coroutine
-                asyncio.create_task(self.logger.log('INFO', f"[API] {message}"))
+                # Get current event loop and create task properly
+                loop = asyncio.get_running_loop()
+                loop.create_task(self.logger.log('INFO', f"[API] {message}"))
+            except RuntimeError:
+                # No event loop running, use print fallback
+                print(f"[API] {message}")
             except Exception:
-                # Fallback to simple print if async bridge fails
+                # Other exceptions, fallback to print
                 print(f"[API] {message}")
         return log_callback
 

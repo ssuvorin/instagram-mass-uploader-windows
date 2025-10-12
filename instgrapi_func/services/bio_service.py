@@ -145,6 +145,31 @@ class BioService:
                 if on_log:
                     on_log(f"bio: challenge failed: {e2}")
                 return False, None
+        except LoginRequired as e:
+            log.debug("LoginRequired on set external url for %s: %s", username, e)
+            if on_log:
+                on_log(f"session expired, attempting to restore...")
+            try:
+                # Attempt to restore session
+                if not self.auth.ensure_logged_in(cl, username, password, on_log=on_log):
+                    if on_log:
+                        on_log(f"session restoration failed: {e}")
+                    return False, None
+                if on_log:
+                    on_log(f"session restored successfully, retrying bio change...")
+                # Retry bio change after session restoration
+                try:
+                    cl.set_external_url(link_url)
+                except AttributeError:
+                    cl.account_edit(external_url=link_url)
+                log.debug("External url set after session restore for %s", username)
+                if on_log:
+                    on_log(f"bio: external url set after session restore")
+            except Exception as restore_e:
+                log.debug("Session restoration failed for %s: %s", username, restore_e)
+                if on_log:
+                    on_log(f"session restoration error: {restore_e}")
+                return False, None
         except Exception as e:
             log.debug("Set external url failed for %s: %s", username, e)
             if on_log:

@@ -2090,16 +2090,36 @@ def import_accounts_bundle(request):
 						except Exception:
 							pass
 					# Extract Apple device model (iPhone/iPad) and mark manufacturer
+					# BUT CONVERT TO ANDROID - iPhone is not supported by instagrapi
 					try:
 						import re as _re
 						inside = _re.search(r'\(([^)]*)\)', ua_string or '')
 						if inside:
 							first_tok = inside.group(1).split(';')[0].strip()
 							if first_tok.lower().startswith(('iphone', 'ipad', 'ipod')):
-								device_settings['model'] = first_tok
-								device_settings['device'] = first_tok
-								device_settings['manufacturer'] = 'apple'
-					except Exception:
+								# CONVERT iPhone to Android instead of marking as Apple
+								print(f"[CONVERT] Detected iPhone/iPad in account data: {first_tok}, converting to Android")
+								
+								# Generate Android device settings
+								from instgrapi_func.services.device_service import generate_random_device_settings
+								android_device = generate_random_device_settings()
+								
+								# Preserve UUIDs from original if available
+								preserved_uuids = {}
+								for key in ("uuid", "android_device_id", "phone_id", "client_session_id"):
+									if device_settings.get(key):
+										preserved_uuids[key] = device_settings[key]
+								
+								# Merge preserved UUIDs into Android device
+								from instgrapi_func.services.device_service import _merge_uuids
+								android_device = _merge_uuids(android_device, preserved_uuids)
+								
+								# Update device_settings with Android values
+								device_settings.update(android_device)
+								
+								print(f"[CONVERT] iPhone converted to Android: {android_device.get('model')} {android_device.get('manufacturer')}")
+					except Exception as e:
+						print(f"[CONVERT] Failed to convert iPhone to Android: {e}")
 						pass
 
 					# Capture network segment like "NW/1" if present in the line segments

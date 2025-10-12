@@ -224,7 +224,7 @@ LOGGING = {
             'class': 'logging.FileHandler',
             'filename': os.path.join(BASE_DIR, 'django.log'),
             'formatter': 'verbose',
-            'level': 'INFO',
+            'level': 'DEBUG',
             'filters': ['mask_secrets', 'truncate_long'],
         },
         'null': {
@@ -291,17 +291,17 @@ LOGGING = {
         # Instagrapi and HTTP request loggers - reduced verbosity to avoid huge JSON dumps
         'instagrapi': {
             'handlers': ['console', 'file'],
-            'level': os.getenv('INSTAGRAPI_LOG_LEVEL', 'WARNING'),
+            'level': os.getenv('INSTAGRAPI_LOG_LEVEL', 'DEBUG'),
             'propagate': False,
         },
         'public_request': {
             'handlers': ['console', 'file'],
-            'level': os.getenv('IG_HTTP_LOG_LEVEL', 'WARNING'),
+            'level': os.getenv('IG_HTTP_LOG_LEVEL', 'DEBUG'),
             'propagate': False,
         },
         'private_request': {
             'handlers': ['console', 'file'],
-            'level': os.getenv('IG_HTTP_LOG_LEVEL', 'WARNING'),
+            'level': os.getenv('IG_HTTP_LOG_LEVEL', 'DEBUG'),
             'propagate': False,
         },
         # Our auth/avatar services
@@ -316,6 +316,21 @@ LOGGING = {
             'propagate': False,
         },
         'insta.follow': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'insta.hashtag': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'insta.bio': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'insta.account.analytics': {
             'handlers': ['console', 'file'],
             'level': 'DEBUG',
             'propagate': False,

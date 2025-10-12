@@ -322,9 +322,27 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 	# Load persisted device + session if available
 	session_store = DjangoDeviceSessionStore()
 	persisted_settings = session_store.load(username) or None
+	
+	# DEBUG: Log what was loaded from session store
+	log_info(f"[DEBUG] session_store.load({username}) returned: {type(persisted_settings)}")
+	if persisted_settings:
+		log_info(f"[DEBUG] Loaded persisted_settings keys: {list(persisted_settings.keys())}")
+	else:
+		log_info(f"[DEBUG] No persisted_settings loaded for {username}")
 
 	# Ensure per-account persistent device (from DB/session or generate once)
 	device_settings, ua_hint = ensure_persistent_device(username, persisted_settings)
+
+	# Resolve locale from proxy if not present in device_settings
+	if not device_settings.get("locale"):
+		try:
+			from instgrapi_func.services.geo import resolve_geo
+			geo_info = resolve_geo(proxy_dict)
+			device_settings["locale"] = geo_info.get("locale", "ru_BY")
+			log_info(f"[LOCALE] Resolved locale from proxy: {device_settings['locale']}")
+		except Exception as geo_e:
+			log_warning(f"[LOCALE] Failed to resolve locale from proxy: {geo_e}")
+			device_settings["locale"] = "ru_BY"
 
 	# Build client
 	try:
@@ -373,6 +391,30 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 			cl.set_proxy(proxy_url)
 			log_info(f"[LOCK] Proxy locked: {proxy_url}")
 		
+		# CRITICAL: Check if device is iPhone and convert to Android BEFORE locking
+		user_agent = device_settings.get("user_agent") or ua_hint
+		is_iphone = False
+		if user_agent and any(indicator in user_agent for indicator in ["iPhone", "iOS", "AppleWebKit"]):
+			is_iphone = True
+			log_info(f"[CONVERT] Detected iPhone device, converting to Android...")
+			
+			# Import device service functions
+			from instgrapi_func.services.device_service import (
+				generate_random_device_settings, 
+				_merge_uuids,
+				_is_iphone_user_agent,
+				_convert_iphone_to_android_device_settings
+			)
+			
+			# Convert iPhone to Android
+			android_device, android_user_agent = _convert_iphone_to_android_device_settings(device_settings, user_agent, username)
+			
+			# Update device_settings with Android values
+			device_settings.update(android_device)
+			user_agent = android_user_agent
+			
+			log_info(f"[CONVERT] iPhone converted to Android: {android_device.get('model')} {android_device.get('manufacturer')}")
+		
 		# Lock device settings - ensure they won't change during session
 		device_cfg = {
 			"cpu": device_settings.get("cpu", "exynos9820"),
@@ -396,8 +438,7 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 		log_info(f"[LOCK] Device locked: {device_cfg.get('model')} {device_cfg.get('manufacturer')}")
 		
 		# Lock user agent if available
-		if device_settings.get("user_agent") or ua_hint:
-			user_agent = device_settings.get("user_agent") or ua_hint
+		if user_agent:
 			# Set user agent in device config as well
 			device_cfg["user_agent"] = user_agent
 			cl.set_device(device_cfg)
@@ -419,16 +460,95 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 			on_log(f"Failed to lock proxy/device: {lock_e}")
 		return ("failed", 0, 1)
 
-	# Auth: prefer existing session; fallback to login with TOTP/email
-	provider = CompositeProvider([
-		TOTPProvider(tfa_secret or None),
-		AutoIMAPEmailProvider(email_login, email_password, on_log=on_log),
-	])
-	auth = IGAuthService(provider)
-	if not auth.ensure_logged_in(cl, username, password, on_log=on_log):
-		if on_log:
-			on_log("Authentication failed")
-		return ("failed", 0, 1)
+	# CRITICAL: Try to restore session from bundle BEFORE login
+	session_restored = False
+	
+	# DEBUG: Log persisted_settings structure
+	log_info(f"[DEBUG] persisted_settings keys: {list(persisted_settings.keys()) if persisted_settings else 'None'}")
+	if persisted_settings:
+		log_info(f"[DEBUG] authorization_data keys: {list(persisted_settings.get('authorization_data', {}).keys())}")
+		sessionid_debug = persisted_settings.get('authorization_data', {}).get('sessionid')
+		log_info(f"[DEBUG] sessionid type: {type(sessionid_debug)}, value: {str(sessionid_debug)[:50] if sessionid_debug else 'None'}...")
+	
+	if persisted_settings and persisted_settings.get('authorization_data', {}).get('sessionid'):
+		sessionid = persisted_settings['authorization_data']['sessionid']
+		# Decode URL-encoded sessionid
+		import urllib.parse
+		sessionid = urllib.parse.unquote(sessionid)
+		if isinstance(sessionid, str) and len(sessionid) > 30:
+			try:
+				log_info(f"[SESSION] Attempting to restore session for {username}")
+				if on_log:
+					on_log(f"Restoring session from bundle...")
+				
+				# Try to restore session using sessionid
+				log_info(f"[DEBUG] About to call login_by_sessionid with sessionid: {sessionid[:20]}...")
+				log_info(f"[DEBUG] Client settings keys: {list(cl.settings.keys()) if hasattr(cl, 'settings') and cl.settings else 'No settings'}")
+				result = cl.login_by_sessionid(sessionid)
+				log_info(f"[DEBUG] login_by_sessionid result: {result}")
+				if result:
+					log_info(f"[SESSION] Successfully restored session for {username}")
+					if on_log:
+						on_log("Session restored successfully")
+					session_restored = True
+				else:
+					log_warning(f"[SESSION] Failed to restore session for {username}")
+					if on_log:
+						on_log("Session restoration failed")
+			except Exception as e:
+				log_warning(f"[SESSION] Session restoration error for {username}: {e}")
+				if on_log:
+					on_log(f"Session restoration error: {e}")
+	else:
+		log_info(f"[DEBUG] No valid sessionid found in persisted_settings")
+	
+	# Auth: use restored session or fallback to login with TOTP/email
+	if not session_restored:
+		provider = CompositeProvider([
+			TOTPProvider(tfa_secret or None),
+			AutoIMAPEmailProvider(email_login, email_password, on_log=on_log),
+		])
+		auth = IGAuthService(provider)
+		if not auth.ensure_logged_in(cl, username, password, on_log=on_log):
+			if on_log:
+				on_log("Authentication failed")
+			return ("failed", 0, 1)
+	else:
+		# Verify restored session is valid
+		try:
+			user_info = cl.user_info_v1(cl.user_id)
+			if user_info and user_info.username == username:
+				log_info(f"[SESSION] Session verified for {username}")
+				if on_log:
+					on_log("Session verified")
+			else:
+				log_warning(f"[SESSION] Session verification failed for {username}")
+				if on_log:
+					on_log("Session verification failed, falling back to login")
+				# Fallback to login
+				provider = CompositeProvider([
+					TOTPProvider(tfa_secret or None),
+					AutoIMAPEmailProvider(email_login, email_password, on_log=on_log),
+				])
+				auth = IGAuthService(provider)
+				if not auth.ensure_logged_in(cl, username, password, on_log=on_log):
+					if on_log:
+						on_log("Authentication failed")
+					return ("failed", 0, 1)
+		except Exception as e:
+			log_warning(f"[SESSION] Session verification error for {username}: {e}")
+			if on_log:
+				on_log(f"Session verification error: {e}")
+			# Fallback to login
+			provider = CompositeProvider([
+				TOTPProvider(tfa_secret or None),
+				AutoIMAPEmailProvider(email_login, email_password, on_log=on_log),
+			])
+			auth = IGAuthService(provider)
+			if not auth.ensure_logged_in(cl, username, password, on_log=on_log):
+				if on_log:
+					on_log("Authentication failed")
+				return ("failed", 0, 1)
 	
 	# Ensure we're logged in before any API calls (mentions, locations, uploads)
 	# Authentication was verified via account_info() - the gold standard
@@ -723,9 +843,27 @@ def _sync_photo_upload_impl(account_details: Dict, photo_files_to_upload: List[s
 	# Load persisted device + session if available
 	session_store = DjangoDeviceSessionStore()
 	persisted_settings = session_store.load(username) or None
+	
+	# DEBUG: Log what was loaded from session store
+	log_info(f"[DEBUG] session_store.load({username}) returned: {type(persisted_settings)}")
+	if persisted_settings:
+		log_info(f"[DEBUG] Loaded persisted_settings keys: {list(persisted_settings.keys())}")
+	else:
+		log_info(f"[DEBUG] No persisted_settings loaded for {username}")
 
 	# Ensure per-account persistent device (from DB/session or generate once)
 	device_settings, ua_hint = ensure_persistent_device(username, persisted_settings)
+
+	# Resolve locale from proxy if not present in device_settings
+	if not device_settings.get("locale"):
+		try:
+			from instgrapi_func.services.geo import resolve_geo
+			geo_info = resolve_geo(proxy_dict)
+			device_settings["locale"] = geo_info.get("locale", "ru_BY")
+			log_info(f"[LOCALE] Resolved locale from proxy: {device_settings['locale']}")
+		except Exception as geo_e:
+			log_warning(f"[LOCALE] Failed to resolve locale from proxy: {geo_e}")
+			device_settings["locale"] = "ru_BY"
 
 	# Build client
 	try:
@@ -763,16 +901,95 @@ def _sync_photo_upload_impl(account_details: Dict, photo_files_to_upload: List[s
 			on_log(f"Failed to create client: {e}")
 		return ("failed", 0, 1)
 
-	# Auth: prefer existing session; fallback to login with TOTP/email
-	provider = CompositeProvider([
-		TOTPProvider(tfa_secret or None),
-		AutoIMAPEmailProvider(email_login, email_password, on_log=on_log),
-	])
-	auth = IGAuthService(provider)
-	if not auth.ensure_logged_in(cl, username, password, on_log=on_log):
-		if on_log:
-			on_log("Authentication failed")
-		return ("failed", 0, 1)
+	# CRITICAL: Try to restore session from bundle BEFORE login
+	session_restored = False
+	
+	# DEBUG: Log persisted_settings structure
+	log_info(f"[DEBUG] persisted_settings keys: {list(persisted_settings.keys()) if persisted_settings else 'None'}")
+	if persisted_settings:
+		log_info(f"[DEBUG] authorization_data keys: {list(persisted_settings.get('authorization_data', {}).keys())}")
+		sessionid_debug = persisted_settings.get('authorization_data', {}).get('sessionid')
+		log_info(f"[DEBUG] sessionid type: {type(sessionid_debug)}, value: {str(sessionid_debug)[:50] if sessionid_debug else 'None'}...")
+	
+	if persisted_settings and persisted_settings.get('authorization_data', {}).get('sessionid'):
+		sessionid = persisted_settings['authorization_data']['sessionid']
+		# Decode URL-encoded sessionid
+		import urllib.parse
+		sessionid = urllib.parse.unquote(sessionid)
+		if isinstance(sessionid, str) and len(sessionid) > 30:
+			try:
+				log_info(f"[SESSION] Attempting to restore session for {username}")
+				if on_log:
+					on_log(f"Restoring session from bundle...")
+				
+				# Try to restore session using sessionid
+				log_info(f"[DEBUG] About to call login_by_sessionid with sessionid: {sessionid[:20]}...")
+				log_info(f"[DEBUG] Client settings keys: {list(cl.settings.keys()) if hasattr(cl, 'settings') and cl.settings else 'No settings'}")
+				result = cl.login_by_sessionid(sessionid)
+				log_info(f"[DEBUG] login_by_sessionid result: {result}")
+				if result:
+					log_info(f"[SESSION] Successfully restored session for {username}")
+					if on_log:
+						on_log("Session restored successfully")
+					session_restored = True
+				else:
+					log_warning(f"[SESSION] Failed to restore session for {username}")
+					if on_log:
+						on_log("Session restoration failed")
+			except Exception as e:
+				log_warning(f"[SESSION] Session restoration error for {username}: {e}")
+				if on_log:
+					on_log(f"Session restoration error: {e}")
+	else:
+		log_info(f"[DEBUG] No valid sessionid found in persisted_settings")
+	
+	# Auth: use restored session or fallback to login with TOTP/email
+	if not session_restored:
+		provider = CompositeProvider([
+			TOTPProvider(tfa_secret or None),
+			AutoIMAPEmailProvider(email_login, email_password, on_log=on_log),
+		])
+		auth = IGAuthService(provider)
+		if not auth.ensure_logged_in(cl, username, password, on_log=on_log):
+			if on_log:
+				on_log("Authentication failed")
+			return ("failed", 0, 1)
+	else:
+		# Verify restored session is valid
+		try:
+			user_info = cl.user_info_v1(cl.user_id)
+			if user_info and user_info.username == username:
+				log_info(f"[SESSION] Session verified for {username}")
+				if on_log:
+					on_log("Session verified")
+			else:
+				log_warning(f"[SESSION] Session verification failed for {username}")
+				if on_log:
+					on_log("Session verification failed, falling back to login")
+				# Fallback to login
+				provider = CompositeProvider([
+					TOTPProvider(tfa_secret or None),
+					AutoIMAPEmailProvider(email_login, email_password, on_log=on_log),
+				])
+				auth = IGAuthService(provider)
+				if not auth.ensure_logged_in(cl, username, password, on_log=on_log):
+					if on_log:
+						on_log("Authentication failed")
+					return ("failed", 0, 1)
+		except Exception as e:
+			log_warning(f"[SESSION] Session verification error for {username}: {e}")
+			if on_log:
+				on_log(f"Session verification error: {e}")
+			# Fallback to login
+			provider = CompositeProvider([
+				TOTPProvider(tfa_secret or None),
+				AutoIMAPEmailProvider(email_login, email_password, on_log=on_log),
+			])
+			auth = IGAuthService(provider)
+			if not auth.ensure_logged_in(cl, username, password, on_log=on_log):
+				if on_log:
+					on_log("Authentication failed")
+				return ("failed", 0, 1)
 	
 	# Ensure we're logged in before any API calls (mentions, locations, uploads)
 	# Authentication was verified via account_info() - the gold standard

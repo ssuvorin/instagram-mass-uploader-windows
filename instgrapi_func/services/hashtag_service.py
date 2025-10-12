@@ -116,6 +116,9 @@ class HashtagAnalysisService:
                                 or getattr(mi, "view_count", None)
                                 or getattr(mi, "video_view_count", None)
                             )
+                        except LoginRequired:
+                            # Session expired during media info fetch - skip this media
+                            continue
                         except Exception:
                             v = None
                 # Likes/comments (best-effort)
@@ -128,6 +131,9 @@ class HashtagAnalysisService:
                             likes_val = getattr(mi2, "like_count", None)
                         if not isinstance(comments_val, (int, float)):
                             comments_val = getattr(mi2, "comment_count", None)
+                    except LoginRequired:
+                        # Session expired during media info fetch - skip this media
+                        continue
                     except Exception:
                         pass
 
@@ -138,6 +144,9 @@ class HashtagAnalysisService:
                     total_likes += int(likes_val)
                 if isinstance(comments_val, (int, float)):
                     total_comments += int(comments_val)
+            except LoginRequired:
+                # Session expired - skip this media
+                continue
             except Exception:
                 continue
         return total_views, total_likes, total_comments, analyzed
@@ -245,6 +254,9 @@ class HashtagAnalysisService:
         pages_loaded: int = 0
         max_id: Optional[str] = None
 
+        consecutive_empty_pages = 0
+        session_restore_attempts = 0
+        max_session_restore_attempts = 3  # Limit session restoration attempts
         for loop_index in range(max_pages):
             try:
                 if on_log:
@@ -267,17 +279,45 @@ class HashtagAnalysisService:
                 if on_log:
                     on_log(f"hashtag: challenge required: {e}")
                 raise
+            except LoginRequired as e:
+                session_restore_attempts += 1
+                if session_restore_attempts > max_session_restore_attempts:
+                    if on_log:
+                        on_log(f"hashtag: max session restore attempts ({max_session_restore_attempts}) exceeded, stopping")
+                    break
+                
+                if on_log:
+                    on_log(f"hashtag: session expired, attempting to restore (attempt {session_restore_attempts}/{max_session_restore_attempts})...")
+                try:
+                    # Attempt to restore session
+                    if not self.auth.ensure_logged_in(cl, account_username, account_password, on_log=on_log):
+                        if on_log:
+                            on_log(f"hashtag: session restoration failed: {e}")
+                        break
+                    if on_log:
+                        on_log(f"hashtag: session restored successfully, continuing...")
+                    # Save refreshed session
+                    try:
+                        settings = cl.get_settings()  # type: ignore[attr-defined]
+                        session_store.save(account_username, settings)
+                    except Exception:
+                        pass
+                    # Reset counter on successful restoration
+                    session_restore_attempts = 0
+                    # Continue with the same page
+                    continue
+                except Exception as restore_e:
+                    if on_log:
+                        on_log(f"hashtag: session restoration error: {restore_e}")
+                    break
             except Exception as e:
                 if on_log:
                     on_log(f"hashtag: chunk error: {e}")
                 break
 
             pages_loaded += 1
-            if not medias:
-                if on_log:
-                    on_log(f"page {pages_loaded}: no medias returned — stop")
-                break
-
+            
+            # Process medias even if empty - we might still have more pages
             views, likes, comments, analyzed = self._sum_media_views(cl, medias)
             total_views += views
             total_likes += likes
@@ -289,16 +329,27 @@ class HashtagAnalysisService:
                     f"page {pages_loaded}: got {len(medias)} medias, analyzed={analyzed}, views+={views}, total_views={total_views}, next_max_id={'set' if max_id else 'none'}"
                 )
 
+            # Track consecutive empty pages to avoid infinite loops
+            if not medias:
+                consecutive_empty_pages += 1
+                if consecutive_empty_pages >= 3:  # Stop after 3 consecutive empty pages
+                    if on_log:
+                        on_log(f"page {pages_loaded}: {consecutive_empty_pages} consecutive empty pages — stop")
+                    break
+            else:
+                consecutive_empty_pages = 0  # Reset counter when we get medias
+
+            # Stop only if no medias AND no next cursor (truly done)
+            if not medias and not max_id:
+                if on_log:
+                    on_log(f"page {pages_loaded}: no medias and no next cursor — stop")
+                break
+
             # Human-like delay between pages
             self._human_delay()
             # Occasionally add a longer "think" pause
             if self.delay_long_every_n > 0 and ((loop_index + 1) % self.delay_long_every_n == 0):
                 self._human_long_think()
-
-            if not max_id:
-                if on_log:
-                    on_log(f"page {pages_loaded}: no next cursor — stop")
-                break
 
         if on_log:
             on_log(

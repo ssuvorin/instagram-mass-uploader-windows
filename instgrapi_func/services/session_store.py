@@ -37,10 +37,17 @@ class DjangoDeviceSessionStore(NoopSessionStore):
             InstagramAccount, InstagramDevice = self._get_models()
             acc = InstagramAccount.objects.filter(username=username).first()
             if not acc:
+                print(f"[DEBUG] Account {username} not found in database")
                 return None
             dev = getattr(acc, 'device', None)
-            return getattr(dev, 'session_settings', None)
-        except Exception:
+            if not dev:
+                print(f"[DEBUG] Device not found for account {username}")
+                return None
+            session_settings = getattr(dev, 'session_settings', None)
+            print(f"[DEBUG] Loaded session_settings for {username}: {type(session_settings)}, keys: {list(session_settings.keys()) if session_settings else 'None'}")
+            return session_settings
+        except Exception as e:
+            print(f"[DEBUG] Error loading session for {username}: {e}")
             return None
 
     def save(self, username: str, settings: dict) -> None:
@@ -48,11 +55,21 @@ class DjangoDeviceSessionStore(NoopSessionStore):
             InstagramAccount, InstagramDevice = self._get_models()
             acc = InstagramAccount.objects.filter(username=username).first()
             if not acc:
+                print(f"[DEBUG] Account {username} not found for saving session")
                 return
             dev = getattr(acc, 'device', None)
             if not dev:
                 dev = InstagramDevice.objects.create(account=acc, device_settings={}, user_agent="")
+                print(f"[DEBUG] Created new device for account {username}")
+            
+            print(f"[DEBUG] Saving session_settings for {username}: keys: {list(settings.keys())}")
+            if 'authorization_data' in settings:
+                sessionid = settings['authorization_data'].get('sessionid')
+                print(f"[DEBUG] sessionid to save: {str(sessionid)[:50] if sessionid else 'None'}...")
+            
             dev.session_settings = settings
             dev.save(update_fields=['session_settings'])
-        except Exception:
+            print(f"[DEBUG] Session saved successfully for {username}")
+        except Exception as e:
+            print(f"[DEBUG] Error saving session for {username}: {e}")
             return 

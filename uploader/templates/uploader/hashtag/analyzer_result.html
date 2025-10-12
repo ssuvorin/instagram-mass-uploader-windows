@@ -17,6 +17,9 @@
             <li class="list-group-item">Страниц загружено: <strong>{{ result.pages_loaded }}</strong></li>
             <li class="list-group-item">Суммарные просмотры: <strong>{{ result.total_views }}</strong></li>
             <li class="list-group-item">Среднее на медиа: <strong>{{ result.average_views|floatformat:0 }}</strong></li>
+            <li class="list-group-item">Суммарные лайки: <strong>{{ result.total_likes }}</strong></li>
+            <li class="list-group-item">Суммарные комментарии: <strong>{{ result.total_comments }}</strong></li>
+            <li class="list-group-item">Engagement Rate: <strong>{{ result.engagement_rate|floatformat:2 }}%</strong></li>
           </ul>
         </div>
       </div>

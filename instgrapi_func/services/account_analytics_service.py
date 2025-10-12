@@ -33,6 +33,9 @@ class AccountAnalysisService:
 
         try:
             medias = cl.user_medias(user_id, amount=amount)
+        except LoginRequired as e:
+            log.warning(f"account: user_medias failed with LoginRequired: {e}")
+            medias = []
         except Exception as e:
             log.warning(f"account: user_medias failed: {e}")
             medias = []
@@ -116,6 +119,23 @@ class AccountAnalysisService:
 
         try:
             user_id = cl.user_id_from_username(account_username)
+        except LoginRequired as e:
+            if on_log:
+                on_log(f"session expired, attempting to restore...")
+            try:
+                # Attempt to restore session
+                if not self.auth.ensure_logged_in(cl, account_username, account_password, on_log=on_log):
+                    if on_log:
+                        on_log(f"session restoration failed: {e}")
+                    return
+                if on_log:
+                    on_log(f"session restored successfully, retrying...")
+                # Retry user_id resolution after session restoration
+                user_id = cl.user_id_from_username(account_username)
+            except Exception as restore_e:
+                if on_log:
+                    on_log(f"session restoration error: {restore_e}")
+                return
         except Exception as e:
             if on_log:
                 on_log(f"account: resolve user_id failed: {e}")

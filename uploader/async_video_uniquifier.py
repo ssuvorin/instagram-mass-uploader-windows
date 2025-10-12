@@ -80,8 +80,8 @@ class UniqueVideoConfig:
             crop_enabled=random.choice([True, False]),
             zoompan_enabled=False,  # Отключаем zoompan - он медленный
             emoji_enabled=False,    # Отключаем эмодзи - они тоже медленные
-            text_enabled=True,
-            text_content=f"@{account_username}" if account_username else "",
+            text_enabled=False,     # Отключаем наложение текста с никнеймом
+            text_content="",        # Пустой текст
             text_font_size=random.randint(20, 35),
             badge_enabled=False,  # Отключаем бейдж по умолчанию для bulk upload
             video_format="9:16"  # Instagram format
