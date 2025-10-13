@@ -149,43 +149,9 @@ class AsyncVideoUniquifier:
         file_size = os.path.getsize(input_path)
         print(f"[FOLDER] [UNIQUIFY] Input file: {os.path.basename(input_path)} ({file_size} bytes)")
         
-        # Проверяем наличие FFmpeg в разных местах
-        ffmpeg_paths = [
-            "ffmpeg",  # В PATH
-            "ffmpeg.exe",  # Windows в PATH
-            os.path.join(os.getcwd(), "ffmpeg.exe"),  # В текущей директории
-            os.path.join(os.path.dirname(__file__), "ffmpeg.exe"),  # В директории скрипта
-            r"C:\ffmpeg\bin\ffmpeg.exe",  # Стандартное место установки на Windows
-            r"C:\Program Files\ffmpeg\bin\ffmpeg.exe",  # Альтернативное место
-            r"C:\Program Files (x86)\ffmpeg\bin\ffmpeg.exe",  # 32-bit программы
-            r"C:\tools\ffmpeg\bin\ffmpeg.exe",  # Chocolatey установка
-            r"C:\Users\{}\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-6.1.1-full_build\bin\ffmpeg.exe".format(os.getenv('USERNAME', 'Admin')),  # WinGet установка
-            r"C:\inst\instagram-mass-uploader-windows\ffmpeg.exe",  # В корне проекта
-            r"C:\inst\instagram-mass-uploader-windows\bin\ffmpeg.exe",  # В bin папке проекта
-            r"C:\inst\instagram-mass-uploader-windows\tools\ffmpeg.exe",  # В tools папке проекта
-        ]
-        
-        ffmpeg_path = None
-        for path in ffmpeg_paths:
-            try:
-                # Проверяем существование файла перед попыткой запуска
-                if os.path.exists(path) or path in ["ffmpeg", "ffmpeg.exe"]:
-                    result = subprocess.run([path, "-version"], capture_output=True, check=True, timeout=5)
-                    ffmpeg_path = path
-                    print(f"[OK] [UNIQUIFY] Found FFmpeg at: {path}")
-                    # Показываем версию FFmpeg
-                    version_line = result.stdout.decode().split('\n')[0]
-                    print(f"[INFO] [UNIQUIFY] FFmpeg version: {version_line}")
-                    break
-                else:
-                    print(f"[SKIP] [UNIQUIFY] Path does not exist: {path}")
-            except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as e:
-                print(f"[SKIP] [UNIQUIFY] Failed to test {path}: {type(e).__name__}")
-                continue
-        
-        if not ffmpeg_path:
+        # Проверяем доступность FFmpeg
+        if not check_ffmpeg_availability():
             print(f"[FAIL] FFmpeg not found! Please install FFmpeg and add it to PATH.")
-            print(f"[INFO] Searched paths: {ffmpeg_paths}")
             print(f"[FALLBACK] Copying original file without uniquification")
             
             # Fallback: просто копируем оригинальный файл
@@ -204,10 +170,10 @@ class AsyncVideoUniquifier:
         
         try:
             # Получаем длительность видео
-            duration = self._get_video_duration(input_path, ffmpeg_path)
+            duration = self._get_video_duration(input_path)
             
             # Строим команду FFmpeg
-            cmd = self._build_ffmpeg_command(input_path, output_path, config, duration, account_username, ffmpeg_path)
+            cmd = self._build_ffmpeg_command(input_path, output_path, config, duration, account_username)
             
             print(f"[VIDEO] [UNIQUIFY] Processing video for {account_username}...")
             print(f"[TOOL] [UNIQUIFY] FFmpeg command: {' '.join(cmd[:8])}... (truncated)")  # Показываем только начало команды
@@ -242,12 +208,12 @@ class AsyncVideoUniquifier:
             print(f"[FAIL] [UNIQUIFY] General error: {str(e)}")
             return False
     
-    def _get_video_duration(self, video_path: str, ffmpeg_path: str = "ffmpeg") -> float:
+    def _get_video_duration(self, video_path: str) -> float:
         """Получить длительность видео"""
         try:
             print(f"[SEARCH] [UNIQUIFY] Getting video duration for: {os.path.basename(video_path)}")
-            # Определяем путь к ffprobe на основе пути к ffmpeg
-            ffprobe_path = ffmpeg_path.replace("ffmpeg", "ffprobe").replace("ffmpeg.exe", "ffprobe.exe")
+            # Используем ffprobe из PATH
+            ffprobe_path = "ffprobe"
             result = subprocess.run([
                 ffprobe_path, "-v", "error", "-show_entries", "format=duration", 
                 "-of", "default=noprint_wrappers=1:nokey=1", video_path
@@ -265,7 +231,7 @@ class AsyncVideoUniquifier:
     
     def _build_ffmpeg_command(self, input_path: str, output_path: str, 
                              config: UniqueVideoConfig, duration: float, 
-                             account_username: str, ffmpeg_path: str = "ffmpeg") -> List[str]:
+                             account_username: str) -> List[str]:
         """Построить команду FFmpeg для уникализации"""
         filters = []
         
@@ -348,7 +314,7 @@ class AsyncVideoUniquifier:
         filters.extend(text_filters)
         
         # Строим команду
-        cmd = [ffmpeg_path, "-y", "-i", input_path]
+        cmd = ["ffmpeg", "-y", "-i", input_path]
         cmd += ["-vf", ",".join(filters)]
         cmd += self._random_metadata(account_username)
         cmd += [
@@ -619,11 +585,35 @@ def cleanup_hanging_ffmpeg():
 def check_ffmpeg_availability() -> bool:
     """Проверка доступности FFmpeg"""
     try:
-        # Используем Windows-совместимый subprocess
+        # Сначала пробуем простой поиск в PATH
         result = run_subprocess_windows(["ffmpeg", "-version"], timeout=5)
-        return result.returncode == 0
+        if result.returncode == 0:
+            return True
     except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
-        return False
+        pass
+    
+    # Если не найден в PATH, ищем в стандартных местах Windows
+    try:
+        import glob
+        localappdata = os.environ.get('LOCALAPPDATA', r'C:\Users\{}\AppData\Local'.format(os.getenv('USERNAME', 'Admin')))
+        if os.path.exists(localappdata):
+            # Ищем ffmpeg.exe рекурсивно в LOCALAPPDATA
+            ffmpeg_patterns = [
+                os.path.join(localappdata, "**", "ffmpeg.exe"),
+                os.path.join(localappdata, "**", "bin", "ffmpeg.exe"),
+            ]
+            for pattern in ffmpeg_patterns:
+                found_ffmpeg = glob.glob(pattern, recursive=True)
+                if found_ffmpeg:
+                    # Проверяем первый найденный файл
+                    result = run_subprocess_windows([found_ffmpeg[0], "-version"], timeout=5)
+                    if result.returncode == 0:
+                        return True
+                    break
+    except Exception:
+        pass
+    
+    return False
 
 def uniquify_video_sync(input_path: str, output_path: str, quality: int = 23) -> bool:
     """Синхронная уникализация видео с Windows совместимостью"""
