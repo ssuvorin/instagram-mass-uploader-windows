@@ -68,6 +68,17 @@ login:pass:email:emailpass|Instagram 364.0.0.18.86 Android (...)|android-xxx;dev
 						</select>
 						<div class="form-text">Импортируемые аккаунты будут привязаны к выбранному клиенту.</div>
 					</div>
+
+					<div class="mb-4">
+						<label for="tags" class="form-label">Assign Tag (optional)</label>
+						<select class="form-select" id="tags" name="tags">
+							<option value="">— Without tag —</option>
+							{% for tag in tags %}
+								<option value="{{ tag.id }}">{{ tag.name }}</option>
+							{% endfor %}
+						</select>
+						<div class="form-text">Импортируемые аккаунты будут помечены выбранным тегом.</div>
+					</div>
 					<div class="mb-4">
 						<label for="accounts_file" class="form-label">Bundle File</label>
 						<input type="file" name="accounts_file" id="accounts_file" class="form-control" accept=".txt" required>

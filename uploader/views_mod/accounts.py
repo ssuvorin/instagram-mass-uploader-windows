@@ -1766,6 +1766,16 @@ def import_accounts_bundle(request):
 		if selected_locale not in valid_locales:
 			selected_locale = 'ru_BY'
 
+		# Optional tags selection
+		selected_tag = None
+		try:
+			tag_id = request.POST.get('tags')
+			if tag_id:
+				from uploader.models import Tag
+				selected_tag = Tag.objects.filter(id=int(tag_id)).first()
+		except Exception:
+			selected_tag = None
+
 		# Helpers
 		def _extract_cookie_value(cookie_list: list, name: str) -> str | None:
 			for c in cookie_list or []:
@@ -2548,6 +2558,12 @@ def import_accounts_bundle(request):
 				except Exception as pe:
 					logger.warning(f"[BUNDLE] Proxy assignment failed for {username}: {pe}")
 
+				# Assign tag to account
+				if selected_tag:
+					account.tag = selected_tag
+					account.save(update_fields=['tag'])
+					logger.info(f"[BUNDLE] Assigned tag '{selected_tag.name}' to {username}")
+
 				# Create Dolphin profile if requested and proxy is available
 				if profile_mode == 'create_profiles' and assigned_proxy and (created or not account.dolphin_profile_id):
 					try:
@@ -2629,9 +2645,12 @@ def import_accounts_bundle(request):
 
 	# GET: render page
 	clients = CabinetClient.objects.select_related('agency').all()
+	from uploader.models import Tag
+	tags = Tag.objects.all().order_by('name')
 	context = {
 		'active_tab': 'accounts',
 		'clients': clients,
+		'tags': tags,
 	}
 	return render(request, 'uploader/import_accounts_bundle.html', context)
 
