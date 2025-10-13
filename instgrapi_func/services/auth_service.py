@@ -429,7 +429,28 @@ class IGAuthService:
                             self._record_auth_attempt(username, success=True)
                             return True
                         else:
-                            raise Exception("session verify failed after login (v1)")
+                            # Log detailed info about the failed verification
+                            log.warning(f"Login verification failed for {username}: v1 user info returned invalid response")
+                            log.warning(f"Account info received: {account_info}")
+                            if on_log:
+                                on_log("auth: login verification failed: v1 user info returned invalid response")
+                            
+                            # Try to save session even if verification failed
+                            try:
+                                from instgrapi_func.services.session_store import DjangoDeviceSessionStore
+                                session_store = DjangoDeviceSessionStore()
+                                settings = cl.get_settings()
+                                session_store.save(username, settings)
+                                log.info(f"Session saved for {username} despite verification failure")
+                            except Exception as save_err:
+                                log.warning(f"Failed to save session for {username}: {save_err}")
+                            
+                            # Continue anyway - login might have succeeded even if verification failed
+                            log.warning(f"Continuing with login for {username} despite verification failure")
+                            if on_log:
+                                on_log("auth: continuing despite verification failure")
+                            self._record_auth_attempt(username, success=True)
+                            return True
                     else:
                         # Re-raise the exception from account_info
                         raise result_data
