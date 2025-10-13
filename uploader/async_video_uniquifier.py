@@ -141,27 +141,45 @@ class AsyncVideoUniquifier:
     def _process_video_sync(self, input_path: str, output_path: str, 
                            config: UniqueVideoConfig, account_username: str) -> bool:
         """Синхронная обработка видео с помощью FFmpeg"""
-        try:
-            # Проверяем наличие входного файла
-            if not os.path.exists(input_path):
-                print(f"[FAIL] [UNIQUIFY] Input file does not exist: {input_path}")
-                return False
-            
-            file_size = os.path.getsize(input_path)
-            print(f"[FOLDER] [UNIQUIFY] Input file: {os.path.basename(input_path)} ({file_size} bytes)")
-            
-            # Проверяем наличие FFmpeg
-            subprocess.run(["ffmpeg", "-version"], capture_output=True, check=True, timeout=5)
-        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+        # Проверяем наличие входного файла
+        if not os.path.exists(input_path):
+            print(f"[FAIL] [UNIQUIFY] Input file does not exist: {input_path}")
+            return False
+        
+        file_size = os.path.getsize(input_path)
+        print(f"[FOLDER] [UNIQUIFY] Input file: {os.path.basename(input_path)} ({file_size} bytes)")
+        
+        # Проверяем наличие FFmpeg в разных местах
+        ffmpeg_paths = [
+            "ffmpeg",  # В PATH
+            "ffmpeg.exe",  # Windows в PATH
+            os.path.join(os.getcwd(), "ffmpeg.exe"),  # В текущей директории
+            os.path.join(os.path.dirname(__file__), "ffmpeg.exe"),  # В директории скрипта
+            r"C:\ffmpeg\bin\ffmpeg.exe",  # Стандартное место установки на Windows
+            r"C:\Program Files\ffmpeg\bin\ffmpeg.exe",  # Альтернативное место
+        ]
+        
+        ffmpeg_path = None
+        for path in ffmpeg_paths:
+            try:
+                subprocess.run([path, "-version"], capture_output=True, check=True, timeout=5)
+                ffmpeg_path = path
+                print(f"[OK] [UNIQUIFY] Found FFmpeg at: {path}")
+                break
+            except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+                continue
+        
+        if not ffmpeg_path:
             print(f"[FAIL] FFmpeg not found! Please install FFmpeg and add it to PATH.")
+            print(f"[INFO] Searched paths: {ffmpeg_paths}")
             return False
         
         try:
             # Получаем длительность видео
-            duration = self._get_video_duration(input_path)
+            duration = self._get_video_duration(input_path, ffmpeg_path)
             
             # Строим команду FFmpeg
-            cmd = self._build_ffmpeg_command(input_path, output_path, config, duration, account_username)
+            cmd = self._build_ffmpeg_command(input_path, output_path, config, duration, account_username, ffmpeg_path)
             
             print(f"[VIDEO] [UNIQUIFY] Processing video for {account_username}...")
             print(f"[TOOL] [UNIQUIFY] FFmpeg command: {' '.join(cmd[:8])}... (truncated)")  # Показываем только начало команды
@@ -196,12 +214,14 @@ class AsyncVideoUniquifier:
             print(f"[FAIL] [UNIQUIFY] General error: {str(e)}")
             return False
     
-    def _get_video_duration(self, video_path: str) -> float:
+    def _get_video_duration(self, video_path: str, ffmpeg_path: str = "ffmpeg") -> float:
         """Получить длительность видео"""
         try:
             print(f"[SEARCH] [UNIQUIFY] Getting video duration for: {os.path.basename(video_path)}")
+            # Определяем путь к ffprobe на основе пути к ffmpeg
+            ffprobe_path = ffmpeg_path.replace("ffmpeg", "ffprobe").replace("ffmpeg.exe", "ffprobe.exe")
             result = subprocess.run([
-                "ffprobe", "-v", "error", "-show_entries", "format=duration", 
+                ffprobe_path, "-v", "error", "-show_entries", "format=duration", 
                 "-of", "default=noprint_wrappers=1:nokey=1", video_path
             ], capture_output=True, text=True, timeout=30)
             
@@ -217,7 +237,7 @@ class AsyncVideoUniquifier:
     
     def _build_ffmpeg_command(self, input_path: str, output_path: str, 
                              config: UniqueVideoConfig, duration: float, 
-                             account_username: str) -> List[str]:
+                             account_username: str, ffmpeg_path: str = "ffmpeg") -> List[str]:
         """Построить команду FFmpeg для уникализации"""
         filters = []
         
@@ -300,7 +320,7 @@ class AsyncVideoUniquifier:
         filters.extend(text_filters)
         
         # Строим команду
-        cmd = ["ffmpeg", "-y", "-i", input_path]
+        cmd = [ffmpeg_path, "-y", "-i", input_path]
         cmd += ["-vf", ",".join(filters)]
         cmd += self._random_metadata(account_username)
         cmd += [
