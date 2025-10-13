@@ -157,16 +157,30 @@ class AsyncVideoUniquifier:
             os.path.join(os.path.dirname(__file__), "ffmpeg.exe"),  # В директории скрипта
             r"C:\ffmpeg\bin\ffmpeg.exe",  # Стандартное место установки на Windows
             r"C:\Program Files\ffmpeg\bin\ffmpeg.exe",  # Альтернативное место
+            r"C:\Program Files (x86)\ffmpeg\bin\ffmpeg.exe",  # 32-bit программы
+            r"C:\tools\ffmpeg\bin\ffmpeg.exe",  # Chocolatey установка
+            r"C:\Users\{}\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-6.1.1-full_build\bin\ffmpeg.exe".format(os.getenv('USERNAME', 'Admin')),  # WinGet установка
+            r"C:\inst\instagram-mass-uploader-windows\ffmpeg.exe",  # В корне проекта
+            r"C:\inst\instagram-mass-uploader-windows\bin\ffmpeg.exe",  # В bin папке проекта
+            r"C:\inst\instagram-mass-uploader-windows\tools\ffmpeg.exe",  # В tools папке проекта
         ]
         
         ffmpeg_path = None
         for path in ffmpeg_paths:
             try:
-                subprocess.run([path, "-version"], capture_output=True, check=True, timeout=5)
-                ffmpeg_path = path
-                print(f"[OK] [UNIQUIFY] Found FFmpeg at: {path}")
-                break
-            except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+                # Проверяем существование файла перед попыткой запуска
+                if os.path.exists(path) or path in ["ffmpeg", "ffmpeg.exe"]:
+                    result = subprocess.run([path, "-version"], capture_output=True, check=True, timeout=5)
+                    ffmpeg_path = path
+                    print(f"[OK] [UNIQUIFY] Found FFmpeg at: {path}")
+                    # Показываем версию FFmpeg
+                    version_line = result.stdout.decode().split('\n')[0]
+                    print(f"[INFO] [UNIQUIFY] FFmpeg version: {version_line}")
+                    break
+                else:
+                    print(f"[SKIP] [UNIQUIFY] Path does not exist: {path}")
+            except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as e:
+                print(f"[SKIP] [UNIQUIFY] Failed to test {path}: {type(e).__name__}")
                 continue
         
         if not ffmpeg_path:
