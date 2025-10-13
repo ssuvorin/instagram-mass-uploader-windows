@@ -86,6 +86,15 @@ login:pass:email:emailpass|Instagram 364.0.0.18.86 Android (...)|android-xxx;dev
 					</div>
 
 					<div class="mb-4">
+						<label for="proxy_source" class="form-label">Proxy Source</label>
+						<select class="form-select" id="proxy_source" name="proxy_source">
+							<option value="bundle" selected>📦 Use proxies from bundle</option>
+							<option value="locale">🌍 Assign by locale (ignore bundle proxies)</option>
+						</select>
+						<div class="form-text">Выберите источник прокси: из bundle или назначение по локали.</div>
+					</div>
+
+					<div class="mb-4">
 						<label for="profile_locale" class="form-label">Default Locale</label>
 						<select class="form-select" id="profile_locale" name="profile_locale">
 							<option value="ru_BY" selected>🇧🇾 ru_BY (Belarus)</option>
@@ -96,7 +105,7 @@ login:pass:email:emailpass|Instagram 364.0.0.18.86 Android (...)|android-xxx;dev
 							<option value="el_GR">🇬🇷 el_GR (Greece)</option>
 							<option value="de_DE">🇩🇪 de_DE (Germany)</option>
 						</select>
-						<div class="form-text">Локаль для назначения прокси и создания профилей. Прокси будут подбираться по стране локали.</div>
+						<div class="form-text">Локаль для назначения прокси и создания профилей. Используется только при выборе "Assign by locale".</div>
 					</div>
 
 					<div class="mb-4">

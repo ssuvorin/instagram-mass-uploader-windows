@@ -1757,14 +1757,19 @@ def import_accounts_bundle(request):
 	if request.method == 'POST' and request.FILES.get('accounts_file'):
 		accounts_file = request.FILES['accounts_file']
 		
-		# Get selected locale and profile mode
+		# Get selected options
 		selected_locale = request.POST.get('profile_locale', 'ru_BY')
 		profile_mode = request.POST.get('profile_mode', 'create_profiles')
+		proxy_source = request.POST.get('proxy_source', 'bundle')
 		
 		# Validate locale
 		valid_locales = ['ru_BY', 'en_IN', 'es_CL', 'es_MX', 'pt_BR', 'el_GR', 'de_DE']
 		if selected_locale not in valid_locales:
 			selected_locale = 'ru_BY'
+		
+		# Validate proxy source
+		if proxy_source not in ['bundle', 'locale']:
+			proxy_source = 'bundle'
 
 		# Optional tags selection
 		selected_tag = None
@@ -2467,10 +2472,10 @@ def import_accounts_bundle(request):
 					except Exception as ce:
 						logger.warning(f"[BUNDLE] Failed to persist cookies for {username}: {ce}")
 
-				# Attach proxy from bundle unless we're in cookies-first mode (skip proxies in this format)
+				# Attach proxy based on proxy_source setting
 				try:
 					assigned_proxy = None
-					if (not cookies_first_mode) and proxy_data and proxy_data.get('host') and proxy_data.get('port'):
+					if proxy_source == 'bundle' and proxy_data and proxy_data.get('host') and proxy_data.get('port'):
 						# Normalize country from locale if present
 						proxy_country = None
 						try:
@@ -2515,7 +2520,7 @@ def import_accounts_bundle(request):
 						account.current_proxy = assigned_proxy
 						account.save(update_fields=['proxy', 'current_proxy'])
 					else:
-						# Fallback: reuse previous or assign free
+						# Fallback: reuse previous proxy if available
 						prev_acc = existing_map.get(username)
 						if prev_acc and (prev_acc.current_proxy or prev_acc.proxy):
 							assigned_proxy = prev_acc.current_proxy or prev_acc.proxy
@@ -2523,10 +2528,11 @@ def import_accounts_bundle(request):
 							account.current_proxy = assigned_proxy
 							account.save(update_fields=['proxy', 'current_proxy'])
 							logger.info(f"[BUNDLE] Reusing existing proxy for {username}: {assigned_proxy}")
-						elif not (account.current_proxy or account.proxy):
-							# Assign proxy by selected locale
-							avail = Proxy.objects.filter(is_active=True, assigned_account__isnull=True)
-							
+					
+					if proxy_source == 'locale':
+						# Assign proxy by locale (ignore bundle proxies)
+						available_proxies = Proxy.objects.filter(is_active=True, assigned_account__isnull=True)
+						if available_proxies.exists():
 							# Filter by locale country if available
 							locale_country = selected_locale.split('_')[-1] if '_' in selected_locale else selected_locale
 							country_text = {
@@ -2534,7 +2540,7 @@ def import_accounts_bundle(request):
 								'MX': 'Mexico', 'BR': 'Brazil', 'GR': 'Greece', 'DE': 'Germany'
 							}.get(locale_country, locale_country)
 							
-							locale_proxies = avail.filter(
+							locale_proxies = available_proxies.filter(
 								Q(country__iexact=locale_country) | 
 								Q(country__icontains=country_text) | 
 								Q(city__icontains=country_text)
@@ -2543,8 +2549,8 @@ def import_accounts_bundle(request):
 							if locale_proxies.exists():
 								assigned_proxy = locale_proxies.order_by('?').first()
 								logger.info(f"[BUNDLE] Assigned locale proxy {assigned_proxy} to {username} (locale: {selected_locale})")
-							elif avail.exists():
-								assigned_proxy = avail.order_by('?').first()
+							elif available_proxies.exists():
+								assigned_proxy = available_proxies.order_by('?').first()
 								logger.info(f"[BUNDLE] Assigned fallback proxy {assigned_proxy} to {username} (no locale match)")
 							else:
 								logger.warning(f"[BUNDLE] No free proxies available to assign for {username}")
