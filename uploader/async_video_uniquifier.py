@@ -596,6 +596,30 @@ def check_ffmpeg_availability() -> bool:
                               capture_output=True, text=True, timeout=5)
         return result.returncode == 0
     except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+        # Если не найден в PATH, попробуем добавить стандартные пути
+        try:
+            import os
+            standard_paths = [
+                r"C:\ffmpeg\bin",
+                r"C:\Program Files\ffmpeg\bin",
+                r"C:\Program Files (x86)\ffmpeg\bin",
+                r"C:\tools\ffmpeg\bin",
+            ]
+            
+            for path in standard_paths:
+                if os.path.exists(os.path.join(path, "ffmpeg.exe")):
+                    # Временно добавляем в PATH
+                    old_path = os.environ.get('PATH', '')
+                    os.environ['PATH'] = path + os.pathsep + old_path
+                    
+                    result = subprocess.run(["ffmpeg", "-version"], 
+                                          capture_output=True, text=True, timeout=5)
+                    if result.returncode == 0:
+                        print(f"[OK] [FFMPEG_CHECK] Found FFmpeg at: {path}")
+                        return True
+        except Exception:
+            pass
+        
         return False
 
 def uniquify_video_sync(input_path: str, output_path: str, quality: int = 23) -> bool:
