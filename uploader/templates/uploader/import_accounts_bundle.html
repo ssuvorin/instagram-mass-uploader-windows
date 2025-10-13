@@ -75,6 +75,20 @@ login:pass:email:emailpass|Instagram 364.0.0.18.86 Android (...)|android-xxx;dev
 					</div>
 
 					<div class="mb-4">
+						<label for="profile_locale" class="form-label">Default Locale</label>
+						<select class="form-select" id="profile_locale" name="profile_locale">
+							<option value="ru_BY" selected>🇧🇾 ru_BY (Belarus)</option>
+							<option value="en_IN">🇮🇳 en_IN (India)</option>
+							<option value="es_CL">🇨🇱 es_CL (Chile)</option>
+							<option value="es_MX">🇲🇽 es_MX (Mexico)</option>
+							<option value="pt_BR">🇧🇷 pt_BR (Brazil)</option>
+							<option value="el_GR">🇬🇷 el_GR (Greece)</option>
+							<option value="de_DE">🇩🇪 de_DE (Germany)</option>
+						</select>
+						<div class="form-text">Локаль для назначения прокси и создания профилей. Прокси будут подбираться по стране локали.</div>
+					</div>
+
+					<div class="mb-4">
 						<label for="profile_mode" class="form-label">Profile Mode</label>
 						<select class="form-select" id="profile_mode" name="profile_mode">
 							<option value="create_profiles" selected>Создавать Dolphin веб‑профили</option>

@@ -1025,6 +1025,30 @@ def create_dolphin_profile(request, account_id):
             except Exception as snap_err:
                 logger.warning(f"[CREATE PROFILE] Could not save Dolphin snapshot: {snap_err}")
             
+            # Import cookies if available
+            try:
+                from uploader.models import InstagramCookies
+                cookies_obj = InstagramCookies.objects.filter(account=account).first()
+                if cookies_obj and cookies_obj.cookies_data:
+                    cookies_list = cookies_obj.cookies_data
+                    if isinstance(cookies_list, dict):
+                        # Convert dict to list format for Dolphin
+                        cookies_list = [{'name': k, 'value': v, 'domain': '.instagram.com', 'path': '/'} for k, v in cookies_list.items()]
+                    
+                    # Import cookies to Dolphin profile
+                    try:
+                        imp = dolphin.import_cookies_local(profile_id, cookies_list)
+                        if not (isinstance(imp, dict) and imp.get('success')):
+                            logger.info(f"[CREATE PROFILE] Local import failed, trying Remote PATCH for {account.username}")
+                            dolphin.update_cookies(profile_id, cookies_list)
+                        logger.info(f"[CREATE PROFILE] Imported {len(cookies_list)} cookies into Dolphin profile {profile_id} for {account.username}")
+                    except Exception as cookie_err:
+                        logger.warning(f"[CREATE PROFILE] Failed to import cookies for {account.username}: {cookie_err}")
+                else:
+                    logger.info(f"[CREATE PROFILE] No cookies found for {account.username}, skipping import")
+            except Exception as cookie_err:
+                logger.warning(f"[CREATE PROFILE] Error importing cookies for {account.username}: {cookie_err}")
+            
             logger.info(f"[CREATE PROFILE] Successfully created Dolphin profile {profile_id} for account {account.username}")
             messages.success(request, f'Dolphin profile {profile_id} created successfully for account {account.username}!')
         else:

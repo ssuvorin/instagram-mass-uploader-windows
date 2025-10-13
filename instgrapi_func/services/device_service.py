@@ -409,6 +409,8 @@ def ensure_persistent_device(username: str, persisted_settings: Optional[Dict] =
 			if dev_obj and dev_obj.device_settings:
 				device_settings = dict(dev_obj.device_settings)
 				user_agent = (dev_obj.user_agent or None)
+				print(f"[DEBUG] ensure_persistent_device: Found device_settings for {username}: {list(device_settings.keys())}")
+				print(f"[DEBUG] ensure_persistent_device: User agent: {user_agent}")
 				
 				# CRITICAL: Check if user agent is iPhone and convert to Android
 				if _is_iphone_user_agent(user_agent):

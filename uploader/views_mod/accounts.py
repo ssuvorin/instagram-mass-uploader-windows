@@ -1,6 +1,7 @@
 """Views module: accounts (split from monolith)."""
 from .common import *
 from django.db import models
+from django.db.models import Q
 from cabinet.models import Client as CabinetClient
 
 
@@ -920,6 +921,26 @@ def import_accounts(request):
                                 # Optional timestamp for reference
                                 'last_login': int(time.time()),
                             }
+                            
+                            # CRITICAL: Add device_settings if we have device info
+                            if device_info_raw:
+                                try:
+                                    device_settings = {}
+                                    # Extract device info from device_info_raw
+                                    di_parts = [p for p in device_info_raw.split(';') if p]
+                                    if di_parts:
+                                        device_settings['android_device_id'] = di_parts[0]
+                                    if len(di_parts) >= 2:
+                                        device_settings['phone_id'] = di_parts[1]
+                                    if len(di_parts) >= 3:
+                                        device_settings['uuid'] = di_parts[2]
+                                    if len(di_parts) >= 4:
+                                        device_settings['client_session_id'] = di_parts[3]
+                                    
+                                    if device_settings:
+                                        session_settings['device_settings'] = device_settings
+                                except Exception:
+                                    pass
                             dev_obj, _ = InstagramDevice.objects.get_or_create(account=account)
                             # Preserve existing device_settings; store session in session_settings in instagrapi format
                             dev_obj.session_settings = session_settings
@@ -1539,6 +1560,60 @@ def import_accounts_ua_cookies(request):
 						},
 						'last_login': int(time.time()),
 					}
+					
+					# CRITICAL: Also save device_settings if we have UA to derive device info
+					if ua_string:
+						try:
+							# Extract device settings from UA for ensure_persistent_device
+							device_settings = {}
+							import re as _re
+							
+							# Extract app_version from UA
+							m = _re.search(r'Instagram\s+([0-9.]+)', ua_string, flags=_re.I)
+							if m:
+								device_settings['app_version'] = m.group(1)
+							
+							# Extract resolution and DPI from UA
+							m_res = _re.search(r'(\d{3,5})x(\d{3,5})', ua_string)
+							if m_res:
+								device_settings['resolution'] = f"{m_res.group(1)}x{m_res.group(2)}"
+							
+							m_scale = _re.search(r'scale\s*=\s*([\d\.]+)', ua_string, flags=_re.I)
+							if m_scale:
+								try:
+									scale_val = float(m_scale.group(1))
+									approx_dpi = int(round(scale_val * 160))
+									device_settings['dpi'] = f"{approx_dpi}dpi"
+								except Exception:
+									pass
+							
+							# Extract device info from UA parentheses
+							inside = _re.search(r'\(([^)]*)\)', ua_string)
+							if inside:
+								ua_tokens = [p.strip() for p in inside.group(1).split(';') if p.strip()]
+								if ua_tokens:
+									device_settings['ios_model'] = ua_tokens[0]
+									for tok in ua_tokens[1:]:
+										if tok.lower().startswith('ios'):
+											device_settings['ios_version'] = tok.split(' ', 1)[-1]
+											break
+									for tok in reversed(ua_tokens):
+										if tok.isdigit() and len(tok) >= 6:
+											device_settings['version_code'] = tok
+											break
+							
+							# Convert iPhone to Android if needed
+							if 'iphone' in ua_string.lower() or 'ipad' in ua_string.lower():
+								from instgrapi_func.services.device_service import generate_random_device_settings
+								android_device = generate_random_device_settings()
+								device_settings.update(android_device)
+							
+							if device_settings:
+								settings_snapshot['device_settings'] = device_settings
+								settings_snapshot['user_agent'] = ua_string
+						except Exception:
+							pass
+					
 					dev_obj.session_settings = settings_snapshot
 					dev_obj.save(update_fields=['session_settings', 'updated_at'])
 				except Exception as se:
@@ -1667,14 +1742,29 @@ def import_accounts_bundle(request):
 	   - ip: external IP of proxy (optional)
 	   - locale: e.g. es-CL / es_CL (will be normalized to underscore)
 
-	2) Legacy (still accepted):
+		2) Legacy (still accepted):
 	   creds | UA | device_ids | cookies/headers | proxy
 	   Where cookies may include Authorization=Bearer IGT:2:...
+
+		3) Enhanced UA+Cookies with 2FA and optional email (cookies-first workflow):
+		   login:password:2FA | User Agent | [device_ids] | Cookies [| proxy] [|| email:password]
+	   - Example email segment at the end: name@example.com:mail_password
+		   - Works strictly via cookies; password is stored but login flows should use cookies.
+		   - Proxies embedded in this format are ignored (we assign our own proxies later).
 
 	Parser is resilient and will attempt to auto-detect provided structure.
 	"""
 	if request.method == 'POST' and request.FILES.get('accounts_file'):
 		accounts_file = request.FILES['accounts_file']
+		
+		# Get selected locale and profile mode
+		selected_locale = request.POST.get('profile_locale', 'ru_BY')
+		profile_mode = request.POST.get('profile_mode', 'create_profiles')
+		
+		# Validate locale
+		valid_locales = ['ru_BY', 'en_IN', 'es_CL', 'es_MX', 'pt_BR', 'el_GR', 'de_DE']
+		if selected_locale not in valid_locales:
+			selected_locale = 'ru_BY'
 
 		# Helpers
 		def _extract_cookie_value(cookie_list: list, name: str) -> str | None:
@@ -1697,7 +1787,8 @@ def import_accounts_bundle(request):
 					return False
 				# Heuristics: if contains scheme and 3+ colons -> likely proxy with auth
 				low = s.lower()
-				if low.startswith(('http:', 'https:', 'socks5:')) and colon_count >= 3:
+				# Accept scheme + host:port (2 colons) and scheme + host:port:user:pass (>=3)
+				if low.startswith(('http:', 'https:', 'socks5:')) and colon_count >= 2:
 					return True
 				# Or host:port:login:pass without scheme
 				if colon_count >= 3 and '=' not in s and ' ' not in s:
@@ -1858,7 +1949,34 @@ def import_accounts_bundle(request):
 			if not (raw or '').strip():
 				continue
 			try:
-				s = raw.strip()
+				raw_line = raw.strip()
+				# Extract optional email suffix, prefer explicit '||email:pass', fallback to last '|email:pass'
+				s = raw_line
+				email_username = None
+				email_password = None
+				if '||' in s:
+					main_part, email_part = s.split('||', 1)
+					s = (main_part or '').strip()
+					e = (email_part or '').strip()
+					if e and ':' in e:
+						eml, epw = e.split(':', 1)
+						if '@' in eml:
+							email_username = eml.strip()
+							email_password = epw.strip()
+				else:
+					# Fallback: if the last segment looks like email:pass, peel it off
+					_tmp_segments = [p.strip() for p in s.split('|')]
+					if _tmp_segments and '@' in _tmp_segments[-1] and ':' in _tmp_segments[-1] and '=' not in _tmp_segments[-1]:
+						try:
+							eml, epw = _tmp_segments[-1].split(':', 1)
+							if '@' in eml:
+								email_username = eml.strip()
+								email_password = epw.strip()
+								# remove the last segment from parsing target
+								s = s.rsplit('|', 1)[0].strip()
+						except Exception:
+							pass
+
 				segments = [p.strip() for p in s.split('|')]
 				# creds: always left part before first |
 				left = segments[0] if segments else ''
@@ -1869,8 +1987,23 @@ def import_accounts_bundle(request):
 					continue
 				username = cred_parts[0].strip()
 				password = cred_parts[1].strip()
-				email_username = cred_parts[2].strip() if len(cred_parts) >= 3 else None
-				email_password = cred_parts[3].strip() if len(cred_parts) >= 4 else None
+				# Determine 2FA vs email in cred_parts[2..]
+				tfa_secret = None
+				if len(cred_parts) >= 4 and ('@' in (cred_parts[2] or '')):
+					# Preferred new format with email embedded in creds
+					if email_username is None:
+						email_username = cred_parts[2].strip()
+					if email_password is None:
+						email_password = cred_parts[3].strip()
+				elif len(cred_parts) == 3:
+					third = cred_parts[2].strip()
+					if '@' in third:
+						# Some bundles might provide only email here without password
+						if email_username is None:
+							email_username = third
+					else:
+						# Treat as TOTP secret
+						tfa_secret = third
 				# Try NEW format first: creds | ua | proxy | ip | locale
 				ua_string = ''
 				proxy_data = None
@@ -1977,6 +2110,9 @@ def import_accounts_bundle(request):
 						ds_user_id = ds_user_id or dec.get('ds_user_id')
 						sessionid = sessionid or dec.get('sessionid')
 
+				# Flag: cookies-first workflow (strictly by cookies). We will ignore bundle proxies in this mode.
+				cookies_first_mode = bool((tfa_secret or '||' in raw_line) and (parsed_cookies_list or sessionid))
+
 				# Create/update account
 				defaults = {
 					'password': password,
@@ -1985,7 +2121,10 @@ def import_accounts_bundle(request):
 					'status': 'ACTIVE',
 					'notes': (f"UA: {ua_string[:200]}" if ua_string else ""),
 				}
-				# Optional: locale from new format
+				# Persist TFA secret if provided in creds (login:password:2FA)
+				if tfa_secret:
+					defaults['tfa_secret'] = tfa_secret
+				# Set locale from selected locale or from new format
 				if locale_value:
 					try:
 						loc = (locale_value or '').strip()
@@ -1993,6 +2132,9 @@ def import_accounts_bundle(request):
 						defaults['locale'] = loc
 					except Exception:
 						pass
+				else:
+					# Use selected locale from form
+					defaults['locale'] = selected_locale
 				# Optional client assignment
 				try:
 					client_id_str = request.POST.get('client_id')
@@ -2039,22 +2181,52 @@ def import_accounts_bundle(request):
 								device_settings['dpi'] = f"{approx_dpi}dpi"
 							except Exception:
 								pass
-						# Extract iOS device model and OS from UA parentheses
+						# Extract device info from UA parentheses
 						inside = _re.search(r'\(([^)]*)\)', ua_string or '')
 						if inside:
 							ua_tokens = [p.strip() for p in inside.group(1).split(';') if p.strip()]
 							if ua_tokens:
-								device_settings['ios_model'] = ua_tokens[0]
-								# iOS version token like "iOS 12_5_4"
-								for tok in ua_tokens[1:]:
-									if tok.lower().startswith('ios'):
-										device_settings['ios_version'] = tok.split(' ', 1)[-1]
-										break
-								# trailing numeric token may be version_code-like
-								for tok in reversed(ua_tokens):
-									if tok.isdigit() and len(tok) >= 6:
-										device_settings['version_code'] = tok
-										break
+								# Check if Android or iOS
+								if 'android' in ua_string.lower():
+									# Android format: (24/7.0; 640dpi; 720x1280; Lenovo; mi_350; Spice Mi-350; h1; en_US; 671551996)
+									if len(ua_tokens) >= 4:
+										device_settings['manufacturer'] = ua_tokens[3]  # Lenovo
+									if len(ua_tokens) >= 5:
+										device_settings['model'] = ua_tokens[4]  # mi_350
+									if len(ua_tokens) >= 6:
+										device_settings['device'] = ua_tokens[5]  # Spice Mi-350
+									if len(ua_tokens) >= 7:
+										device_settings['cpu'] = ua_tokens[6]  # h1
+									# Extract Android version
+									if len(ua_tokens) >= 1:
+										android_ver = ua_tokens[0]  # 24/7.0
+										if '/' in android_ver:
+											ver_parts = android_ver.split('/')
+											if len(ver_parts) >= 2:
+												device_settings['android_version'] = int(ver_parts[0])
+												device_settings['android_release'] = ver_parts[1]
+									# Extract DPI
+									if len(ua_tokens) >= 2:
+										dpi_val = ua_tokens[1]  # 640dpi
+										device_settings['dpi'] = dpi_val
+									# Extract version code from end
+									for tok in reversed(ua_tokens):
+										if tok.isdigit() and len(tok) >= 6:
+											device_settings['version_code'] = tok
+											break
+								else:
+									# iOS format
+									device_settings['ios_model'] = ua_tokens[0]
+									# iOS version token like "iOS 12_5_4"
+									for tok in ua_tokens[1:]:
+										if tok.lower().startswith('ios'):
+											device_settings['ios_version'] = tok.split(' ', 1)[-1]
+											break
+									# trailing numeric token may be version_code-like
+									for tok in reversed(ua_tokens):
+										if tok.isdigit() and len(tok) >= 6:
+											device_settings['version_code'] = tok
+											break
 					except Exception:
 						pass
 					# Persist locale/country if provided
@@ -2226,6 +2398,8 @@ def import_accounts_bundle(request):
 						dev_obj.user_agent = dev_obj.user_agent or ua_for_api
 					if device_settings:
 						dev_obj.device_settings = device_settings
+						logger.info(f"[BUNDLE] Saved device_settings for {username}: {list(device_settings.keys())}")
+						logger.info(f"[BUNDLE] Device details: manufacturer={device_settings.get('manufacturer')}, model={device_settings.get('model')}, resolution={device_settings.get('resolution')}")
 					# Minimal session_settings to carry UA for API-only flows
 					sess = dict(getattr(dev_obj, 'session_settings', {}) or {})
 					if ua_string:
@@ -2233,6 +2407,21 @@ def import_accounts_bundle(request):
 						sess['user_agent'] = (ua_replaced or ua_string)
 						if ua_replaced:
 							sess['original_user_agent'] = ua_string
+					
+					# CRITICAL: Save device_settings in session_settings for ensure_persistent_device
+					if device_settings:
+						sess['device_settings'] = device_settings
+					
+					# Inject authorization_data from cookies for instagrapi session login
+					if (ds_user_id or sessionid):
+						try:
+							sess['authorization_data'] = {
+								'ds_user_id': ds_user_id,
+								'sessionid': sessionid,
+								'should_use_header_over_cookies': True,
+							}
+						except Exception:
+							pass
 					dev_obj.session_settings = sess
 					dev_obj.save(update_fields=['device_settings', 'session_settings', 'user_agent', 'updated_at'])
 					# If we auto-derived locale from UA and account lacks it, persist to account
@@ -2246,21 +2435,32 @@ def import_accounts_bundle(request):
 				except Exception as se:
 					logger.warning(f"[BUNDLE] Could not persist device session for {username}: {se}")
 
-				# Persist cookies for reference if legacy format provided
+				# Persist cookies for reference and instagrapi session restoration
 				if parsed_cookies_list:
 					try:
 						from uploader.models import InstagramCookies
+						# Convert cookies list to dict format for instagrapi
+						cookies_dict = {cookie['name']: cookie['value'] for cookie in parsed_cookies_list}
+						
 						InstagramCookies.objects.update_or_create(
 							account=account,
-							defaults={'cookies_data': parsed_cookies_list, 'is_valid': True}
+							defaults={'cookies_data': cookies_dict, 'is_valid': True}
 						)
+						
+						# Also save cookies in session_settings for instagrapi
+						if not sess.get('cookies'):
+							sess['cookies'] = cookies_dict
+							dev_obj.session_settings = sess
+							dev_obj.save(update_fields=['session_settings'])
+						
+						logger.info(f"[BUNDLE] Saved {len(cookies_dict)} cookies for {username}")
 					except Exception as ce:
 						logger.warning(f"[BUNDLE] Failed to persist cookies for {username}: {ce}")
 
-				# Attach proxy from bundle (preferred). If absent, fallback to free pool.
+				# Attach proxy from bundle unless we're in cookies-first mode (skip proxies in this format)
 				try:
 					assigned_proxy = None
-					if proxy_data and proxy_data.get('host') and proxy_data.get('port'):
+					if (not cookies_first_mode) and proxy_data and proxy_data.get('host') and proxy_data.get('port'):
 						# Normalize country from locale if present
 						proxy_country = None
 						try:
@@ -2314,19 +2514,106 @@ def import_accounts_bundle(request):
 							account.save(update_fields=['proxy', 'current_proxy'])
 							logger.info(f"[BUNDLE] Reusing existing proxy for {username}: {assigned_proxy}")
 						elif not (account.current_proxy or account.proxy):
+							# Assign proxy by selected locale
 							avail = Proxy.objects.filter(is_active=True, assigned_account__isnull=True)
-							if avail.exists():
+							
+							# Filter by locale country if available
+							locale_country = selected_locale.split('_')[-1] if '_' in selected_locale else selected_locale
+							country_text = {
+								'BY': 'Belarus', 'IN': 'India', 'CL': 'Chile', 
+								'MX': 'Mexico', 'BR': 'Brazil', 'GR': 'Greece', 'DE': 'Germany'
+							}.get(locale_country, locale_country)
+							
+							locale_proxies = avail.filter(
+								Q(country__iexact=locale_country) | 
+								Q(country__icontains=country_text) | 
+								Q(city__icontains=country_text)
+							)
+							
+							if locale_proxies.exists():
+								assigned_proxy = locale_proxies.order_by('?').first()
+								logger.info(f"[BUNDLE] Assigned locale proxy {assigned_proxy} to {username} (locale: {selected_locale})")
+							elif avail.exists():
 								assigned_proxy = avail.order_by('?').first()
+								logger.info(f"[BUNDLE] Assigned fallback proxy {assigned_proxy} to {username} (no locale match)")
+							else:
+								logger.warning(f"[BUNDLE] No free proxies available to assign for {username}")
+							
+							if assigned_proxy:
 								account.proxy = assigned_proxy
 								account.current_proxy = assigned_proxy
 								account.save(update_fields=['proxy', 'current_proxy'])
 								assigned_proxy.assigned_account = account
 								assigned_proxy.save(update_fields=['assigned_account'])
-								logger.info(f"[BUNDLE] Assigned free proxy {assigned_proxy} to {username}")
-							else:
-								logger.warning(f"[BUNDLE] No free proxies available to assign for {username}")
 				except Exception as pe:
 					logger.warning(f"[BUNDLE] Proxy assignment failed for {username}: {pe}")
+
+				# Create Dolphin profile if requested and proxy is available
+				if profile_mode == 'create_profiles' and assigned_proxy and (created or not account.dolphin_profile_id):
+					try:
+						# Initialize Dolphin API
+						api_key = os.environ.get("DOLPHIN_API_TOKEN", "")
+						if api_key:
+							dolphin_api_host = os.environ.get("DOLPHIN_API_HOST", "http://localhost:3001/v1.0")
+							if not dolphin_api_host.endswith("/v1.0"):
+								dolphin_api_host = dolphin_api_host.rstrip("/") + "/v1.0"
+							
+							from bot.src.instagram_uploader.dolphin_anty import DolphinAnty
+							dolphin = DolphinAnty(api_key=api_key, local_api_base=dolphin_api_host)
+							
+							if dolphin.authenticate():
+								# Create profile name
+								random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
+								profile_name = f"instagram_{username}_{random_suffix}"
+								logger.info(f"[BUNDLE][DOLPHIN] Creating Dolphin profile for account {username}")
+								
+								# Create profile
+								response = dolphin.create_profile(
+									name=profile_name,
+									proxy=assigned_proxy.to_dict(),
+									tags=["instagram", "bundle"],
+									locale=selected_locale
+								)
+								
+								# Extract profile ID
+								profile_id = None
+								if response and isinstance(response, dict):
+									profile_id = response.get("browserProfileId")
+									if not profile_id and isinstance(response.get("data"), dict):
+										profile_id = response["data"].get("id")
+								
+								if profile_id:
+									account.dolphin_profile_id = profile_id
+									account.save(update_fields=['dolphin_profile_id'])
+									
+									# Import cookies if available
+									if parsed_cookies_list:
+										try:
+											# Convert cookies to list format for Dolphin
+											cookies_for_dolphin = []
+											if isinstance(parsed_cookies_list, list):
+												cookies_for_dolphin = parsed_cookies_list
+											elif isinstance(parsed_cookies_list, dict):
+												cookies_for_dolphin = [{'name': k, 'value': v, 'domain': '.instagram.com', 'path': '/'} for k, v in parsed_cookies_list.items()]
+											
+											# Import cookies
+											imp = dolphin.import_cookies_local(profile_id, cookies_for_dolphin)
+											if not (isinstance(imp, dict) and imp.get('success')):
+												logger.info(f"[BUNDLE][DOLPHIN] Local import failed, trying Remote PATCH for {username}")
+												dolphin.update_cookies(profile_id, cookies_for_dolphin)
+											logger.info(f"[BUNDLE][DOLPHIN] Imported {len(cookies_for_dolphin)} cookies into profile {profile_id} for {username}")
+										except Exception as cookie_err:
+											logger.warning(f"[BUNDLE][DOLPHIN] Failed to import cookies for {username}: {cookie_err}")
+									
+									logger.info(f"[BUNDLE][DOLPHIN] Successfully created profile {profile_id} for {username}")
+								else:
+									logger.error(f"[BUNDLE][DOLPHIN] Failed to create profile for {username}: {response}")
+							else:
+								logger.warning(f"[BUNDLE][DOLPHIN] Failed to authenticate with Dolphin API")
+						else:
+							logger.warning(f"[BUNDLE][DOLPHIN] Dolphin API token not configured")
+					except Exception as dolphin_err:
+						logger.warning(f"[BUNDLE][DOLPHIN] Error creating Dolphin profile for {username}: {dolphin_err}")
 
 			except Exception as e:
 				logger.error(f"[BUNDLE] Error at line {line_num}: {e}")
