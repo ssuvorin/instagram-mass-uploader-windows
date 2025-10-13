@@ -106,10 +106,10 @@ logger = logging.getLogger(__name__)
 @dataclass
 class AsyncConfig:
     """Конфигурация для асинхронной обработки"""
-    MAX_CONCURRENT_ACCOUNTS: int = 5
+    MAX_CONCURRENT_ACCOUNTS: int = 5  # Maximum 5 accounts in parallel to avoid anti-fraud
     MAX_CONCURRENT_VIDEOS: int = 1
-    ACCOUNT_DELAY_MIN: float = 5.0
-    ACCOUNT_DELAY_MAX: float = 10.0
+    ACCOUNT_DELAY_MIN: float = 10.0  # Increased delay to avoid anti-fraud detection
+    ACCOUNT_DELAY_MAX: float = 30.0  # Increased delay to avoid anti-fraud detection
     RETRY_ATTEMPTS: int = 2
     HEALTH_CHECK_INTERVAL: int = 60
     FILE_CHUNK_SIZE: int = 8192
@@ -988,15 +988,15 @@ class AsyncTaskCoordinator:
                     await logger.log('INFO', f"[ROUND] Dispatching {len(round_tasks)} accounts for round {round_index}")
                     _ = await asyncio.gather(*round_tasks, return_exceptions=True)
             else:
-                # Создаем задачи для всех аккаунтов (default)
+                # Создаем задачи для всех аккаунтов (default) with staggered start
                 tasks = []
-                for account_task in account_tasks:
+                for i, account_task in enumerate(account_tasks):
                     processor = AsyncAccountProcessor(account_task, task_data, logger)
-                    task_coroutine = self._process_account_with_semaphore(processor, account_task)
+                    task_coroutine = self._process_account_with_semaphore(processor, account_task, start_delay=i * 2.0)
                     tasks.append(task_coroutine)
                 
-                # Запускаем все задачи параллельно
-                await logger.log('INFO', f"Starting {len(tasks)} account tasks in parallel")
+                # Запускаем все задачи параллельно с задержками
+                await logger.log('INFO', f"Starting {len(tasks)} account tasks in parallel with staggered delays")
                 results = await asyncio.gather(*tasks, return_exceptions=True)
             
             # Обрабатываем результаты
@@ -1093,9 +1093,13 @@ class AsyncTaskCoordinator:
         )
     
     async def _process_account_with_semaphore(self, processor: AsyncAccountProcessor, 
-                                            account_task: BulkUploadAccount) -> Tuple[str, int, int]:
+                                            account_task: BulkUploadAccount, start_delay: float = 0.0) -> Tuple[str, int, int]:
         """Обрабатывает аккаунт с ограничением параллельности"""
         async with self.account_semaphore:
+            # Initial staggered delay to avoid simultaneous starts
+            if start_delay > 0:
+                await asyncio.sleep(start_delay)
+            
             # Добавляем случайную задержку между аккаунтами
             delay = random.uniform(AsyncConfig.ACCOUNT_DELAY_MIN, AsyncConfig.ACCOUNT_DELAY_MAX)
             await asyncio.sleep(delay)

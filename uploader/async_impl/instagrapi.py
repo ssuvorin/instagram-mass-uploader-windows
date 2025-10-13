@@ -391,29 +391,11 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 			cl.set_proxy(proxy_url)
 			log_info(f"[LOCK] Proxy locked: {proxy_url}")
 		
-		# CRITICAL: Check if device is iPhone and convert to Android BEFORE locking
+		# NOTE: iPhone devices are now supported by instagrapi, no conversion needed
 		user_agent = device_settings.get("user_agent") or ua_hint
-		is_iphone = False
 		if user_agent and any(indicator in user_agent for indicator in ["iPhone", "iOS", "AppleWebKit"]):
-			is_iphone = True
-			log_info(f"[CONVERT] Detected iPhone device, converting to Android...")
-			
-			# Import device service functions
-			from instgrapi_func.services.device_service import (
-				generate_random_device_settings, 
-				_merge_uuids,
-				_is_iphone_user_agent,
-				_convert_iphone_to_android_device_settings
-			)
-			
-			# Convert iPhone to Android
-			android_device, android_user_agent = _convert_iphone_to_android_device_settings(device_settings, user_agent, username)
-			
-			# Update device_settings with Android values
-			device_settings.update(android_device)
-			user_agent = android_user_agent
-			
-			log_info(f"[CONVERT] iPhone converted to Android: {android_device.get('model')} {android_device.get('manufacturer')}")
+			log_info(f"[DEVICE] Using iPhone device settings: {user_agent}")
+			# iPhone devices are now supported, no conversion needed
 		
 		# Lock device settings - ensure they won't change during session
 		device_cfg = {
