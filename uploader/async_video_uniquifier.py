@@ -481,7 +481,7 @@ class AsyncVideoUniquifier:
         ]
     
     async def cleanup_temp_files_async(self) -> None:
-        """Асинхронно очистить временные файлы уникализации"""
+        """Асинхронно очистить временные файлы уникализации с проверкой на shutdown"""
         def cleanup():
             for file_path in self.temp_files:
                 try:
@@ -492,14 +492,37 @@ class AsyncVideoUniquifier:
                     print(f"[WARN] [UNIQUIFY] Could not delete temp file {file_path}: {str(e)}")
             self.temp_files.clear()
         
-        # Запускаем очистку асинхронно
+        # Запускаем очистку асинхронно с проверкой на shutdown
         try:
+            # Проверяем, что event loop еще работает
+            loop = asyncio.get_running_loop()
+            if loop.is_closed():
+                print("[WARN] [UNIQUIFY] Event loop is closed, skipping async cleanup")
+                cleanup()  # Выполняем синхронно
+                return
+            
             # Python 3.9+
             await asyncio.to_thread(cleanup)
         except AttributeError:
             # Fallback для Python < 3.9
-            loop = asyncio.get_running_loop()
-            await loop.run_in_executor(None, cleanup)
+            try:
+                loop = asyncio.get_running_loop()
+                if not loop.is_closed():
+                    await loop.run_in_executor(None, cleanup)
+                else:
+                    cleanup()  # Выполняем синхронно
+            except RuntimeError as e:
+                if "cannot schedule new futures after shutdown" in str(e):
+                    print("[WARN] [UNIQUIFY] Event loop shutdown detected, using sync cleanup")
+                    cleanup()  # Выполняем синхронно
+                else:
+                    raise
+        except RuntimeError as e:
+            if "cannot schedule new futures after shutdown" in str(e):
+                print("[WARN] [UNIQUIFY] Event loop shutdown detected, using sync cleanup")
+                cleanup()  # Выполняем синхронно
+            else:
+                raise
 
 # Глобальный экземпляр для использования в async задачах
 _global_uniquifier = None
@@ -528,10 +551,16 @@ async def uniquify_video_for_account(input_path: str, account_username: str,
     return await uniquifier.uniquify_video_async(input_path, account_username, copy_number)
 
 async def cleanup_uniquifier_temp_files():
-    """Очистить все временные файлы уникализатора"""
+    """Очистить все временные файлы уникализатора с проверкой на shutdown"""
     global _global_uniquifier
     if _global_uniquifier:
-        await _global_uniquifier.cleanup_temp_files_async()
+        try:
+            await _global_uniquifier.cleanup_temp_files_async()
+        except RuntimeError as e:
+            if "cannot schedule new futures after shutdown" in str(e):
+                print("[WARN] [UNIQUIFY] Event loop shutdown detected, skipping cleanup")
+            else:
+                raise
 
 def cleanup_hanging_ffmpeg():
     """Очистка зависших FFmpeg процессов"""
