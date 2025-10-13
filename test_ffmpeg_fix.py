@@ -15,7 +15,7 @@ def test_ffmpeg_detection():
     print("🔍 Тестирование обнаружения FFmpeg...")
     
     try:
-        from async_video_uniquifier import check_ffmpeg_availability
+        from async_video_uniquifier import check_ffmpeg_availability, get_ffmpeg_path
         
         # Тестируем функцию проверки доступности FFmpeg
         is_available = check_ffmpeg_availability()
@@ -23,19 +23,27 @@ def test_ffmpeg_detection():
         if is_available:
             print("✅ FFmpeg найден и работает!")
             
-            # Дополнительная проверка - попробуем запустить ffmpeg
-            try:
-                result = subprocess.run(["ffmpeg", "-version"], 
-                                     capture_output=True, text=True, timeout=10)
-                if result.returncode == 0:
-                    version_line = result.stdout.split('\n')[0]
-                    print(f"📋 Версия FFmpeg: {version_line}")
-                    return True
-                else:
-                    print(f"❌ FFmpeg вернул ошибку: {result.stderr}")
+            # Получаем путь к FFmpeg
+            ffmpeg_path = get_ffmpeg_path()
+            if ffmpeg_path:
+                print(f"📍 Путь к FFmpeg: {ffmpeg_path}")
+                
+                # Дополнительная проверка - попробуем запустить ffmpeg
+                try:
+                    result = subprocess.run([ffmpeg_path, "-version"], 
+                                         capture_output=True, text=True, timeout=10)
+                    if result.returncode == 0:
+                        version_line = result.stdout.split('\n')[0]
+                        print(f"📋 Версия FFmpeg: {version_line}")
+                        return True
+                    else:
+                        print(f"❌ FFmpeg вернул ошибку: {result.stderr}")
+                        return False
+                except Exception as e:
+                    print(f"❌ Ошибка при запуске FFmpeg: {e}")
                     return False
-            except Exception as e:
-                print(f"❌ Ошибка при запуске FFmpeg: {e}")
+            else:
+                print("❌ Не удалось получить путь к FFmpeg!")
                 return False
         else:
             print("❌ FFmpeg не найден!")
