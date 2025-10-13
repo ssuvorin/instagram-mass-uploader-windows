@@ -259,11 +259,11 @@ document.addEventListener('DOMContentLoaded', function() {
     container.innerHTML = '';
     if (nonActiveSel > 0 || invalidProxySel > 0) {
       const div = document.createElement('div');
-      div.className = 'alert alert-warning mt-3';
-      div.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>
-        <strong>Warning:</strong> ${nonActiveSel} non-ACTIVE selected.
-        ${invalidProxySel > 0 ? `<br/><strong>Warning:</strong> ${invalidProxySel} selected account(s) have inactive/invalid proxy.` : ''}
-        <br><small class="text-muted">Tip: Prefer ACTIVE accounts with valid proxies for successful login.</small>`;
+      div.className = 'alert alert-info mt-3';
+      div.innerHTML = `<i class="bi bi-info-circle me-2"></i>
+        <strong>Info:</strong> ${nonActiveSel} non-ACTIVE account${nonActiveSel !== 1 ? 's' : ''} selected.
+        ${invalidProxySel > 0 ? `<br/><strong>Info:</strong> ${invalidProxySel} account(s) have inactive/invalid proxy.` : ''}
+        <br><small class="text-muted">This is useful for testing unbanned accounts. Only ${activeSel} ACTIVE account${activeSel !== 1 ? 's' : ''} will likely succeed immediately.</small>`;
       container.appendChild(div);
     }
   }
@@ -282,9 +282,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectedActive = checked.filter(cb => cb.closest('.account-item').dataset.status === 'active').length;
     const selectedNonActive = checked.length - selectedActive;
     const invalidProxySel = checked.filter(cb => cb.closest('.account-item').dataset.hasProxy === 'true' && cb.closest('.account-item').dataset.proxyActive === 'false').length;
-    if (selectedActive === 0) { alert('No ACTIVE accounts selected.'); return false; }
+    
+    // Allow all account types for bulk login testing - just show warnings
     if (selectedNonActive > 0 || invalidProxySel > 0) {
-      return confirm(`Warning: ${selectedNonActive} non-ACTIVE selected.` + (invalidProxySel>0? `\nWarning: ${invalidProxySel} selected account(s) have inactive/invalid proxy.`:'' ) + `\n\nOnly ${selectedActive} ACTIVE account(s) will likely succeed. Continue?`);
+      const message = `Warning: ${selectedNonActive} non-ACTIVE account${selectedNonActive !== 1 ? 's' : ''} selected.` +
+                     (invalidProxySel > 0 ? `\nWarning: ${invalidProxySel} account(s) have inactive/invalid proxy.` : '') +
+                     `\n\nThis is useful for testing unbanned accounts. Only ${selectedActive} ACTIVE account${selectedActive !== 1 ? 's' : ''} will likely succeed immediately.\n\nContinue with bulk login test?`;
+      return confirm(message);
     }
     return true;
   }
