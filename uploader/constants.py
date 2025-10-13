@@ -9,17 +9,17 @@ class TimeConstants:
     HUMAN_DELAY_MIN = 0.5
     HUMAN_DELAY_MAX = 2.0
     
-    # Задержки между аккаунтами
-    ACCOUNT_DELAY_MIN = 30
-    ACCOUNT_DELAY_MAX = 120
+    # Задержки между аккаунтами - УМЕНЬШЕНЫ ДЛЯ БЫСТРОЙ РАБОТЫ
+    ACCOUNT_DELAY_MIN = 10  # УМЕНЬШЕНО: было 30
+    ACCOUNT_DELAY_MAX = 30  # УМЕНЬШЕНО: было 120
     
-    # Задержки между видео
-    VIDEO_DELAY_MIN = 180  # 3 минуты
-    VIDEO_DELAY_MAX = 420  # 7 минут
+    # Задержки между видео - УМЕНЬШЕНЫ ДЛЯ БЫСТРОЙ РАБОТЫ
+    VIDEO_DELAY_MIN = 30   # УМЕНЬШЕНО: было 180 (3 минуты)
+    VIDEO_DELAY_MAX = 60   # УМЕНЬШЕНО: было 420 (7 минут)
     
-    # Новые улучшенные задержки
-    BATCH_PROCESSING_DELAY_MIN = 300   # 5 минут между батчами
-    BATCH_PROCESSING_DELAY_MAX = 900   # 15 минут между батчами
+    # Новые улучшенные задержки - УМЕНЬШЕНЫ ДЛЯ БЫСТРОЙ РАБОТЫ
+    BATCH_PROCESSING_DELAY_MIN = 60    # УМЕНЬШЕНО: было 300 (5 минут)
+    BATCH_PROCESSING_DELAY_MAX = 180   # УМЕНЬШЕНО: было 900 (15 минут)
     
     # Адаптивные задержки по времени суток
     NIGHT_DELAY_MULTIPLIER = 2.0      # Ночью медленнее
