@@ -382,9 +382,9 @@ def _derive_from_session_settings(persisted_settings: Dict, username: Optional[s
 	dev = generate_random_device_settings(username)
 	dev = _merge_uuids(dev, uuids)
 	
-	# CRITICAL: Check if user agent is iPhone and convert to Android
-	if _is_iphone_user_agent(ua):
-		dev, ua = _convert_iphone_to_android_device_settings(dev, ua, username)
+	# NOTE: iPhone devices are now supported by instagrapi, no conversion needed
+	# if _is_iphone_user_agent(ua):
+	#     dev, ua = _convert_iphone_to_android_device_settings(dev, ua, username)
 	
 	return dev, ua
 
@@ -412,16 +412,9 @@ def ensure_persistent_device(username: str, persisted_settings: Optional[Dict] =
 				print(f"[DEBUG] ensure_persistent_device: Found device_settings for {username}: {list(device_settings.keys())}")
 				print(f"[DEBUG] ensure_persistent_device: User agent: {user_agent}")
 				
-				# CRITICAL: Check if user agent is iPhone and convert to Android
-				if _is_iphone_user_agent(user_agent):
-					device_settings, user_agent = _convert_iphone_to_android_device_settings(device_settings, user_agent, username)
-					# Update database with converted Android settings
-					try:
-						dev_obj.device_settings = device_settings
-						dev_obj.user_agent = user_agent
-						dev_obj.save(update_fields=['device_settings', 'user_agent'])
-					except Exception:
-						pass  # Continue even if DB update fails
+				# NOTE: iPhone devices are now supported by instagrapi, no conversion needed
+				# if _is_iphone_user_agent(user_agent):
+				#     device_settings, user_agent = _convert_iphone_to_android_device_settings(device_settings, user_agent, username)
 				
 				# CRITICAL: Merge UUIDs from session settings if available (bundle data takes priority)
 				if persisted_settings and persisted_settings.get('uuids'):
