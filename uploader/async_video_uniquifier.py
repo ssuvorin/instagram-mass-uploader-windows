@@ -213,21 +213,37 @@ class AsyncVideoUniquifier:
         """Получить длительность видео"""
         try:
             print(f"[SEARCH] [UNIQUIFY] Getting video duration for: {os.path.basename(video_path)}")
-            # Определяем путь к ffprobe на основе пути к ffmpeg
-            ffprobe_path = ffmpeg_path.replace("ffmpeg", "ffprobe").replace("ffmpeg.exe", "ffprobe.exe")
-            result = subprocess.run([
+            
+            # Ищем ffprobe
+            ffprobe_path = get_ffprobe_path(ffmpeg_path)
+            if not ffprobe_path:
+                print(f"[WARN] [UNIQUIFY] ffprobe not found, using default duration 12.63s")
+                return 12.63
+            
+            print(f"[INFO] [UNIQUIFY] Using ffprobe at: {ffprobe_path}")
+            
+            # Используем Windows-совместимый subprocess
+            result = run_subprocess_windows([
                 ffprobe_path, "-v", "error", "-show_entries", "format=duration", 
                 "-of", "default=noprint_wrappers=1:nokey=1", video_path
-            ], capture_output=True, text=True, timeout=30)
+            ], timeout=30, capture_output=True, text=True)
             
-            duration = float(result.stdout.strip())
-            print(f"⏱️  [UNIQUIFY] Video duration: {duration:.2f}s")
-            return duration
+            if result.returncode == 0:
+                duration = float(result.stdout.strip())
+                print(f"⏱️  [UNIQUIFY] Video duration: {duration:.2f}s")
+                return duration
+            else:
+                print(f"[WARN] [UNIQUIFY] ffprobe failed: {result.stderr}")
+                return 12.63
+                
         except subprocess.TimeoutExpired:
             print(f"⏰ [UNIQUIFY] ffprobe timeout, using default duration 12.63s")
             return 12.63
         except (subprocess.CalledProcessError, ValueError):
             print(f"[WARN] [UNIQUIFY] Could not determine video duration, using default 12.63s")
+            return 12.63
+        except Exception as e:
+            print(f"[WARN] [UNIQUIFY] Unexpected error getting duration: {e}, using default 12.63s")
             return 12.63
     
     def _build_ffmpeg_command(self, input_path: str, output_path: str, 
@@ -582,6 +598,32 @@ def cleanup_hanging_ffmpeg():
         print(f"[WARN] [UNIQUIFY_CLEANUP] psutil not available, cannot cleanup FFmpeg processes")
     except Exception as e:
         print(f"[FAIL] [UNIQUIFY_CLEANUP] Error during FFmpeg cleanup: {str(e)}")
+
+def get_ffprobe_path(ffmpeg_path: str) -> Optional[str]:
+    """Получение пути к ffprobe на основе пути к ffmpeg"""
+    # Определяем путь к ffprobe на основе пути к ffmpeg
+    ffprobe_path = ffmpeg_path.replace("ffmpeg", "ffprobe").replace("ffmpeg.exe", "ffprobe.exe")
+    
+    # Проверяем существование ffprobe
+    if os.path.exists(ffprobe_path):
+        print(f"[OK] [FFPROBE_SEARCH] Found ffprobe at: {ffprobe_path}")
+        return ffprobe_path
+    
+    # Если не найден, ищем в той же директории
+    ffmpeg_dir = os.path.dirname(ffmpeg_path)
+    ffprobe_candidates = [
+        os.path.join(ffmpeg_dir, "ffprobe.exe"),
+        os.path.join(ffmpeg_dir, "ffprobe"),
+    ]
+    
+    for candidate in ffprobe_candidates:
+        if os.path.exists(candidate):
+            print(f"[OK] [FFPROBE_SEARCH] Found ffprobe at: {candidate}")
+            return candidate
+    
+    print(f"[WARN] [FFPROBE_SEARCH] ffprobe not found, will use default duration")
+    return None
+
 
 def get_ffmpeg_path() -> Optional[str]:
     """Получение пути к исполняемому файлу FFmpeg"""
