@@ -106,10 +106,10 @@ logger = logging.getLogger(__name__)
 @dataclass
 class AsyncConfig:
     """Конфигурация для асинхронной обработки"""
-    MAX_CONCURRENT_ACCOUNTS: int = 5  # Maximum 5 accounts in parallel to avoid anti-fraud
+    MAX_CONCURRENT_ACCOUNTS: int = 3  # Maximum 3 accounts in parallel to avoid Challenge
     MAX_CONCURRENT_VIDEOS: int = 1
-    ACCOUNT_DELAY_MIN: float = 10.0  # Increased delay to avoid anti-fraud detection
-    ACCOUNT_DELAY_MAX: float = 30.0  # Increased delay to avoid anti-fraud detection
+    ACCOUNT_DELAY_MIN: float = 30.0  # Increased delay to avoid Challenge
+    ACCOUNT_DELAY_MAX: float = 60.0  # Increased delay to avoid Challenge
     RETRY_ATTEMPTS: int = 2
     HEALTH_CHECK_INTERVAL: int = 60
     FILE_CHUNK_SIZE: int = 8192
@@ -995,7 +995,13 @@ class AsyncTaskCoordinator:
                     task_coroutine = self._process_account_with_semaphore(processor, account_task, start_delay=i * 2.0)
                     tasks.append(task_coroutine)
                 
-                # Запускаем все задачи параллельно с задержками
+                # Ограничиваем количество параллельных задач до MAX_CONCURRENT_ACCOUNTS
+                max_concurrent = AsyncConfig.MAX_CONCURRENT_ACCOUNTS
+                if len(tasks) > max_concurrent:
+                    await logger.log('INFO', f"Limiting parallel accounts to {max_concurrent} (was {len(tasks)})")
+                    tasks = tasks[:max_concurrent]
+                
+                # Запускаем задачи параллельно с задержками
                 await logger.log('INFO', f"Starting {len(tasks)} account tasks in parallel with staggered delays")
                 results = await asyncio.gather(*tasks, return_exceptions=True)
             

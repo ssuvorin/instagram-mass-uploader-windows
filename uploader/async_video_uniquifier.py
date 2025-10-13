@@ -172,7 +172,21 @@ class AsyncVideoUniquifier:
         if not ffmpeg_path:
             print(f"[FAIL] FFmpeg not found! Please install FFmpeg and add it to PATH.")
             print(f"[INFO] Searched paths: {ffmpeg_paths}")
-            return False
+            print(f"[FALLBACK] Copying original file without uniquification")
+            
+            # Fallback: просто копируем оригинальный файл
+            try:
+                import shutil
+                shutil.copy2(input_path, output_path)
+                if os.path.exists(output_path):
+                    print(f"[OK] [FALLBACK] Copied original file: {os.path.basename(output_path)}")
+                    return True
+                else:
+                    print(f"[FAIL] [FALLBACK] Failed to copy original file")
+                    return False
+            except Exception as e:
+                print(f"[FAIL] [FALLBACK] Error copying file: {e}")
+                return False
         
         try:
             # Получаем длительность видео
