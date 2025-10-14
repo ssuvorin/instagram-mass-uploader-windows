@@ -484,6 +484,9 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 	else:
 		log_info(f"[DEBUG] No valid sessionid found in persisted_settings")
 	
+	# Initialize auth variable to None
+	auth = None
+	
 	# Auth: use restored session or fallback to login with TOTP/email
 	if not session_restored:
 		provider = CompositeProvider([
@@ -503,6 +506,12 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 				log_info(f"[SESSION] Session verified for {username}")
 				if on_log:
 					on_log("Session verified")
+				# Create auth object for potential re-authentication during uploads
+				provider = CompositeProvider([
+					TOTPProvider(tfa_secret or None),
+					AutoIMAPEmailProvider(email_login, email_password, on_log=on_log),
+				])
+				auth = IGAuthService(provider)
 			else:
 				log_warning(f"[SESSION] Session verification failed for {username}")
 				if on_log:
@@ -703,6 +712,10 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 				if on_log:
 					on_log(f"Upload attempt {retry_count} failed: {e}")
 				
+				# Add detailed error logging for debugging
+				error_type = type(e).__name__
+				log_error(f"[ERROR_DETAILS] Error type: {error_type}, Message: {str(e)}")
+				
 				# Check for authentication errors first (using proper exception types)
 				if isinstance(e, LoginRequired) or "login_required" in error_msg or "403" in error_msg or "unauthorized" in error_msg:
 					log_error(f"[AUTH_ERROR] Authentication error detected: {e}")
@@ -710,7 +723,7 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 						on_log(f"Authentication error: {e}")
 					
 					# Try to re-authenticate
-					if retry_count < max_retries:
+					if retry_count < max_retries and auth is not None:
 						log_info(f"[AUTH_RETRY] Attempting to re-authenticate...")
 						if on_log:
 							on_log("Attempting to re-authenticate...")
@@ -729,6 +742,9 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 								on_log("Re-authentication failed, stopping retries")
 							break
 					else:
+						log_error(f"[AUTH_FAIL] Cannot re-authenticate (auth object is None or max retries reached)")
+						if on_log:
+							on_log("Cannot re-authenticate, stopping retries")
 						break
 				
 				# Check for rate limiting (using proper exception types)
@@ -925,6 +941,9 @@ def _sync_photo_upload_impl(account_details: Dict, photo_files_to_upload: List[s
 	else:
 		log_info(f"[DEBUG] No valid sessionid found in persisted_settings")
 	
+	# Initialize auth variable to None
+	auth = None
+	
 	# Auth: use restored session or fallback to login with TOTP/email
 	if not session_restored:
 		provider = CompositeProvider([
@@ -944,6 +963,12 @@ def _sync_photo_upload_impl(account_details: Dict, photo_files_to_upload: List[s
 				log_info(f"[SESSION] Session verified for {username}")
 				if on_log:
 					on_log("Session verified")
+				# Create auth object for potential re-authentication during uploads
+				provider = CompositeProvider([
+					TOTPProvider(tfa_secret or None),
+					AutoIMAPEmailProvider(email_login, email_password, on_log=on_log),
+				])
+				auth = IGAuthService(provider)
 			else:
 				log_warning(f"[SESSION] Session verification failed for {username}")
 				if on_log:

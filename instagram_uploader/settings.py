@@ -33,6 +33,19 @@ DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 ALLOWED_HOSTS_ENV = os.environ.get('ALLOWED_HOSTS', '0.0.0.0,localhost,127.0.0.1,*')
 ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_ENV.split(',') if host.strip()]
 
+# Add common problematic hosts that might appear in logs
+PROBLEMATIC_HOSTS = [
+    'example.com',
+    'ipv4-internet.yandex.net',
+    '*.example.com',
+    '*.yandex.net'
+]
+
+# Add problematic hosts to prevent DisallowedHost errors
+for host in PROBLEMATIC_HOSTS:
+    if host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(host)
+
 # Allow all hosts in DEBUG to prevent DisallowedHost during local/dev runs
 if DEBUG and '*' not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append('*')
@@ -185,6 +198,17 @@ LOGOUT_REDIRECT_URL = '/login/'
 # File upload settings
 DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100 MB
 FILE_UPLOAD_MAX_MEMORY_SIZE = 104857600
+
+# Server timeout settings to prevent TimeoutError
+SERVER_TIMEOUT = int(os.environ.get('SERVER_TIMEOUT', '300'))  # 5 minutes default
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000  # Increase field limit for bulk operations
+
+# Connection settings for better stability
+CONN_MAX_AGE = int(os.environ.get('CONN_MAX_AGE', '600'))  # 10 minutes
+CONN_HEALTH_CHECKS = True
+
+# Request timeout settings
+REQUEST_TIMEOUT = int(os.environ.get('REQUEST_TIMEOUT', '60'))  # 1 minute
 
 # reCAPTCHA settings
 RUCAPTCHA_API_KEY = os.environ.get('RUCAPTCHA_API_KEY', '')
