@@ -6,6 +6,8 @@ import asyncio
 from typing import Dict, List, Tuple, Optional, Callable
 
 from uploader.logging_utils import log_info, log_error, log_success, attach_instagrapi_web_bridge
+from uploader.proxy_manager import ProxyManager
+from uploader.models import InstagramAccount
 
 # instagrapi imports (runtime)
 try:
@@ -318,6 +320,11 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 	log_info(f"[API] Starting instagrapi upload for {username}")
 	if on_log:
 		on_log(f"Starting instagrapi upload for {username}")
+
+	# Initialize proxy manager for automatic proxy switching
+	proxy_manager = ProxyManager()
+	proxy_error_count = 0  # Track consecutive proxy errors
+	max_proxy_switches = 3  # Maximum proxy switches per upload session
 
 	# Load persisted device + session if available
 	session_store = DjangoDeviceSessionStore()
@@ -767,14 +774,78 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 				
 				# Check for proxy errors specifically
 				elif "proxy" in error_msg or "ProxyError" in str(type(e)) or "RemoteDisconnected" in error_msg:
-					log_warning(f"[PROXY] Proxy error detected: {e}")
+					proxy_error_count += 1
+					log_warning(f"[PROXY] Proxy error detected ({proxy_error_count}/{max_proxy_switches}): {e}")
 					if on_log:
-						on_log(f"Proxy error: {e}")
+						on_log(f"Proxy error ({proxy_error_count}/{max_proxy_switches}): {e}")
 					
-					# Longer wait for proxy errors as they often indicate proxy issues
-					wait_time = random.uniform(20.0, 60.0)
-					log_info(f"[PROXY] Waiting {wait_time:.1f}s before retry...")
-					time.sleep(wait_time)
+					# If we've had 3 consecutive proxy errors, try switching proxy
+					if proxy_error_count >= 3 and proxy_error_count <= max_proxy_switches:
+						try:
+							# Get the Instagram account to switch proxy
+							account = InstagramAccount.objects.get(username=username)
+							log_info(f"[PROXY_SWITCH] Attempting to switch proxy for {username} (attempt {proxy_error_count})")
+							if on_log:
+								on_log(f"Switching proxy (attempt {proxy_error_count})...")
+							
+							# Get a new proxy from the same region
+							new_proxy = proxy_manager.get_available_proxy(account, exclude_blocked=True)
+							
+							if new_proxy:
+								# Update proxy in account_details for next retry
+								account_details['proxy'] = {
+									'host': new_proxy.host,
+									'port': new_proxy.port,
+									'username': new_proxy.username,
+									'password': new_proxy.password,
+									'type': new_proxy.proxy_type.lower()
+								}
+								
+								log_success(f"[PROXY_SWITCH] Switched to new proxy: {new_proxy.host}:{new_proxy.port}")
+								if on_log:
+									on_log(f"Switched to new proxy: {new_proxy.host}:{new_proxy.port}")
+								
+								# Reset proxy error count after successful switch
+								proxy_error_count = 0
+								
+								# Wait a bit before retrying with new proxy
+								wait_time = random.uniform(10.0, 20.0)
+								log_info(f"[PROXY_SWITCH] Waiting {wait_time:.1f}s before retry with new proxy...")
+								time.sleep(wait_time)
+								
+								# Re-initialize client with new proxy
+								proxy_url = build_proxy_url(account_details['proxy'])
+								cl = Client(proxy=proxy_url)
+								
+								continue  # Retry with new proxy
+							else:
+								log_error(f"[PROXY_SWITCH] No available proxy found for {username}")
+								if on_log:
+									on_log("No available proxy found")
+								
+								# Mark current proxy as blocked
+								if account.current_proxy:
+									proxy_manager.mark_proxy_blocked(account.current_proxy, account, "consecutive proxy errors")
+								
+								# Wait longer if no proxy available
+								wait_time = random.uniform(30.0, 60.0)
+								log_info(f"[PROXY_SWITCH] Waiting {wait_time:.1f}s (no proxy available)...")
+								time.sleep(wait_time)
+								
+						except Exception as proxy_switch_error:
+							log_error(f"[PROXY_SWITCH] Error switching proxy: {proxy_switch_error}")
+							if on_log:
+								on_log(f"Error switching proxy: {proxy_switch_error}")
+							
+							# Fallback to regular proxy error handling
+							wait_time = random.uniform(20.0, 60.0)
+							log_info(f"[PROXY] Waiting {wait_time:.1f}s before retry...")
+							time.sleep(wait_time)
+					else:
+						# Regular proxy error handling for first 2 errors
+						wait_time = random.uniform(20.0, 60.0)
+						log_info(f"[PROXY] Waiting {wait_time:.1f}s before retry...")
+						time.sleep(wait_time)
 				
 				# Check for network/connection errors
 				elif any(keyword in error_msg for keyword in ["connection", "timeout", "network", "dns", "RemoteDisconnected"]):
@@ -848,6 +919,11 @@ def _sync_photo_upload_impl(account_details: Dict, photo_files_to_upload: List[s
 	log_info(f"[API] Starting instagrapi photo upload for {username}")
 	if on_log:
 		on_log(f"Starting instagrapi photo upload for {username}")
+
+	# Initialize proxy manager for automatic proxy switching
+	proxy_manager = ProxyManager()
+	proxy_error_count = 0  # Track consecutive proxy errors
+	max_proxy_switches = 3  # Maximum proxy switches per upload session
 
 	# Load persisted device + session if available
 	session_store = DjangoDeviceSessionStore()
@@ -1156,9 +1232,78 @@ def _sync_photo_upload_impl(account_details: Dict, photo_files_to_upload: List[s
 					log_error(f"[CHALLENGE] Challenge required: {e}")
 					break
 				elif "proxy" in error_msg or "ProxyError" in str(type(e)) or "RemoteDisconnected" in error_msg:
-					wait_time = random.uniform(20.0, 60.0)
-					log_warning(f"[PROXY] Waiting {wait_time:.1f}s before retry...")
-					time.sleep(wait_time)
+					proxy_error_count += 1
+					log_warning(f"[PROXY] Proxy error detected ({proxy_error_count}/{max_proxy_switches}): {e}")
+					if on_log:
+						on_log(f"Proxy error ({proxy_error_count}/{max_proxy_switches}): {e}")
+					
+					# If we've had 3 consecutive proxy errors, try switching proxy
+					if proxy_error_count >= 3 and proxy_error_count <= max_proxy_switches:
+						try:
+							# Get the Instagram account to switch proxy
+							account = InstagramAccount.objects.get(username=username)
+							log_info(f"[PROXY_SWITCH] Attempting to switch proxy for {username} (attempt {proxy_error_count})")
+							if on_log:
+								on_log(f"Switching proxy (attempt {proxy_error_count})...")
+							
+							# Get a new proxy from the same region
+							new_proxy = proxy_manager.get_available_proxy(account, exclude_blocked=True)
+							
+							if new_proxy:
+								# Update proxy in account_details for next retry
+								account_details['proxy'] = {
+									'host': new_proxy.host,
+									'port': new_proxy.port,
+									'username': new_proxy.username,
+									'password': new_proxy.password,
+									'type': new_proxy.proxy_type.lower()
+								}
+								
+								log_success(f"[PROXY_SWITCH] Switched to new proxy: {new_proxy.host}:{new_proxy.port}")
+								if on_log:
+									on_log(f"Switched to new proxy: {new_proxy.host}:{new_proxy.port}")
+								
+								# Reset proxy error count after successful switch
+								proxy_error_count = 0
+								
+								# Wait a bit before retrying with new proxy
+								wait_time = random.uniform(10.0, 20.0)
+								log_info(f"[PROXY_SWITCH] Waiting {wait_time:.1f}s before retry with new proxy...")
+								time.sleep(wait_time)
+								
+								# Re-initialize client with new proxy
+								proxy_url = build_proxy_url(account_details['proxy'])
+								cl = Client(proxy=proxy_url)
+								
+								continue  # Retry with new proxy
+							else:
+								log_error(f"[PROXY_SWITCH] No available proxy found for {username}")
+								if on_log:
+									on_log("No available proxy found")
+								
+								# Mark current proxy as blocked
+								if account.current_proxy:
+									proxy_manager.mark_proxy_blocked(account.current_proxy, account, "consecutive proxy errors")
+								
+								# Wait longer if no proxy available
+								wait_time = random.uniform(30.0, 60.0)
+								log_info(f"[PROXY_SWITCH] Waiting {wait_time:.1f}s (no proxy available)...")
+								time.sleep(wait_time)
+								
+						except Exception as proxy_switch_error:
+							log_error(f"[PROXY_SWITCH] Error switching proxy: {proxy_switch_error}")
+							if on_log:
+								on_log(f"Error switching proxy: {proxy_switch_error}")
+							
+							# Fallback to regular proxy error handling
+							wait_time = random.uniform(20.0, 60.0)
+							log_info(f"[PROXY] Waiting {wait_time:.1f}s before retry...")
+							time.sleep(wait_time)
+					else:
+						# Regular proxy error handling for first 2 errors
+						wait_time = random.uniform(20.0, 60.0)
+						log_info(f"[PROXY] Waiting {wait_time:.1f}s before retry...")
+						time.sleep(wait_time)
 				elif any(k in error_msg for k in ["connection", "timeout", "network", "dns", "RemoteDisconnected"]):
 					wait_time = random.uniform(15.0, 45.0)
 					log_warning(f"[NETWORK] Waiting {wait_time:.1f}s before retry...")
