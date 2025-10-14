@@ -1228,8 +1228,33 @@ def _sync_photo_upload_impl(account_details: Dict, photo_files_to_upload: List[s
 					wait_time = min(180, 20 * (2 ** retry_count))
 					log_warning(f"[RATE_LIMIT] Waiting {wait_time:.1f}s before retry...")
 					time.sleep(wait_time)
-				elif isinstance(e, ChallengeError) or "challenge" in error_msg or "checkpoint" in error_msg:
+				elif isinstance(e, ChallengeError) or "challenge" in error_msg or "checkpoint" in error_msg or "400" in error_msg:
 					log_error(f"[CHALLENGE] Challenge required: {e}")
+					if on_log:
+						on_log(f"Challenge required: {e}")
+					# Log the actual response for debugging
+					try:
+						lr = getattr(getattr(cl, 'private', None), 'last_response', None)
+						if lr is not None:
+							log_debug(f"[CHALLENGE] Response text: {lr.text[:500]}")
+							# Check if this is actually a challenge
+							if "challenge" in lr.text.lower() or "checkpoint" in lr.text.lower():
+								log_info(f"[CHALLENGE] Attempting to resolve challenge for {username}")
+								if on_log:
+									on_log("Attempting to resolve challenge...")
+								try:
+									# Try to resolve challenge
+									cl.challenge_resolve(cl.last_json)
+									log_info(f"[CHALLENGE] Challenge resolved for {username}, retrying upload")
+									if on_log:
+										on_log("Challenge resolved, retrying upload")
+									continue  # Retry the upload
+								except Exception as challenge_e:
+									log_error(f"[CHALLENGE] Failed to resolve challenge for {username}: {challenge_e}")
+									if on_log:
+										on_log(f"Challenge resolution failed: {challenge_e}")
+					except Exception:
+						pass
 					break
 				elif "proxy" in error_msg or "ProxyError" in str(type(e)) or "RemoteDisconnected" in error_msg:
 					proxy_error_count += 1

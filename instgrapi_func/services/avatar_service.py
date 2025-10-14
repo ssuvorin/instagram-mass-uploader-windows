@@ -207,7 +207,7 @@ class AvatarService:
         except Exception as e:
             # Check if this is a challenge disguised as another exception
             error_str = str(e)
-            if "challenge_required" in error_str.lower():
+            if "challenge_required" in error_str.lower() or "400" in error_str or "challenge" in error_str.lower():
                 log.debug("Challenge detected in generic exception for %s: %s", username, e)
                 if on_log:
                     on_log("challenge detected (email)")
@@ -237,6 +237,45 @@ class AvatarService:
                         on_log(f"challenge failed: {e3}")
                     return False, None
             else:
+                # Check if this is a 400 error that might be a challenge
+                if "400" in error_str:
+                    log.debug("400 error detected for %s: %s", username, e)
+                    if on_log:
+                        on_log("400 error detected, checking for challenge")
+                    try:
+                        # Check if this is actually a challenge by looking at the response
+                        lr = getattr(getattr(cl, 'private', None), 'last_response', None)
+                        if lr is not None and ("challenge" in lr.text.lower() or "checkpoint" in lr.text.lower()):
+                            log.debug("400 error contains challenge for %s", username)
+                            if on_log:
+                                on_log("400 error contains challenge, attempting resolution")
+                            try:
+                                if on_log:
+                                    on_log("avatar: requesting email challenge code")
+                                code = self.auth.provider.get_challenge_code(username, method="email") or ""
+                                if not code:
+                                    log.debug("No challenge code available for %s", username)
+                                    if on_log:
+                                        on_log("no email code available")
+                                    return False, None
+                                if on_log:
+                                    on_log(f"avatar: resolving challenge with code: {code[:2]}***")
+                                cl.challenge_resolve(code)
+                                log.debug("Challenge resolved during avatar change for %s, retrying", username)
+                                if on_log:
+                                    on_log("challenge ok, retry")
+                                result = cl.account_change_picture(image_path_obj)
+                                log.debug("Profile picture changed after challenge for %s, result: %s", username, result)
+                                if on_log:
+                                    on_log(f"picture changed after challenge (user: {getattr(result, 'username', 'unknown')})")
+                            except Exception as e4:
+                                log.debug("Challenge resolution failed for %s: %s", username, e4)
+                                if on_log:
+                                    on_log(f"challenge failed: {e4}")
+                                return False, None
+                    except Exception:
+                        pass
+                
                 log.debug("Change picture failed for %s: %s (type: %s)", username, e, type(e).__name__)
                 if on_log:
                     on_log(f"change failed: {e} (type: {type(e).__name__})")
