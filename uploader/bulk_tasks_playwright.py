@@ -1518,7 +1518,17 @@ def prepare_video_files(videos_for_account, account_task):
                     
                     input_path_obj = Path(tmp.name)
                     timestamp_str = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-                    output_filename = f"{input_path_obj.stem}_{account_username}_{timestamp_str}_v{i+1}.mp4"
+                    
+                    # Сокращаем имя файла для избежания ошибок Windows
+                    short_stem = input_path_obj.stem[:50]
+                    short_username = account_username[:20]
+                    output_filename = f"{short_stem}_{short_username}_{timestamp_str}_v{i+1}.mp4"
+                    
+                    # Дополнительная проверка длины имени файла
+                    if len(output_filename) > 200:
+                        import hashlib
+                        hash_suffix = hashlib.md5(f"{account_username}_{timestamp_str}_{i+1}".encode()).hexdigest()[:8]
+                        output_filename = f"vid_{hash_suffix}_{timestamp_str}_v{i+1}.mp4"
                     
                     temp_dir = tempfile.gettempdir()
                     unique_video_path = os.path.join(temp_dir, output_filename)

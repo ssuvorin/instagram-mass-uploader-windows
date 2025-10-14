@@ -110,10 +110,22 @@ class AsyncVideoUniquifier:
         # Создаем случайную конфигурацию для каждого аккаунта
         unique_config = UniqueVideoConfig.create_random_config(account_username)
         
-        # Генерируем уникальное имя файла
+        # Генерируем уникальное имя файла (сокращаем для Windows совместимости)
         input_path_obj = Path(input_path)
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-        output_filename = f"{input_path_obj.stem}_{account_username}_{timestamp}_v{copy_number}.mp4"
+        
+        # Сокращаем имя файла для избежания ошибок Windows (максимум 200 символов)
+        short_stem = input_path_obj.stem[:50]  # Ограничиваем длину исходного имени
+        short_username = account_username[:20]  # Ограничиваем длину имени пользователя
+        
+        output_filename = f"{short_stem}_{short_username}_{timestamp}_v{copy_number}.mp4"
+        
+        # Дополнительная проверка длины имени файла
+        if len(output_filename) > 200:
+            # Если все еще слишком длинное, используем хеш
+            import hashlib
+            hash_suffix = hashlib.md5(f"{account_username}_{timestamp}_{copy_number}".encode()).hexdigest()[:8]
+            output_filename = f"vid_{hash_suffix}_{timestamp}_v{copy_number}.mp4"
         
         # Создаем временный файл для результата
         temp_dir = tempfile.gettempdir()

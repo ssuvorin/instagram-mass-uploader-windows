@@ -765,13 +765,24 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 						on_log(f"Challenge required: {e}")
 					break  # Don't retry challenges
 				
+				# Check for proxy errors specifically
+				elif "proxy" in error_msg or "ProxyError" in str(type(e)) or "RemoteDisconnected" in error_msg:
+					log_warning(f"[PROXY] Proxy error detected: {e}")
+					if on_log:
+						on_log(f"Proxy error: {e}")
+					
+					# Longer wait for proxy errors as they often indicate proxy issues
+					wait_time = random.uniform(20.0, 60.0)
+					log_info(f"[PROXY] Waiting {wait_time:.1f}s before retry...")
+					time.sleep(wait_time)
+				
 				# Check for network/connection errors
-				elif any(keyword in error_msg for keyword in ["connection", "timeout", "network", "dns"]):
+				elif any(keyword in error_msg for keyword in ["connection", "timeout", "network", "dns", "RemoteDisconnected"]):
 					log_warning(f"[NETWORK] Network error detected: {e}")
 					if on_log:
 						on_log(f"Network error: {e}")
 					
-					wait_time = random.uniform(10.0, 30.0)
+					wait_time = random.uniform(15.0, 45.0)
 					log_info(f"[NETWORK] Waiting {wait_time:.1f}s before retry...")
 					time.sleep(wait_time)
 				
@@ -1144,8 +1155,12 @@ def _sync_photo_upload_impl(account_details: Dict, photo_files_to_upload: List[s
 				elif isinstance(e, ChallengeError) or "challenge" in error_msg or "checkpoint" in error_msg:
 					log_error(f"[CHALLENGE] Challenge required: {e}")
 					break
-				elif any(k in error_msg for k in ["connection", "timeout", "network", "dns"]):
-					wait_time = random.uniform(8.0, 20.0)
+				elif "proxy" in error_msg or "ProxyError" in str(type(e)) or "RemoteDisconnected" in error_msg:
+					wait_time = random.uniform(20.0, 60.0)
+					log_warning(f"[PROXY] Waiting {wait_time:.1f}s before retry...")
+					time.sleep(wait_time)
+				elif any(k in error_msg for k in ["connection", "timeout", "network", "dns", "RemoteDisconnected"]):
+					wait_time = random.uniform(15.0, 45.0)
 					log_warning(f"[NETWORK] Waiting {wait_time:.1f}s before retry...")
 					time.sleep(wait_time)
 				else:

@@ -38,7 +38,11 @@ PROBLEMATIC_HOSTS = [
     'example.com',
     'ipv4-internet.yandex.net',
     '*.example.com',
-    '*.yandex.net'
+    '*.yandex.net',
+    'api.ipify.org',
+    'www.shadowserver.org',
+    '*.ipify.org',
+    '*.shadowserver.org'
 ]
 
 # Add problematic hosts to prevent DisallowedHost errors
