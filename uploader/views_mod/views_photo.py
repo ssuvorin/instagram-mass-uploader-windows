@@ -21,27 +21,81 @@ def create_photo_post(request):
         form = PhotoPostForm(request.POST, request.FILES)
         if form.is_valid():
             accounts = list(form.cleaned_data['selected_accounts'])
-            photo_file = request.FILES.get('photo')
+            photo_files = request.FILES.getlist('photos')
+            captions_file = request.FILES.get('captions_file')
             caption = form.cleaned_data.get('caption') or ''
             mentions = form.cleaned_data.get('mentions') or ''
             location = form.cleaned_data.get('location') or ''
             delay_min = form.cleaned_data.get('delay_min_sec') or 10
             delay_max = form.cleaned_data.get('delay_max_sec') or 25
 
-            # Save photo to media temporary path
-            saved_path = default_storage.save(os.path.join('bot', 'photos', photo_file.name), photo_file)
-            abs_photo_path = default_storage.path(saved_path)
+            if not photo_files:
+                messages.error(request, 'Please select at least one photo.')
+                return render(request, 'uploader/photos/create.html', {
+                    'form': form,
+                    'active_tab': 'avatars',
+                })
 
-            # Start background worker thread to post per account sequentially with delays
-            def _worker(photo_path: str, acc_ids):
+            # Read captions from file if provided
+            captions_list = []
+            if captions_file:
                 try:
-                    for idx, acc_id in enumerate(acc_ids):
+                    captions_content = captions_file.read().decode('utf-8')
+                    captions_list = [line.strip() for line in captions_content.split('\n') if line.strip()]
+                except Exception as e:
+                    messages.warning(request, f'Error reading captions file: {e}')
+                    captions_list = []
+
+            # Distribute photos and captions among accounts
+            photo_account_pairs = []
+            account_count = len(accounts)
+            photo_count = len(photo_files)
+            caption_count = len(captions_list)
+            
+            if photo_count >= account_count:
+                # More photos than accounts - distribute one photo per account, skip extras
+                for i, account in enumerate(accounts):
+                    if i < photo_count:
+                        # Get caption for this photo (from file or default)
+                        photo_caption = caption
+                        if captions_list and i < caption_count:
+                            photo_caption = captions_list[i]
+                        elif captions_list and caption_count > 0:
+                            # Cycle through captions if fewer captions than photos
+                            photo_caption = captions_list[i % caption_count]
+                        
+                        photo_account_pairs.append((photo_files[i], account, photo_caption))
+            else:
+                # Fewer photos than accounts - distribute with repetitions
+                for i, account in enumerate(accounts):
+                    photo_index = i % photo_count
+                    # Get caption for this photo (from file or default)
+                    photo_caption = caption
+                    if captions_list and photo_index < caption_count:
+                        photo_caption = captions_list[photo_index]
+                    elif captions_list and caption_count > 0:
+                        # Cycle through captions if fewer captions than photos
+                        photo_caption = captions_list[photo_index % caption_count]
+                    
+                    photo_account_pairs.append((photo_files[photo_index], account, photo_caption))
+
+            # Save photos to media temporary path
+            saved_photo_paths = []
+            for photo_file in photo_files:
+                saved_path = default_storage.save(os.path.join('bot', 'photos', photo_file.name), photo_file)
+                abs_photo_path = default_storage.path(saved_path)
+                saved_photo_paths.append(abs_photo_path)
+
+            # Start background worker thread to post photos with session restoration
+            def _worker(photo_account_pairs, saved_paths):
+                try:
+                    for idx, (photo_file, account, photo_caption) in enumerate(photo_account_pairs):
                         # human-like delay between accounts
                         if idx > 0:
                             time.sleep(random.uniform(delay_min, delay_max))
 
                         try:
-                            acc = InstagramAccount.objects.get(id=acc_id)
+                            acc = InstagramAccount.objects.get(id=account.id)
                         except Exception:
                             continue
 
@@ -69,12 +123,23 @@ def create_photo_post(request):
                             'proxy': (acc.current_proxy or acc.proxy).to_dict() if (acc.current_proxy or acc.proxy) else {},
                         }
 
+                        # Find the saved path for this photo
+                        photo_path = None
+                        for saved_path in saved_paths:
+                            if photo_file.name in saved_path:
+                                photo_path = saved_path
+                                break
+                        
+                        if not photo_path:
+                            on_log(f"Error: Could not find saved path for photo {photo_file.name}")
+                            continue
+
                         try:
                             import asyncio
                             asyncio.run(run_instagrapi_photo_upload_async(
                                 account_details=account_details,
                                 photo_files_to_upload=[photo_path],
-                                captions=[caption],
+                                captions=[photo_caption],
                                 mentions_list=[mentions],
                                 locations_list=[location],
                                 on_log=on_log,
@@ -86,7 +151,7 @@ def create_photo_post(request):
                                 loop.run_until_complete(run_instagrapi_photo_upload_async(
                                     account_details=account_details,
                                     photo_files_to_upload=[photo_path],
-                                    captions=[caption],
+                                    captions=[photo_caption],
                                     mentions_list=[mentions],
                                     locations_list=[location],
                                     on_log=on_log,
@@ -97,10 +162,10 @@ def create_photo_post(request):
                     # best-effort cleanup: keep the uploaded media as audit by default
                     pass
 
-            t = threading.Thread(target=_worker, args=(abs_photo_path, [a.id for a in accounts]), daemon=True)
+            t = threading.Thread(target=_worker, args=(photo_account_pairs, saved_photo_paths), daemon=True)
             t.start()
 
-            messages.success(request, f"Photo posting started for {len(accounts)} accounts")
+            messages.success(request, f"Photo posting started for {len(photo_account_pairs)} account-photo pairs ({len(accounts)} accounts, {len(photo_files)} photos)")
             # Redirect to photo post status page to view logs
             try:
                 return redirect('photo_post_status')

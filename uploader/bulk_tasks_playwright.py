@@ -1474,12 +1474,12 @@ def prepare_video_files(videos_for_account, account_task):
     """Prepare video files for upload with uniquification"""
     temp_files = []
     video_files_to_upload = []
-    account_username = account_task.account.username
+    account_username = getattr(account_task.account, 'username', getattr(account_task.account, 'email', 'Unknown'))
     
     log_info(f"[VIDEO] Starting video uniquification for account {account_username}")
     
     for i, video in enumerate(videos_for_account):
-        video_filename = os.path.basename(video.video_file.name)
+        video_filename = os.path.basename(getattr(video, 'video_file', {}).get('name', 'unknown_video.mp4'))
         timestamp = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
         log_info(f"Preparing and uniquifying video: {video_filename}")
         update_account_task(

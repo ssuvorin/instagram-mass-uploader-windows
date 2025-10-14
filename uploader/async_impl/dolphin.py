@@ -241,10 +241,10 @@ async def run_dolphin_browser_async(account_details: Dict, videos: List, video_f
                     except Exception:
                         cookies_list = []
                 if cookies_list:
-                    from uploader.models import InstagramAccount, InstagramCookies
+                    from uploader.models import YouTubeAccount, InstagramCookies
                     @sync_to_async
                     def _save():
-                        acc = InstagramAccount.objects.get(username=username)
+                        acc = YouTubeAccount.objects.get(email=username)
                         InstagramCookies.objects.update_or_create(
                             account=acc,
                             defaults={'cookies_data': cookies_list, 'is_valid': True}
@@ -305,10 +305,10 @@ async def get_dolphin_profile_id_async(username: str) -> str:
     """Get Dolphin profile ID for account - exact copy from sync version"""
     try:
         from asgiref.sync import sync_to_async
-        from uploader.models import InstagramAccount
+        from uploader.models import YouTubeAccount
         
-        get_account = sync_to_async(InstagramAccount.objects.get)
-        account = await get_account(username=username)
+        get_account = sync_to_async(YouTubeAccount.objects.get)
+        account = await get_account(email=username)
         return account.dolphin_profile_id
     except Exception as e:
         log_error(f"[FAIL] [ASYNC_DOLPHIN_PROFILE] Error getting dolphin profile ID for {username}: {str(e)}")

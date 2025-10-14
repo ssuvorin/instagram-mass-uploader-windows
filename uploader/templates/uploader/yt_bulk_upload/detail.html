@@ -273,5 +273,59 @@
     </div>
 </div>
 {% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Progress update function
+    function updateTaskProgress() {
+        fetch('{% url "yt_shorts_bulk_task_logs" task_id=task.id %}')
+            .then(response => response.json())
+            .then(data => {
+                // Update progress bar
+                if (data.completion_percentage !== undefined) {
+                    const progressBar = document.getElementById('progressBar');
+                    const progressText = document.getElementById('progressText');
+                    
+                    if (progressBar) {
+                        progressBar.style.width = data.completion_percentage + '%';
+                    }
+                    
+                    if (progressText && data.completed_count !== undefined && data.total_count !== undefined) {
+                        progressText.textContent = `${data.completed_count} of ${data.total_count} accounts completed (${data.completion_percentage}%)`;
+                    }
+                }
+                
+                // Update status badge
+                if (data.status) {
+                    const statusBadge = document.querySelector('.badge');
+                    if (statusBadge) {
+                        // Remove all status classes
+                        statusBadge.classList.remove('bg-pending', 'bg-running', 'bg-completed', 'bg-failed', 'bg-partial');
+                        
+                        // Add appropriate class and update content
+                        statusBadge.classList.add('bg-' + data.status.toLowerCase());
+                        statusBadge.textContent = data.status_display || data.status;
+                    }
+                }
+                
+                // Update logs
+                if (data.logs) {
+                    const logContainer = document.querySelector('pre');
+                    if (logContainer) {
+                        logContainer.textContent = data.logs;
+                        logContainer.scrollTop = logContainer.scrollHeight;
+                    }
+                }
+            })
+            .catch(() => {});
+    }
+    
+    // Periodic progress updates every 3 seconds
+    setInterval(updateTaskProgress, 3000);
+    
+    // Initial update
+    updateTaskProgress();
+});
+</script>
 {% endblock %}
 

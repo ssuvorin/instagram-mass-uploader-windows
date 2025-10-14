@@ -32,6 +32,74 @@
   .compact-mode .badge-custom { padding: 0.15rem 0.5rem; border-radius: 8px; font-size: 0.65rem; }
   .list-mode .account-item { margin-bottom: 0.25rem; }
   .list-mode .account-card { padding: 0.75rem 1rem; border-radius: 6px; border-width: 1px; }
+  
+  /* Photo upload styles */
+  .photo-upload-area {
+    border: 2px dashed #dee2e6;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    background: #f8f9fb;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+  .photo-upload-area:hover {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.05);
+  }
+  .photo-upload-area.dragover {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.1);
+    transform: scale(1.02);
+  }
+  .photo-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  .photo-preview-item {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    background: white;
+    border: 2px solid #e9ecef;
+  }
+  .photo-preview-item img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+  }
+  .photo-preview-item .remove-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(239, 68, 68, 0.9);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .photo-preview-item .filename {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 4px 8px;
+    font-size: 11px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 </style>
 {% endblock %}
 
@@ -164,17 +232,36 @@
   {% endif %}
 
   <div class="mb-3">
-    <label class="form-label">{{ form.photo.label }}</label>
-    {{ form.photo }}
-    {% if form.photo.help_text %}<div class="form-text">{{ form.photo.help_text }}</div>{% endif %}
-    {% if form.photo.errors %}
-    <div class="text-danger small mt-1">{% for err in form.photo.errors %}<div>{{ err }}</div>{% endfor %}</div>
+    <label class="form-label">{{ form.photos.label }}</label>
+    <div class="photo-upload-area" id="photoUploadArea">
+      <div class="upload-content">
+        <i class="bi bi-cloud-upload" style="font-size: 3rem; color: #667eea; margin-bottom: 1rem;"></i>
+        <h5>Drop photos here or click to select</h5>
+        <p class="text-muted mb-0">Supports JPG, JPEG, PNG files</p>
+        <p class="text-muted small">Photos will be distributed among selected accounts</p>
+      </div>
+    </div>
+    <input type="file" name="photos" id="id_photos" multiple accept=".jpg,.jpeg,.png" style="display: none;">
+    <div class="photo-preview-grid" id="photoPreviewGrid"></div>
+    {% if form.photos.help_text %}<div class="form-text">{{ form.photos.help_text }}</div>{% endif %}
+    {% if form.photos.errors %}
+    <div class="text-danger small mt-1">{% for err in form.photos.errors %}<div>{{ err }}</div>{% endfor %}</div>
+    {% endif %}
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">{{ form.captions_file.label }}</label>
+    {{ form.captions_file }}
+    {% if form.captions_file.help_text %}<div class="form-text">{{ form.captions_file.help_text }}</div>{% endif %}
+    {% if form.captions_file.errors %}
+    <div class="text-danger small mt-1">{% for err in form.captions_file.errors %}<div>{{ err }}</div>{% endfor %}</div>
     {% endif %}
   </div>
 
   <div class="mb-3">
     <label class="form-label">{{ form.caption.label }}</label>
     {{ form.caption }}
+    <div class="form-text">This caption will be used if no captions file is provided or if there are fewer captions than photos.</div>
   </div>
 
   <div class="row g-3">
@@ -229,6 +316,13 @@ function validateAccountSelection(){
     container.innerHTML = '<div class="alert alert-warning">Please select at least one account</div>';
     return false;
   }
+  
+  if(selectedPhotos.length === 0){
+    const container = document.getElementById('nonActiveWarningContainer');
+    container.innerHTML = '<div class="alert alert-warning">Please select at least one photo</div>';
+    return false;
+  }
+  
   return true;
 }
 
@@ -248,6 +342,121 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('selectNone').addEventListener('click', function(){ accountCheckboxes.forEach(cb => { cb.checked = false; updateCardSelection(cb); }); updateCounter(); });
   document.getElementById('selectRandom').addEventListener('click', function(){ const visible = Array.from(accountItems).filter(i => i.style.display !== 'none'); const randomTen = visible.sort(() => .5 - Math.random()).slice(0, 10); accountCheckboxes.forEach(cb => { cb.checked = false; updateCardSelection(cb); }); randomTen.forEach(item => { const cb = item.querySelector('.account-checkbox'); cb.checked = true; updateCardSelection(cb); }); updateCounter(); });
   accountCheckboxes.forEach(cb => { cb.addEventListener('change', function(){ updateCardSelection(cb); updateCounter(); }); });
+
+  // Photo upload functionality
+  const photoUploadArea = document.getElementById('photoUploadArea');
+  const photoInput = document.getElementById('id_photos');
+  const photoPreviewGrid = document.getElementById('photoPreviewGrid');
+  let selectedPhotos = [];
+
+  // Click to select files
+  photoUploadArea.addEventListener('click', () => {
+    photoInput.click();
+  });
+
+  // File input change
+  photoInput.addEventListener('change', (e) => {
+    handleFiles(e.target.files);
+  });
+
+  // Drag and drop
+  photoUploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    photoUploadArea.classList.add('dragover');
+  });
+
+  photoUploadArea.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    photoUploadArea.classList.remove('dragover');
+  });
+
+  photoUploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    photoUploadArea.classList.remove('dragover');
+    handleFiles(e.dataTransfer.files);
+  });
+
+  function handleFiles(files) {
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    const validFiles = Array.from(files).filter(file => validTypes.includes(file.type));
+    
+    if (validFiles.length === 0) {
+      alert('Please select only JPG, JPEG, or PNG files.');
+      return;
+    }
+
+    validFiles.forEach(file => {
+      if (!selectedPhotos.find(photo => photo.name === file.name)) {
+        selectedPhotos.push(file);
+        createPhotoPreview(file);
+      }
+    });
+
+    updatePhotoInput();
+    updateUploadAreaText();
+  }
+
+  function createPhotoPreview(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const previewItem = document.createElement('div');
+      previewItem.className = 'photo-preview-item';
+      previewItem.innerHTML = `
+        <img src="${e.target.result}" alt="${file.name}">
+        <button type="button" class="remove-btn" onclick="removePhoto('${file.name}')">
+          <i class="bi bi-x"></i>
+        </button>
+        <div class="filename">${file.name}</div>
+      `;
+      photoPreviewGrid.appendChild(previewItem);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removePhoto(filename) {
+    selectedPhotos = selectedPhotos.filter(photo => photo.name !== filename);
+    updatePhotoInput();
+    updateUploadAreaText();
+    
+    // Remove preview
+    const previewItems = photoPreviewGrid.querySelectorAll('.photo-preview-item');
+    previewItems.forEach(item => {
+      if (item.querySelector('.filename').textContent === filename) {
+        item.remove();
+      }
+    });
+  }
+
+  function updatePhotoInput() {
+    // Create a new DataTransfer object
+    const dataTransfer = new DataTransfer();
+    selectedPhotos.forEach(photo => {
+      dataTransfer.items.add(photo);
+    });
+    photoInput.files = dataTransfer.files;
+  }
+
+  function updateUploadAreaText() {
+    const uploadContent = photoUploadArea.querySelector('.upload-content');
+    if (selectedPhotos.length > 0) {
+      uploadContent.innerHTML = `
+        <i class="bi bi-check-circle-fill" style="font-size: 3rem; color: #28a745; margin-bottom: 1rem;"></i>
+        <h5>${selectedPhotos.length} photo${selectedPhotos.length !== 1 ? 's' : ''} selected</h5>
+        <p class="text-muted mb-0">Click to add more photos</p>
+        <p class="text-muted small">Photos will be distributed among selected accounts</p>
+      `;
+    } else {
+      uploadContent.innerHTML = `
+        <i class="bi bi-cloud-upload" style="font-size: 3rem; color: #667eea; margin-bottom: 1rem;"></i>
+        <h5>Drop photos here or click to select</h5>
+        <p class="text-muted mb-0">Supports JPG, JPEG, PNG files</p>
+        <p class="text-muted small">Photos will be distributed among selected accounts</p>
+      `;
+    }
+  }
+
+  // Make removePhoto globally accessible
+  window.removePhoto = removePhoto;
 });
 </script>
 {% endblock %}

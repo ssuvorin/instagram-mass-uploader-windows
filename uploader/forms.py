@@ -476,12 +476,18 @@ class PhotoPostForm(forms.Form):
         required=True,
         label="Select accounts"
     )
-    photo = forms.FileField(
+    photos = MultipleFileField(
         validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png'])],
         required=True,
-        label="Photo (JPG/PNG)",
-        help_text="Single image to post",
-        widget=forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': '.jpg,.jpeg,.png'})
+        label="Photos (JPG/PNG)",
+        help_text="Select multiple photos to distribute among accounts"
+    )
+    captions_file = forms.FileField(
+        validators=[FileExtensionValidator(allowed_extensions=['txt'])],
+        required=False,
+        label="Captions File (TXT)",
+        help_text="Optional: Upload a text file with captions (one per line). Will be distributed with photos.",
+        widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.txt'})
     )
     caption = forms.CharField(
         widget=forms.Textarea(attrs={'rows': 4, 'class': 'form-control', 'placeholder': 'Post caption'}),

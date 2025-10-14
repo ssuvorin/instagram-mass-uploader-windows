@@ -1353,6 +1353,10 @@ class YouTubeShortsVideo(models.Model):
         related_name='assigned_videos'
     )
     order = models.IntegerField(default=0)
+    # Ensure DB not-null constraint is satisfied
+    title = models.CharField(max_length=200, blank=True, default="", help_text="Video title")
+    # Ensure DB not-null constraint is satisfied
+    description = models.TextField(blank=True, default="", help_text="Video description")
     
     # Individual video settings (override defaults if set)
     visibility = models.CharField(

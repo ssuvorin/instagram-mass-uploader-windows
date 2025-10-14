@@ -25,6 +25,7 @@ from ..models import (
     Proxy,
     DolphinCookieRobotTask
 )
+from ..constants import TaskStatus
 from ..yt_shorts_forms import (
     YouTubeShortsBulkUploadTaskForm,
     YouTubeShortsVideoUploadForm,
@@ -322,27 +323,36 @@ def delete_yt_shorts_bulk_upload(request, task_id):
 # ===== Start Task View (Placeholder) =====
 @login_required
 def start_yt_shorts_bulk_upload(request, task_id):
-    """Start a YouTube Shorts bulk upload task (placeholder for future implementation)"""
+    """Start a YouTube Shorts bulk upload task asynchronously using Dolphin + Playwright."""
     task = get_object_or_404(YouTubeShortsBulkUploadTask, id=task_id)
-    
-    # Check if task is already running
+
+    # Already running?
     if task.status == TaskStatus.RUNNING:
         messages.warning(request, f'Task "{task.name}" is already running!')
         return redirect('yt_shorts_bulk_upload_detail', task_id=task.id)
-    
-    # Check if task has videos and accounts
-    if not task.videos.exists():
-        messages.error(request, 'No videos found for this task!')
-        return redirect('yt_shorts_bulk_upload_detail', task_id=task.id)
-    
-    if not task.accounts.exists():
-        messages.error(request, 'No accounts assigned to this task!')
-        return redirect('yt_shorts_bulk_upload_detail', task_id=task.id)
-    
-    # TODO: Implement async upload logic here
-    update_task_status(task, TaskStatus.RUNNING, "Task started (upload logic not implemented yet)")
-    
-    messages.info(request, f'Task "{task.name}" marked as running. Upload logic will be implemented later.')
+
+    # Start async runner in background thread
+    try:
+        from uploader.yt_async_bulk_tasks import run_async_yt_shorts_task_sync
+        import threading
+
+        # Create a proper background thread that won't interfere with Django
+        def run_task():
+            try:
+                run_async_yt_shorts_task_sync(task.id)
+            except Exception as e:
+                print(f"[YT] Background task error: {e}")
+                import traceback
+                traceback.print_exc()
+
+        thread = threading.Thread(target=run_task)
+        thread.daemon = True
+        thread.start()
+
+        messages.success(request, f'YouTube Shorts task "{task.name}" started successfully!')
+    except Exception as e:
+        messages.error(request, f'Failed to start task: {str(e)}')
+
     return redirect('yt_shorts_bulk_upload_detail', task_id=task.id)
 
 

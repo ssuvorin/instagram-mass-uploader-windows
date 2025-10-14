@@ -67,7 +67,7 @@ def update_task_status(task, status, log_message):
 def get_account_username(account_task):
     """Get username from account task safely"""
     account = get_account_from_task(account_task)
-    return account.username if account else "Unknown"
+    return getattr(account, 'username', getattr(account, 'email', 'Unknown')) if account else "Unknown"
 
 
 def get_account_from_task(account_task):
