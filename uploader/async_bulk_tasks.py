@@ -106,7 +106,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class AsyncConfig:
     """Конфигурация для асинхронной обработки"""
-    MAX_CONCURRENT_ACCOUNTS: int = 3  # Maximum 3 accounts in parallel to avoid Challenge
+    MAX_CONCURRENT_ACCOUNTS: int = 5  # Increased from 3 to 5 for better throughput
     MAX_CONCURRENT_VIDEOS: int = 1
     ACCOUNT_DELAY_MIN: float = 30.0  # Increased delay to avoid Challenge
     ACCOUNT_DELAY_MAX: float = 60.0  # Increased delay to avoid Challenge
@@ -995,14 +995,9 @@ class AsyncTaskCoordinator:
                     task_coroutine = self._process_account_with_semaphore(processor, account_task, start_delay=i * 2.0)
                     tasks.append(task_coroutine)
                 
-                # Ограничиваем количество параллельных задач до MAX_CONCURRENT_ACCOUNTS
+                # Запускаем все задачи параллельно с ограничением через семафор
                 max_concurrent = AsyncConfig.MAX_CONCURRENT_ACCOUNTS
-                if len(tasks) > max_concurrent:
-                    await logger.log('INFO', f"Limiting parallel accounts to {max_concurrent} (was {len(tasks)})")
-                    tasks = tasks[:max_concurrent]
-                
-                # Запускаем задачи параллельно с задержками
-                await logger.log('INFO', f"Starting {len(tasks)} account tasks in parallel with staggered delays")
+                await logger.log('INFO', f"Starting {len(tasks)} account tasks with max {max_concurrent} concurrent (controlled by semaphore)")
                 results = await asyncio.gather(*tasks, return_exceptions=True)
             
             # Обрабатываем результаты
