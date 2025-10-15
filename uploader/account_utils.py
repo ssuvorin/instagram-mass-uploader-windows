@@ -9,7 +9,7 @@ from .logging_utils import log_info, log_error, log_debug
 def get_account_details(account, proxy=None):
     """Get account details safely in a sync context"""
     details = {
-        'username': getattr(account, 'username', account.email),
+        'username': getattr(account, 'username', getattr(account, 'email', None)),
         'password': account.password,
         'tfa_secret': account.tfa_secret,
         'email_login': getattr(account, 'email_username', None),

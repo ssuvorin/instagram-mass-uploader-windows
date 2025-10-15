@@ -880,6 +880,41 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 					log_info(f"[FINAL_BACKOFF] Waiting {final_delay:.1f}s before next video...")
 					time.sleep(final_delay)
 
+	# Check if all videos failed after 3 attempts - if so, mark account as suspended
+	if completed == 0 and failed > 0 and len(video_files_to_upload) > 0:
+		# All videos failed - check if this was due to account being inactive
+		log_error(f"[ACCOUNT_STATUS] All {len(video_files_to_upload)} videos failed for account {username}")
+		if on_log:
+			on_log(f"All {len(video_files_to_upload)} videos failed for account {username}")
+		
+		# Update account status to SUSPENDED
+		try:
+			from uploader.models import InstagramAccount, BulkUploadAccount
+			from django.utils import timezone
+			
+			account = InstagramAccount.objects.get(username=username)
+			old_status = account.status
+			account.status = 'SUSPENDED'
+			account.save(update_fields=['status'])
+			
+			# Also update the BulkUploadAccount status if we have the account_task_id
+			if account_task_id:
+				try:
+					bulk_account = BulkUploadAccount.objects.get(id=account_task_id)
+					bulk_account.status = 'SUSPENDED'
+					bulk_account.save(update_fields=['status'])
+					log_error(f"[ACCOUNT_STATUS] Updated bulk upload account {account_task_id} status to SUSPENDED")
+				except BulkUploadAccount.DoesNotExist:
+					log_error(f"[ACCOUNT_STATUS] BulkUploadAccount with ID {account_task_id} not found")
+			
+			log_error(f"[ACCOUNT_STATUS] Updated account {username} status from {old_status} to SUSPENDED due to all video uploads failing")
+			if on_log:
+				on_log(f"Account {username} status updated to SUSPENDED due to all video uploads failing")
+		except Exception as status_error:
+			log_error(f"[ACCOUNT_STATUS] Failed to update account {username} status: {str(status_error)}")
+			if on_log:
+				on_log(f"Failed to update account {username} status: {str(status_error)}")
+
 	return ("success" if completed > 0 else "failed", completed, failed)
 
 
@@ -1346,6 +1381,31 @@ def _sync_photo_upload_impl(account_details: Dict, photo_files_to_upload: List[s
 					final_delay = random.uniform(10.0, 25.0)
 					log_info(f"[FINAL_BACKOFF] Waiting {final_delay:.1f}s before next photo...")
 					time.sleep(final_delay)
+
+	# Check if all photos failed after 3 attempts - if so, mark account as suspended
+	if completed == 0 and failure > 0 and len(photo_files_to_upload) > 0:
+		# All photos failed - check if this was due to account being inactive
+		log_error(f"[ACCOUNT_STATUS] All {len(photo_files_to_upload)} photos failed for account {username}")
+		if on_log:
+			on_log(f"All {len(photo_files_to_upload)} photos failed for account {username}")
+		
+		# Update account status to SUSPENDED
+		try:
+			from uploader.models import InstagramAccount
+			from django.utils import timezone
+			
+			account = InstagramAccount.objects.get(username=username)
+			old_status = account.status
+			account.status = 'SUSPENDED'
+			account.save(update_fields=['status'])
+			
+			log_error(f"[ACCOUNT_STATUS] Updated account {username} status from {old_status} to SUSPENDED due to all photo uploads failing")
+			if on_log:
+				on_log(f"Account {username} status updated to SUSPENDED due to all photo uploads failing")
+		except Exception as status_error:
+			log_error(f"[ACCOUNT_STATUS] Failed to update account {username} status: {str(status_error)}")
+			if on_log:
+				on_log(f"Failed to update account {username} status: {str(status_error)}")
 
 	return ("success" if completed > 0 else "failed", completed, failure)
 
