@@ -1,0 +1,221 @@
+{% extends 'tiktok_uploader/base.html' %}
+{% load static %}
+
+{% block title %}{{ server.name }} - Server Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="bi bi-hdd-network"></i> {{ server.name }}</h2>
+                    <p class="text-muted">{{ server.host }}:{{ server.port }}</p>
+                </div>
+                <div>
+                    <a href="{% url 'tiktok_uploader:server_management' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to List
+                    </a>
+                    <a href="{% url 'tiktok_uploader:server_ping' server.id %}" class="btn btn-primary">
+                        <i class="bi bi-broadcast"></i> Ping Server
+                    </a>
+                    <a href="{% url 'tiktok_uploader:server_edit' server.id %}" class="btn btn-warning">
+                        <i class="bi bi-pencil"></i> Edit
+                    </a>
+                    <button type="button" class="btn btn-danger" onclick="confirmDelete()">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Hidden delete form -->
+            <form id="deleteForm" method="post" action="{% url 'tiktok_uploader:server_delete' server.id %}" style="display: none;">
+                {% csrf_token %}
+            </form>
+
+            <!-- Server Info -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">Connection Info</h5>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Host:</strong> {{ server.host }}</p>
+                            <p><strong>Port:</strong> {{ server.port }}</p>
+                            <p><strong>API Key:</strong> <code>{{ server.api_key|truncatechars:20 }}</code></p>
+                            <p><strong>Status:</strong> 
+                                <span class="badge 
+                                    {% if server.status == 'online' %}bg-success
+                                    {% elif server.status == 'busy' %}bg-warning
+                                    {% else %}bg-danger{% endif %}">
+                                    {{ server.get_status_display }}
+                                </span>
+                            </p>
+                            <p class="mb-0"><strong>Active:</strong> 
+                                {% if server.is_active %}
+                                <span class="badge bg-success">Yes</span>
+                                {% else %}
+                                <span class="badge bg-secondary">No</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">Settings</h5>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Priority:</strong> {{ server.priority }}</p>
+                            <p><strong>Active Tasks:</strong> {{ server.active_tasks|default:"0" }}</p>
+                            <p><strong>Created:</strong> {{ server.created_at|date:"Y-m-d H:i" }}</p>
+                            <p class="mb-0"><strong>Last Health Check:</strong> 
+                                {% if server.last_health_check %}
+                                {{ server.last_health_check|timesince }} ago
+                                {% else %}
+                                Never
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">Statistics</h5>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Total Tasks:</strong> {{ server.total_tasks }}</p>
+                            <p><strong>Successful:</strong> 
+                                <span class="text-success">{{ server.successful_tasks }}</span>
+                            </p>
+                            <p><strong>Failed:</strong> 
+                                <span class="text-danger">{{ server.failed_tasks }}</span>
+                            </p>
+                            <p class="mb-0"><strong>Success Rate:</strong> 
+                                {% if server.total_tasks > 0 %}
+                                {{ server.successful_tasks|floatformat:0|add:"0" }}%
+                                {% else %}
+                                N/A
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Tasks -->
+            <div class="card mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="bi bi-list-task"></i> Recent Tasks</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_tasks %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Task Name</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Progress</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for task in recent_tasks %}
+                                <tr>
+                                    <td>{{ task.name }}</td>
+                                    <td><span class="badge bg-secondary">{{ task.task_type }}</span></td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if task.status == 'COMPLETED' %}bg-success
+                                            {% elif task.status == 'FAILED' %}bg-danger
+                                            {% elif task.status == 'RUNNING' %}bg-primary
+                                            {% else %}bg-warning{% endif %}">
+                                            {{ task.status }}
+                                        </span>
+                                    </td>
+                                    <td>{{ task.progress|default:"0" }}%</td>
+                                    <td>{{ task.created_at|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        <a href="{% url 'tiktok_uploader:remote_task_detail' task.id %}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-4">No tasks yet</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Health Logs -->
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="bi bi-heart-pulse"></i> Health Check History</h5>
+                </div>
+                <div class="card-body">
+                    <a href="{% url 'tiktok_uploader:server_logs' server.id %}" class="btn btn-outline-info mb-3">
+                        <i class="bi bi-journal-text"></i> View Full Logs
+                    </a>
+                    
+                    {% if health_logs %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Status</th>
+                                    <th>Response Time</th>
+                                    <th>Error</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in health_logs|slice:":10" %}
+                                <tr>
+                                    <td>{{ log.checked_at|date:"Y-m-d H:i:s" }}</td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if log.is_online %}bg-success
+                                            {% else %}bg-danger{% endif %}">
+                                            {% if log.is_online %}Online{% else %}Offline{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>{{ log.response_time_ms|floatformat:0 }}ms</td>
+                                    <td>{{ log.error_message|default:"-" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-4">No health checks performed yet</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete() {
+    if (confirm('Are you sure you want to delete server "{{ server.name }}"?\n\nThis action cannot be undone.')) {
+        document.getElementById('deleteForm').submit();
+    }
+}
+</script>
+{% endblock %}
+

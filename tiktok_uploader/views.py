@@ -212,7 +212,9 @@ def create_account(request):
         POST: redirect на account_detail или форму с ошибками
     """
     from .forms import TikTokAccountForm
-    from tiktok_uploader.bot_integration.services import create_dolphin_profile_for_account
+    # REMOVED: Local Dolphin profile creation
+    # Dolphin profiles should be created on remote servers via API
+    # from tiktok_uploader.bot_integration.services import create_dolphin_profile_for_account
     
     if request.method == 'POST':
         form = TikTokAccountForm(request.POST, request.FILES)
@@ -233,19 +235,15 @@ def create_account(request):
                 account.save()
                 
                 # Обрабатываем cookies если они были предоставлены
+                # NOTE: Cookie import functionality removed - should be done via server API
                 cookies_data = form.cleaned_data.get('_cookies_data')
                 if cookies_data:
                     try:
-                        import json
-                        from tiktok_uploader.bot_integration.dolphin.dolphin import Dolphin
-                        
-                        # Если есть Dolphin профиль, импортируем cookies
+                        # TODO: Implement cookie import via server API
+                        # For now, cookies are stored in the model and will be used when task is created
                         if account.dolphin_profile_id:
-                            dolphin = Dolphin()
-                            result = dolphin.import_cookies_local(
-                                profile_id=account.dolphin_profile_id,
-                                cookies=cookies_data
-                            )
+                            # Placeholder for future API integration
+                            result = {'success': False, 'message': 'Cookie import via server API not yet implemented'}
                             if result.get('success'):
                                 messages.success(request, f'Cookies imported successfully into Dolphin profile!')
                             else:
@@ -263,32 +261,14 @@ def create_account(request):
                 )
                 
                 # Создаем Dolphin профиль если запрошено
+                # NOTE: Local Dolphin profile creation disabled
+                # Profiles will be created automatically on servers when needed
                 if create_dolphin:
-                    # Проверяем наличие прокси
-                    if not account.proxy and not account.current_proxy:
-                        messages.warning(
-                            request,
-                            'Cannot create Dolphin profile: No proxy configured. Please assign a proxy first.'
-                        )
-                    else:
-                        # Создаем профиль в фоновом режиме
-                        try:
-                            result = create_dolphin_profile_for_account(account)
-                            if result.get('success'):
-                                messages.success(
-                                    request,
-                                    f'Dolphin profile created successfully! Profile ID: {result.get("profile_id")}'
-                                )
-                            else:
-                                messages.error(
-                                    request,
-                                    f'Failed to create Dolphin profile: {result.get("error")}'
-                                )
-                        except Exception as e:
-                            messages.error(
-                                request,
-                                f'Error creating Dolphin profile: {str(e)}'
-                            )
+                    messages.info(
+                        request,
+                        'Dolphin profiles are now created automatically on servers when tasks are assigned. '
+                        'No manual creation needed.'
+                    )
                 
                 return redirect('tiktok_uploader:account_detail', account_id=account.id)
                 
@@ -420,32 +400,19 @@ def edit_account(request, account_id):
             cookies_file = form.cleaned_data.get('cookies_file')
             
             if (cookies_json or cookies_file) and account.dolphin_profile_id:
+                # NOTE: Cookie import via local Dolphin removed
+                # TODO: Implement via server API
+                messages.info(request, 'Cookie import functionality will be available via server API in future updates.')
                 try:
-                    # Импорт cookies в Dolphin профиль
-                    from tiktok_uploader.bot_integration.dolphin.dolphin import Dolphin
-                    from tiktok_uploader.bot_integration.dolphin.profile import Profile
+                    # REMOVED: Local Dolphin cookie import
+                    # from tiktok_uploader.bot_integration.dolphin.dolphin import Dolphin
+                    # from tiktok_uploader.bot_integration.dolphin.profile import Profile
                     
-                    dolphin = Dolphin()
-                    profile_data = dolphin.get_profile_by_name(account.username)
-                    
-                    if profile_data:
-                        profile = Profile(profile_data['id'], dolphin)
-                        
-                        # Парсим cookies
-                        if cookies_file:
-                            import json
-                            cookies_content = cookies_file.read().decode('utf-8')
-                            cookies = json.loads(cookies_content)
-                        else:
-                            import json
-                            cookies = json.loads(cookies_json)
-                        
-                        # Импортируем cookies
-                        profile.import_cookies(cookies, 'https://www.tiktok.com')
-                        messages.success(request, f'Cookies imported successfully for {account.username}!')
+                    # Placeholder - functionality removed
+                    pass
                         
                 except Exception as e:
-                    messages.warning(request, f'Failed to import cookies: {str(e)}')
+                    messages.warning(request, f'Cookie import not available: {str(e)}')
             
             messages.success(request, f'Account {account.username} updated successfully!')
             return redirect('tiktok_uploader:account_detail', account_id=account.id)
@@ -584,51 +551,19 @@ def create_dolphin_profile(request, account_id):
     
     Returns:
         POST: JsonResponse с profile_id или error
+    
+    DEPRECATED: Local Dolphin profile creation is no longer supported.
     """
-    from tiktok_uploader.bot_integration.services import create_dolphin_profile_for_account
+    # REMOVED: Local Dolphin profile creation
+    # from tiktok_uploader.bot_integration.services import create_dolphin_profile_for_account
     
     if request.method == 'POST':
-        try:
-            account = get_object_or_404(TikTokAccount, id=account_id)
-            
-            # Проверяем, что профиль еще не создан
-            if account.dolphin_profile_id:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Dolphin profile already exists for this account'
-                }, status=400)
-            
-            # Проверяем наличие прокси
-            if not account.current_proxy and not account.proxy:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'No proxy configured for this account'
-                }, status=400)
-            
-            # Создаем профиль через сервис бота
-            result = create_dolphin_profile_for_account(account)
-            
-            if result.get('success'):
-                messages.success(request, f'Dolphin profile created successfully for {account.username}')
-                return JsonResponse({
-                    'success': True,
-                    'profile_id': result.get('profile_id'),
-                    'message': 'Dolphin profile created successfully'
-                })
-            else:
-                error_msg = result.get('error', 'Unknown error')
-                messages.error(request, f'Failed to create Dolphin profile: {error_msg}')
-                return JsonResponse({
-                    'success': False,
-                    'error': error_msg
-                }, status=500)
-        
-        except Exception as e:
-            messages.error(request, f'Error creating Dolphin profile: {str(e)}')
-            return JsonResponse({
-                'success': False,
-                'error': str(e)
-            }, status=500)
+        return JsonResponse({
+            'success': False,
+            'error': 'Local Dolphin profile creation is deprecated. '
+                     'Profiles are now created automatically on servers when tasks are assigned.',
+            'info': 'Use the remote task creation interface.'
+        }, status=410)
     
     return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
 

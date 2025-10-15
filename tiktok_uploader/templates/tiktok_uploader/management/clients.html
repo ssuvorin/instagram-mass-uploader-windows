@@ -1,0 +1,104 @@
+{% extends "tiktok_uploader/base.html" %}
+
+{% block title %}Client Management - TikTok Uploader{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Breadcrumbs -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'tiktok_uploader:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item active">Client Management</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-briefcase me-2"></i>
+            Client Management
+        </h2>
+        <a href="{% url 'tiktok_uploader:client_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>
+            New Client
+        </a>
+    </div>
+
+    <!-- Clients Table -->
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>TikTok Accounts</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if clients %}
+                            {% for client in clients %}
+                            <tr>
+                                <td>#{{ client.id }}</td>
+                                <td>
+                                    <strong>{{ client.name }}</strong>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ client.tiktok_accounts_count }} accounts</span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="{% url 'tiktok_uploader:client_edit' client.id %}" 
+                                           class="btn btn-outline-primary" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <form method="post" 
+                                              action="{% url 'tiktok_uploader:client_delete' client.id %}" 
+                                              style="display:inline;"
+                                              onsubmit="return confirm('Delete client \'{{ client.name }}\'? This action cannot be undone.')">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-outline-danger" title="Delete"
+                                                    {% if client.tiktok_accounts_count > 0 %}disabled 
+                                                    data-bs-toggle="tooltip" 
+                                                    data-bs-title="Cannot delete: has linked accounts"{% endif %}>
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">
+                                    <div class="py-5">
+                                        <i class="bi bi-briefcase fs-1 d-block mb-3"></i>
+                                        <p>No clients found</p>
+                                        <a href="{% url 'tiktok_uploader:client_create' %}" class="btn btn-primary btn-sm">
+                                            <i class="bi bi-plus-circle me-2"></i>
+                                            Create First Client
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+</script>
+{% endblock %}
+

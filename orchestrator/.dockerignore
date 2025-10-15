@@ -1,0 +1,61 @@
+# Файлы Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info
+dist/
+build/
+
+# Виртуальные окружения
+venv/
+env/
+.venv/
+
+# IDE файлы
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Логи и данные
+*.log
+logs/
+data/
+*.db
+
+# OS файлы
+.DS_Store
+Thumbs.db
+
+# Временные файлы
+tmp/
+temp/
+
+# Docker файлы
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Документация и README
+README.md
+docs/
+
+# Конфигурационные файлы разработки
+.env
+.env.local
+.env.development
+
+# Тесты
+tests/
+*_test.py
+test_*
+
+# Резервные копии
+*.backup
+*.bak

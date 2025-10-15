@@ -17,6 +17,38 @@ import json
 # ПРОКСИ И БАЗОВЫЕ МОДЕЛИ
 # ============================================================================
 
+class AccountTag(models.Model):
+    """
+    Модель для хранения тегов/категорий аккаунтов.
+    Используется для группировки аккаунтов по тематикам (memes, fim, sports и т.д.)
+    """
+    name = models.CharField(
+        max_length=100, 
+        unique=True,
+        help_text="Название тега (например: memes, fim, cooking)"
+    )
+    description = models.TextField(
+        blank=True, 
+        default="",
+        help_text="Описание тега (опционально)"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Account Tag"
+        verbose_name_plural = "Account Tags"
+        ordering = ['name']
+    
+    def __str__(self):
+        return self.name
+    
+    def get_accounts_count(self):
+        """Возвращает количество аккаунтов с этим тегом"""
+        from tiktok_uploader.models import TikTokAccount
+        return TikTokAccount.objects.filter(tag=self.name).count()
+
+
 class TikTokProxy(models.Model):
     """
     Модель для хранения прокси-серверов для TikTok аккаунтов.
@@ -165,6 +197,14 @@ class TikTokAccount(models.Model):
         related_name='tiktok_accounts'
     )
     
+    # Тематика аккаунта для категоризации
+    tag = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        help_text="Тематика/категория аккаунта (например: fim, memes, cooking, sports и т.д.)"
+    )
+    
     class Meta:
         verbose_name = "TikTok Account"
         verbose_name_plural = "TikTok Accounts"
@@ -202,6 +242,88 @@ class TikTokAccount(models.Model):
         data["locale"] = self.locale or 'en_US'
         
         return data
+
+    def to_server_payload(self):
+        """Подготовить полный набор данных аккаунта для передачи на удаленный сервер.
+        Включает учетные данные, привязки, а также последние известные cookies и fingerprint, если доступны.
+        """
+        # Базовые учетные данные
+        payload = {
+            "username": self.username,
+            "password": self.password,
+        }
+
+        # Email как отдельные поля username/password
+        if self.email:
+            payload["email_username"] = self.email
+        if self.email_password:
+            payload["email_password"] = self.email_password
+
+        # Статус и временные метки
+        payload["status"] = self.status
+        payload["last_time_used"] = self.last_used.isoformat() if self.last_used else None
+
+        # Клиент и тег
+        payload["client"] = self.client.name if self.client else None
+        payload["tag"] = self.tag or None
+
+        # Прокси (текущий приоритетнее)
+        if self.current_proxy:
+            payload["proxy"] = self.current_proxy.to_dict()
+        elif self.proxy:
+            payload["proxy"] = self.proxy.to_dict()
+        else:
+            payload["proxy"] = None
+
+        # Локализация
+        payload["locale"] = self.locale or 'en_US'
+
+        # Куки и fingerprint — пробуем взять из связанной записи назначения на сервер
+        cookies = None
+        fingerprint = None
+        try:
+            if hasattr(self, 'server_assignment') and self.server_assignment:
+                cookies = self.server_assignment.cookies_from_server or None
+                fingerprint = self.server_assignment.fingerprint_from_server or None
+        except Exception:
+            pass
+
+        # Если cookies не найдены, берем последние из задач cookie-робота (если были)
+        if cookies is None:
+            try:
+                latest_cookie_task = self.cookie_tasks.filter(
+                    cookies_json__isnull=False
+                ).order_by('-completed_at', '-started_at').first()
+                if latest_cookie_task and latest_cookie_task.cookies_json:
+                    cookies = latest_cookie_task.cookies_json
+            except Exception:
+                pass
+
+        payload["cookies"] = cookies
+        payload["fingerprint"] = fingerprint
+
+        # localStorage — источника в моделях нет; оставляем как None или вытаскиваем из снапшота Dolphin, если доступно
+        local_storage = None
+        try:
+            if hasattr(self, 'dolphin_snapshot') and self.dolphin_snapshot and isinstance(self.dolphin_snapshot.payload_json, dict):
+                # Некоторые экспорты Dolphin могут содержать local storage в payload_json
+                local_storage = self.dolphin_snapshot.payload_json.get('localStorage')
+        except Exception:
+            pass
+        payload["local_storage"] = local_storage
+
+        # Состояние прогрева: по умолчанию определяем по last_warmed
+        if self.last_warmed:
+            warmup_state = "WARMED"
+        else:
+            warmup_state = "NOT_WARMED"
+        payload["warmup_state"] = warmup_state
+
+        # Dolphin профиль (если есть)
+        if self.dolphin_profile_id:
+            payload["dolphin_profile_id"] = self.dolphin_profile_id
+
+        return payload
     
     def mark_as_used(self):
         """Отметить аккаунт как использованный"""
@@ -769,5 +891,442 @@ class CookieRobotTaskAccount(models.Model):
     
     def __str__(self):
         return f"{self.account.username} in Cookie Task {self.task.id}"
+
+
+# ============================================================================
+# УПРАВЛЕНИЕ УДАЛЕННЫМИ СЕРВЕРАМИ
+# ============================================================================
+
+class TikTokServer(models.Model):
+    """
+    Удаленный сервер с TikTok ботом.
+    Управление серверами через FastAPI.
+    """
+    
+    STATUS_CHOICES = [
+        ('ONLINE', 'Online'),
+        ('OFFLINE', 'Offline'),
+        ('ERROR', 'Error'),
+        ('MAINTENANCE', 'Maintenance'),
+    ]
+    
+    # Основная информация
+    name = models.CharField(
+        max_length=100, 
+        unique=True,
+        help_text="Уникальное имя сервера (например: 'TikTok Server 1')"
+    )
+    host = models.CharField(
+        max_length=255,
+        help_text="IP адрес или домен сервера"
+    )
+    port = models.IntegerField(
+        default=8000,
+        help_text="Порт FastAPI бота"
+    )
+    
+    # Безопасность
+    api_key = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text="API ключ для доступа к серверу (если требуется)"
+    )
+    allowed_ips = models.TextField(
+        blank=True,
+        default="",
+        help_text="Список разрешенных IP адресов (через запятую)"
+    )
+    
+    # Статус и мониторинг
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='OFFLINE'
+    )
+    last_ping = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Время последней успешной проверки доступности"
+    )
+    last_error = models.TextField(
+        blank=True,
+        default="",
+        help_text="Последняя ошибка подключения"
+    )
+    response_time_ms = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Время отклика в миллисекундах"
+    )
+    
+    # Конфигурация
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Активен ли сервер для использования"
+    )
+    priority = models.IntegerField(
+        default=1,
+        help_text="Приоритет сервера (1 - наивысший)"
+    )
+    max_concurrent_tasks = models.IntegerField(
+        default=3,
+        help_text="Максимальное количество одновременных задач на сервере"
+    )
+    
+    # Статистика
+    total_accounts = models.IntegerField(
+        default=0,
+        help_text="Общее количество аккаунтов на сервере"
+    )
+    active_tasks = models.IntegerField(
+        default=0,
+        help_text="Текущее количество активных задач"
+    )
+    total_videos_uploaded = models.IntegerField(
+        default=0,
+        help_text="Всего загружено видео"
+    )
+    
+    # Метаданные
+    notes = models.TextField(
+        blank=True,
+        default="",
+        help_text="Дополнительные заметки о сервере"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "TikTok Server"
+        verbose_name_plural = "TikTok Servers"
+        ordering = ['priority', 'name']
+    
+    def __str__(self):
+        return f"{self.name} ({self.host}:{self.port})"
+    
+    def get_api_url(self):
+        """Получить базовый URL API сервера"""
+        return f"http://{self.host}:{self.port}"
+    
+    def is_available(self):
+        """Проверить доступность сервера для новых задач"""
+        return (
+            self.is_active and 
+            self.status == 'ONLINE' and 
+            self.active_tasks < self.max_concurrent_tasks
+        )
+    
+    def to_dict(self):
+        """Преобразовать сервер в словарь для API"""
+        return {
+            'id': self.id,
+            'name': self.name,
+            'host': self.host,
+            'port': self.port,
+            'status': self.status,
+            'is_active': self.is_active,
+            'priority': self.priority,
+            'max_concurrent_tasks': self.max_concurrent_tasks,
+            'active_tasks': self.active_tasks,
+            'total_accounts': self.total_accounts,
+            'last_ping': self.last_ping.isoformat() if self.last_ping else None,
+            'response_time_ms': self.response_time_ms,
+        }
+
+
+class ServerAccount(models.Model):
+    """
+    Связь между аккаунтом TikTok и сервером.
+    Хранит информацию о том, на каком сервере находится аккаунт.
+    """
+    
+    STATUS_CHOICES = [
+        ('FREE', 'Free'),  # Не назначен ни на один сервер
+        ('ASSIGNED', 'Assigned'),  # Назначен на сервер
+        ('ACTIVE', 'Active'),  # Активно используется на сервере
+        ('SYNCING', 'Syncing'),  # Синхронизация данных
+        ('ERROR', 'Error'),  # Ошибка на сервере
+    ]
+    
+    account = models.OneToOneField(
+        TikTokAccount,
+        on_delete=models.CASCADE,
+        related_name='server_assignment',
+        help_text="TikTok аккаунт"
+    )
+    server = models.ForeignKey(
+        TikTokServer,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='assigned_accounts',
+        help_text="Сервер, на котором находится аккаунт"
+    )
+    
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='FREE'
+    )
+    
+    # Синхронизация
+    assigned_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Когда аккаунт был назначен на сервер"
+    )
+    last_sync_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Последняя синхронизация данных с сервера"
+    )
+    last_used_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Когда аккаунт последний раз использовался на сервере"
+    )
+    
+    # Данные с сервера
+    dolphin_profile_id_on_server = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        help_text="ID Dolphin профиля на сервере"
+    )
+    cookies_from_server = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Последние cookies с сервера"
+    )
+    fingerprint_from_server = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Fingerprint данные с сервера"
+    )
+    
+    # Метаданные
+    sync_errors = models.TextField(
+        blank=True,
+        default="",
+        help_text="Ошибки синхронизации"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Server Account Assignment"
+        verbose_name_plural = "Server Account Assignments"
+    
+    def __str__(self):
+        server_name = self.server.name if self.server else "No Server"
+        return f"{self.account.username} on {server_name}"
+    
+    def assign_to_server(self, server):
+        """Назначить аккаунт на сервер"""
+        self.server = server
+        self.status = 'ASSIGNED'
+        self.assigned_at = timezone.now()
+        self.save()
+    
+    def free_from_server(self):
+        """Освободить аккаунт от сервера"""
+        self.server = None
+        self.status = 'FREE'
+        self.assigned_at = None
+        self.save()
+    
+    def mark_as_synced(self, cookies=None, fingerprint=None):
+        """Отметить как синхронизированный с сервера"""
+        self.last_sync_at = timezone.now()
+        if cookies:
+            self.cookies_from_server = cookies
+        if fingerprint:
+            self.fingerprint_from_server = fingerprint
+        self.save()
+
+
+class ServerTask(models.Model):
+    """
+    Задача, выполняющаяся на удаленном сервере.
+    Может быть задачей загрузки, прогрева или другой.
+    """
+    
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),  # Ожидает выполнения
+        ('QUEUED', 'Queued'),  # В очереди на сервере
+        ('RUNNING', 'Running'),  # Выполняется
+        ('COMPLETED', 'Completed'),  # Завершена успешно
+        ('FAILED', 'Failed'),  # Завершена с ошибкой
+        ('CANCELLED', 'Cancelled'),  # Отменена
+    ]
+    
+    TASK_TYPE_CHOICES = [
+        ('UPLOAD', 'Upload Videos'),
+        ('WARMUP', 'Warmup Accounts'),
+        ('PREPARE_ACCOUNTS', 'Prepare Accounts'),
+        ('COOKIE_ROBOT', 'Cookie Robot'),
+        ('CUSTOM', 'Custom Task'),
+    ]
+    
+    # Основная информация
+    server = models.ForeignKey(
+        TikTokServer,
+        on_delete=models.CASCADE,
+        related_name='tasks',
+        help_text="Сервер, на котором выполняется задача"
+    )
+    task_type = models.CharField(
+        max_length=50,
+        choices=TASK_TYPE_CHOICES,
+        help_text="Тип задачи"
+    )
+    name = models.CharField(
+        max_length=200,
+        help_text="Название задачи"
+    )
+    
+    # Статус
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='PENDING'
+    )
+    progress = models.IntegerField(
+        default=0,
+        help_text="Прогресс выполнения (0-100)"
+    )
+    
+    # Связь с локальными задачами
+    bulk_upload_task = models.ForeignKey(
+        BulkUploadTask,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='server_tasks',
+        help_text="Связанная задача массовой загрузки"
+    )
+    warmup_task = models.ForeignKey(
+        WarmupTask,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='server_tasks',
+        help_text="Связанная задача прогрева"
+    )
+    
+    # Параметры задачи
+    parameters = models.JSONField(
+        default=dict,
+        help_text="Параметры задачи в JSON формате"
+    )
+    
+    # Результаты
+    result = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Результат выполнения задачи"
+    )
+    error_message = models.TextField(
+        blank=True,
+        default="",
+        help_text="Сообщение об ошибке"
+    )
+    
+    # ID задачи на сервере
+    remote_task_id = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        help_text="ID задачи на удаленном сервере"
+    )
+    
+    # Временные метки
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    
+    # Логи
+    log = models.TextField(
+        blank=True,
+        default="",
+        help_text="Логи выполнения задачи"
+    )
+    
+    class Meta:
+        verbose_name = "Server Task"
+        verbose_name_plural = "Server Tasks"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.name} on {self.server.name} ({self.status})"
+    
+    def mark_as_started(self):
+        """Отметить задачу как запущенную"""
+        self.status = 'RUNNING'
+        self.started_at = timezone.now()
+        self.save()
+    
+    def mark_as_completed(self, result=None):
+        """Отметить задачу как завершенную"""
+        self.status = 'COMPLETED'
+        self.completed_at = timezone.now()
+        self.progress = 100
+        if result:
+            self.result = result
+        self.save()
+    
+    def mark_as_failed(self, error_message):
+        """Отметить задачу как неудачную"""
+        self.status = 'FAILED'
+        self.completed_at = timezone.now()
+        self.error_message = error_message
+        self.save()
+    
+    def update_progress(self, progress):
+        """Обновить прогресс задачи"""
+        self.progress = min(100, max(0, progress))
+        self.save()
+
+
+class ServerHealthLog(models.Model):
+    """
+    Лог проверок здоровья серверов.
+    Используется для мониторинга и статистики.
+    """
+    
+    server = models.ForeignKey(
+        TikTokServer,
+        on_delete=models.CASCADE,
+        related_name='health_logs'
+    )
+    
+    # Результаты проверки
+    is_online = models.BooleanField(default=False)
+    response_time_ms = models.IntegerField(null=True, blank=True)
+    status_code = models.IntegerField(null=True, blank=True)
+    error_message = models.TextField(blank=True, default="")
+    
+    # Метрики с сервера
+    server_cpu_usage = models.FloatField(null=True, blank=True)
+    server_memory_usage = models.FloatField(null=True, blank=True)
+    server_disk_usage = models.FloatField(null=True, blank=True)
+    
+    # Статистика с сервера
+    accounts_count = models.IntegerField(null=True, blank=True)
+    videos_count = models.IntegerField(null=True, blank=True)
+    dolphin_profiles_count = models.IntegerField(null=True, blank=True)
+    
+    checked_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Server Health Log"
+        verbose_name_plural = "Server Health Logs"
+        ordering = ['-checked_at']
+    
+    def __str__(self):
+        status = "Online" if self.is_online else "Offline"
+        return f"{self.server.name} - {status} at {self.checked_at}"
 
 

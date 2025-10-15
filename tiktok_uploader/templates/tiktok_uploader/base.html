@@ -112,6 +112,81 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
+
+        /* Server switcher styles */
+        #serverDropdown {
+            position: relative;
+        }
+        
+        #current-server-name {
+            font-weight: 600;
+        }
+        
+        .server-status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: pulse 2s infinite;
+        }
+        
+        .server-status-online {
+            background-color: #00F2EA;
+            box-shadow: 0 0 6px rgba(0, 242, 234, 0.6);
+        }
+        
+        .server-status-offline {
+            background-color: #666;
+            box-shadow: none;
+            animation: none;
+        }
+        
+        .server-status-error {
+            background-color: #FE2C55;
+            box-shadow: 0 0 6px rgba(254, 44, 85, 0.6);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .server-item {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .server-item:hover {
+            background-color: rgba(254, 44, 85, 0.1) !important;
+        }
+        
+        .server-item.selected {
+            background-color: rgba(0, 242, 234, 0.1);
+            font-weight: 600;
+        }
+        
+        .server-item .server-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+        
+        .server-item .server-stats {
+            font-size: 0.75rem;
+            color: #666;
+            margin-left: 8px;
+        }
+        
+        .dark-theme .server-item .server-stats {
+            color: #999;
+        }
+        
+        /* Ensure server management buttons are always visible */
+        .server-management-item {
+            display: block !important;
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -151,8 +226,13 @@
                                 <li><a class="dropdown-item" href="{% url 'tiktok_uploader:bulk_upload_list' %}">
                                     <i class="bi bi-list-ul"></i> All Tasks
                                 </a></li>
-                                <li><a class="dropdown-item" href="{% url 'tiktok_uploader:create_bulk_upload' %}">
-                                    <i class="bi bi-plus-circle"></i> New Task
+                                <li><a class="dropdown-item" href="{% url 'tiktok_uploader:create_remote_bulk_upload' %}">
+                                    <i class="bi bi-plus-circle"></i> New Remote Task
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><small class="dropdown-item text-muted">Deprecated:</small></li>
+                                <li><a class="dropdown-item text-muted" href="{% url 'tiktok_uploader:create_bulk_upload' %}">
+                                    <i class="bi bi-hdd"></i> Old Local Task
                                 </a></li>
                             </ul>
                         </li>
@@ -203,14 +283,68 @@
                     </ul>
                     <ul class="navbar-nav ms-auto">
                         {% if user.is_authenticated %}
+                        <!-- SERVER SWITCHER -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle {% if 'server' in request.resolver_match.url_name %}active{% endif %}" 
+                               href="#" role="button" data-bs-toggle="dropdown" id="serverDropdown">
+                                <i class="bi bi-hdd-network-fill"></i> 
+                                <span id="current-server-name">
+                                    {% if request.session.selected_server_id %}
+                                        {{ request.session.selected_server_name|default:"Server" }}
+                                    {% else %}
+                                        Select Server
+                                    {% endif %}
+                                </span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" id="serverList">
+                                <li class="dropdown-header">Select Server</li>
+                                <li id="serversPlaceholder" style="display:none;">
+                                    <span class="dropdown-item text-muted">
+                                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                        Loading...
+                                    </span>
+                                </li>
+                                <!-- Fallback: Static server list if JavaScript fails -->
+                                <li id="fallbackServers" style="display:none;">
+                                    <span class="dropdown-item text-muted">
+                                        <i class="bi bi-exclamation-triangle me-2"></i> 
+                                        JavaScript disabled or API unavailable
+                                    </span>
+                                </li>
+                                <!-- Static server list from Django context -->
+                                {% for server in available_servers %}
+                                <li class="static-server-item" style="display:none;">
+                                    <a class="dropdown-item server-item" href="#" 
+                                       data-server-id="{{ server.id }}" 
+                                       data-server-name="{{ server.name }}">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span>
+                                                <span class="server-status-indicator {% if server.status == 'online' or server.status == 'ONLINE' %}server-status-online{% elif server.status == 'ERROR' or server.status == 'error' %}server-status-error{% else %}server-status-offline{% endif %}"></span>
+                                                {{ server.name }}
+                                                {% if server.id == selected_server_id %}
+                                                    <i class="bi bi-check2 ms-2 text-success"></i>
+                                                {% endif %}
+                                            </span>
+                                            <small class="text-muted">{{ server.active_tasks|default:0 }} tasks</small>
+                                        </div>
+                                    </a>
+                                </li>
+                                {% endfor %}
+                                <!-- Servers will be loaded here via JavaScript -->
+                                <li><hr class="dropdown-divider"></li>
+                                <li class="server-management-item">
+                                    <a class="dropdown-item" href="{% url 'tiktok_uploader:server_management' %}">
+                                        <i class="bi bi-gear-fill"></i> Server Management
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                        
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                                 <i class="bi bi-person-circle"></i> {{ user.username }}
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="{% url 'dashboard' %}">
-                                    <i class="bi bi-instagram"></i> Instagram Dashboard
-                                </a></li>
                                 <li><a class="dropdown-item" href="{% url 'cabinet_agency_dashboard' %}">
                                     <i class="bi bi-briefcase"></i> Cabinet
                                 </a></li>
@@ -302,7 +436,269 @@
                 icon.classList.remove('bi-moon-fill');
                 icon.classList.add('bi-sun-fill');
             }
+            
+            // Load servers list
+            loadServersList();
+            
+            // Add event listeners for static server items
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('.static-server-item .server-item')) {
+                    e.preventDefault();
+                    const serverItem = e.target.closest('.server-item');
+                    const serverId = serverItem.dataset.serverId;
+                    const serverName = serverItem.dataset.serverName;
+                    switchServer(serverId, serverName);
+                }
+            });
+            
+            // Fallback: Show static servers if API doesn't load within 5 seconds
+            setTimeout(function() {
+                const placeholder = document.getElementById('serversPlaceholder');
+                const staticServers = document.querySelectorAll('.static-server-item');
+                
+                if (placeholder && placeholder.style.display !== 'none') {
+                    console.log('Showing static servers - API took too long to load');
+                    placeholder.style.display = 'none';
+                    
+                    // Show static servers if available
+                    if (staticServers.length > 0) {
+                        staticServers.forEach(server => {
+                            server.style.display = '';
+                        });
+                    } else {
+                        // Show error message if no static servers available
+                        const fallback = document.getElementById('fallbackServers');
+                        if (fallback) {
+                            fallback.style.display = '';
+                        }
+                    }
+                }
+            }, 5000);
         });
+
+        // Helper function to safely clear server list
+        function clearServerList() {
+            const serverList = document.getElementById('serverList');
+            const header = serverList.querySelector('.dropdown-header');
+            
+            if (!header) {
+                console.error('Server list header not found');
+                return;
+            }
+            
+            // Remove all items after header except the divider and management links
+            let current = header.nextElementSibling;
+            while (current) {
+                const next = current.nextElementSibling;
+                
+                // Keep divider and management links - check both class and href
+                const isDivider = current.classList.contains('dropdown-divider');
+                const isServerManagement = current.classList.contains('server-management-item');
+                const hasServerManagement = current.querySelector && current.querySelector('a[href*="server_management"]');
+                
+                const shouldKeep = isDivider || isServerManagement || hasServerManagement;
+                
+                if (shouldKeep) {
+                    console.log('Keeping element:', current.textContent.trim(), {
+                        isDivider,
+                        isServerManagement,
+                        hasServerManagement: !!hasServerManagement
+                    });
+                } else {
+                    console.log('Removing element:', current.textContent.trim());
+                    try {
+                        serverList.removeChild(current);
+                    } catch (e) {
+                        console.warn('Error removing element:', e);
+                    }
+                }
+                current = next;
+            }
+        }
+
+        // Helper function to safely insert element
+        function safeInsertElement(element) {
+            const serverList = document.getElementById('serverList');
+            const divider = serverList.querySelector('.dropdown-divider');
+            
+            try {
+                if (divider) {
+                    serverList.insertBefore(element, divider);
+                } else {
+                    serverList.appendChild(element);
+                }
+            } catch (e) {
+                console.warn('Error inserting element, appending to end:', e);
+                serverList.appendChild(element);
+            }
+        }
+
+        // Server switcher functionality
+        function loadServersList() {
+            console.log('Loading servers list...');
+            
+            // Show loading placeholder
+            const placeholder = document.getElementById('serversPlaceholder');
+            if (placeholder) {
+                placeholder.style.display = '';
+                console.log('Showing loading placeholder');
+            }
+            
+            const apiUrl = '{% url "tiktok_uploader:api_servers_list" %}';
+            console.log('Fetching from:', apiUrl);
+            
+            fetch(apiUrl)
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Received data:', data);
+                    if (data.success) {
+                        renderServersList(data.servers, data.selected_server_id);
+                    } else {
+                        // Hide placeholder and show error
+                        if (placeholder) {
+                            placeholder.style.display = 'none';
+                        }
+                        showServerError('Failed to load servers: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading servers:', error);
+                    // Hide placeholder and show error
+                    const placeholder = document.getElementById('serversPlaceholder');
+                    if (placeholder) {
+                        placeholder.style.display = 'none';
+                    }
+                    showServerError('Error loading servers: ' + error.message);
+                });
+        }
+
+        function showServerError(message) {
+            clearServerList();
+            
+            const errorItem = document.createElement('li');
+            errorItem.innerHTML = `<span class="dropdown-item text-danger"><i class="bi bi-exclamation-triangle me-2"></i> ${message}</span>`;
+            
+            safeInsertElement(errorItem);
+        }
+
+        function renderServersList(servers, selectedServerId) {
+            console.log('Rendering servers list:', servers, 'Selected:', selectedServerId);
+            
+            clearServerList();
+            
+            if (servers.length === 0) {
+                console.log('No servers found, showing placeholder');
+                const noServersItem = document.createElement('li');
+                noServersItem.innerHTML = '<span class="dropdown-item text-muted"><i class="bi bi-info-circle me-2"></i> No servers configured</span>';
+                safeInsertElement(noServersItem);
+                return;
+            }
+            
+            console.log(`Adding ${servers.length} servers to dropdown`);
+            
+            // Add servers
+            servers.forEach(server => {
+                const li = document.createElement('li');
+                const isSelected = server.id === selectedServerId;
+                
+                // Status indicator
+                let statusClass = 'server-status-offline';
+                let statusIcon = 'bi-x-circle';
+                if (server.status === 'online' || server.status === 'ONLINE') {
+                    statusClass = 'server-status-online';
+                    statusIcon = 'bi-check-circle-fill';
+                } else if (server.status === 'ERROR' || server.status === 'error') {
+                    statusClass = 'server-status-error';
+                    statusIcon = 'bi-exclamation-triangle-fill';
+                }
+                
+                li.innerHTML = `
+                    <a class="dropdown-item server-item ${isSelected ? 'active' : ''}" 
+                       href="#" onclick="switchServer(${server.id}, '${server.name}'); return false;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>
+                                <span class="server-status-indicator ${statusClass}"></span>
+                                ${server.name}
+                                ${isSelected ? '<i class="bi bi-check2 ms-2 text-success"></i>' : ''}
+                            </span>
+                            <small class="text-muted">${server.active_tasks || 0} tasks</small>
+                        </div>
+                    </a>
+                `;
+                
+                safeInsertElement(li);
+            });
+        }
+
+        function switchServer(serverId, serverName) {
+            fetch('{% url "tiktok_uploader:api_switch_server" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ server_id: serverId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update UI
+                    document.getElementById('current-server-name').textContent = serverName;
+                    
+                    // Show success message
+                    showNotification('success', `Switched to ${serverName}`);
+                    
+                    // Reload page to refresh data
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500);
+                } else {
+                    showNotification('error', data.message || 'Failed to switch server');
+                }
+            })
+            .catch(error => {
+                console.error('Error switching server:', error);
+                showNotification('error', 'Error switching server');
+            });
+        }
+
+        function showNotification(type, message) {
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            const alertHtml = `
+                <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            const container = document.querySelector('.container.my-4');
+            if (container) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = alertHtml;
+                container.insertBefore(tempDiv.firstElementChild, container.firstChild);
+            }
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
     </script>
     {% block extra_js %}{% endblock %}
 </body>

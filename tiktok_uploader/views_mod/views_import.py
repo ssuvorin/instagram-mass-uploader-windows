@@ -10,7 +10,8 @@ from django.db.models import Q
 
 from tiktok_uploader.models import TikTokAccount, TikTokProxy
 from cabinet.models import Client
-from tiktok_uploader.bot_integration.dolphin.dolphin import Dolphin
+# REMOVED: Local Dolphin profile creation
+# from tiktok_uploader.bot_integration.dolphin.dolphin import Dolphin
 
 logger = logging.getLogger('tiktok_uploader')
 
@@ -75,21 +76,12 @@ def import_accounts(request):
         dolphin_available = False
         
         if profile_mode == 'create_profiles':
-            try:
-                logger.info("[STEP 1/5] Initializing Dolphin Anty API client")
-                api_key = os.environ.get("DOLPHIN_API_TOKEN", "")
-                if not api_key:
-                    logger.error("[ERROR] Dolphin API token not found")
-                    messages.error(request, "Dolphin API token not configured. Set DOLPHIN_API_TOKEN.")
-                    return redirect('tiktok_uploader:import_accounts')
-                
-                dolphin = Dolphin()
-                dolphin_available = True
-                logger.info("[SUCCESS] Dolphin Anty API initialized")
-            except Exception as e:
-                logger.error(f"[ERROR] Dolphin API init failed: {str(e)}")
-                dolphin_available = False
-                messages.error(request, f"Dolphin API error: {str(e)}")
+            # REMOVED: Local Dolphin profile creation
+            # Dolphin profiles will be created automatically on servers when tasks are assigned
+            logger.info("[STEP 1/5] Dolphin profile creation - DEPRECATED")
+            messages.info(request, "Dolphin profiles will be created automatically on servers when tasks are assigned.")
+            dolphin = None
+            dolphin_available = False
         
         # Читаем файл
         logger.info("[STEP 2/5] Reading accounts file")
@@ -241,7 +233,8 @@ def import_accounts(request):
                     created_count += 1
                 
                 # Создание Dolphin профиля (если включено)
-                if profile_mode == 'create_profiles' and dolphin_available and not account.dolphin_profile_id:
+                # REMOVED: Local Dolphin profile creation - profiles created on servers
+                if False:  # Disabled: profile_mode == 'create_profiles' and dolphin_available and not account.dolphin_profile_id:
                     try:
                         logger.info(f"[DOLPHIN] Creating profile for {username}")
                         

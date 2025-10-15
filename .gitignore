@@ -334,3 +334,8 @@ dolphin_data/
 # Browser cache
 *.crdownload
 staticfiles/
+
+# Server operation logs
+logs/*.log
+!logs/.gitkeep
+!logs/README.md

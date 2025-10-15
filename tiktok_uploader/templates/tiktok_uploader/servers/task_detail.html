@@ -1,0 +1,265 @@
+{% extends 'tiktok_uploader/base.html' %}
+{% load static %}
+
+{% block title %}Task: {{ server_task.name }} - TikTok Uploader{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-badge-large {
+        font-size: 1.2rem;
+        padding: 10px 20px;
+    }
+    
+    .progress-large {
+        height: 30px;
+        font-size: 1rem;
+    }
+    
+    .log-container {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 20px;
+        border-radius: 8px;
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 0.9rem;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    
+    .log-container .log-line {
+        margin-bottom: 5px;
+        line-height: 1.5;
+    }
+    
+    .log-container .log-error {
+        color: #f48771;
+    }
+    
+    .log-container .log-warning {
+        color: #dcdcaa;
+    }
+    
+    .log-container .log-success {
+        color: #4ec9b0;
+    }
+    
+    .metric-card {
+        border-left: 4px solid #0d6efd;
+        background: #f8f9fa;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="bi bi-eye"></i> Task Monitor</h2>
+                    <p class="text-muted">{{ server_task.name }}</p>
+                </div>
+                <div>
+                    <a href="{% url 'tiktok_uploader:bulk_upload_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to List
+                    </a>
+                    <button onclick="location.reload()" class="btn btn-primary">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Server Info -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-hdd-network"></i> Server: {{ server.name }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Host:</strong> {{ server.host }}:{{ server.port }}</p>
+                            <p class="mb-1"><strong>Status:</strong> 
+                                <span class="badge 
+                                    {% if server.status == 'online' %}bg-success
+                                    {% elif server.status == 'busy' %}bg-warning
+                                    {% else %}bg-danger{% endif %}">
+                                    {{ server.get_status_display }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Remote Task ID:</strong> 
+                                <code>{{ server_task.remote_task_id|default:"N/A" }}</code>
+                            </p>
+                            <p class="mb-0"><strong>Created:</strong> {{ server_task.created_at|date:"Y-m-d H:i:s" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Task Status -->
+            <div class="card mb-4">
+                <div class="card-header 
+                    {% if server_task.status == 'COMPLETED' %}bg-success
+                    {% elif server_task.status == 'FAILED' or server_task.status == 'CANCELLED' %}bg-danger
+                    {% elif server_task.status == 'RUNNING' %}bg-primary
+                    {% else %}bg-warning{% endif %} text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-activity"></i> Status</h5>
+                        <span class="status-badge-large badge bg-light text-dark">
+                            {{ server_task.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Progress Bar -->
+                    {% if server_task.status == 'RUNNING' or server_task.status == 'QUEUED' %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Progress</span>
+                            <span>{{ server_task.progress|default:0 }}%</span>
+                        </div>
+                        <div class="progress progress-large">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" 
+                                 style="width: {{ server_task.progress|default:0 }}%">
+                                {{ server_task.progress|default:0 }}%
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Timing Info -->
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="metric-card p-3 rounded">
+                                <h6 class="text-muted mb-1">Created</h6>
+                                <p class="mb-0"><strong>{{ server_task.created_at|date:"Y-m-d H:i:s" }}</strong></p>
+                            </div>
+                        </div>
+                        {% if server_task.started_at %}
+                        <div class="col-md-4">
+                            <div class="metric-card p-3 rounded">
+                                <h6 class="text-muted mb-1">Started</h6>
+                                <p class="mb-0"><strong>{{ server_task.started_at|date:"Y-m-d H:i:s" }}</strong></p>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if server_task.completed_at %}
+                        <div class="col-md-4">
+                            <div class="metric-card p-3 rounded">
+                                <h6 class="text-muted mb-1">Completed</h6>
+                                <p class="mb-0"><strong>{{ server_task.completed_at|date:"Y-m-d H:i:s" }}</strong></p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            {% if server_task.status == 'RUNNING' or server_task.status == 'QUEUED' %}
+            <div class="card mb-4 border-warning">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h5 class="mb-1"><i class="bi bi-stop-circle"></i> Task Control</h5>
+                            <p class="mb-0 text-muted">Stop or cancel the running task</p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <form method="post" action="{% url 'tiktok_uploader:stop_remote_task' server_task.id %}"
+                                  onsubmit="return confirm('Are you sure you want to stop this task?')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger btn-lg">
+                                    <i class="bi bi-stop-fill"></i> Stop Task
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Task Result -->
+            {% if server_task.result %}
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-check-circle"></i> Result</h5>
+                </div>
+                <div class="card-body">
+                    <pre class="mb-0">{{ server_task.result|safe }}</pre>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Error Message -->
+            {% if server_task.error_message %}
+            <div class="card mb-4 border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Error</h5>
+                </div>
+                <div class="card-body">
+                    <pre class="mb-0 text-danger">{{ server_task.error_message }}</pre>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Logs -->
+            <div class="card mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="bi bi-terminal"></i> Logs</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="log-container" id="logContainer">
+                        {% if server_task.log %}
+                            {% for line in server_task.log.splitlines %}
+                            <div class="log-line
+                                {% if 'error' in line|lower or 'failed' in line|lower %}log-error
+                                {% elif 'warning' in line|lower %}log-warning
+                                {% elif 'success' in line|lower or 'completed' in line|lower %}log-success
+                                {% endif %}">
+                                {{ line }}
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                        <div class="log-line text-muted">No logs available yet...</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Task Parameters -->
+            {% if server_task.parameters %}
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-gear"></i> Task Parameters</h5>
+                </div>
+                <div class="card-body">
+                    <pre class="mb-0">{{ server_task.parameters|safe }}</pre>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-refresh for running tasks
+{% if server_task.status == 'RUNNING' or server_task.status == 'QUEUED' %}
+setTimeout(function() {
+    location.reload();
+}, 10000); // Refresh every 10 seconds
+{% endif %}
+
+// Auto-scroll logs to bottom
+const logContainer = document.getElementById('logContainer');
+if (logContainer) {
+    logContainer.scrollTop = logContainer.scrollHeight;
+}
+</script>
+{% endblock %}
+
+
+

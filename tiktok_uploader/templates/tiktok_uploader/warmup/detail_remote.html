@@ -1,0 +1,318 @@
+{% extends "tiktok_uploader/base.html" %}
+
+{% block title %}Warmup Task #{{ task.id }} - TikTok Uploader{% endblock %}
+
+{% block extra_css %}
+<style>
+    .log-container {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 15px;
+        border-radius: 8px;
+        max-height: 500px;
+        overflow-y: auto;
+        font-family: 'Courier New', monospace;
+        font-size: 0.875rem;
+    }
+    .progress-circle {
+        width: 120px;
+        height: 120px;
+    }
+    .server-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Breadcrumbs -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'tiktok_uploader:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'tiktok_uploader:warmup_task_list' %}">Warmup Tasks</a></li>
+            <li class="breadcrumb-item active">Task #{{ task.id }}</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-2">
+                <i class="bi bi-fire me-2"></i>
+                {{ task.name }}
+            </h2>
+            <div class="d-flex align-items-center gap-2">
+                {% if task.status == 'PENDING' %}
+                    <span class="badge bg-warning">PENDING</span>
+                {% elif task.status == 'RUNNING' %}
+                    <span class="badge bg-primary">
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                        RUNNING
+                    </span>
+                {% elif task.status == 'COMPLETED' %}
+                    <span class="badge bg-success">COMPLETED</span>
+                {% elif task.status == 'FAILED' %}
+                    <span class="badge bg-danger">FAILED</span>
+                {% else %}
+                    <span class="badge bg-secondary">{{ task.status }}</span>
+                {% endif %}
+
+                {% if has_server %}
+                <span class="server-badge badge bg-info">
+                    <i class="bi bi-hdd-network"></i>
+                    {{ server.name }}
+                    {% if server_task.status %}
+                        ({{ server_task.status }})
+                    {% endif %}
+                </span>
+                {% endif %}
+
+                <small class="text-muted">Created: {{ task.created_at|date:"Y-m-d H:i" }}</small>
+            </div>
+        </div>
+        <div class="btn-group">
+            {% if can_start %}
+                <form method="post" action="{% url 'tiktok_uploader:warmup_task_start' task.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success" onclick="return confirm('Start warmup task on server {{ server.name }}?')">
+                        <i class="bi bi-play-fill"></i> Start Warmup
+                    </button>
+                </form>
+            {% endif %}
+            {% if can_stop %}
+                <form method="post" action="{% url 'tiktok_uploader:warmup_task_stop' task.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning" onclick="return confirm('Stop this task?')">
+                        <i class="bi bi-stop-circle"></i> Stop
+                    </button>
+                </form>
+            {% endif %}
+            {% if can_delete %}
+                <form method="post" action="{% url 'tiktok_uploader:warmup_task_delete' task.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Delete this task? This cannot be undone.')">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                </form>
+            {% endif %}
+            <a href="{% url 'tiktok_uploader:warmup_task_list' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column: Progress & Settings -->
+        <div class="col-lg-4">
+            <!-- Progress Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-graph-up"></i> Progress</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="progress-circle mx-auto mb-3">
+                        <svg viewBox="0 0 120 120">
+                            <circle cx="60" cy="60" r="54" fill="none" stroke="#e9ecef" stroke-width="12"/>
+                            <circle id="progressCircle" cx="60" cy="60" r="54" fill="none" stroke="#28a745" stroke-width="12"
+                                    stroke-dasharray="0 339.292"
+                                    transform="rotate(-90 60 60)" stroke-linecap="round"/>
+                            <text id="progressText" x="60" y="70" text-anchor="middle" font-size="24" font-weight="bold" fill="#333">
+                                {{ progress_percent|floatformat:0 }}%
+                            </text>
+                        </svg>
+                    </div>
+                    <div class="row text-center">
+                        <div class="col-6 mb-2">
+                            <strong class="text-success d-block" id="completedCount">{{ completed_accounts }}</strong>
+                            <small class="text-muted">Completed</small>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <strong class="text-primary d-block" id="runningCount">{{ running_accounts }}</strong>
+                            <small class="text-muted">Running</small>
+                        </div>
+                        <div class="col-6">
+                            <strong class="text-danger d-block" id="failedCount">{{ failed_accounts }}</strong>
+                            <small class="text-muted">Failed</small>
+                        </div>
+                        <div class="col-6">
+                            <strong class="text-warning d-block" id="pendingCount">{{ pending_accounts }}</strong>
+                            <small class="text-muted">Pending</small>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <small class="text-muted">Total: <strong id="totalCount">{{ total_accounts }}</strong> accounts</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Server Info Card -->
+            {% if has_server %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-hdd-network"></i> Server Info</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless mb-0">
+                        <tr>
+                            <td class="text-muted">Server:</td>
+                            <td class="text-end"><strong>{{ server.name }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Host:</td>
+                            <td class="text-end"><code>{{ server.host }}:{{ server.port }}</code></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Status:</td>
+                            <td class="text-end">
+                                <span class="badge bg-{{ server.status|default:'secondary' }}">{{ server.status|upper }}</span>
+                            </td>
+                        </tr>
+                        {% if server_task.remote_task_id %}
+                        <tr>
+                            <td class="text-muted">Remote ID:</td>
+                            <td class="text-end"><code>{{ server_task.remote_task_id }}</code></td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Settings Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-sliders"></i> Settings</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless mb-0">
+                        <tr>
+                            <td class="text-muted">Concurrency:</td>
+                            <td class="text-end"><strong>{{ task.concurrency }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Delay Range:</td>
+                            <td class="text-end"><strong>{{ task.delay_min_sec }}-{{ task.delay_max_sec }}s</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Feed Scrolls:</td>
+                            <td class="text-end"><strong>{{ task.feed_scroll_min_count }}-{{ task.feed_scroll_max_count }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Likes:</td>
+                            <td class="text-end"><strong>{{ task.like_min_count }}-{{ task.like_max_count }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Videos:</td>
+                            <td class="text-end"><strong>{{ task.watch_video_min_count }}-{{ task.watch_video_max_count }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Follows:</td>
+                            <td class="text-end"><strong>{{ task.follow_min_count }}-{{ task.follow_max_count }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Comments:</td>
+                            <td class="text-end"><strong>{{ task.comment_min_count }}-{{ task.comment_max_count }}</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Logs -->
+        <div class="col-lg-8">
+            <!-- Task Logs -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-terminal"></i> Task Logs</h5>
+                    <button class="btn btn-sm btn-outline-primary" onclick="refreshLogs()">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="log-container" id="taskLogs">
+                        <div class="text-muted text-center py-5">
+                            {% if task.status == 'PENDING' %}
+                                <i class="bi bi-clock-history fs-1 d-block mb-3"></i>
+                                <p>Task not started yet. Click "Start Warmup" to begin.</p>
+                            {% else %}
+                                <i class="bi bi-hourglass-split fs-1 d-block mb-3"></i>
+                                <p>Loading logs from server...</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let refreshInterval;
+
+function refreshLogs() {
+    fetch('{% url "tiktok_uploader:warmup_task_logs" task.id %}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Обновляем логи
+                const logsContainer = document.getElementById('taskLogs');
+                if (data.logs) {
+                    logsContainer.innerHTML = '<pre class="mb-0">' + data.logs + '</pre>';
+                    logsContainer.scrollTop = logsContainer.scrollHeight;
+                }
+                
+                // Обновляем прогресс
+                if (data.progress) {
+                    const progress = data.progress;
+                    updateProgress(progress);
+                }
+                
+                // Обновляем статус
+                if (data.task_status === 'COMPLETED' || data.task_status === 'FAILED') {
+                    clearInterval(refreshInterval);
+                    setTimeout(() => window.location.reload(), 2000);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching logs:', error);
+        });
+}
+
+function updateProgress(progress) {
+    const total = progress.total || 0;
+    const completed = progress.completed || 0;
+    const running = progress.running || 0;
+    const failed = progress.failed || 0;
+    const pending = progress.pending || 0;
+    const percent = progress.percent || 0;
+    
+    // Обновляем счетчики
+    document.getElementById('totalCount').textContent = total;
+    document.getElementById('completedCount').textContent = completed;
+    document.getElementById('runningCount').textContent = running;
+    document.getElementById('failedCount').textContent = failed;
+    document.getElementById('pendingCount').textContent = pending;
+    document.getElementById('progressText').textContent = Math.round(percent) + '%';
+    
+    // Обновляем круговой прогресс
+    const circumference = 339.292;
+    const progressValue = (percent / 100) * circumference;
+    document.getElementById('progressCircle').setAttribute('stroke-dasharray', progressValue + ' ' + circumference);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    {% if task.status == 'RUNNING' %}
+        // Автоматическое обновление логов каждые 3 секунды
+        refreshLogs();
+        refreshInterval = setInterval(refreshLogs, 3000);
+    {% endif %}
+});
+</script>
+{% endblock %}
+

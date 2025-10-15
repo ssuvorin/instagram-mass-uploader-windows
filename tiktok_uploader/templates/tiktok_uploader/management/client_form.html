@@ -1,0 +1,46 @@
+{% extends "tiktok_uploader/base.html" %}
+
+{% block title %}{{ action }} Client - TikTok Uploader{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'tiktok_uploader:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'tiktok_uploader:client_management' %}">Clients</a></li>
+            <li class="breadcrumb-item active">{{ action }}</li>
+        </ol>
+    </nav>
+
+    <h2 class="fw-bold mb-4">
+        <i class="bi bi-briefcase me-2"></i>
+        {{ action }} Client
+    </h2>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <label for="name" class="form-label">Client Name *</label>
+                    <input type="text" class="form-control" name="name" id="name" 
+                           value="{{ client.name|default:'' }}" required
+                           placeholder="e.g., Acme Corp">
+                    <small class="text-muted">Unique name for the client</small>
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'tiktok_uploader:client_management' %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> {{ action }} Client
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

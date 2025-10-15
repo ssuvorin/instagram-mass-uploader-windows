@@ -210,23 +210,14 @@ def warmup_task_start(request, task_id):
             messages.error(request, 'No accounts assigned to this task')
             return redirect('tiktok_uploader:warmup_task_detail', task_id=task_id)
         
-        # Меняем статус на RUNNING
-        task.status = 'RUNNING'
-        task.started_at = timezone.now()
-        task.log = f"[{timezone.now().strftime('%Y-%m-%d %H:%M:%S')}] Task started\n"
-        task.save()
-        
-        # Запускаем задачу в отдельном потоке с изоляцией Django ORM
-        from .bot_integration.services import run_warmup_task_wrapper
-        
-        thread = threading.Thread(
-            target=run_warmup_task_wrapper,
-            args=(task_id,),
-            daemon=True
+        # DEPRECATED: Этот view больше не используется!
+        # Используйте views_warmup_remote.py для работы через API
+        messages.error(
+            request, 
+            'This local warmup functionality is deprecated. '
+            'Please use the remote warmup interface at /tiktok/warmup/create/'
         )
-        thread.start()
-        
-        messages.success(request, f'Warmup task "{task.name}" started successfully!')
+        return redirect('tiktok_uploader:warmup_task_list')
         
     except Exception as e:
         logger.error(f"Error starting warmup task {task_id}: {str(e)}")

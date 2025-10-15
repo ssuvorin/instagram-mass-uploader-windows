@@ -1,0 +1,136 @@
+{% extends 'tiktok_uploader/base.html' %}
+{% load static %}
+
+{% block title %}Edit Server - {{ server.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="bi bi-pencil"></i> Edit Server</h2>
+                    <p class="text-muted">{{ server.name }}</p>
+                </div>
+                <a href="{% url 'tiktok_uploader:server_detail' server.id %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back
+                </a>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Server Name -->
+                        <div class="mb-3">
+                            <label class="form-label">Server Name *</label>
+                            <input type="text" class="form-control" name="name" required
+                                   value="{{ server.name }}">
+                        </div>
+                        
+                        <!-- Connection -->
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label class="form-label">Host *</label>
+                                    <input type="text" class="form-control" name="host" required
+                                           value="{{ server.host }}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Port *</label>
+                                    <input type="number" class="form-control" name="port" 
+                                           value="{{ server.port }}" min="1" max="65535" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- API Key -->
+                        <div class="mb-3">
+                            <label class="form-label">API Key</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" name="api_key" 
+                                       value="{{ server.api_key }}" 
+                                       placeholder="Leave empty to keep current">
+                                <button class="btn btn-outline-secondary" type="button" 
+                                        onclick="copyApiKey()" title="Copy to clipboard">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Leave empty to keep current API key</small>
+                        </div>
+                        
+                        <!-- Settings -->
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label class="form-label">Priority</label>
+                                    <input type="number" class="form-control" name="priority" 
+                                           value="{{ server.priority }}" min="1" max="100">
+                                    <small class="text-muted">Lower number = higher priority</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Active Status -->
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="is_active" 
+                                       id="isActive" {% if server.is_active %}checked{% endif %}>
+                                <label class="form-check-label" for="isActive">
+                                    <strong>Active</strong> — Server is available for task assignment
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Buttons -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-check-circle"></i> Save Changes
+                            </button>
+                            <a href="{% url 'tiktok_uploader:server_detail' server.id %}" 
+                               class="btn btn-outline-secondary">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyApiKey() {
+    const input = document.querySelector('input[name="api_key"]');
+    const value = input.value;
+    
+    if (!value) {
+        alert('No API key to copy!');
+        return;
+    }
+    
+    navigator.clipboard.writeText(value).then(() => {
+        const btn = event.target.closest('button');
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check"></i> Copied!';
+        btn.classList.remove('btn-outline-secondary');
+        btn.classList.add('btn-success');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-outline-secondary');
+        }, 2000);
+    }).catch(err => {
+        alert('Failed to copy: ' + err);
+    });
+}
+</script>
+{% endblock %}
+
+

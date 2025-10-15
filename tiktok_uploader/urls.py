@@ -11,9 +11,14 @@ from . import views
 from . import views_warmup
 from . import views_follow
 from .views_mod import views_bulk
+from .views_mod import views_bulk_remote
 from .views_mod import views_proxies
 from .views_mod import views_cookie
 from .views_mod import views_import
+from .views_mod import views_servers
+from .views_mod import views_api_accounts
+from .views_mod import views_warmup_remote
+from .views_mod import views_management
 
 app_name = 'tiktok_uploader'
 
@@ -53,9 +58,20 @@ urlpatterns = [
     path('proxies/bulk-delete/', views_proxies.bulk_delete_proxies, name='bulk_delete_proxies'),
     
     # ========================================================================
-    # МАССОВАЯ ЗАГРУЗКА ВИДЕО
+    # МАССОВАЯ ЗАГРУЗКА ВИДЕО (REMOTE - НОВАЯ АРХИТЕКТУРА)
     # ========================================================================
     path('bulk-upload/', views_bulk.bulk_upload_list, name='bulk_upload_list'),
+    
+    # Новая удаленная загрузка через серверы
+    path('bulk-upload/remote/create/', views_bulk_remote.create_remote_bulk_upload, name='create_remote_bulk_upload'),
+    path('bulk-upload/remote/<int:task_id>/add-videos/', views_bulk_remote.add_remote_bulk_videos, name='add_remote_bulk_videos'),
+    path('bulk-upload/remote/<int:task_id>/add-captions/', views_bulk_remote.add_remote_bulk_captions, name='add_remote_bulk_captions'),
+    path('bulk-upload/remote/<int:task_id>/review/', views_bulk_remote.remote_bulk_upload_review, name='remote_bulk_upload_review'),
+    path('bulk-upload/remote/<int:task_id>/start/', views_bulk_remote.start_remote_bulk_upload, name='start_remote_bulk_upload'),
+    path('bulk-upload/remote/task/<int:task_id>/', views_bulk_remote.remote_task_detail, name='remote_task_detail'),
+    path('bulk-upload/remote/task/<int:task_id>/stop/', views_bulk_remote.stop_remote_task, name='stop_remote_task'),
+    
+    # Старая локальная загрузка (будет удалена)
     path('bulk-upload/create/', views_bulk.create_bulk_upload, name='create_bulk_upload'),
     path('bulk-upload/<int:task_id>/', views_bulk.bulk_upload_detail, name='bulk_upload_detail'),
     path('bulk-upload/<int:task_id>/add-videos/', views_bulk.add_bulk_videos, name='add_bulk_videos'),
@@ -84,16 +100,15 @@ urlpatterns = [
     path('cookies/bulk/refresh/', views_cookie.refresh_cookies_from_profiles, name='refresh_cookies_from_profiles'),
     
     # ========================================================================
-    # ПРОГРЕВ АККАУНТОВ (WARMUP)
+    # ПРОГРЕВ АККАУНТОВ (WARMUP) - REMOTE API
     # ========================================================================
-    path('warmup/', views_warmup.warmup_task_list, name='warmup_task_list'),
-    path('warmup/create/', views_warmup.warmup_task_create, name='warmup_task_create'),
-    path('warmup/<int:task_id>/', views_warmup.warmup_task_detail, name='warmup_task_detail'),
-    path('warmup/<int:task_id>/start/', views_warmup.warmup_task_start, name='warmup_task_start'),
-    path('warmup/<int:task_id>/force-stop/', views_warmup.force_stop_warmup_task, name='force_stop_warmup_task'),
-    path('warmup/<int:task_id>/restart/', views_warmup.restart_warmup_task, name='restart_warmup_task'),
-    path('warmup/<int:task_id>/logs/', views_warmup.warmup_task_logs, name='warmup_task_logs'),
-    path('warmup/<int:task_id>/delete/', views_warmup.delete_warmup_task, name='delete_warmup_task'),
+    path('warmup/', views_warmup_remote.warmup_task_list, name='warmup_task_list'),
+    path('warmup/create/', views_warmup_remote.warmup_task_create_remote, name='warmup_task_create'),
+    path('warmup/<int:task_id>/', views_warmup_remote.warmup_task_detail, name='warmup_task_detail'),
+    path('warmup/<int:task_id>/start/', views_warmup_remote.warmup_task_start, name='warmup_task_start'),
+    path('warmup/<int:task_id>/stop/', views_warmup_remote.warmup_task_stop, name='warmup_task_stop'),
+    path('warmup/<int:task_id>/logs/', views_warmup_remote.warmup_task_logs, name='warmup_task_logs'),
+    path('warmup/<int:task_id>/delete/', views_warmup_remote.warmup_task_delete, name='warmup_task_delete'),
     
     # ========================================================================
     # ПОДПИСКИ И ОТПИСКИ
@@ -124,6 +139,50 @@ urlpatterns = [
     path('api/stats/', views.get_stats_api, name='get_stats_api'),
     path('api/account/<int:account_id>/status/', views.get_account_status_api, name='get_account_status_api'),
     path('api/task/<int:task_id>/progress/', views.get_task_progress_api, name='get_task_progress_api'),
+    
+    # ========================================================================
+    # УПРАВЛЕНИЕ СЕРВЕРАМИ
+    # ========================================================================
+    # API для переключателя серверов
+    path('api/servers/list/', views_servers.api_servers_list, name='api_servers_list'),
+    path('api/servers/switch/', views_servers.api_switch_server, name='api_switch_server'),
+    
+    # API для резервирования аккаунтов (используется серверами)
+    path('api/accounts/reserve/', views_api_accounts.reserve_accounts, name='api_reserve_accounts'),
+    path('api/accounts/release/', views_api_accounts.release_accounts, name='api_release_accounts'),
+    path('api/accounts/sync/', views_api_accounts.sync_account_data, name='api_sync_account'),
+    path('api/accounts/count/', views_api_accounts.get_available_accounts_count, name='api_accounts_count'),
+    
+    # Страницы управления серверами
+    path('servers/', views_servers.server_management, name='server_management'),
+    path('servers/add/', views_servers.server_add, name='server_add'),
+    path('servers/<int:server_id>/', views_servers.server_detail, name='server_detail'),
+    path('servers/<int:server_id>/edit/', views_servers.server_edit, name='server_edit'),
+    path('servers/<int:server_id>/delete/', views_servers.server_delete, name='server_delete'),
+    path('servers/<int:server_id>/ping/', views_servers.server_ping, name='server_ping'),
+    path('servers/<int:server_id>/logs/', views_servers.server_logs, name='server_logs'),
+    path('servers/<int:server_id>/sync-stats/', views_servers.server_sync_stats, name='server_sync_stats'),
+    path('servers/<int:server_id>/health-check/', views_servers.server_create_health_log, name='server_health_check'),
+    path('servers/ping-all/', views_servers.server_ping_all, name='server_ping_all'),
+    
+    # ========================================================================
+    # УПРАВЛЕНИЕ КЛИЕНТАМИ И ТЕГАМИ
+    # ========================================================================
+    # Clients
+    path('clients/', views_management.client_management, name='client_management'),
+    path('clients/create/', views_management.client_create, name='client_create'),
+    path('clients/<int:client_id>/edit/', views_management.client_edit, name='client_edit'),
+    path('clients/<int:client_id>/delete/', views_management.client_delete, name='client_delete'),
+    
+    # Tags
+    path('tags/', views_management.tag_management, name='tag_management'),
+    path('tags/create/', views_management.tag_create, name='tag_create'),
+    path('tags/<int:tag_id>/edit/', views_management.tag_edit, name='tag_edit'),
+    path('tags/<int:tag_id>/delete/', views_management.tag_delete, name='tag_delete'),
+    
+    # API для получения списков
+    path('api/tags/', views_management.api_get_tags, name='api_get_tags'),
+    path('api/clients/', views_management.api_get_clients, name='api_get_clients'),
 ]
 
 

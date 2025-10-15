@@ -134,6 +134,24 @@
                                     {{ form.client.errors }}
                                 </div>
                                 {% endif %}
+                                <small class="form-text text-muted">
+                                    <a href="{% url 'tiktok_uploader:client_create' %}" target="_blank">Create new</a>
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.tag.id_for_label }}" class="form-label">Tag / Category (Optional)</label>
+                                {{ form.tag }}
+                                {% if form.tag.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.tag.errors }}
+                                </div>
+                                {% endif %}
+                                <small class="form-text text-muted">
+                                    <a href="{% url 'tiktok_uploader:tag_create' %}" target="_blank">Create new</a>
+                                </small>
                             </div>
                         </div>
                         

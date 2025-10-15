@@ -1,0 +1,311 @@
+{% extends 'tiktok_uploader/base.html' %}
+{% load static %}
+
+{% block title %}Create Remote Bulk Upload - TikTok Uploader{% endblock %}
+
+{% block extra_css %}
+<style>
+    .server-card {
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .server-card:hover {
+        border-color: #0d6efd;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .server-card.selected {
+        border-color: #0d6efd;
+        background-color: #e7f1ff;
+    }
+    
+    .server-status {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 5px;
+    }
+    
+    .server-status.available { background-color: #28a745; }
+    .server-status.busy { background-color: #ffc107; }
+    .server-status.offline { background-color: #dc3545; }
+    
+    .tag-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        margin: 3px;
+        background: #e9ecef;
+        border-radius: 15px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .tag-badge:hover {
+        background: #0d6efd;
+        color: white;
+    }
+    
+    .tag-badge.selected {
+        background: #0d6efd;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="bi bi-cloud-upload"></i> Create Remote Bulk Upload</h2>
+                    <p class="text-muted">Новая архитектура: задача отправляется на удаленный сервер</p>
+                </div>
+                <a href="{% url 'tiktok_uploader:bulk_upload_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to List
+                </a>
+            </div>
+
+            <form method="post" id="createTaskForm">
+                {% csrf_token %}
+                
+                <!-- STEP 1: Основные параметры -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-1-circle"></i> Основные параметры</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Название задачи *</label>
+                                    <input type="text" class="form-control" name="name" required 
+                                           placeholder="Example: Client1 - Memes Upload #1">
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Клиент *</label>
+                                    <select class="form-select" name="client_id" required>
+                                        <option value="">-- Выберите клиента --</option>
+                                        {% for client in clients %}
+                                        <option value="{{ client.id }}">{{ client.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Тематика (Tag)</label>
+                                    <select class="form-select" name="tag">
+                                        <option value="">-- No Tag --</option>
+                                        {% for tag in tags %}
+                                        <option value="{{ tag.name }}">{{ tag.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <small class="text-muted">
+                                        Выберите тематику для выбора аккаунтов. 
+                                        <a href="{% url 'tiktok_uploader:tag_create' %}" target="_blank">Create new tag</a>
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Количество аккаунтов *</label>
+                                    <input type="number" class="form-control" name="accounts_count" 
+                                           value="5" min="1" max="50" required>
+                                    <small class="text-muted">Сервер автоматически выберет нужное количество</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- STEP 2: Выбор сервера -->
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="bi bi-2-circle"></i> Выбор сервера *</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">Выберите сервер для выполнения задачи</p>
+                        
+                        <!-- Available Servers -->
+                        {% for server in available_servers %}
+                        <div class="server-card" onclick="selectServer('{{ server.id }}', this)">
+                            <div class="d-flex align-items-center">
+                                <input type="radio" name="server_id" value="{{ server.id }}" 
+                                       id="server-{{ server.id }}" class="me-3">
+                                <div class="flex-grow-1">
+                                    <h5 class="mb-1">
+                                        <span class="server-status {% if server.status == 'online' %}available{% elif server.status == 'busy' %}busy{% else %}offline{% endif %}"></span>
+                                        {{ server.name }}
+                                    </h5>
+                                    <p class="mb-1 text-muted">{{ server.host }}:{{ server.port }}</p>
+                                    <small class="text-muted">
+                                        Active tasks: {{ server.active_tasks|default:"0" }}
+                                    </small>
+                                </div>
+                                {% if server.status == 'online' %}
+                                <span class="badge bg-success">Online</span>
+                                {% elif server.status == 'busy' %}
+                                <span class="badge bg-warning">Busy</span>
+                                {% else %}
+                                <span class="badge bg-danger">Offline</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                        
+                        {% if not available_servers %}
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            Нет доступных серверов. <a href="{% url 'tiktok_uploader:server_add' %}">Добавить сервер</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- STEP 3: Настройки загрузки -->
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="bi bi-3-circle"></i> Настройки загрузки</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Количество циклов</label>
+                                    <input type="number" class="form-control" name="cycles" 
+                                           value="1" min="1" max="10">
+                                    <small class="text-muted">Сколько раз загружать каждое видео</small>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Задержка между циклами (мин)</label>
+                                    <input type="number" class="form-control" name="cycle_timeout_minutes" 
+                                           value="30" min="1" max="1440">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Мин. задержка между загрузками (сек)</label>
+                                    <input type="number" class="form-control" name="delay_min_sec" 
+                                           value="30" min="10" max="300">
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Макс. задержка между загрузками (сек)</label>
+                                    <input type="number" class="form-control" name="delay_max_sec" 
+                                           value="60" min="10" max="300">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label class="form-label">Описание по умолчанию</label>
+                                    <textarea class="form-control" name="default_caption" rows="3" 
+                                              placeholder="Будет использовано, если для видео не указано своё описание"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label class="form-label">Хештеги по умолчанию</label>
+                                    <input type="text" class="form-control" name="default_hashtags" 
+                                           placeholder="viral, trending, fyp">
+                                    <small class="text-muted">Через запятую, без #</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="allow_comments" 
+                                           id="allowComments" checked>
+                                    <label class="form-check-label" for="allowComments">
+                                        Разрешить комментарии
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="allow_duet" 
+                                           id="allowDuet" checked>
+                                    <label class="form-check-label" for="allowDuet">
+                                        Разрешить дуэты
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="allow_stitch" 
+                                           id="allowStitch" checked>
+                                    <label class="form-check-label" for="allowStitch">
+                                        Разрешить стич
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Submit Button -->
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-check-circle"></i> Создать задачу и добавить видео
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function selectServer(serverId, element) {
+    // Remove selected class from all cards
+    document.querySelectorAll('.server-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    
+    // Add selected class to clicked card
+    element.classList.add('selected');
+    
+    // Check the radio button
+    document.getElementById('server-' + serverId).checked = true;
+}
+
+// No auto-selection - user must choose manually
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-selection removed as per requirements
+});
+</script>
+{% endblock %}
+

@@ -1,0 +1,133 @@
+{% extends 'tiktok_uploader/base.html' %}
+{% load static %}
+
+{% block title %}Add Captions - {{ task.name }} - TikTok Uploader{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <!-- Progress Steps -->
+            <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="flex-fill text-center">
+                        <div class="badge bg-success mb-2" style="font-size: 1rem;">✓ Параметры</div>
+                    </div>
+                    <div class="px-2">→</div>
+                    <div class="flex-fill text-center">
+                        <div class="badge bg-success mb-2" style="font-size: 1rem;">✓ Видео</div>
+                    </div>
+                    <div class="px-2">→</div>
+                    <div class="flex-fill text-center">
+                        <div class="badge bg-primary mb-2" style="font-size: 1rem;">3. Описания</div>
+                    </div>
+                    <div class="px-2">→</div>
+                    <div class="flex-fill text-center">
+                        <div class="badge bg-secondary mb-2" style="font-size: 1rem;">4. Проверка</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="bi bi-card-text"></i> Добавить описания</h2>
+                    <p class="text-muted">Задача: <strong>{{ task.name }}</strong> | Видео: {{ videos_count }}</p>
+                </div>
+            </div>
+
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <!-- Option 1: Upload file -->
+                    <div class="col-md-6">
+                        <div class="card mb-4 h-100">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0"><i class="bi bi-file-earmark-text"></i> Вариант 1: Загрузить файл</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted">Загрузите текстовый файл с описаниями (одно на строку)</p>
+                                
+                                <div class="mb-3">
+                                    <input type="file" class="form-control" name="captions_file" 
+                                           accept=".txt" id="captionsFile">
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="bi bi-upload"></i> Загрузить и продолжить
+                                </button>
+                                
+                                <hr>
+                                
+                                <div class="alert alert-info mb-0">
+                                    <small>
+                                        <strong>Формат файла:</strong><br>
+                                        Одно описание на строку<br>
+                                        Пример:<br>
+                                        <code>
+                                            Первое описание #viral<br>
+                                            Второе описание #trending<br>
+                                            Третье описание #fyp
+                                        </code>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Option 2: Manual input -->
+                    <div class="col-md-6">
+                        <div class="card mb-4 h-100">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0"><i class="bi bi-keyboard"></i> Вариант 2: Ввести вручную</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted">Введите описания вручную (одно на строку)</p>
+                                
+                                <div class="mb-3">
+                                    <textarea class="form-control" name="manual_captions" 
+                                              rows="15" placeholder="Введите описания, каждое с новой строки..."></textarea>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-success w-100">
+                                    <i class="bi bi-check-circle"></i> Сохранить и продолжить
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Current captions info -->
+                {% if captions_count > 0 %}
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle"></i>
+                    <strong>Уже загружено {{ captions_count }} описаний</strong>
+                    Вы можете добавить еще или перейти к проверке
+                </div>
+                {% endif %}
+                
+                <!-- Navigation buttons -->
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'tiktok_uploader:add_remote_bulk_videos' task.id %}" 
+                       class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Назад
+                    </a>
+                    
+                    <a href="{% url 'tiktok_uploader:remote_bulk_upload_review' task.id %}" 
+                       class="btn btn-outline-primary btn-lg">
+                        <i class="bi bi-arrow-right-circle"></i> 
+                        {% if captions_count > 0 %}
+                            Пропустить → Проверка
+                        {% else %}
+                            Пропустить (использовать описание по умолчанию)
+                        {% endif %}
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+

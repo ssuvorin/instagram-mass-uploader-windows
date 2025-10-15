@@ -13,7 +13,7 @@ import re
 from .models import (
     TikTokAccount, TikTokProxy, BulkUploadTask,
     WarmupTask, WarmupTaskAccount, FollowTask, FollowCategory, FollowTarget,
-    CookieRobotTask, BulkVideo, VideoCaption
+    CookieRobotTask, BulkVideo, VideoCaption, AccountTag
 )
 
 
@@ -48,11 +48,19 @@ class TikTokAccountForm(forms.ModelForm):
         help_text='Upload cookies as JSON file'
     )
     
+    # Дополнительное поле для тега (выбор из dropdown)
+    tag = forms.ChoiceField(
+        label='Tag / Category',
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        help_text='Select an account tag or leave empty'
+    )
+    
     class Meta:
         model = TikTokAccount
         fields = [
             'username', 'password', 'email', 'email_password',
-            'proxy', 'locale', 'client', 'notes'
+            'proxy', 'locale', 'client', 'tag', 'notes'
         ]
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Username'}),
@@ -90,6 +98,17 @@ class TikTokAccountForm(forms.ModelForm):
         except ImportError:
             # Если cabinet не доступен, оставляем пустой queryset
             pass
+        
+        # Заполняем choices для тегов
+        tag_choices = [('', '-- No Tag --')]
+        tags = AccountTag.objects.all().order_by('name')
+        for tag in tags:
+            tag_choices.append((tag.name, tag.name))
+        self.fields['tag'].choices = tag_choices
+        
+        # Устанавливаем начальное значение тега, если редактируем существующий аккаунт
+        if self.instance and self.instance.pk and self.instance.tag:
+            self.fields['tag'].initial = self.instance.tag
     
     def clean_username(self):
         """Валидация username: только буквы, цифры, точки, подчеркивания."""

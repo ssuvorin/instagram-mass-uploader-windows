@@ -565,72 +565,22 @@ def start_bulk_upload_api(request, task_id):
             celery_task_id: "...",
             message: "Upload started"
         }
+    
+    DEPRECATED: This local bulk upload function is no longer used.
+    Use views_bulk_remote.py for remote server execution.
     """
-    import threading
-    from tiktok_uploader.bot_integration.services import run_bulk_upload_task
+    # REMOVED: Local bulk upload execution
+    # import threading
+    # from tiktok_uploader.bot_integration.services import run_bulk_upload_task
     
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
     
-    try:
-        task = get_object_or_404(BulkUploadTask, id=task_id)
-        
-        # Проверяем статус задачи
-        if task.status not in ['PENDING', 'PAUSED']:
-            return JsonResponse({
-                'success': False,
-                'error': f'Task cannot be started from status {task.status}'
-            }, status=400)
-        
-        # Проверяем наличие видео и аккаунтов
-        if not task.videos.exists():
-            return JsonResponse({
-                'success': False,
-                'error': 'No videos uploaded for this task'
-            }, status=400)
-        
-        if not task.accounts.exists():
-            return JsonResponse({
-                'success': False,
-                'error': 'No accounts assigned to this task'
-            }, status=400)
-        
-        # Распределяем НЕназначенные видео между аккаунтами (round-robin)
-        from ..models import BulkVideo
-        unassigned_videos = list(task.videos.filter(assigned_to__isnull=True).order_by('id'))
-        accounts_list = list(task.accounts.all().select_related('account'))
-        if unassigned_videos and accounts_list:
-            acc_count = len(accounts_list)
-            idx = 0
-            for video in unassigned_videos:
-                video.assigned_to = accounts_list[idx % acc_count]
-                video.save(update_fields=['assigned_to'])
-                idx += 1
-        
-        # Запускаем задачу в отдельном потоке, чтобы не блокировать HTTP запрос
-        def run_upload_in_background():
-            try:
-                run_bulk_upload_task(task_id)
-            except Exception as e:
-                print(f"Error in background upload task: {str(e)}")
-        
-        thread = threading.Thread(target=run_upload_in_background, daemon=True)
-        thread.start()
-        
-        messages.success(request, f'Upload task "{task.name}" started')
-        
-        return JsonResponse({
-            'success': True,
-            'task_id': task_id,
-            'message': 'Upload started in background'
-        })
-    
-    except Exception as e:
-        messages.error(request, f'Error starting upload task: {str(e)}')
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=500)
+    return JsonResponse({
+        'success': False,
+        'error': 'Local bulk upload is deprecated. Use remote bulk upload interface.',
+        'redirect': '/tiktok/bulk-upload/remote/create/'
+    }, status=410)
 
 
 @login_required
@@ -706,39 +656,20 @@ def resume_bulk_upload(request, task_id):
         POST: JsonResponse с результатом
     """
     from django.http import JsonResponse
-    from django.core.cache import cache
-    from ..models import BulkUploadTask
-    import threading
-    from tiktok_uploader.bot_integration.services import run_bulk_upload_task
+    # REMOVED: Local bulk upload execution
+    # from django.core.cache import cache
+    # from ..models import BulkUploadTask
+    # import threading
+    # from tiktok_uploader.bot_integration.services import run_bulk_upload_task
     
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
     
-    try:
-        task = get_object_or_404(BulkUploadTask, id=task_id)
-        if task.status != 'PAUSED':
-            return JsonResponse({'success': False, 'error': f'Task is not paused (status: {task.status})'}, status=400)
-        
-        # Clear pause flag
-        cache.delete(f"bulk_upload_pause_{task_id}")
-        
-        # Set status to RUNNING and restart background worker
-        task.status = 'RUNNING'
-        task.save(update_fields=['status'])
-        
-        def run_upload_in_background():
-            try:
-                run_bulk_upload_task(task_id)
-            except Exception as e:
-                print(f"Error resuming background upload task: {str(e)}")
-        
-        thread = threading.Thread(target=run_upload_in_background, daemon=True)
-        thread.start()
-        
-        return JsonResponse({'success': True, 'message': 'Task resumed'})
-    
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    return JsonResponse({
+        'success': False,
+        'error': 'Local bulk upload is deprecated. Use remote bulk upload interface.',
+        'redirect': '/tiktok/bulk-upload/remote/create/'
+    }, status=410)
 
 
 @login_required

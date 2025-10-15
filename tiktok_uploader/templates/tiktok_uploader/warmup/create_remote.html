@@ -1,0 +1,472 @@
+{% extends "tiktok_uploader/base.html" %}
+{% load tiktok_tags %}
+
+{% block title %}Create Remote Warmup Task - TikTok Uploader{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Хлебные крошки -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'tiktok_uploader:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'tiktok_uploader:warmup_task_list' %}">Warmup</a></li>
+            <li class="breadcrumb-item active">Create Remote Task</li>
+        </ol>
+    </nav>
+
+    <h2 class="fw-bold mb-4">
+        <i class="bi bi-fire me-2"></i>
+        Create Warmup Task (Remote Server)
+    </h2>
+
+    <form method="post" id="warmupForm">
+        {% csrf_token %}
+        
+        <!-- Основная информация -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Task Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="name" class="form-label">Task Name *</label>
+                        <input type="text" class="form-control" name="name" id="name" 
+                               placeholder="e.g., Daily Warmup - Memes" required>
+                        <small class="text-muted">Descriptive name for this warmup task</small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="client_id" class="form-label">Client *</label>
+                        <select class="form-select" name="client_id" id="client_id" required>
+                            <option value="">-- Select Client --</option>
+                            {% for client in clients %}
+                            <option value="{{ client.id }}">{{ client.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Фильтры аккаунтов -->
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <h6 class="mb-3"><i class="bi bi-funnel"></i> Account Filters</h6>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="tag_filter" class="form-label">Tag</label>
+                        <select class="form-select" id="tag_filter" onchange="filterAccounts()">
+                            <option value="">-- All Tags --</option>
+                            {% for tag in tags %}
+                            <option value="{{ tag }}">{{ tag }} ({{ tag_stats|get_item:tag|default:0 }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="status_filter" class="form-label">Status</label>
+                        <select class="form-select" id="status_filter" onchange="filterAccounts()">
+                            <option value="">-- All Statuses --</option>
+                            {% for status_code, status_name in status_choices %}
+                            {% if status_stats|get_item:status_code %}
+                            <option value="{{ status_code }}">{{ status_name }} ({{ status_stats|get_item:status_code }})</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="proxy_filter" class="form-label">Proxy</label>
+                        <select class="form-select" id="proxy_filter" onchange="filterAccounts()">
+                            <option value="">-- All Proxies --</option>
+                            <option value="no_proxy">No Proxy</option>
+                            {% for proxy in proxies %}
+                            <option value="{{ proxy.id }}">{{ proxy.host }}:{{ proxy.port }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="search_filter" class="form-label">Search Username</label>
+                        <input type="text" class="form-control" id="search_filter" placeholder="Search..." onkeyup="filterAccounts()">
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="last_used_filter" class="form-label">Last Used</label>
+                        <select class="form-select" id="last_used_filter" onchange="filterAccounts()">
+                            <option value="">-- Any Time --</option>
+                            <option value="never">Never Used</option>
+                            <option value="today">Today</option>
+                            <option value="week">This Week</option>
+                            <option value="month">This Month</option>
+                            <option value="old">Older than Month</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-end h-100">
+                            <button type="button" class="btn btn-outline-secondary me-2" onclick="clearFilters()">
+                                <i class="bi bi-x-circle"></i> Clear Filters
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" onclick="selectFilteredAccounts()">
+                                <i class="bi bi-check-all"></i> Select Filtered
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Select Accounts -->
+                <div class="mb-3">
+                    <label class="form-label">Select Accounts to Warmup *</label>
+                    <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                        {% if accounts %}
+                            <div class="mb-2">
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAllAccounts()">
+                                    <i class="bi bi-check-all"></i> Select All
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAllAccounts()">
+                                    <i class="bi bi-x"></i> Deselect All
+                                </button>
+                            </div>
+                            {% for account in accounts %}
+                            <div class="form-check mb-2 account-item" 
+                                 data-tag="{{ account.tag|default:'' }}" 
+                                 data-client="{{ account.client.id|default:'' }}"
+                                 data-status="{{ account.status }}"
+                                 data-proxy="{{ account.current_proxy.id|default:account.proxy.id|default:'no_proxy' }}"
+                                 data-username="{{ account.username|lower }}"
+                                 data-last-used="{{ account.last_used|date:'Y-m-d'|default:'' }}">
+                                <input class="form-check-input account-checkbox" type="checkbox" 
+                                       name="account_ids" value="{{ account.id }}" id="account_{{ account.id }}">
+                                <label class="form-check-label w-100" for="account_{{ account.id }}">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex align-items-center mb-1">
+                                                <strong class="me-2">@{{ account.username }}</strong>
+                                                {% if account.tag %}
+                                                    <span class="badge bg-primary me-1">{{ account.tag }}</span>
+                                                {% endif %}
+                                                {% if account.client %}
+                                                    <span class="badge bg-info me-1">{{ account.client.name }}</span>
+                                                {% endif %}
+                                                <span class="badge bg-{% if account.status == 'ACTIVE' %}success{% elif account.status == 'BLOCKED' %}danger{% elif account.status == 'LIMITED' %}warning{% else %}secondary{% endif %} me-1">
+                                                    {{ account.get_status_display }}
+                                                </span>
+                                            </div>
+                                            <div class="small text-muted">
+                                                {% if account.current_proxy or account.proxy %}
+                                                    <i class="bi bi-shield-lock me-1"></i>
+                                                    {{ account.current_proxy.host|default:account.proxy.host }}:{{ account.current_proxy.port|default:account.proxy.port }}
+                                                {% else %}
+                                                    <i class="bi bi-shield-x me-1"></i>No Proxy
+                                                {% endif %}
+                                                {% if account.last_used %}
+                                                    | <i class="bi bi-clock me-1"></i>Last used: {{ account.last_used|date:"M d, Y" }}
+                                                {% else %}
+                                                    | <i class="bi bi-clock me-1"></i>Never used
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="text-end">
+                                            <small class="text-muted">{{ account.created_at|date:"M d" }}</small>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted mb-0">
+                                <i class="bi bi-info-circle"></i> No accounts available. 
+                                <a href="{% url 'tiktok_uploader:create_account' %}">Create one</a>
+                            </p>
+                        {% endif %}
+                    </div>
+                    <small class="text-muted">Select individual accounts for warmup</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Выбор сервера -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-hdd-network me-2"></i>Server Selection</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="server_id" class="form-label">Target Server *</label>
+                    <select class="form-select" name="server_id" id="server_id" required>
+                        <option value="">-- Select Server --</option>
+                        {% for server in servers %}
+                        <option value="{{ server.id }}">
+                            {{ server.name }} 
+                            ({{ server.status|upper }}, 
+                            {{ server.active_tasks|default:0 }} active)
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <small class="text-muted">Select a server to execute the warmup task</small>
+                </div>
+                {% if not servers %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    No servers available. <a href="{% url 'tiktok_uploader:server_add' %}">Add a server</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Настройки прогрева -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-sliders me-2"></i>Warmup Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="delay_min_sec" class="form-label">Min Delay (seconds)</label>
+                        <input type="number" class="form-control" name="delay_min_sec" id="delay_min_sec" 
+                               min="5" max="300" value="15" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="delay_max_sec" class="form-label">Max Delay (seconds)</label>
+                        <input type="number" class="form-control" name="delay_max_sec" id="delay_max_sec" 
+                               min="5" max="600" value="45" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="concurrency" class="form-label">Concurrency</label>
+                        <input type="number" class="form-control" name="concurrency" id="concurrency" 
+                               min="1" max="4" value="1" required>
+                        <small class="text-muted">1-4 accounts simultaneously</small>
+                    </div>
+                </div>
+
+                <hr>
+
+                <h6 class="mb-3">Action Ranges</h6>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Feed Scroll</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Min</span>
+                            <input type="number" class="form-control" name="feed_scroll_min_count" min="0" max="50" value="5">
+                            <span class="input-group-text">Max</span>
+                            <input type="number" class="form-control" name="feed_scroll_max_count" min="0" max="100" value="15">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Likes</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Min</span>
+                            <input type="number" class="form-control" name="like_min_count" min="0" max="50" value="3">
+                            <span class="input-group-text">Max</span>
+                            <input type="number" class="form-control" name="like_max_count" min="0" max="100" value="10">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Watch Videos</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Min</span>
+                            <input type="number" class="form-control" name="watch_video_min_count" min="0" max="50" value="5">
+                            <span class="input-group-text">Max</span>
+                            <input type="number" class="form-control" name="watch_video_max_count" min="0" max="100" value="20">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Follows</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Min</span>
+                            <input type="number" class="form-control" name="follow_min_count" min="0" max="20" value="0">
+                            <span class="input-group-text">Max</span>
+                            <input type="number" class="form-control" name="follow_max_count" min="0" max="50" value="5">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Comments</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Min</span>
+                            <input type="number" class="form-control" name="comment_min_count" min="0" max="10" value="0">
+                            <span class="input-group-text">Max</span>
+                            <input type="number" class="form-control" name="comment_max_count" min="0" max="20" value="3">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Кнопки -->
+        <div class="d-flex justify-content-between mb-4">
+            <a href="{% url 'tiktok_uploader:warmup_task_list' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Cancel
+            </a>
+            <button type="submit" class="btn btn-success btn-lg">
+                <i class="bi bi-fire"></i> Create Warmup Task
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Advanced account filtering
+function filterAccounts() {
+    const selectedTag = document.getElementById('tag_filter').value;
+    const selectedClient = document.getElementById('client_id').value;
+    const selectedStatus = document.getElementById('status_filter').value;
+    const selectedProxy = document.getElementById('proxy_filter').value;
+    const searchTerm = document.getElementById('search_filter').value.toLowerCase();
+    const lastUsedFilter = document.getElementById('last_used_filter').value;
+    
+    const accountItems = document.querySelectorAll('.account-item');
+    let visibleCount = 0;
+    
+    accountItems.forEach(item => {
+        const itemTag = item.dataset.tag || '';
+        const itemClient = item.dataset.client || '';
+        const itemStatus = item.dataset.status || '';
+        const itemProxy = item.dataset.proxy || '';
+        const itemUsername = item.dataset.username || '';
+        const itemLastUsed = item.dataset.lastUsed || '';
+        
+        // Apply filters
+        let showByTag = !selectedTag || itemTag === selectedTag;
+        let showByClient = !selectedClient || itemClient === selectedClient;
+        let showByStatus = !selectedStatus || itemStatus === selectedStatus;
+        let showByProxy = !selectedProxy || itemProxy === selectedProxy;
+        let showBySearch = !searchTerm || itemUsername.includes(searchTerm);
+        let showByLastUsed = !lastUsedFilter || checkLastUsedFilter(itemLastUsed, lastUsedFilter);
+        
+        if (showByTag && showByClient && showByStatus && showByProxy && showBySearch && showByLastUsed) {
+            item.style.display = '';
+            visibleCount++;
+        } else {
+            item.style.display = 'none';
+            // Uncheck hidden items
+            item.querySelector('.account-checkbox').checked = false;
+        }
+    });
+    
+    // Update counter
+    updateAccountCounter(visibleCount);
+}
+
+// Check last used filter
+function checkLastUsedFilter(lastUsedDate, filter) {
+    if (!lastUsedDate) {
+        return filter === 'never';
+    }
+    
+    const lastUsed = new Date(lastUsedDate);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+    
+    switch (filter) {
+        case 'never':
+            return false;
+        case 'today':
+            return lastUsed >= today;
+        case 'week':
+            return lastUsed >= weekAgo;
+        case 'month':
+            return lastUsed >= monthAgo;
+        case 'old':
+            return lastUsed < monthAgo;
+        default:
+            return true;
+    }
+}
+
+// Update account counter
+function updateAccountCounter(visibleCount) {
+    const totalCount = document.querySelectorAll('.account-item').length;
+    const counterElement = document.getElementById('account-counter');
+    if (counterElement) {
+        counterElement.textContent = `${visibleCount} of ${totalCount} accounts`;
+    }
+}
+
+// Clear all filters
+function clearFilters() {
+    document.getElementById('tag_filter').value = '';
+    document.getElementById('status_filter').value = '';
+    document.getElementById('proxy_filter').value = '';
+    document.getElementById('search_filter').value = '';
+    document.getElementById('last_used_filter').value = '';
+    filterAccounts();
+}
+
+// Select all filtered accounts
+function selectFilteredAccounts() {
+    document.querySelectorAll('.account-item').forEach(item => {
+        if (item.style.display !== 'none') {
+            item.querySelector('.account-checkbox').checked = true;
+        }
+    });
+}
+
+// Select all visible accounts
+function selectAllAccounts() {
+    document.querySelectorAll('.account-item').forEach(item => {
+        if (item.style.display !== 'none') {
+            item.querySelector('.account-checkbox').checked = true;
+        }
+    });
+}
+
+// Deselect all accounts
+function deselectAllAccounts() {
+    document.querySelectorAll('.account-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Add account counter
+    const accountContainer = document.querySelector('.border.rounded.p-3');
+    if (accountContainer) {
+        const counter = document.createElement('div');
+        counter.id = 'account-counter';
+        counter.className = 'mb-2 text-muted small';
+        counter.textContent = '0 of 0 accounts';
+        accountContainer.insertBefore(counter, accountContainer.firstChild);
+    }
+    
+    // Add event listeners
+    document.getElementById('client_id').addEventListener('change', filterAccounts);
+    
+    // Initial filter
+    filterAccounts();
+    
+    // Combined form validation
+    document.getElementById('warmupForm').addEventListener('submit', function(e) {
+        // Check at least one account is selected
+        const selectedAccounts = document.querySelectorAll('.account-checkbox:checked');
+        if (selectedAccounts.length === 0) {
+            e.preventDefault();
+            alert('Please select at least one account for warmup!');
+            return false;
+        }
+        
+        // Validate min/max delay ranges
+        const delayMin = parseInt(document.getElementById('delay_min_sec').value);
+        const delayMax = parseInt(document.getElementById('delay_max_sec').value);
+        
+        if (delayMin > delayMax) {
+            e.preventDefault();
+            alert('Min Delay cannot be greater than Max Delay');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}
+
