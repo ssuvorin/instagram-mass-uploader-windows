@@ -241,14 +241,23 @@ async def run_dolphin_browser_async(account_details: Dict, videos: List, video_f
                     except Exception:
                         cookies_list = []
                 if cookies_list:
-                    from uploader.models import YouTubeAccount, InstagramCookies
+                    from uploader.models import InstagramAccount, InstagramCookies
                     @sync_to_async
                     def _save():
-                        acc = YouTubeAccount.objects.get(email=username)
-                        InstagramCookies.objects.update_or_create(
+                        # Persist cookies for the Instagram account; some DBs may not have `is_valid`
+                        acc = InstagramAccount.objects.get(username=username)
+                        obj, _created = InstagramCookies.objects.update_or_create(
                             account=acc,
-                            defaults={'cookies_data': cookies_list, 'is_valid': True}
+                            defaults={'cookies_data': cookies_list}
                         )
+                        # Best-effort: mark cookies as valid if the field exists
+                        try:
+                            if hasattr(obj, 'is_valid'):
+                                obj.is_valid = True
+                                obj.save(update_fields=['is_valid', 'cookies_data', 'last_updated'])
+                        except Exception:
+                            # Field may not exist or DB may not support partial update list here
+                            pass
                     await _save()
                     log_info(f"[COOKIES] [ASYNC] Saved {len(cookies_list)} cookies for {username}")
         except Exception as cookie_err:
@@ -305,10 +314,11 @@ async def get_dolphin_profile_id_async(username: str) -> str:
     """Get Dolphin profile ID for account - exact copy from sync version"""
     try:
         from asgiref.sync import sync_to_async
-        from uploader.models import YouTubeAccount
+        from uploader.models import InstagramAccount
         
-        get_account = sync_to_async(YouTubeAccount.objects.get)
-        account = await get_account(email=username)
+        # Instagram flow uses username, not email
+        get_account = sync_to_async(InstagramAccount.objects.get)
+        account = await get_account(username=username)
         return account.dolphin_profile_id
     except Exception as e:
         log_error(f"[FAIL] [ASYNC_DOLPHIN_PROFILE] Error getting dolphin profile ID for {username}: {str(e)}")

@@ -1,5 +1,7 @@
 """Views module: bulk (split from monolith)."""
 from .common import *
+from django.db.utils import OperationalError
+from django.db import close_old_connections
 
 
 def bulk_upload_list(request):
@@ -382,7 +384,49 @@ def get_bulk_task_logs(request, task_id):
     from django.core.cache import cache
     import json
     
-    task = get_object_or_404(BulkUploadTask, id=task_id)
+    # Try to get task with a one-time retry on OperationalError (DB connection dropped)
+    try:
+        task = get_object_or_404(BulkUploadTask, id=task_id)
+    except OperationalError:
+        # Reset stale DB connections and retry once
+        try:
+            close_old_connections()
+        except Exception:
+            pass
+        try:
+            task = get_object_or_404(BulkUploadTask, id=task_id)
+        except OperationalError:
+            # Fallback to cache-only response to avoid 500 for the UI poller
+            account_id = request.GET.get('account_id')
+            cache_key = f"task_logs_{task_id}"
+            if account_id:
+                cache_key += f"_account_{account_id}"
+            cached_logs = cache.get(cache_key, [])
+            formatted_logs = []
+            for log_entry in cached_logs:
+                if isinstance(log_entry, dict):
+                    formatted_logs.append({
+                        'timestamp': log_entry.get('timestamp', ''),
+                        'level': log_entry.get('level', 'INFO'),
+                        'message': log_entry.get('message', ''),
+                        'category': log_entry.get('category', 'GENERAL')
+                    })
+                else:
+                    formatted_logs.append({
+                        'timestamp': '',
+                        'level': 'INFO',
+                        'message': str(log_entry),
+                        'category': 'LEGACY'
+                    })
+            response_data = {
+                'status': cache.get(f"task_status_{task_id}", 'RUNNING'),
+                'logs': formatted_logs,
+                'completion_percentage': cache.get(f"task_completion_{task_id}", 0),
+                'completed_count': cache.get(f"task_completed_{task_id}", 0),
+                'total_count': cache.get(f"task_total_{task_id}", 0),
+                'last_update': cache.get(f"task_last_update_{task_id}", ''),
+            }
+            return JsonResponse(response_data)
     
     # Get account ID if specified for account-specific logs
     account_id = request.GET.get('account_id')
