@@ -259,19 +259,19 @@ class AsyncVideoUniquifier:
         
         # Применяем фильтры уникализации
         if config.cut_enabled:
-            trim_value = random.uniform(0.1, 0.3)
+            trim_value = random.uniform(0.01, 0.05)  # Очень мягкая обрезка начала
             filters.append(f"trim=start={trim_value},setpts=PTS-STARTPTS")
-            print(f"🔪 [UNIQUIFY] Added cut filter: trim=start={trim_value}")
+            print(f"🔪 [UNIQUIFY] Added subtle cut filter: trim=start={trim_value}")
         
         if config.contrast_enabled:
-            contrast_value = random.uniform(1.0, 1.2)
+            contrast_value = random.uniform(0.98, 1.05)  # Очень мягкий контраст
             filters.append(f"eq=contrast={contrast_value}")
-            print(f"🔆 [UNIQUIFY] Added contrast filter: eq=contrast={contrast_value}")
+            print(f"🔆 [UNIQUIFY] Added subtle contrast filter: eq=contrast={contrast_value}")
         
         if config.color_enabled:
-            hue_value = random.uniform(-10, 10)
+            hue_value = random.uniform(-2, 2)  # Очень мягкое изменение цвета
             filters.append(f"hue=h={hue_value}")
-            print(f"🌈 [UNIQUIFY] Added color filter: hue=h={hue_value}")
+            print(f"🌈 [UNIQUIFY] Added subtle color filter: hue=h={hue_value}")
         
         if config.noise_enabled:
             # Делаем шум очень мягким, чтобы не раздувать битрейт
@@ -280,18 +280,18 @@ class AsyncVideoUniquifier:
             print(f"📺 [UNIQUIFY] Added mild noise filter: noise=alls={noise_value}")
         
         if config.brightness_enabled:
-            brightness_value = random.uniform(0.01, 0.1)
-            saturation_value = random.uniform(0.8, 1.2)
+            brightness_value = random.uniform(0.001, 0.02)  # Очень мягкая яркость
+            saturation_value = random.uniform(0.95, 1.05)  # Очень мягкая насыщенность
             filters.append(f"eq=brightness={brightness_value}:saturation={saturation_value}")
-            print(f"💡 [UNIQUIFY] Added brightness/saturation filter")
+            print(f"💡 [UNIQUIFY] Added subtle brightness/saturation filter")
         
         if config.crop_enabled:
-            crop_w = random.uniform(0.95, 0.99)
-            crop_h = random.uniform(0.95, 0.99)
-            crop_x = random.uniform(0, video_w * 0.05)
-            crop_y = random.uniform(0, video_h * 0.05)
+            crop_w = random.uniform(0.98, 0.999)  # Очень мягкая обрезка
+            crop_h = random.uniform(0.98, 0.999)  # Очень мягкая обрезка
+            crop_x = random.uniform(0, video_w * 0.01)  # Минимальное смещение
+            crop_y = random.uniform(0, video_h * 0.01)  # Минимальное смещение
             filters.append(f"crop=iw*{crop_w}:ih*{crop_h}:{crop_x}:{crop_y}")
-            print(f"✂️ [UNIQUIFY] Added crop filter")
+            print(f"✂️ [UNIQUIFY] Added subtle crop filter")
         
         if config.zoompan_enabled:
             zoom_value = random.uniform(1.0, 1.2)

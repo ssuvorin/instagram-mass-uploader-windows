@@ -770,6 +770,47 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 					log_error(f"[CHALLENGE] Challenge required: {e}")
 					if on_log:
 						on_log(f"Challenge required: {e}")
+					
+					# Check specifically for UFAC_WWW_BLOKS challenge which indicates account suspension
+					if "UFAC_WWW_BLOKS" in str(e) or "ufac_www_bloks" in error_msg.lower():
+						log_error(f"[SUSPENDED] UFAC_WWW_BLOKS challenge detected - marking account as suspended: {username}")
+						if on_log:
+							on_log(f"Account suspended due to UFAC_WWW_BLOKS challenge")
+						
+						# Update account status to SUSPENDED
+						try:
+							from uploader.models import InstagramAccount, BulkUploadAccount
+							
+							def update_account_status():
+								try:
+									# Update Instagram account status
+									instagram_account = InstagramAccount.objects.get(username=username)
+									instagram_account.status = 'SUSPENDED'
+									instagram_account.save(update_fields=['status'])
+									
+									# Update BulkUploadAccount status for dashboard display
+									try:
+										bulk_accounts = BulkUploadAccount.objects.filter(account=instagram_account)
+										if bulk_accounts.exists():
+											bulk_accounts.update(status='SUSPENDED')
+											log_info(f"[SUSPENDED] Updated {bulk_accounts.count()} BulkUploadAccount records")
+									except Exception as bulk_error:
+										log_warning(f"[SUSPENDED] Error updating BulkUploadAccount: {bulk_error}")
+									
+									return True
+								except InstagramAccount.DoesNotExist:
+									log_error(f"[SUSPENDED] Instagram account {username} not found")
+									return False
+								except Exception as db_error:
+									log_error(f"[SUSPENDED] Database error updating account status: {db_error}")
+									return False
+							
+							# Execute the status update synchronously
+							update_account_status()
+							
+						except Exception as status_error:
+							log_error(f"[SUSPENDED] Error updating account status: {status_error}")
+					
 					break  # Don't retry challenges
 				
 				# Check for proxy errors specifically
@@ -1267,6 +1308,49 @@ def _sync_photo_upload_impl(account_details: Dict, photo_files_to_upload: List[s
 					log_error(f"[CHALLENGE] Challenge required: {e}")
 					if on_log:
 						on_log(f"Challenge required: {e}")
+					
+					# Check specifically for UFAC_WWW_BLOKS challenge which indicates account suspension
+					if "UFAC_WWW_BLOKS" in str(e) or "ufac_www_bloks" in error_msg.lower():
+						log_error(f"[SUSPENDED] UFAC_WWW_BLOKS challenge detected - marking account as suspended: {username}")
+						if on_log:
+							on_log(f"Account suspended due to UFAC_WWW_BLOKS challenge")
+						
+						# Update account status to SUSPENDED
+						try:
+							from uploader.models import InstagramAccount, BulkUploadAccount
+							
+							def update_account_status():
+								try:
+									# Update Instagram account status
+									instagram_account = InstagramAccount.objects.get(username=username)
+									instagram_account.status = 'SUSPENDED'
+									instagram_account.save(update_fields=['status'])
+									
+									# Update BulkUploadAccount status for dashboard display
+									try:
+										bulk_accounts = BulkUploadAccount.objects.filter(account=instagram_account)
+										if bulk_accounts.exists():
+											bulk_accounts.update(status='SUSPENDED')
+											log_info(f"[SUSPENDED] Updated {bulk_accounts.count()} BulkUploadAccount records")
+									except Exception as bulk_error:
+										log_warning(f"[SUSPENDED] Error updating BulkUploadAccount: {bulk_error}")
+									
+									return True
+								except InstagramAccount.DoesNotExist:
+									log_error(f"[SUSPENDED] Instagram account {username} not found")
+									return False
+								except Exception as db_error:
+									log_error(f"[SUSPENDED] Database error updating account status: {db_error}")
+									return False
+							
+							# Execute the status update synchronously
+							update_account_status()
+							
+						except Exception as status_error:
+							log_error(f"[SUSPENDED] Error updating account status: {status_error}")
+						
+						break  # Don't retry suspended accounts
+					
 					# Log the actual response for debugging
 					try:
 						lr = getattr(getattr(cl, 'private', None), 'last_response', None)

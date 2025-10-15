@@ -248,14 +248,14 @@ class TimingManager:
             
             # Video uniquification parameters
             'video_uniquification': {
-                'trim_range': (0.1, 0.3),         # Replaces video trim values
-                'contrast_range': (1.0, 1.2),     # Replaces contrast adjustments
-                'hue_range': (-10, 10),           # Replaces color adjustments
-                'brightness_range': (0.01, 0.1),  # Replaces brightness values
-                'saturation_range': (0.8, 1.2),   # Replaces saturation values
-                'crop_range': (0.95, 0.99),       # Replaces crop percentages
-                'zoom_range': (1.0, 1.2),         # Replaces zoom values
-                'zoom_duration': (0.5, 2.0)       # Replaces zoom duration
+                'trim_range': (0.01, 0.05),         # Очень мягкая обрезка начала
+                'contrast_range': (0.98, 1.05),      # Очень мягкий контраст
+                'hue_range': (-2, 2),                # Очень мягкое изменение цвета
+                'brightness_range': (0.001, 0.02),  # Очень мягкая яркость
+                'saturation_range': (0.95, 1.05),   # Очень мягкая насыщенность
+                'crop_range': (0.98, 0.999),        # Очень мягкая обрезка
+                'zoom_range': (1.0, 1.2),           # Replaces zoom values
+                'zoom_duration': (0.5, 2.0)         # Replaces zoom duration
             }
         }
     
