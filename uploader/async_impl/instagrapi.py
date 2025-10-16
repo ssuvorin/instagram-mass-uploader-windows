@@ -449,47 +449,8 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 			on_log(f"Failed to lock proxy/device: {lock_e}")
 		return ("failed", 0, 1)
 
-	# CRITICAL: Try to restore session from bundle BEFORE login
-	session_restored = False
-	
-	# DEBUG: Log persisted_settings structure
-	log_info(f"[DEBUG] persisted_settings keys: {list(persisted_settings.keys()) if persisted_settings else 'None'}")
-	if persisted_settings:
-		log_info(f"[DEBUG] authorization_data keys: {list(persisted_settings.get('authorization_data', {}).keys())}")
-		sessionid_debug = persisted_settings.get('authorization_data', {}).get('sessionid')
-		log_info(f"[DEBUG] sessionid type: {type(sessionid_debug)}, value: {str(sessionid_debug)[:50] if sessionid_debug else 'None'}...")
-	
-	if persisted_settings and persisted_settings.get('authorization_data', {}).get('sessionid'):
-		sessionid = persisted_settings['authorization_data']['sessionid']
-		# Decode URL-encoded sessionid
-		import urllib.parse
-		sessionid = urllib.parse.unquote(sessionid)
-		if isinstance(sessionid, str) and len(sessionid) > 30:
-			try:
-				log_info(f"[SESSION] Attempting to restore session for {username}")
-				if on_log:
-					on_log(f"Restoring session from bundle...")
-				
-				# Try to restore session using sessionid
-				log_info(f"[DEBUG] About to call login_by_sessionid with sessionid: {sessionid[:20]}...")
-				log_info(f"[DEBUG] Client settings keys: {list(cl.settings.keys()) if hasattr(cl, 'settings') and cl.settings else 'No settings'}")
-				result = cl.login_by_sessionid(sessionid)
-				log_info(f"[DEBUG] login_by_sessionid result: {result}")
-				if result:
-					log_info(f"[SESSION] Successfully restored session for {username}")
-					if on_log:
-						on_log("Session restored successfully")
-					session_restored = True
-				else:
-					log_warning(f"[SESSION] Failed to restore session for {username}")
-					if on_log:
-						on_log("Session restoration failed")
-			except Exception as e:
-				log_warning(f"[SESSION] Session restoration error for {username}: {e}")
-				if on_log:
-					on_log(f"Session restoration error: {e}")
-	else:
-		log_info(f"[DEBUG] No valid sessionid found in persisted_settings")
+	# SMART SESSION RESTORATION: Use intelligent session restoration with auto-save
+	session_restored = smart_session_restoration_with_save(cl, username, persisted_settings, session_store, on_log)
 	
 	# Initialize auth variable to None
 	auth = None
@@ -973,6 +934,61 @@ async def run_instagrapi_upload_async(account_details: Dict, videos: List, video
 
 
 # =========================
+# Smart Session Restoration with Auto-Save
+# =========================
+
+def smart_session_restoration_with_save(cl, username: str, persisted_settings: Optional[Dict], session_store, on_log: Optional[Callable[[str], None]] = None) -> bool:
+	"""
+	Smart session restoration that:
+	1. Attempts to restore from bundle if valid
+	2. Automatically saves refreshed session after successful restoration
+	3. Returns True if session was successfully restored, False otherwise
+	"""
+	session_restored = False
+	
+	# Check if we have a valid session bundle
+	if persisted_settings and persisted_settings.get('authorization_data', {}).get('sessionid'):
+		sessionid = persisted_settings['authorization_data']['sessionid']
+		import urllib.parse
+		sessionid = urllib.parse.unquote(sessionid)
+		
+		if isinstance(sessionid, str) and len(sessionid) > 30:
+			try:
+				log_info(f"[SESSION] Attempting to restore session for {username}")
+				if on_log:
+					on_log(f"Restoring session from bundle...")
+				
+				result = cl.login_by_sessionid(sessionid)
+				if result:
+					log_info(f"[SESSION] Successfully restored session for {username}")
+					if on_log:
+						on_log("Session restored successfully")
+					session_restored = True
+					
+					# CRITICAL: Save refreshed session after successful restoration
+					try:
+						settings = cl.get_settings()  # type: ignore[attr-defined]
+						session_store.save(username, settings)
+						log_info("[SESSION] Restored session saved to bundle")
+						if on_log:
+							on_log("Restored session saved")
+					except Exception as e:
+						log_warning(f"[SESSION] Failed to save restored session: {e}")
+				else:
+					log_warning(f"[SESSION] Failed to restore session for {username}")
+					if on_log:
+						on_log("Session restoration failed")
+			except Exception as e:
+				log_warning(f"[SESSION] Session restoration error for {username}: {e}")
+				if on_log:
+					on_log(f"Session restoration error: {e}")
+	else:
+		log_info(f"[SESSION] No persisted session data found for {username}")
+	
+	return session_restored
+
+
+# =========================
 # Photo upload implementation
 # =========================
 
@@ -1062,47 +1078,8 @@ def _sync_photo_upload_impl(account_details: Dict, photo_files_to_upload: List[s
 			on_log(f"Failed to create client: {e}")
 		return ("failed", 0, 1)
 
-	# CRITICAL: Try to restore session from bundle BEFORE login
-	session_restored = False
-	
-	# DEBUG: Log persisted_settings structure
-	log_info(f"[DEBUG] persisted_settings keys: {list(persisted_settings.keys()) if persisted_settings else 'None'}")
-	if persisted_settings:
-		log_info(f"[DEBUG] authorization_data keys: {list(persisted_settings.get('authorization_data', {}).keys())}")
-		sessionid_debug = persisted_settings.get('authorization_data', {}).get('sessionid')
-		log_info(f"[DEBUG] sessionid type: {type(sessionid_debug)}, value: {str(sessionid_debug)[:50] if sessionid_debug else 'None'}...")
-	
-	if persisted_settings and persisted_settings.get('authorization_data', {}).get('sessionid'):
-		sessionid = persisted_settings['authorization_data']['sessionid']
-		# Decode URL-encoded sessionid
-		import urllib.parse
-		sessionid = urllib.parse.unquote(sessionid)
-		if isinstance(sessionid, str) and len(sessionid) > 30:
-			try:
-				log_info(f"[SESSION] Attempting to restore session for {username}")
-				if on_log:
-					on_log(f"Restoring session from bundle...")
-				
-				# Try to restore session using sessionid
-				log_info(f"[DEBUG] About to call login_by_sessionid with sessionid: {sessionid[:20]}...")
-				log_info(f"[DEBUG] Client settings keys: {list(cl.settings.keys()) if hasattr(cl, 'settings') and cl.settings else 'No settings'}")
-				result = cl.login_by_sessionid(sessionid)
-				log_info(f"[DEBUG] login_by_sessionid result: {result}")
-				if result:
-					log_info(f"[SESSION] Successfully restored session for {username}")
-					if on_log:
-						on_log("Session restored successfully")
-					session_restored = True
-				else:
-					log_warning(f"[SESSION] Failed to restore session for {username}")
-					if on_log:
-						on_log("Session restoration failed")
-			except Exception as e:
-				log_warning(f"[SESSION] Session restoration error for {username}: {e}")
-				if on_log:
-					on_log(f"Session restoration error: {e}")
-	else:
-		log_info(f"[DEBUG] No valid sessionid found in persisted_settings")
+	# SMART SESSION RESTORATION: Use intelligent session restoration with auto-save
+	session_restored = smart_session_restoration_with_save(cl, username, persisted_settings, session_store, on_log)
 	
 	# Initialize auth variable to None
 	auth = None

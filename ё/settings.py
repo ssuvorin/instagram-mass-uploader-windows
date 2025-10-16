@@ -108,8 +108,8 @@ WSGI_APPLICATION = 'instagram_uploader.wsgi.application'
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
     # Use persistent connections with health checks for long-running async tasks
-    # 'conn_max_age' can be overridden via env var; default to 600s
-    DB_CONN_MAX_AGE = int(os.environ.get('DB_CONN_MAX_AGE', '600'))
+    # 'conn_max_age' can be overridden via env var; default to 300s (reduced from 600s)
+    DB_CONN_MAX_AGE = int(os.environ.get('DB_CONN_MAX_AGE', '300'))
     DATABASES = {
         'default': dj_database_url.parse(
             DATABASE_URL,
@@ -117,6 +117,12 @@ if DATABASE_URL:
             ssl_require=False,
         )
     }
+    # Add connection pool settings to prevent connection exhaustion
+    DATABASES['default']['OPTIONS'] = DATABASES['default'].get('OPTIONS', {})
+    DATABASES['default']['OPTIONS'].update({
+        'MAX_CONNS': 5,  # Limit concurrent connections per process
+        'MIN_CONNS': 1,  # Minimum connections to maintain
+    })
     # Enable Django connection health checks for long-running tasks
     DATABASES['default']['CONN_HEALTH_CHECKS'] = True
     # Optional: pgBouncer transaction pooling compatibility
@@ -198,6 +204,12 @@ WORKER_API_TOKEN = os.environ.get('WORKER_API_TOKEN', '')
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/login/'
+
+# Session settings to prevent database connection issues
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+SESSION_COOKIE_AGE = 3600  # 1 hour
+SESSION_SAVE_EVERY_REQUEST = False
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 # File upload settings
 DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100 MB

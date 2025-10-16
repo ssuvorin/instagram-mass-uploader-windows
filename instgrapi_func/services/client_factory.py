@@ -156,6 +156,33 @@ class IGClientFactory:
         if session_settings:
             try:
                 cl.set_settings(session_settings)
+                
+                # CRITICAL: Try to restore session from bundle if valid sessionid exists
+                if session_settings.get('authorization_data', {}).get('sessionid'):
+                    sessionid = session_settings['authorization_data']['sessionid']
+                    import urllib.parse
+                    sessionid = urllib.parse.unquote(sessionid)
+                    
+                    if isinstance(sessionid, str) and len(sessionid) > 30:
+                        try:
+                            # Attempt to restore session using sessionid
+                            result = cl.login_by_sessionid(sessionid)
+                            if result:
+                                # Session restored successfully - save refreshed session
+                                try:
+                                    from .session_store import DjangoDeviceSessionStore
+                                    # Extract username from restored client (login_by_sessionid sets self.username automatically)
+                                    username = getattr(cl, 'username', None)
+                                    
+                                    if username:
+                                        session_store = DjangoDeviceSessionStore()
+                                        refreshed_settings = cl.get_settings()
+                                        session_store.save(username, refreshed_settings)
+                                        logging.getLogger('insta.auth').info(f"[SESSION] Restored and saved session for {username}")
+                                except Exception as save_e:
+                                    logging.getLogger('insta.auth').warning(f"[SESSION] Failed to save restored session: {save_e}")
+                        except Exception as restore_e:
+                            logging.getLogger('insta.auth').warning(f"[SESSION] Session restoration error: {restore_e}")
             except Exception:
                 pass
 

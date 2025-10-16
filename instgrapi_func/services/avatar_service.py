@@ -342,6 +342,18 @@ class AvatarService:
                         if on_log:
                             on_log("Session restored successfully")
                         session_restored = True
+                        
+                        # CRITICAL: Save refreshed session after successful restoration
+                        try:
+                            from instgrapi_func.services.session_store import DjangoDeviceSessionStore
+                            session_store = DjangoDeviceSessionStore()
+                            settings = cl.get_settings()  # type: ignore[attr-defined]
+                            session_store.save(username, settings)
+                            log.info("[SESSION] Restored session saved to bundle")
+                            if on_log:
+                                on_log("Restored session saved")
+                        except Exception as e:
+                            log.warning(f"[SESSION] Failed to save restored session: {e}")
                     else:
                         log.warning(f"[SESSION] Failed to restore session for {username}")
                         if on_log:

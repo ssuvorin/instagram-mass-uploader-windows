@@ -15,8 +15,14 @@ class RequestLoggingMiddleware:
         start_time = time.time()
         log_prefix = f"[{request.method}]"
         
-        # Log request details
-        user_info = f"User: {request.user}" if request.user.is_authenticated else "User: Anonymous"
+        # Log request details with safe user info retrieval
+        try:
+            user_info = f"User: {request.user}" if request.user.is_authenticated else "User: Anonymous"
+        except Exception as e:
+            # Handle database connection errors gracefully
+            logger.warning(f"Failed to get user info: {e}")
+            user_info = "User: Unknown (DB Error)"
+        
         msg_req = f"{log_prefix} Request received: {request.path} - {user_info}"
         if SILENT_REQUEST_LOGS:
             logger.info(msg_req)
@@ -24,7 +30,13 @@ class RequestLoggingMiddleware:
             print(msg_req)
         
         # Process request
-        response = self.get_response(request)
+        try:
+            response = self.get_response(request)
+        except Exception as e:
+            logger.error(f"Request processing failed: {e}")
+            # Return a basic error response if middleware fails
+            from django.http import HttpResponseServerError
+            response = HttpResponseServerError("Internal Server Error")
         
         # Log response details
         duration = round((time.time() - start_time) * 1000)
