@@ -119,10 +119,8 @@ if DATABASE_URL:
     }
     # Add connection pool settings to prevent connection exhaustion
     DATABASES['default']['OPTIONS'] = DATABASES['default'].get('OPTIONS', {})
-    DATABASES['default']['OPTIONS'].update({
-        'MAX_CONNS': 5,  # Limit concurrent connections per process
-        'MIN_CONNS': 1,  # Minimum connections to maintain
-    })
+    # Note: MAX_CONNS/MIN_CONNS are not valid psycopg2 options
+    # Connection pooling should be handled at the database level (pgBouncer)
     # Enable Django connection health checks for long-running tasks
     DATABASES['default']['CONN_HEALTH_CHECKS'] = True
     # Optional: pgBouncer transaction pooling compatibility
