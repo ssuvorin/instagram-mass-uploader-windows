@@ -109,6 +109,9 @@ def add_bulk_videos(request, task_id):
                 
                 messages.success(request, f'Added {len(files)} videos to task "{task.name}"')
                 
+                # ИСПРАВЛЕНИЕ: Назначаем видео аккаунтам сразу после добавления
+                assign_videos_to_accounts(task)
+                
                 # Check if task already has titles
                 if task.titles.exists():
                     return redirect('bulk_upload_detail', task_id=task.id)
