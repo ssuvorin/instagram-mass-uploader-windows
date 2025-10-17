@@ -107,9 +107,7 @@ WSGI_APPLICATION = 'instagram_uploader.wsgi.application'
 # Prefer DATABASE_URL (PostgreSQL) when provided; otherwise, fallback to SQLite
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
-    # Use persistent connections with health checks for long-running async tasks
-    # 'conn_max_age' can be overridden via env var; default to 300s (reduced from 600s)
-    DB_CONN_MAX_AGE = int(os.environ.get('DB_CONN_MAX_AGE', '300'))
+    DB_CONN_MAX_AGE = int(os.environ.get('DB_CONN_MAX_AGE', '60'))
     DATABASES = {
         'default': dj_database_url.parse(
             DATABASE_URL,
@@ -117,21 +115,26 @@ if DATABASE_URL:
             ssl_require=False,
         )
     }
-    # Add connection pool settings to prevent connection exhaustion
+
     DATABASES['default']['OPTIONS'] = DATABASES['default'].get('OPTIONS', {})
-    # Note: MAX_CONNS/MIN_CONNS are not valid psycopg2 options
-    # Connection pooling should be handled at the database level (pgBouncer)
-    # Enable Django connection health checks for long-running tasks
+    app_name = os.environ.get('DB_APPLICATION_NAME', 'instagram_uploader')
+    DATABASES['default']['OPTIONS']['application_name'] = app_name
+    DATABASES['default']['OPTIONS']['connect_timeout'] = int(os.environ.get('DB_CONN_TIMEOUT', '30'))
     DATABASES['default']['CONN_HEALTH_CHECKS'] = True
-    # Optional: pgBouncer transaction pooling compatibility
-    # Set via env PGBOUNCER_MODE=transaction to document expected setup
+
     PGBOUNCER_MODE = os.environ.get('PGBOUNCER_MODE', '').lower()
+
     if PGBOUNCER_MODE == 'transaction':
-        # Typically no code change is needed; ensure server-side settings align.
-        # Here we document with a flag to aid debugging.
-        DATABASES['default']['OPTIONS'] = DATABASES['default'].get('OPTIONS', {})
-        # Example placeholder for transaction mode specific options if needed later
-        DATABASES['default']['OPTIONS'].setdefault('application_name', 'instagram_uploader_async')
+        # ВАЖНО: для PgBouncer transaction pooling
+        DATABASES['default']['CONN_MAX_AGE'] = 0
+        # Никаких ручных autocommit/isolation_level
+        DATABASES['default']['OPTIONS'].pop('autocommit', None)
+        DATABASES['default']['OPTIONS'].pop('isolation_level', None)
+
+    elif PGBOUNCER_MODE == 'session':
+        DATABASES['default']['CONN_MAX_AGE'] = min(DB_CONN_MAX_AGE, 300)
+
+    DATABASES['default']['CONN_MAX_RETRIES'] = int(os.environ.get('DB_CONN_RETRIES', '3'))
 else:
     # Use DATABASE_PATH environment variable if set, otherwise use default location
     DATABASE_PATH = os.environ.get('DATABASE_PATH', BASE_DIR / 'db.sqlite3')
@@ -380,3 +383,7 @@ LOGGING = {
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 WHITENOISE_USE_FINDERS = True
 WHITENOISE_AUTOREFRESH = True
+CONN_MAX_AGE = 0
+CONN_HEALTH_CHECKS = True
+DISABLE_SERVER_SIDE_CURSORS = True
+

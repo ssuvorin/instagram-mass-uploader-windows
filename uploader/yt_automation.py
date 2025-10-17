@@ -14,6 +14,7 @@ from typing import List, Optional, Dict
 from playwright.async_api import Page
 
 from .logging_utils import log_info, log_warning, log_error
+from .audio_recaptcha_solver import solve_recaptcha_with_audio
 
 
 # Robust selector sets with fallbacks - Universal XPath selectors
@@ -25,9 +26,11 @@ YOUTUBE_SELECTORS: Dict[str, List[str]] = {
         '//input[@name="identifier"]',
     ],
     'email_next': [
-        '//button[@jsname="LgbsSe" and contains(@class, "VfPpkd-LgbsSe")]',
+        '//button[@type="submit" and contains(@class, "VfPpkd-LgbsSe")]',
         '//div[@id="identifierNext"]//button',
         '//button[contains(@class, "VfPpkd-LgbsSe") and (contains(., "Next") or contains(., "Siguiente") or contains(., "Weiter") or contains(., "Suivant"))]',
+        '//button[@type="submit"]',
+        '//button[contains(@class, "VfPpkd-LgbsSe")]',
     ],
     'password_input': [
         '//input[@type="password" and @name="Passwd"]',
@@ -35,9 +38,11 @@ YOUTUBE_SELECTORS: Dict[str, List[str]] = {
         '//input[@name="Passwd"]',
     ],
     'password_next': [
-        '//button[@jsname="LgbsSe" and contains(@class, "VfPpkd-LgbsSe")]',
+        '//button[@type="submit" and contains(@class, "VfPpkd-LgbsSe")]',
         '//div[@id="passwordNext"]//button',
         '//button[contains(@class, "VfPpkd-LgbsSe") and (contains(., "Next") or contains(., "Siguiente") or contains(., "Weiter") or contains(., "Suivant"))]',
+        '//button[@type="submit"]',
+        '//button[contains(@class, "VfPpkd-LgbsSe")]',
     ],
 
     # Verification - Universal selectors
@@ -213,12 +218,12 @@ async def login_to_google(page: Page, email: str, password: str, proxy: Optional
         if not next_btn:
             raise RuntimeError('Next button (email) not found')
         await next_btn.click()
-        await human_like_delay(3000, 5000)
+        await human_like_delay(10000, 20000)  # REDUCED from 3-5s to 1-2s for faster processingслуф
 
         # Check for reCaptcha after email submission
         log_info('[YT LOGIN] Checking for reCaptcha after email submission...')
         await _handle_recaptcha_check(page, proxy=proxy, user_agent=user_agent)
-        await human_like_delay(2000, 3500)
+        await human_like_delay(4000, 6000)  # REDUCED from 2-3.5s to 1-2s for faster processing
         log_info('[YT LOGIN] reCaptcha check completed, looking for password field...')
 
         pwd_input = await find_element_by_selectors(page, YOUTUBE_SELECTORS['password_input'], timeout=40000)
@@ -265,7 +270,7 @@ async def login_to_google(page: Page, email: str, password: str, proxy: Optional
             return True
         except Exception as e:
             log_warning(f"[YT LOGIN] Error confirming login: {e}; proceeding optimistically")
-                return True
+            return True
         return True
     except Exception as e:
         log_error(f"[YT LOGIN] Error: {e}")
@@ -273,12 +278,90 @@ async def login_to_google(page: Page, email: str, password: str, proxy: Optional
 
 
 async def _handle_recaptcha_check(page: Page, proxy: Optional[Dict] = None, user_agent: Optional[str] = None) -> None:
-    """Handle reCaptcha detection and solving using RuCaptcha API"""
+    """Handle reCaptcha detection and solving using RuCaptcha API with 400 error prevention"""
     try:
         log_info('[YT RECAPTCHA] Starting reCaptcha detection...')
         
-        # Wait a bit for page to load
-        await human_like_delay(12000, 15000)
+        # Debug page structure before processing
+        await debug_400_error(page)
+        
+        # Wait a bit for page to load - REDUCED from 12-15s to 2-3s for faster processing
+        await human_like_delay(2000, 3000)
+        
+        # JAVASCRIPT CHECK: Use JavaScript to detect reCaptcha more accurately
+        try:
+            recaptcha_detected = await page.evaluate("""
+                () => {
+                    // Check for reCaptcha configuration
+                    if (typeof ___grecaptcha_cfg !== 'undefined' && ___grecaptcha_cfg.clients) {
+                        const clients = Object.entries(___grecaptcha_cfg.clients);
+                        if (clients.length > 0) {
+                            return {
+                                found: true,
+                                count: clients.length,
+                                clients: clients.map(([id, client]) => ({
+                                    id: id,
+                                    version: id >= 10000 ? 'V3' : 'V2'
+                                }))
+                            };
+                        }
+                    }
+                    
+                    // Fallback: check for DOM elements
+                    const iframes = document.querySelectorAll('iframe[src*="recaptcha"]');
+                    const textareas = document.querySelectorAll('textarea[name="g-recaptcha-response"]');
+                    const divs = document.querySelectorAll('div[data-site-key]');
+                    
+                    if (iframes.length > 0 || textareas.length > 0 || divs.length > 0) {
+                        return {
+                            found: true,
+                            count: iframes.length + textareas.length + divs.length,
+                            dom_elements: {
+                                iframes: iframes.length,
+                                textareas: textareas.length,
+                                divs: divs.length
+                            }
+                        };
+                    }
+                    
+                    return { found: false };
+                }
+            """)
+            
+            if recaptcha_detected['found']:
+                log_warning(f'[YT RECAPTCHA] reCaptcha detected via JavaScript: {recaptcha_detected}')
+            else:
+                log_info('[YT RECAPTCHA] No reCaptcha detected via JavaScript, continuing...')
+                return
+                
+        except Exception as e:
+            log_warning(f'[YT RECAPTCHA] JavaScript check failed: {e}, falling back to DOM check...')
+            
+            # FALLBACK: DOM-based check if JavaScript fails
+            quick_indicators = [
+                '//iframe[contains(@src, "recaptcha")]',
+                '//textarea[@name="g-recaptcha-response"]',
+                '//div[@data-site-key]'
+            ]
+            
+            recaptcha_found = False
+            for indicator in quick_indicators:
+                try:
+                    element = page.locator(indicator).first
+                    if await element.is_visible():
+                        log_warning(f'[YT RECAPTCHA] reCaptcha detected with DOM check: {indicator}')
+                        recaptcha_found = True
+                        break
+                except Exception:
+                    continue
+            
+            # If no reCaptcha found in fallback check, exit early
+            if not recaptcha_found:
+                log_info('[YT RECAPTCHA] No reCaptcha detected in DOM check, continuing...')
+                return
+        
+        # DETAILED CHECK: Only if quick check found something, do detailed verification
+        log_info('[YT RECAPTCHA] Quick check found potential reCaptcha, doing detailed verification...')
         
         # Check for various reCaptcha indicators - Based on real HTML structure
         recaptcha_indicators = [
@@ -324,10 +407,37 @@ async def _handle_recaptcha_check(page: Page, proxy: Optional[Dict] = None, user
             log_info('[YT RECAPTCHA] No reCaptcha detected, continuing...')
             return
         
-        # Get site key from the page
+        # PRIMARY METHOD: Try audio challenge first (free and reliable)
+        log_info('[YT RECAPTCHA] Starting with audio challenge (primary method)...')
+        try:
+            audio_success = await solve_recaptcha_with_audio(page)
+            if audio_success:
+                log_info('[YT RECAPTCHA] Audio challenge solved successfully!')
+                # Wait for page to process the solution
+                await human_like_delay(5000, 9000)
+                
+                # Check if we're still on the same page (reCAPTCHA might have auto-submitted)
+                current_url = page.url
+                log_info(f'[YT RECAPTCHA] Current URL after audio success: {current_url}')
+                
+                # Only try to click if we're still on the reCAPTCHA page
+                if 'recaptcha' in current_url.lower():
+                    log_info('[YT RECAPTCHA] Still on reCAPTCHA page, attempting to proceed...')
+                    await _click_google_next_universal(page)
+                else:
+                    log_info('[YT RECAPTCHA] Page has already progressed, no need to click button')
+                
+                return
+            else:
+                log_warning('[YT RECAPTCHA] Audio challenge failed, trying RuCaptcha API...')
+        except Exception as audio_e:
+            log_warning(f'[YT RECAPTCHA] Audio challenge error: {audio_e}, trying RuCaptcha API...')
+        
+        # FALLBACK METHOD: RuCaptcha API when audio challenge fails
+        log_info('[YT RECAPTCHA] Falling back to RuCaptcha API...')
         site_key = await _extract_recaptcha_site_key(page)
         if not site_key:
-            log_error('[YT RECAPTCHA] Could not extract site key')
+            log_error('[YT RECAPTCHA] Could not extract site key for RuCaptcha fallback')
             return
         
         log_info(f'[YT RECAPTCHA] Site key extracted: {site_key}')
@@ -341,7 +451,7 @@ async def _handle_recaptcha_check(page: Page, proxy: Optional[Dict] = None, user
             log_info('[YT RECAPTCHA] No proxy provided; using proxyless solving via RuCaptcha')
         solution = await _solve_recaptcha_with_rucaptcha(page.url, site_key, proxy=proxy, user_agent=user_agent)
         if solution:
-            log_info('[YT RECAPTCHA] Successfully solved reCaptcha')
+            log_info('[YT RECAPTCHA] RuCaptcha API solved successfully')
             await _submit_recaptcha_solution(page, solution)
             
             # Wait for page to process the solution
@@ -349,16 +459,47 @@ async def _handle_recaptcha_check(page: Page, proxy: Optional[Dict] = None, user
             # Try to proceed by clicking primary action if present
             await _click_google_next_universal(page)
         else:
-            log_error('[YT RECAPTCHA] Failed to solve reCaptcha')
+            log_error('[YT RECAPTCHA] Both audio challenge and RuCaptcha API failed')
             
     except Exception as e:
         log_warning(f'[YT RECAPTCHA] Error handling reCaptcha: {e}')
 
 
 async def _extract_recaptcha_site_key(page: Page) -> str:
-    """Extract reCaptcha site key from the page"""
+    """Extract reCaptcha site key from the page using JavaScript and DOM methods"""
     try:
-        # Method 1: Try to find site key in script tags
+        # METHOD 1: JavaScript extraction from reCaptcha configuration (most reliable)
+        try:
+            site_key = await page.evaluate("""
+                () => {
+                    // Check reCaptcha configuration first
+                    if (typeof ___grecaptcha_cfg !== 'undefined' && ___grecaptcha_cfg.clients) {
+                        const clients = Object.entries(___grecaptcha_cfg.clients);
+                        for (const [id, client] of clients) {
+                            const objects = Object.entries(client).filter(([_, value]) => value && typeof value === 'object');
+                            for (const [toplevelKey, toplevel] of objects) {
+                                const found = Object.entries(toplevel).find(([_, value]) => (
+                                    value && typeof value === 'object' && 'sitekey' in value
+                                ));
+                                if (found) {
+                                    const [_, sublevel] = found;
+                                    return sublevel.sitekey;
+                                }
+                            }
+                        }
+                    }
+                    return null;
+                }
+            """)
+            
+            if site_key:
+                log_info(f'[YT RECAPTCHA] Site key found via JavaScript config: {site_key}')
+                return site_key
+                
+        except Exception as js_e:
+            log_warning(f'[YT RECAPTCHA] JavaScript config extraction failed: {js_e}')
+        
+        # METHOD 2: Try to find site key in script tags
         site_key_script = await page.evaluate('''
             () => {
                 const scripts = document.querySelectorAll('script');
@@ -388,7 +529,7 @@ async def _extract_recaptcha_site_key(page: Page) -> str:
             log_info(f'[YT RECAPTCHA] Found site key in scripts: {site_key_script}')
             return site_key_script
             
-        # Method 2: Try to find in data attributes (both formats)
+        # METHOD 3: Try to find in data attributes (both formats)
         site_key_data = await page.evaluate('''
             () => {
                 // Try data-site-key first (from real HTML)
@@ -411,7 +552,7 @@ async def _extract_recaptcha_site_key(page: Page) -> str:
             log_info(f'[YT RECAPTCHA] Found site key in data attribute: {site_key_data}')
             return site_key_data
             
-        # Method 3: Look for reCaptcha div with site key
+        # METHOD 4: Look for reCaptcha div with site key
         site_key_div = await page.evaluate('''
             () => {
                 const recaptchaDivs = document.querySelectorAll('div[class*="recaptcha"], div[id*="recaptcha"]');
@@ -427,7 +568,7 @@ async def _extract_recaptcha_site_key(page: Page) -> str:
             log_info(f'[YT RECAPTCHA] Found site key in div: {site_key_div}')
             return site_key_div
             
-        # Method 4: Look in iframe src
+        # METHOD 5: Look in iframe src
         site_key_iframe = await page.evaluate('''
             () => {
                 const iframes = document.querySelectorAll('iframe[src*="recaptcha"]');
@@ -564,102 +705,235 @@ async def _solve_recaptcha_with_rucaptcha(page_url: str, site_key: str, proxy: O
 
 
 async def _submit_recaptcha_solution(page: Page, solution: str) -> None:
-    """Submit reCaptcha solution to the page"""
+    """ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ функции отправки reCAPTCHA"""
     try:
-        log_info(f'[YT RECAPTCHA] Submitting solution: {solution[:20]}...')
+        log_info(f'[YT RECAPTCHA] FINAL FIX: Submitting solution: {solution[:20]}...')
         
-        # Method 1: Try to find the reCaptcha response textarea
-        response_textarea = page.locator('textarea[name="g-recaptcha-response"]').first
-        if await response_textarea.is_visible():
-            await response_textarea.fill(solution)
-            log_info('[YT RECAPTCHA] Solution submitted to textarea')
-            
-            # Try to trigger form submission
-            await page.evaluate('''
-                () => {
-                    // Try to find and click submit button - Universal selectors
-                    const submitButtons = document.querySelectorAll('button[type="submit"], input[type="submit"]');
-                    for (let btn of submitButtons) {
-                        if (btn.offsetParent !== null) { // Check if visible
-                            btn.click();
-                            return 'submit_clicked';
-                        }
-                    }
-                    
-                    // Try to find next buttons in different languages
-                    const nextButtons = document.querySelectorAll('button');
-                    for (let btn of nextButtons) {
-                        const text = btn.textContent || btn.innerText || '';
-                        if (text.includes('Next') || text.includes('Siguiente') || text.includes('Weiter') || text.includes('Suivant')) {
-                            if (btn.offsetParent !== null) {
-                                btn.click();
-                                return 'next_clicked';
-                            }
-                        }
-                    }
-                    
-                    // Try to trigger form submission
-                    const forms = document.querySelectorAll('form');
-                    for (let form of forms) {
-                        form.submit();
-                        return 'form_submitted';
-                    }
-                    
-                    return 'no_submit_found';
-                }
-            ''')
-            
-            await human_like_delay(3000, 6000)
-            return
+        # ШАГ 1: Вставить токен (ваш код уже работает)
+        insert_result = await page.evaluate(f'''
+            () => {{
+                const textarea = document.getElementById('g-recaptcha-response') ||
+                               document.querySelector('textarea[name="g-recaptcha-response"]');
+                if (textarea) {{
+                    textarea.value = '{solution}';
+                    const event = new Event('change', {{ bubbles: true }});
+                    textarea.dispatchEvent(event);
+                    return 'token_inserted';
+                }}
+                return 'textarea_not_found';
+            }}
+        ''')
+        log_info(f'[YT RECAPTCHA] Token insert: {insert_result}')
         
-        # Method 2: Try to submit via JavaScript callback
+        # ШАГ 2: Обязательная задержка 
+        await asyncio.sleep(3)
+        
+        # ШАГ 3: Поиск callback (ваш код уже работает)
         callback_result = await page.evaluate(f'''
             () => {{
-                try {{
-                    // Find callback function
-                    const callbackElements = document.querySelectorAll('[data-callback]');
-                    for (let element of callbackElements) {{
-                        const callbackName = element.getAttribute('data-callback');
-                        if (callbackName && window[callbackName]) {{
-                            window[callbackName]('{solution}');
-                            return 'callback_executed';
-                        }}
-                    }}
+                const solution = '{solution}';
+                if (typeof ___grecaptcha_cfg !== 'undefined' && ___grecaptcha_cfg.clients) {{
+                    const clients = ___grecaptcha_cfg.clients;
+                    const paths = ['callback', 'L.L.callback', 'I.I.callback', 'A.A.callback', 'D.D.callback'];
                     
-                    // Try to trigger grecaptcha callback manually
-                    if (window.grecaptcha) {{
-                        // Find all reCaptcha widgets
-                        const widgets = document.querySelectorAll('.g-recaptcha');
-                        for (let widget of widgets) {{
-                            const widgetId = widget.getAttribute('data-widget-id') || 
-                                           widget.querySelector('[data-widget-id]')?.getAttribute('data-widget-id');
-                            if (widgetId) {{
-                                // Try to execute callback
-                                const callback = widget.getAttribute('data-callback');
-                                if (callback && window[callback]) {{
-                                    window[callback]('{solution}');
-                                    return 'grecaptcha_callback_executed';
+                    for (let clientId in clients) {{
+                        for (let path of paths) {{
+                            let current = clients[clientId];
+                            const parts = path.split('.');
+                            for (let part of parts) {{
+                                current = current[part];
+                                if (!current) break;
+                            }}
+                            if (typeof current === 'function') {{
+                                current(solution);
+                                return `callback_executed_${{path}}`;
+                            }}
                                 }}
                             }}
                         }}
-                    }}
-                    
-                    return 'no_callback_found';
-                }} catch (e) {{
-                    return 'error: ' + e.message;
+                return 'no_callback_found';
+            }}
+        ''')
+        log_info(f'[YT RECAPTCHA] Callback result: {callback_result}')
+        
+        # ШАГ 4: КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ - ВСЕГДА пытаемся кликнуть кнопку
+        await asyncio.sleep(1)
+        button_success = await _click_google_recaptcha_button_fixed(page)
+        
+        if button_success:
+            log_info('[YT RECAPTCHA] FIXED: Button clicked successfully!')
+        else:
+            log_warning('[YT RECAPTCHA] FIXED: Button click failed, using fallback...')
+            # Fallback: form.submit()
+            await page.evaluate(f'''
+                () => {{
+                    const textarea = document.getElementById('g-recaptcha-response');
+                    if (textarea && textarea.value === '{solution}') {{
+                        const form = textarea.closest('form');
+                        if (form) {{
+                            form.submit();
+                        }}
                 }}
             }}
         ''')
         
-        log_info(f'[YT RECAPTCHA] Callback result: {callback_result}')
+        # ШАГ 5: Ждем результата
+        await asyncio.sleep(5)
         
-        # Method 3: Click primary action (Next) using universal XPaths
-        await _click_google_next_universal(page)
+        # ШАГ 6: Проверяем что нет 400 ошибки
+        current_url = page.url
+        page_content = await page.content()
         
-        await human_like_delay(3000, 6000)
+        if '400' in page_content and 'error' in page_content.lower():
+            log_error('[YT RECAPTCHA] DETECTED 400 error on page')
+            return False
+        
+        log_info(f'[YT RECAPTCHA] FINAL FIX completed. URL: {current_url}')
         
     except Exception as e:
-        log_warning(f'[YT RECAPTCHA] Error submitting solution: {e}')
+        log_error(f'[YT RECAPTCHA] Error in FINAL FIX: {e}')
+
+
+async def debug_400_error(page: Page) -> None:
+    """Debug function to analyze causes of 400 errors"""
+    try:
+        debug_info = await page.evaluate('''
+            () => {
+                const info = {
+                    forms: [],
+                    recaptcha_elements: [],
+                    hidden_inputs: [],
+                    current_url: window.location.href,
+                    page_title: document.title
+                };
+                
+                // Analyze forms and hidden fields
+                document.querySelectorAll('form').forEach((form, index) => {
+                    const hiddenInputs = [];
+                    form.querySelectorAll('input[type="hidden"]').forEach(input => {
+                        hiddenInputs.push({
+                            name: input.name,
+                            value: input.value ? input.value.substring(0, 50) + '...' : ''
+                        });
+                    });
+                    
+                    info.forms.push({
+                        index: index,
+                        action: form.action,
+                        method: form.method,
+                        elements_count: form.elements.length,
+                        hidden_inputs: hiddenInputs
+                    });
+                });
+                
+                // Analyze reCAPTCHA elements
+                document.querySelectorAll('[data-site-key], .g-recaptcha, #g-recaptcha-response').forEach((el, index) => {
+                    info.recaptcha_elements.push({
+                        index: index,
+                        tag: el.tagName,
+                        id: el.id,
+                        class: el.className,
+                        site_key: el.getAttribute('data-site-key') || 'none'
+                    });
+                });
+                
+                return info;
+            }
+        ''')
+        
+        log_info(f'[YT DEBUG] Page analysis: {debug_info}')
+        
+    except Exception as e:
+        log_warning(f'[YT DEBUG] Error analyzing page: {e}')
+
+
+async def _click_google_recaptcha_button_fixed(page: Page) -> bool:
+    """ИСПРАВЛЕННАЯ функция поиска кнопки на странице reCAPTCHA Google"""
+    try:
+        log_info('[YT RECAPTCHA] Starting FIXED button search for Google reCAPTCHA page...')
+        
+        # Специальные селекторы для Google reCAPTCHA challenge page
+        recaptcha_page_selectors = [
+            # Google reCAPTCHA specific selectors
+            'button[type="submit"]',  # Стабильный селектор
+            '.VfPpkd-LgbsSe',
+            'button[type="submit"]',
+            'input[type="submit"]',
+            # Universal submit selectors
+            'button:has-text("Siguiente")',
+            'button:has-text("Next")',
+            'button:has-text("Continue")',
+            'button:has-text("Submit")',
+            'button:has-text("Далее")',
+            # CSS contains selectors
+            'button[class*="VfPpkd"]',
+            'button[class*="LgbsSe"]'
+        ]
+        
+        for selector in recaptcha_page_selectors:
+            try:
+                log_info(f'[YT RECAPTCHA] Trying selector: {selector}')
+                
+                if ':has-text(' in selector:
+                    # Playwright text selectors
+                    elements = await page.locator(selector).all()
+                else:
+                    # Regular CSS selectors
+                    elements = await page.query_selector_all(selector)
+                    
+                log_info(f'[YT RECAPTCHA] Found {len(elements)} elements with selector: {selector}')
+                
+                for element in elements:
+                    try:
+                        is_visible = await element.is_visible()
+                        if not is_visible:
+                            continue
+                            
+                        # Get text content
+                        if ':has-text(' not in selector:
+                            text = await element.inner_text() if element else ""
+                        else:
+                            text = await element.text_content() if element else ""
+                            
+                        log_info(f'[YT RECAPTCHA] Button text: "{text}" (visible: {is_visible})')
+                        
+                        # Click any visible submit button on reCAPTCHA page
+                        if (selector in ['button[type="submit"]', 'input[type="submit"]'] or
+                            any(word in text.lower() for word in ['siguiente', 'next', 'continue', 'submit', 'далее'])):
+                            
+                            log_info(f'[YT RECAPTCHA] CLICKING button: {selector} with text: {text}')
+                            await element.click()
+                            await asyncio.sleep(2)
+                            return True
+                            
+                    except Exception as e:
+                        log_warning(f'[YT RECAPTCHA] Error checking element: {e}')
+                        continue
+                        
+            except Exception as e:
+                log_warning(f'[YT RECAPTCHA] Error with selector {selector}: {e}')
+                continue
+        
+        # Last resort: try to click ANY visible button
+        try:
+            log_info('[YT RECAPTCHA] Last resort: clicking any visible button...')
+            all_buttons = await page.query_selector_all('button')
+            for button in all_buttons:
+                if await button.is_visible():
+                    text = await button.inner_text()
+                    log_info(f'[YT RECAPTCHA] Found visible button: "{text}"')
+                    await button.click()
+                    await asyncio.sleep(2)
+                    return True
+        except Exception as e:
+            log_warning(f'[YT RECAPTCHA] Last resort failed: {e}')
+        
+        log_warning('[YT RECAPTCHA] FIXED button search found NO clickable buttons')
+        return False
+        
+    except Exception as e:
+        log_error(f'[YT RECAPTCHA] Error in FIXED button search: {e}')
+        return False
 
 
 async def _handle_basic_verification(page: Page, password: str, proxy: Optional[Dict] = None, user_agent: Optional[str] = None) -> None:
@@ -708,16 +982,39 @@ async def _click_google_next_universal(page: Page) -> None:
     try:
         await human_like_delay(500, 1200)
 
-        # 1) Button by jsname and visible text in common languages
+        # Extended list of button texts in multiple languages
+        button_texts = [
+            'Next', 'Siguiente', 'Weiter', 'Suivant', 'Далее', 'Continuar', 
+            'Continue', 'Continuer', 'Продолжить', 'Submit', 'Enviar', 'Enviar',
+            'Confirmar', 'Confirm', 'Bestätigen', 'Confirmer', 'Подтвердить',
+            'Proceed', 'Proceder', 'Fortfahren', 'Procéder', 'Продолжить',
+            'Done', 'Hecho', 'Fertig', 'Terminé', 'Готово', 'Finalizar'
+        ]
+
+        # 1) Google-specific selectors first (most reliable for Google forms)
         next_locators = [
-            # Button with jsname and visible localized label
-            '//button[@jsname="LgbsSe" and .//span[contains(normalize-space(.), "Next") or contains(normalize-space(.), "Siguiente") or contains(normalize-space(.), "Weiter") or contains(normalize-space(.), "Suivant") or contains(normalize-space(.), "Далее")]]',
-            # Primary action container -> button
-            '//div[@jsname="Njthtb"]//button[@jsname="LgbsSe"]',
-            # Action footer with primary action label attribute
-            '//div[@data-primary-action-label]//button[@jsname="LgbsSe"]',
-            # Any visible Next-like button as a fallback
-            '//button[.//span[contains(., "Next") or contains(., "Siguiente") or contains(., "Weiter") or contains(., "Suivant") or contains(., "Далее")]]',
+            # Google-specific selectors (highest priority)
+            '//button[@type="submit"]',  # Стабильный селектор
+            '//button[contains(@class, "VfPpkd-LgbsSe")]',  # Google Material Design
+            '//button[@data-identifier]',  # Google forms identifier
+            '//button[@data-primary-action-label]',  # Google primary action
+            # Button by type and visible text
+            f'//button[@type="submit" and .//span[{" or ".join([f"contains(normalize-space(.), \"{text}\")" for text in button_texts])}]]',
+            # Button by type only
+            '//button[@type="submit"]',
+            '//input[@type="submit"]',
+            # Button by stable class patterns
+            '//button[contains(@class, "goog-button")]',
+            '//button[contains(@class, "submit")]',
+            # Button by role attribute
+            '//button[@role="button"]',
+            # Button by data attributes
+            '//button[@data-action]',
+            # Any visible Next-like button as fallback
+            f'//button[.//span[{" or ".join([f"contains(., \"{text}\")" for text in button_texts])}]]',
+            # Generic button selectors
+            '//button[contains(@class, "button")]',
+            '//button[contains(@class, "btn")]',
         ]
 
         for sel in next_locators:
@@ -732,15 +1029,60 @@ async def _click_google_next_universal(page: Page) -> None:
                 log_warning(f"[YT RECAPTCHA] Failed clicking selector {sel}: {e}")
                 continue
 
-        # As a last resort, try clicking any visible submit button
+        # 2) Fallback: Try clicking any visible button by Google-specific attributes
         try:
-            fallback_btn = page.locator('//button[@type="submit"]').first
-            if await fallback_btn.is_visible():
-                log_info('[YT RECAPTCHA] Clicking fallback submit button')
-                await fallback_btn.click()
-                await human_like_delay(2500, 5000)
+            fallback_selectors = [
+                'button[type="submit"]',  # Стабильный селектор
+                'button[data-identifier]',  # Google forms
+                'button[data-primary-action-label]',  # Google primary action
+                'button[type="submit"]',
+                'input[type="submit"]',
+                'button[role="button"]',
+                'button[data-action]'
+            ]
+            
+            for selector in fallback_selectors:
+                try:
+                    fallback_btn = page.locator(selector).first
+                    if await fallback_btn.is_visible():
+                        log_info(f"[YT RECAPTCHA] Clicked fallback button: {selector}")
+                        await fallback_btn.click()
+                        await human_like_delay(2500, 5000)
+                        return
+                except Exception:
+                    continue
         except Exception:
             pass
+
+        # 3) Last resort: Try to find any submit button by Google patterns
+        try:
+            submit_selectors = [
+                'button[type="submit"]',  # Стабильный селектор  # Google-specific
+                'button[data-identifier]',  # Google forms
+                'button[type="submit"]',
+                'input[type="submit"]',
+                'button[role="button"]',
+                'button[class*="submit"]',
+                'button[class*="button"]',
+                'button[class*="btn"]',
+                '.VfPpkd-LgbsSe',  # Google Material Design
+                'button[data-primary-action-label]'
+            ]
+            
+            for selector in submit_selectors:
+                try:
+                    btn = page.locator(selector).first
+                    if await btn.is_visible():
+                        await btn.click()
+                        log_info(f"[YT RECAPTCHA] Clicked last resort button: {selector}")
+                        await human_like_delay(2500, 5000)
+                        return
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+        log_warning("[YT RECAPTCHA] No suitable button found to click")
     except Exception as e:
         log_warning(f"[YT RECAPTCHA] Error in _click_google_next_universal: {e}")
 

@@ -1374,7 +1374,7 @@ async def run_async_yt_shorts_task(task_id: int) -> bool:
         import django
         from django.conf import settings
         if not settings.configured:
-            os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'youtube_uploader.settings')
+            os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'instagram_uploader.settings')
             django.setup()
         
         print(f"[START] Starting async bulk upload task {task_id}")
@@ -1501,7 +1501,7 @@ def run_async_yt_shorts_task_sync(task_id: int) -> bool:
                 import django
                 from django.conf import settings
                 if not settings.configured:
-                    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'youtube_uploader.settings')
+                    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'instagram_uploader.settings')
                     django.setup()
                 
                 # Создаем новый event loop для этого потока

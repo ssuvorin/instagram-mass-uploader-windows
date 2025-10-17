@@ -1078,8 +1078,37 @@ def _sync_photo_upload_impl(account_details: Dict, photo_files_to_upload: List[s
 			on_log(f"Failed to create client: {e}")
 		return ("failed", 0, 1)
 
-	# SMART SESSION RESTORATION: Use intelligent session restoration with auto-save
-	session_restored = smart_session_restoration_with_save(cl, username, persisted_settings, session_store, on_log)
+	# OPTIMIZED SESSION HANDLING: Try direct session use first, then restore if needed
+	session_restored = False
+	
+	# First, try to use existing session directly if we have valid sessionid
+	if persisted_settings and persisted_settings.get('authorization_data', {}).get('sessionid'):
+		sessionid = persisted_settings['authorization_data']['sessionid']
+		import urllib.parse
+		sessionid = urllib.parse.unquote(sessionid)
+		
+		if isinstance(sessionid, str) and len(sessionid) > 30:
+			try:
+				# Try to use session directly without restoration
+				cl.set_settings(persisted_settings)
+				user_info = cl.user_info_v1(cl.user_id)
+				if user_info and user_info.username == username:
+					log_info(f"[SESSION] Using existing session directly for {username}")
+					if on_log:
+						on_log("Using existing session directly")
+					session_restored = True
+				else:
+					log_info(f"[SESSION] Existing session invalid, attempting restoration for {username}")
+					if on_log:
+						on_log("Existing session invalid, attempting restoration")
+			except Exception as e:
+				log_info(f"[SESSION] Direct session use failed for {username}: {e}")
+				if on_log:
+					on_log(f"Direct session use failed: {e}")
+	
+	# If direct session use failed, try restoration
+	if not session_restored:
+		session_restored = smart_session_restoration_with_save(cl, username, persisted_settings, session_store, on_log)
 	
 	# Initialize auth variable to None
 	auth = None
