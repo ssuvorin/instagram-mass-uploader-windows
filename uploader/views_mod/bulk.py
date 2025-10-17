@@ -198,20 +198,37 @@ def assign_titles_to_videos(task):
 
 
 def assign_videos_to_accounts(task):
-    """Assign ALL videos to ALL accounts in a bulk upload task (each video goes to every account)"""
-    videos = task.videos.all()
+    """Assign videos to accounts with proper distribution"""
+    videos = list(task.videos.all())
     accounts = list(task.accounts.all())
     
     if not videos or not accounts:
         return
         
-    # Assign each video to ALL accounts (not distribute)
-    for video in videos:
-        if video.assigned_to is None:  # Only assign if not already assigned
-            # For now, we'll assign to the first account to maintain the current database structure
-            # But the actual upload logic will handle uploading to all accounts
-            video.assigned_to = accounts[0]
+    # ИСПРАВЛЕНИЕ: Правильное распределение видео между аккаунтами
+    if len(videos) < len(accounts):
+        # РЕЖИМ ПОВТОРЕНИЯ: видео меньше чем аккаунтов
+        for i, account in enumerate(accounts):
+            video_index = i % len(videos)  # Циклическое распределение
+            video = videos[video_index]
+            video.assigned_to = account
             video.save(update_fields=['assigned_to'])
+    else:
+        # РЕЖИМ УНИКАЛЬНОГО РАСПРЕДЕЛЕНИЯ: видео больше или равно аккаунтам
+        videos_per_account = len(videos) // len(accounts)
+        remainder = len(videos) % len(accounts)
+        
+        video_index = 0
+        for account_index, account in enumerate(accounts):
+            # Определяем количество видео для этого аккаунта
+            account_video_count = videos_per_account + (1 if account_index < remainder else 0)
+            
+            # Назначаем видео этому аккаунту
+            for _ in range(account_video_count):
+                if video_index < len(videos):
+                    videos[video_index].assigned_to = account
+                    videos[video_index].save(update_fields=['assigned_to'])
+                    video_index += 1
 
 
 def all_videos_assigned(task):
