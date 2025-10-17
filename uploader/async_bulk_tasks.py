@@ -694,9 +694,9 @@ class AsyncAccountProcessor:
             return 'failed', 0, 1
     
     async def _prepare_videos_for_account(self) -> List[VideoData]:
-        """Подготавливает видео для аккаунта"""
-        videos_for_account = list(self.task_data.videos)
-        random.shuffle(videos_for_account)
+        """Подготавливает видео для аккаунта с правильным распределением без повторений"""
+        # ИСПРАВЛЕНИЕ: Получаем уникальные видео для этого аккаунта
+        videos_for_account = await self._get_unique_videos_for_account()
         
         # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: titles_for_account содержит VideoTitle объекты, а не строки
         titles_for_account = list(self.task_data.titles) if self.task_data.titles else []
@@ -726,8 +726,42 @@ class AsyncAccountProcessor:
             if video.mentions:
                 await self.logger.log('INFO', f"[USERS] Mentions: {video.mentions}")
         
-        await self.logger.log('INFO', f"Prepared {len(videos_for_account)} videos for account")
+        await self.logger.log('INFO', f"Prepared {len(videos_for_account)} unique videos for account")
         return videos_for_account
+    
+    async def _get_unique_videos_for_account(self) -> List[VideoData]:
+        """Получает уникальные видео для аккаунта без повторений между аккаунтами"""
+        all_videos = list(self.task_data.videos)
+        all_accounts = list(self.task_data.accounts)
+        
+        # Находим индекс текущего аккаунта в списке
+        current_account_index = -1
+        for i, account in enumerate(all_accounts):
+            if account.id == self.account_task.account.id:
+                current_account_index = i
+                break
+        
+        if current_account_index == -1:
+            await self.logger.log('ERROR', f"Account {self.account_task.account.username} not found in task accounts")
+            return []
+        
+        # ИСПРАВЛЕНИЕ: Распределяем видео равномерно между аккаунтами
+        videos_per_account = len(all_videos) // len(all_accounts)
+        remainder = len(all_videos) % len(all_accounts)
+        
+        # Определяем диапазон видео для текущего аккаунта
+        start_index = current_account_index * videos_per_account + min(current_account_index, remainder)
+        end_index = start_index + videos_per_account + (1 if current_account_index < remainder else 0)
+        
+        # Получаем видео для текущего аккаунта
+        account_videos = all_videos[start_index:end_index]
+        
+        # Перемешиваем видео для случайности
+        random.shuffle(account_videos)
+        
+        await self.logger.log('INFO', f"[DISTRIBUTION] Account {self.account_task.account.username} gets videos {start_index+1}-{end_index} ({len(account_videos)} videos)")
+        
+        return account_videos
     
     async def _prepare_video_files(self, videos_for_account: List[VideoData]) -> Tuple[List[str], List[str]]:
         """Подготавливает файлы видео с уникализацией для каждого аккаунта"""
@@ -960,33 +994,47 @@ class AsyncTaskCoordinator:
 
             if use_rounds:
                 await logger.log('INFO', '[MODE] Using rounds-by-video scheduling (API)')
-                # In rounds mode: iterate videos; for each video, shuffle accounts and run per-account upload of only that video
-                # Build lightweight per-video task data clones
+                # ИСПРАВЛЕНИЕ: В rounds режиме распределяем видео равномерно между аккаунтами
                 all_video_datas = list(task_data.videos)
-                total_rounds = len(all_video_datas)
-                for round_index, video_data in enumerate(all_video_datas, start=1):
-                    await logger.log('INFO', f"[ROUND] Starting round {round_index}/{total_rounds}: {os.path.basename(video_data.file_path)}")
-                    # Shuffle accounts each round
-                    accounts_order = list(account_tasks)
-                    random.shuffle(accounts_order)
-                    # Build tasks for this round
-                    round_tasks = []
-                    for account_task in accounts_order:
-                        # Clone task_data with only this one video
-                        single_video_task_data = TaskData(
+                all_accounts = list(account_tasks)
+                
+                # Распределяем видео между аккаунтами
+                videos_per_account = len(all_video_datas) // len(all_accounts)
+                remainder = len(all_video_datas) % len(all_accounts)
+                
+                await logger.log('INFO', f"[ROUNDS] Distributing {len(all_video_datas)} videos among {len(all_accounts)} accounts")
+                await logger.log('INFO', f"[ROUNDS] Each account gets {videos_per_account} videos, {remainder} accounts get 1 extra")
+                
+                # Создаем задачи для каждого аккаунта с его уникальными видео
+                tasks = []
+                for account_index, account_task in enumerate(all_accounts):
+                    # Определяем диапазон видео для этого аккаунта
+                    start_index = account_index * videos_per_account + min(account_index, remainder)
+                    end_index = start_index + videos_per_account + (1 if account_index < remainder else 0)
+                    
+                    # Получаем видео для этого аккаунта
+                    account_videos = all_video_datas[start_index:end_index]
+                    
+                    if account_videos:  # Только если есть видео для аккаунта
+                        await logger.log('INFO', f"[ROUNDS] Account {account_task.account.username} gets videos {start_index+1}-{end_index} ({len(account_videos)} videos)")
+                        
+                        # Создаем task_data с уникальными видео для этого аккаунта
+                        account_task_data = TaskData(
                             id=task_data.id,
                             name=task_data.name,
                             status=task_data.status,
                             accounts=task_data.accounts,
-                            videos=[video_data],
+                            videos=account_videos,
                             titles=task_data.titles,
                         )
-                        processor = AsyncAccountProcessor(account_task, single_video_task_data, logger)
-                        coro = self._process_account_with_semaphore(processor, account_task)
-                        round_tasks.append(coro)
-                    # Run this round with concurrency control
-                    await logger.log('INFO', f"[ROUND] Dispatching {len(round_tasks)} accounts for round {round_index}")
-                    _ = await asyncio.gather(*round_tasks, return_exceptions=True)
+                        
+                        processor = AsyncAccountProcessor(account_task, account_task_data, logger)
+                        task_coroutine = self._process_account_with_semaphore(processor, account_task, start_delay=account_index * 2.0)
+                        tasks.append(task_coroutine)
+                
+                # Запускаем все задачи параллельно
+                await logger.log('INFO', f"[ROUNDS] Starting {len(tasks)} account tasks with unique video distribution")
+                results = await asyncio.gather(*tasks, return_exceptions=True)
             else:
                 # Создаем задачи для всех аккаунтов (default) with staggered start
                 tasks = []

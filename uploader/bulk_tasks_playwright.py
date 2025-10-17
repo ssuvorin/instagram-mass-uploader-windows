@@ -1408,11 +1408,9 @@ def run_bulk_upload_task(task_id):
                 log_warning(f"[WARN] [CLEANUP] Finally cleanup failed for original video files: {str(cleanup_error)}", LogCategories.CLEANUP)
 
 def process_account_videos(account_task, task, all_videos, all_titles, task_id):
-    """Process videos for a single account"""
-    # [OK] ВАЖНО: Каждый аккаунт получает ВСЕ видео задачи, а не только назначенные ему
-    # Это означает, что одно видео будет загружено на все аккаунты
-    videos_for_account = list(all_videos)
-    random.shuffle(videos_for_account)
+    """Process videos for a single account with proper distribution without repetitions"""
+    # ИСПРАВЛЕНИЕ: Получаем уникальные видео для этого аккаунта
+    videos_for_account = get_unique_videos_for_account(account_task, task, all_videos)
     
     titles_for_account = list(all_titles) if all_titles else []
     if titles_for_account:
@@ -1469,6 +1467,40 @@ def process_account_videos(account_task, task, all_videos, all_titles, task_id):
     cleanup_temp_files(temp_files)
     
     return result_type, completed, failed
+
+
+def get_unique_videos_for_account(account_task, task, all_videos):
+    """Получает уникальные видео для аккаунта без повторений между аккаунтами"""
+    all_accounts = list(task.accounts.all())
+    
+    # Находим индекс текущего аккаунта в списке
+    current_account_index = -1
+    for i, account_task_item in enumerate(all_accounts):
+        if account_task_item.id == account_task.id:
+            current_account_index = i
+            break
+    
+    if current_account_index == -1:
+        log_error(f"Account {account_task.account.username} not found in task accounts")
+        return []
+    
+    # ИСПРАВЛЕНИЕ: Распределяем видео равномерно между аккаунтами
+    videos_per_account = len(all_videos) // len(all_accounts)
+    remainder = len(all_videos) % len(all_accounts)
+    
+    # Определяем диапазон видео для текущего аккаунта
+    start_index = current_account_index * videos_per_account + min(current_account_index, remainder)
+    end_index = start_index + videos_per_account + (1 if current_account_index < remainder else 0)
+    
+    # Получаем видео для текущего аккаунта
+    account_videos = all_videos[start_index:end_index]
+    
+    # Перемешиваем видео для случайности
+    random.shuffle(account_videos)
+    
+    log_info(f"[DISTRIBUTION] Account {account_task.account.username} gets videos {start_index+1}-{end_index} ({len(account_videos)} videos)")
+    
+    return account_videos
 
 def prepare_video_files(videos_for_account, account_task):
     """Prepare video files for upload with uniquification"""
