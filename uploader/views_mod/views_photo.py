@@ -88,6 +88,15 @@ def create_photo_post(request):
 
             # Start background worker thread to post photos with session restoration
             def _worker(photo_account_pairs, saved_paths):
+                # Initialize statistics tracking
+                stats = {
+                    'total_accounts': len(photo_account_pairs),
+                    'successful_uploads': 0,
+                    'failed_uploads': 0,
+                    'processed_accounts': 0,
+                    'account_stats': {}  # per-account statistics
+                }
+                
                 try:
                     for idx, (photo_file, account, photo_caption) in enumerate(photo_account_pairs):
                         # human-like delay between accounts
@@ -97,7 +106,15 @@ def create_photo_post(request):
                         try:
                             acc = InstagramAccount.objects.get(id=account.id)
                         except Exception:
+                            stats['failed_uploads'] += 1
                             continue
+
+                        # Initialize account stats
+                        stats['account_stats'][acc.username] = {
+                            'successful': 0,
+                            'failed': 0,
+                            'photos_processed': 0
+                        }
 
                         def on_log(line: str):
                             # Forward to centralized logger
@@ -132,7 +149,12 @@ def create_photo_post(request):
                         
                         if not photo_path:
                             on_log(f"Error: Could not find saved path for photo {photo_file.name}")
+                            stats['failed_uploads'] += 1
+                            stats['account_stats'][acc.username]['failed'] += 1
                             continue
+
+                        stats['processed_accounts'] += 1
+                        stats['account_stats'][acc.username]['photos_processed'] += 1
 
                         try:
                             import asyncio
@@ -144,6 +166,14 @@ def create_photo_post(request):
                                 locations_list=[location],
                                 on_log=on_log,
                             ))
+                            # If we get here without exception, upload was successful
+                            stats['successful_uploads'] += 1
+                            stats['account_stats'][acc.username]['successful'] += 1
+                            on_log(f"[OK] Photo uploaded successfully: {photo_file.name}")
+                        except Exception as e:
+                            stats['failed_uploads'] += 1
+                            stats['account_stats'][acc.username]['failed'] += 1
+                            on_log(f"[FAIL] Upload failed: {str(e)}")
                         except RuntimeError:
                             # If we're inside an existing loop (unlikely here), fallback
                             loop = asyncio.new_event_loop()
@@ -156,8 +186,30 @@ def create_photo_post(request):
                                     locations_list=[location],
                                     on_log=on_log,
                                 ))
+                                # If we get here without exception, upload was successful
+                                stats['successful_uploads'] += 1
+                                stats['account_stats'][acc.username]['successful'] += 1
+                                on_log(f"[OK] Photo uploaded successfully: {photo_file.name}")
+                            except Exception as e:
+                                stats['failed_uploads'] += 1
+                                stats['account_stats'][acc.username]['failed'] += 1
+                                on_log(f"[FAIL] Upload failed: {str(e)}")
                             finally:
                                 loop.close()
+                
+                    # Log final statistics
+                    log_info(f"[STATS] [PHOTO_UPLOAD] Final Statistics:")
+                    log_info(f"   📊 Total accounts: {stats['total_accounts']}")
+                    log_info(f"   ✅ Successful uploads: {stats['successful_uploads']}")
+                    log_info(f"   ❌ Failed uploads: {stats['failed_uploads']}")
+                    log_info(f"   📈 Success rate: {(stats['successful_uploads'] / stats['total_accounts'] * 100):.1f}%" if stats['total_accounts'] > 0 else "   📈 Success rate: 0%")
+                    
+                    # Log per-account statistics
+                    log_info(f"[STATS] [ACCOUNT_BREAKDOWN]:")
+                    for username, account_stat in stats['account_stats'].items():
+                        success_rate = (account_stat['successful'] / account_stat['photos_processed'] * 100) if account_stat['photos_processed'] > 0 else 0
+                        log_info(f"   👤 {username}: {account_stat['successful']}/{account_stat['photos_processed']} ({success_rate:.1f}%)")
+                        
                 finally:
                     # best-effort cleanup: keep the uploaded media as audit by default
                     pass

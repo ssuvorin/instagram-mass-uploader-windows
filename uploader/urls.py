@@ -197,7 +197,7 @@ urlpatterns += [
     path('yt-shorts/bulk-upload/<int:task_id>/add-titles/', yt_shorts_bulk.add_yt_shorts_bulk_titles, name='yt_shorts_add_bulk_titles'),
     path('yt-shorts/bulk-upload/<int:task_id>/start/', yt_shorts_bulk.start_yt_shorts_bulk_upload, name='start_yt_shorts_bulk_upload'),
     path('yt-shorts/bulk-upload/<int:task_id>/delete/', yt_shorts_bulk.delete_yt_shorts_bulk_upload, name='delete_yt_shorts_bulk_upload'),
-    path('yt-shorts/bulk-upload/<int:task_id>/logs/', yt_shorts_bulk.get_yt_shorts_bulk_task_logs, name='yt_shorts_bulk_task_logs'),
+    path('yt-shorts/bulk-upload/<int:task_id>/logs/api/', yt_shorts_bulk.get_yt_shorts_bulk_task_logs, name='yt_shorts_bulk_task_logs'),
     path('yt-shorts/bulk-upload/video/<int:video_id>/edit/', yt_shorts_bulk.edit_yt_shorts_video_settings, name='edit_yt_shorts_video_settings'),
     path('yt-shorts/bulk-upload/<int:task_id>/bulk-edit-videos/', yt_shorts_bulk.bulk_edit_yt_shorts_videos, name='bulk_edit_yt_shorts_videos'),
     

@@ -45,15 +45,6 @@ except ImportError:
     except Exception as e:
         print(f"[SSL] Warning: Could not configure SSL settings: {e}")
 
-# Windows-specific fixes
-try:
-    from .windows_fixes import apply_windows_async_context_fix, log_windows_environment, is_windows
-    if is_windows():
-        apply_windows_async_context_fix()
-        log_windows_environment()
-except ImportError:
-    print("[WARN] Windows fixes module not available")
-
 # Django imports
 import django
 django.setup()
@@ -815,7 +806,7 @@ class AsyncYTAccountProcessor:
                     await self.logger.log('INFO', f"🐬 [YT_DOLPHIN_CONFIG] Using Dolphin API host: {dolphin_api_host}")
                     
                     # Initialize AsyncDolphinBrowser exactly like Instagram
-                    dolphin_browser = AsyncDolphinBrowser(dolphin_api_token=dolphin_token, dolphin_api_host=dolphin_api_host)
+                    dolphin_browser = AsyncDolphinBrowser(dolphin_api_token=dolphin_token)
                     
                     # Get Dolphin profile ID from account details
                     dolphin_profile_id = account_details.get('dolphin_profile_id')

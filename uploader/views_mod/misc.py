@@ -1855,9 +1855,13 @@ def _get_tiktok_api_base(request=None, persist: bool = True) -> str:
         return ctx.get('api_base')
 
 
-def _json_response(data: dict, status: int = 200):
+def _json_response(data, status: int = 200):
     from django.http import JsonResponse
-    return JsonResponse(data, status=status)
+    # Handle non-dict objects by setting safe=False
+    if isinstance(data, dict):
+        return JsonResponse(data, status=status)
+    else:
+        return JsonResponse(data, status=status, safe=False)
 
 
 @csrf_exempt

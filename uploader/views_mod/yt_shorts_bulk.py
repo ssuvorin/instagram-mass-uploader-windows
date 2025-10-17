@@ -331,6 +331,10 @@ def start_yt_shorts_bulk_upload(request, task_id):
         messages.warning(request, f'Task "{task.name}" is already running!')
         return redirect('yt_shorts_bulk_upload_detail', task_id=task.id)
 
+    # Update task status to RUNNING immediately
+    task.status = TaskStatus.RUNNING
+    task.save()
+    
     # Start async runner in background thread
     try:
         from uploader.yt_async_bulk_tasks import run_async_yt_shorts_task_sync
@@ -351,6 +355,9 @@ def start_yt_shorts_bulk_upload(request, task_id):
 
         messages.success(request, f'YouTube Shorts task "{task.name}" started successfully!')
     except Exception as e:
+        # If starting failed, revert status to PENDING
+        task.status = TaskStatus.PENDING
+        task.save()
         messages.error(request, f'Failed to start task: {str(e)}')
 
     return redirect('yt_shorts_bulk_upload_detail', task_id=task.id)

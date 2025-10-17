@@ -208,7 +208,7 @@ class YouTubeUploader:
             logger.info(f"Начало входа в аккаунт {email}")
 
             # Переход на страницу входа
-            await self.page.goto('https://accounts.google.com/signin/v2/identifier', wait_until='networkidle')
+            await self.page.goto('https://studio.youtube.com/', wait_until='networkidle')
             await self.human_like_delay(2000, 4000)
 
             # Ввод email
