@@ -145,6 +145,21 @@
         </div>
         </div>
         <div class="btn-toolbar gap-2 mobile-btn-group">
+          <!-- Time Period Selector -->
+          <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-primary btn-sm" id="timePeriodAll" onclick="changeTimePeriod(null)">
+              <i class="bi bi-calendar-range"></i>
+              <span class="d-none d-sm-inline"> All Time</span>
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="timePeriod30" onclick="changeTimePeriod(30)">
+              <i class="bi bi-calendar-week"></i>
+              <span class="d-none d-sm-inline"> 30 Days</span>
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="timePeriod7" onclick="changeTimePeriod(7)">
+              <i class="bi bi-calendar-day"></i>
+              <span class="d-none d-sm-inline"> 7 Days</span>
+            </button>
+          </div>
           <a class="btn btn-success btn-sm" href="{% url 'cabinet_export_excel' %}">
             <i class="bi bi-file-earmark-excel"></i>
             <span class="d-none d-sm-inline"> Excel</span>
@@ -456,6 +471,55 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
+});
+
+// Time period selector functionality
+function changeTimePeriod(days) {
+    // Update button states
+    document.querySelectorAll('.btn-group .btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.classList.add('btn-outline-primary');
+    });
+    
+    let activeButton;
+    if (days === null) {
+        activeButton = document.getElementById('timePeriodAll');
+    } else if (days === 30) {
+        activeButton = document.getElementById('timePeriod30');
+    } else if (days === 7) {
+        activeButton = document.getElementById('timePeriod7');
+    }
+    
+    if (activeButton) {
+        activeButton.classList.add('active');
+        activeButton.classList.remove('btn-outline-primary');
+    }
+    
+    // Reload page with new time period parameter
+    const url = new URL(window.location);
+    if (days === null) {
+        url.searchParams.delete('days');
+    } else {
+        url.searchParams.set('days', days);
+    }
+    window.location.href = url.toString();
+}
+
+// Set initial active button based on current URL parameter
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const days = urlParams.get('days');
+    
+    if (days === null) {
+        document.getElementById('timePeriodAll').classList.add('active');
+        document.getElementById('timePeriodAll').classList.remove('btn-outline-primary');
+    } else if (days === '30') {
+        document.getElementById('timePeriod30').classList.add('active');
+        document.getElementById('timePeriod30').classList.remove('btn-outline-primary');
+    } else if (days === '7') {
+        document.getElementById('timePeriod7').classList.add('active');
+        document.getElementById('timePeriod7').classList.remove('btn-outline-primary');
+    }
 });
 </script>
 {% endif %}

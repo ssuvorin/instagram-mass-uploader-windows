@@ -314,35 +314,42 @@ class AnalyticsService:
         from django.db.models import Sum, Avg, Max
         
         end = timezone.now()
-        start = end - timezone.timedelta(days=days)
+        if days is None:
+            # All time - no date filtering
+            start = None
+            time_filter = {}
+        else:
+            start = end - timezone.timedelta(days=days)
+            time_filter = {
+                'created_at__gte': start,
+                'created_at__lte': end
+            }
         
         print(f"\n=== DEBUG get_manual_analytics_by_network ===")
         print(f"Client: {self.client.name} (ID: {self.client.id})")
-        print(f"Period: {start} to {end} (last {days} days)")
+        if days is None:
+            print(f"Period: All time")
+        else:
+            print(f"Period: {start} to {end} (last {days} days)")
         
         # Get client hashtags first
         client_hashtags = list(self.get_client_hashtags().values_list("hashtag", flat=True))
         print(f"Client hashtags: {client_hashtags}")
         
         # Check raw records first - search by hashtag, not client
-        all_manual_records = HashtagAnalytics.objects.filter(
-            hashtag__in=client_hashtags,  # Search by hashtag, not client
-            is_manual=True,
-            created_at__gte=start,
-            created_at__lte=end
-        )
+        filter_kwargs = {
+            'hashtag__in': client_hashtags,
+            'is_manual': True,
+            **time_filter
+        }
+        all_manual_records = HashtagAnalytics.objects.filter(**filter_kwargs)
         print(f"Total manual records found: {all_manual_records.count()}")
         for record in all_manual_records[:5]:  # Show first 5
             print(f"  - ID:{record.id}, Hashtag:{record.hashtag}, Network:{record.social_network}, Created:{record.created_at}, Posts:{record.analyzed_medias}, Views:{record.total_views}")
         
         # Get manual analytics for this client's hashtags and aggregate by network
         # NOTE: We SUM cumulative metrics (posts, views, likes) but take LATEST for snapshot metrics (accounts, followers)
-        networks_data = HashtagAnalytics.objects.filter(
-            hashtag__in=client_hashtags,  # Search by hashtag, not client
-            is_manual=True,
-            created_at__gte=start,
-            created_at__lte=end
-        ).values('social_network').annotate(
+        networks_data = HashtagAnalytics.objects.filter(**filter_kwargs).values('social_network').annotate(
             total_posts=Sum('analyzed_medias'),
             total_views=Sum('total_views'),
             total_likes=Sum('total_likes'),
@@ -382,23 +389,23 @@ class AnalyticsService:
             
             # Get latest record for snapshot metrics (accounts, followers, growth_rate)
             # For total_accounts, get the latest record where total_accounts > 0
-            latest_record = HashtagAnalytics.objects.filter(
-                hashtag__in=client_hashtags,  # Search by hashtag, not client
-                is_manual=True,
-                social_network=network_key,
-                created_at__gte=start,
-                created_at__lte=end
-            ).order_by('-created_at').first()
+            latest_filter = {
+                'hashtag__in': client_hashtags,
+                'is_manual': True,
+                'social_network': network_key,
+                **time_filter
+            }
+            latest_record = HashtagAnalytics.objects.filter(**latest_filter).order_by('-created_at').first()
             
             # For total_accounts, try to get a record with actual account count
-            accounts_record = HashtagAnalytics.objects.filter(
-                hashtag__in=client_hashtags,  # Search by hashtag, not client
-                is_manual=True,
-                social_network=network_key,
-                created_at__gte=start,
-                created_at__lte=end,
-                total_accounts__gt=0
-            ).order_by('-created_at').first()
+            accounts_filter = {
+                'hashtag__in': client_hashtags,
+                'is_manual': True,
+                'social_network': network_key,
+                'total_accounts__gt': 0,
+                **time_filter
+            }
+            accounts_record = HashtagAnalytics.objects.filter(**accounts_filter).order_by('-created_at').first()
             
             # Snapshot metrics from latest record
             total_accounts = accounts_record.total_accounts if accounts_record else (latest_record.total_accounts if latest_record else 0)

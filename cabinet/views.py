@@ -428,12 +428,22 @@ def agency_dashboard(request):
     # Build client list (all clients for agency owner)
     clients_list = list(agency.clients.select_related("user").all())
 
+    # Get time period parameter
+    days_param = request.GET.get("days")
+    if days_param:
+        try:
+            days = int(days_param)
+        except ValueError:
+            days = None
+    else:
+        days = None  # All time by default
+
     client_rows = []
     for c in clients_list:
         # Use AnalyticsService to get combined data
         analytics_service = AnalyticsService(c)
-        combined_summary = analytics_service.get_combined_analytics_summary(days=30)
-        network_breakdown = analytics_service.get_network_breakdown(days=30)
+        combined_summary = analytics_service.get_combined_analytics_summary(days=days)
+        network_breakdown = analytics_service.get_network_breakdown(days=days)
         
         # Calculate total accounts across all networks
         total_accounts = sum(network.total_accounts for network in combined_summary.networks.values())
@@ -1440,13 +1450,23 @@ def client_dashboard(request):
     if not client:
         return render(request, "cabinet/error.html", {"message": "Client not found or access denied."})
     
+    # Get time period parameter
+    days_param = request.GET.get("days")
+    if days_param:
+        try:
+            days = int(days_param)
+        except ValueError:
+            days = None
+    else:
+        days = None  # All time by default
+    
     # Initialize analytics service
     analytics_service = AnalyticsService(client)
     
     # Get analytics data
     hashtag_details = analytics_service.get_hashtag_details()
-    network_breakdown = analytics_service.get_network_breakdown(days=30)
-    combined_summary = analytics_service.get_combined_analytics_summary(days=30)
+    network_breakdown = analytics_service.get_network_breakdown(days=days)
+    combined_summary = analytics_service.get_combined_analytics_summary(days=days)
     
     # Get client hashtags
     hashtags = list(analytics_service.get_client_hashtags().values_list("hashtag", flat=True))
