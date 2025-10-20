@@ -339,13 +339,12 @@ class AnalyticsService:
         # Check raw records first - search by hashtag, not client
         filter_kwargs = {
             'hashtag__in': client_hashtags,
-            'is_manual': True,
             **time_filter
         }
-        all_manual_records = HashtagAnalytics.objects.filter(**filter_kwargs)
-        print(f"Total manual records found: {all_manual_records.count()}")
-        for record in all_manual_records[:5]:  # Show first 5
-            print(f"  - ID:{record.id}, Hashtag:{record.hashtag}, Network:{record.social_network}, Created:{record.created_at}, Posts:{record.analyzed_medias}, Views:{record.total_views}")
+        all_records = HashtagAnalytics.objects.filter(**filter_kwargs)
+        print(f"Total records found: {all_records.count()}")
+        for record in all_records[:5]:  # Show first 5
+            print(f"  - ID:{record.id}, Hashtag:{record.hashtag}, Network:{record.social_network}, Manual:{record.is_manual}, Created:{record.created_at}, Posts:{record.analyzed_medias}, Views:{record.total_views}")
         
         # Get manual analytics for this client's hashtags and aggregate by network
         # NOTE: We SUM cumulative metrics (posts, views, likes) but take LATEST for snapshot metrics (accounts, followers)
@@ -391,7 +390,6 @@ class AnalyticsService:
             # For total_accounts, get the latest record where total_accounts > 0
             latest_filter = {
                 'hashtag__in': client_hashtags,
-                'is_manual': True,
                 'social_network': network_key,
                 **time_filter
             }
@@ -400,7 +398,6 @@ class AnalyticsService:
             # For total_accounts, try to get a record with actual account count
             accounts_filter = {
                 'hashtag__in': client_hashtags,
-                'is_manual': True,
                 'social_network': network_key,
                 'total_accounts__gt': 0,
                 **time_filter
