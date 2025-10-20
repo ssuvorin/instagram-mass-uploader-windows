@@ -215,6 +215,7 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 # File upload settings
 DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100 MB
 FILE_UPLOAD_MAX_MEMORY_SIZE = 104857600
+DATA_UPLOAD_MAX_NUMBER_FILES = 1000  # Allow up to 1000 files per request
 
 # Server timeout settings to prevent TimeoutError
 SERVER_TIMEOUT = int(os.environ.get('SERVER_TIMEOUT', '300'))  # 5 minutes default
