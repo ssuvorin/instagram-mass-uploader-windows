@@ -49,6 +49,10 @@ urlpatterns = [
     path('proxies/<int:proxy_id>/delete/', proxies.delete_proxy, name='delete_proxy'),
     path('proxies/import/', proxies.import_proxies, name='import_proxies'),
     path('proxies/validate-all/', proxies.validate_all_proxies, name='validate_all_proxies'),
+    path('proxies/bulk-delete/', proxies.bulk_delete_proxies, name='bulk_delete_proxies'),
+    path('proxies/bulk-status/', proxies.bulk_set_proxy_status, name='bulk_set_proxy_status'),
+    path('proxies/bulk-validate/', proxies.bulk_validate_proxies, name='bulk_validate_proxies'),
+    path('proxies/bulk-change-ip/', proxies.bulk_change_ip, name='bulk_change_proxy_ip'),
     path('proxies/cleanup-inactive/', views.cleanup_inactive_proxies, name='cleanup_inactive_proxies'),
     
     # Bulk Upload

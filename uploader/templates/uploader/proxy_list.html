@@ -46,6 +46,16 @@
         justify-content: flex-end;
         gap: 0.5rem;
     }
+    /* Bulk actions styling similar to accounts */
+    #bulkActionsBar {
+        display: none;
+        border-left: 4px solid #0d6efd;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    #bulkActionsBar.show { display: block; animation: slideDown 0.3s ease; }
+    @keyframes slideDown { from { opacity:0; transform: translateY(-10px);} to { opacity:1; transform: translateY(0);} }
+    .proxy-checkbox:checked { accent-color: #0d6efd; }
+    tr.selected { background-color: #e7f3ff !important; }
 </style>
 {% endblock %}
 
@@ -73,6 +83,39 @@
         </div>
     </div>
 </div>
+
+<!-- Bulk Actions Bar (top) -->
+<div id="bulkActionsBar" class="card mb-3">
+    <div class="card-body py-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <i class="bi bi-check2-square text-primary me-2"></i>
+                <span id="selectedCount" class="fw-bold fs-5">0</span>
+                <span class="text-muted ms-2">proxies selected</span>
+            </div>
+            <div class="btn-group">
+                <button type="button" class="btn btn-warning" onclick="bulkValidateProxies()" title="Validate selected proxies">
+                    <i class="bi bi-lightning"></i> Validate
+                </button>
+                <button type="button" class="btn btn-success" onclick="bulkSetStatus('active')" title="Mark selected proxies Active">
+                    <i class="bi bi-toggle-on"></i> Set Active
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="bulkSetStatus('inactive')" title="Mark selected proxies Inactive">
+                    <i class="bi bi-toggle-off"></i> Set Inactive
+                </button>
+                <button type="button" class="btn btn-info" onclick="bulkChangeProxyIp()" title="Change IP for selected proxies (with configured URL)">
+                    <i class="bi bi-arrow-clockwise"></i> Change IP
+                </button>
+                <button type="button" class="btn btn-danger" onclick="bulkDeleteProxies()" title="Delete selected proxies">
+                    <i class="bi bi-trash"></i> Delete
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="clearSelection()">
+                    <i class="bi bi-x"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+ </div>
 
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
@@ -114,6 +157,9 @@
             <table class="table table-hover mb-0">
                 <thead>
                     <tr>
+                        <th style="width: 40px;">
+                            <input type="checkbox" id="selectAll" class="form-check-input" title="Select All">
+                        </th>
                         <th>Host:Port</th>
                         <th>Country</th>
                         <th>Authentication</th>
@@ -126,6 +172,9 @@
                 <tbody>
                     {% for proxy in proxies %}
                     <tr>
+                        <td>
+                            <input type="checkbox" class="form-check-input proxy-checkbox" value="{{ proxy.id }}" data-host="{{ proxy.host }}:{{ proxy.port }}">
+                        </td>
                         <td title="Host: {{ proxy.host }}:{{ proxy.port }}{% if proxy.external_ip %} | External IP: {{ proxy.external_ip }}{% endif %}">
                             {{ proxy.host }}:{{ proxy.port }}
                             {% if proxy.external_ip %}
@@ -228,6 +277,8 @@
         </div>
     </div>
 </div>
+
+<!-- Bulk Actions Bar moved to top; bottom bar removed -->
 
 <!-- Custom Delete Confirmation Modal -->
 <div class="custom-modal-overlay" id="deleteConfirmationModal">
@@ -342,5 +393,115 @@
             }
         });
     });
+
+    // Bulk selection logic
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const proxyCheckboxes = document.querySelectorAll('.proxy-checkbox');
+    const bulkActionsBar = document.getElementById('bulkActionsBar');
+    const selectedCountEl = document.getElementById('selectedCount');
+
+    function updateRowHighlight(checkbox) {
+        const row = checkbox.closest('tr');
+        if (checkbox.checked) {
+            row.classList.add('selected');
+        } else {
+            row.classList.remove('selected');
+        }
+    }
+
+    function updateBulkActionsBar() {
+        const selected = Array.from(proxyCheckboxes).filter(cb => cb.checked);
+        const count = selected.length;
+        selectedCountEl.textContent = count;
+        if (count > 0) {
+            bulkActionsBar.classList.add('show');
+        } else {
+            bulkActionsBar.classList.remove('show');
+        }
+    }
+
+    selectAllCheckbox && selectAllCheckbox.addEventListener('change', function() {
+        proxyCheckboxes.forEach(cb => { cb.checked = this.checked; updateRowHighlight(cb); });
+        updateBulkActionsBar();
+    });
+
+    proxyCheckboxes.forEach(cb => cb.addEventListener('change', function() {
+        updateRowHighlight(this);
+        updateBulkActionsBar();
+        const allChecked = Array.from(proxyCheckboxes).every(x => x.checked);
+        const someChecked = Array.from(proxyCheckboxes).some(x => x.checked);
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = allChecked;
+            selectAllCheckbox.indeterminate = someChecked && !allChecked;
+        }
+    }));
+
+    function getSelectedProxyIds() {
+        return Array.from(proxyCheckboxes).filter(cb => cb.checked).map(cb => cb.value);
+    }
+
+    window.clearSelection = function() {
+        proxyCheckboxes.forEach(cb => { cb.checked = false; updateRowHighlight(cb); });
+        if (selectAllCheckbox) { selectAllCheckbox.checked = false; selectAllCheckbox.indeterminate = false; }
+        updateBulkActionsBar();
+    }
+
+    function buildPostForm(actionUrl, payload) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = actionUrl;
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = csrfToken.value;
+            form.appendChild(csrfInput);
+        }
+        payload.forEach(([name, value]) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = value;
+            form.appendChild(input);
+        });
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    // Bulk actions
+    window.bulkDeleteProxies = function() {
+        const ids = getSelectedProxyIds();
+        if (ids.length === 0) return;
+        if (!confirm(`Delete ${ids.length} selected proxy(ies)? This cannot be undone.`)) return;
+        const payload = ids.map(id => ['proxy_ids', id]);
+        buildPostForm('{% url "bulk_delete_proxies" %}', payload);
+    }
+
+    window.bulkSetStatus = function(status) {
+        const ids = getSelectedProxyIds();
+        if (ids.length === 0) return;
+        const payload = ids.map(id => ['proxy_ids', id]);
+        payload.push(['status', status]);
+        buildPostForm('{% url "bulk_set_proxy_status" %}', payload);
+    }
+
+    window.bulkValidateProxies = function() {
+        const ids = getSelectedProxyIds();
+        if (ids.length === 0) return;
+        const payload = ids.map(id => ['proxy_ids', id]);
+        buildPostForm('{% url "bulk_validate_proxies" %}', payload);
+    }
+
+    window.bulkChangeProxyIp = function() {
+        const ids = getSelectedProxyIds();
+        if (ids.length === 0) return;
+        if (!confirm(`Request IP change for ${ids.length} selected proxy(ies)?`)) return;
+        const payload = ids.map(id => ['proxy_ids', id]);
+        buildPostForm('{% url "bulk_change_proxy_ip" %}', payload);
+    }
 </script>
-{% endblock %} 
+
+<!-- CSRF Token для JavaScript -->
+{% csrf_token %}
+{% endblock %}

@@ -636,3 +636,111 @@ def delete_proxy(request, proxy_id):
         messages.error(request, f'Error deleting proxy: {str(e)}')
     
     return redirect('proxy_list')
+
+
+def _parse_ids_from_post(request, field_name='proxy_ids'):
+    """Extract a list of integer IDs from POST payload supporting repeated fields and comma-separated values."""
+    ids = []
+    raw_list = request.POST.getlist(field_name)
+    for raw in raw_list:
+        if not raw:
+            continue
+        parts = [p.strip() for p in str(raw).split(',') if p.strip()]
+        for part in parts:
+            try:
+                ids.append(int(part))
+            except ValueError:
+                continue
+    # Ensure uniqueness
+    return list(dict.fromkeys(ids))
+
+
+def bulk_delete_proxies(request):
+    """Bulk delete selected proxies."""
+    if request.method != 'POST':
+        return redirect('proxy_list')
+    proxy_ids = _parse_ids_from_post(request, 'proxy_ids')
+    if not proxy_ids:
+        messages.warning(request, 'No proxies selected.')
+        return redirect('proxy_list')
+    qs = Proxy.objects.filter(id__in=proxy_ids)
+    count = qs.count()
+    try:
+        qs.delete()
+        messages.success(request, f'Deleted {count} proxies.')
+    except Exception as e:
+        messages.error(request, f'Error deleting proxies: {str(e)}')
+    return redirect('proxy_list')
+
+
+def bulk_set_proxy_status(request):
+    """Bulk set status (active/inactive) for selected proxies."""
+    if request.method != 'POST':
+        return redirect('proxy_list')
+    proxy_ids = _parse_ids_from_post(request, 'proxy_ids')
+    target_status = (request.POST.get('status') or '').strip().lower()
+    if not proxy_ids:
+        messages.warning(request, 'No proxies selected.')
+        return redirect('proxy_list')
+    if target_status not in {'active', 'inactive'}:
+        messages.error(request, 'Invalid status. Use "active" or "inactive".')
+        return redirect('proxy_list')
+    is_active = target_status == 'active'
+    updated = Proxy.objects.filter(id__in=proxy_ids).update(status=target_status, is_active=is_active, last_checked=timezone.now())
+    messages.success(request, f'Updated status for {updated} proxies to {target_status}.')
+    return redirect('proxy_list')
+
+
+def bulk_validate_proxies(request):
+    """Validate selected proxies (like validate_all but scoped to selection)."""
+    if request.method != 'POST':
+        return redirect('proxy_list')
+    proxy_ids = _parse_ids_from_post(request, 'proxy_ids')
+    if not proxy_ids:
+        messages.warning(request, 'No proxies selected.')
+        return redirect('proxy_list')
+    proxies = Proxy.objects.filter(id__in=proxy_ids)
+    if not proxies.exists():
+        messages.warning(request, 'Selected proxies not found.')
+        return redirect('proxy_list')
+    # Reuse background validator but only for selected set
+    thread = threading.Thread(
+        target=_validate_proxies_background,
+        args=(proxies, getattr(request.user, 'id', None))
+    )
+    thread.daemon = True
+    thread.start()
+    messages.info(request, f'Validation of {proxies.count()} selected proxies started in background.')
+    return redirect('proxy_list')
+
+
+def bulk_change_ip(request):
+    """Trigger IP change for selected proxies that have ip_change_url set."""
+    if request.method != 'POST':
+        return redirect('proxy_list')
+    proxy_ids = _parse_ids_from_post(request, 'proxy_ids')
+    if not proxy_ids:
+        messages.warning(request, 'No proxies selected.')
+        return redirect('proxy_list')
+    selected = list(Proxy.objects.filter(id__in=proxy_ids))
+    if not selected:
+        messages.warning(request, 'Selected proxies not found.')
+        return redirect('proxy_list')
+    import requests
+    success = 0
+    skipped = 0
+    errors = 0
+    for proxy in selected:
+        if not proxy.ip_change_url:
+            skipped += 1
+            continue
+        try:
+            resp = requests.get(proxy.ip_change_url, timeout=30)
+            if resp.status_code == 200:
+                success += 1
+            else:
+                errors += 1
+        except Exception:
+            errors += 1
+    messages.success(request, f'IP change requested. Success: {success}, Skipped (no URL): {skipped}, Errors: {errors}.')
+    return redirect('proxy_list')
