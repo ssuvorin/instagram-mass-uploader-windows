@@ -9,12 +9,14 @@ navigation to Studio, and Shorts upload + publish.
 
 import asyncio
 import random
+import os
 from typing import List, Optional, Dict
 
 from playwright.async_api import Page
 
 from .logging_utils import log_info, log_warning, log_error
 from .audio_recaptcha_solver import solve_recaptcha_with_audio
+from .enhanced_captcha_solver import EnhancedCaptchaSolver, CaptchaConfig
 
 
 # Robust selector sets with fallbacks - Universal XPath selectors
@@ -278,191 +280,49 @@ async def login_to_google(page: Page, email: str, password: str, proxy: Optional
 
 
 async def _handle_recaptcha_check(page: Page, proxy: Optional[Dict] = None, user_agent: Optional[str] = None) -> None:
-    """Handle reCaptcha detection and solving using RuCaptcha API with 400 error prevention"""
+    """Enhanced reCaptcha detection and solving using new captcha solver"""
     try:
-        log_info('[YT RECAPTCHA] Starting reCaptcha detection...')
+        log_info('[YT RECAPTCHA] Starting enhanced reCaptcha detection and solving...')
         
-        # Debug page structure before processing
-        await debug_400_error(page)
+        # Create enhanced captcha solver with configuration
+        config = CaptchaConfig(
+            audio_timeout=30,
+            api_timeout=120,
+            max_retries=3,
+            rucaptcha_api_key=os.getenv('RUCAPTCHA_API_KEY'),
+            enable_audio_challenge=True,
+            enable_api_fallback=True,
+            submission_delay=3
+        )
         
-        # Wait a bit for page to load - REDUCED from 12-15s to 2-3s for faster processing
-        await human_like_delay(2000, 3000)
+        solver = EnhancedCaptchaSolver(config)
         
-        # JAVASCRIPT CHECK: Use JavaScript to detect reCaptcha more accurately
-        try:
-            recaptcha_detected = await page.evaluate("""
-                () => {
-                    // Check for reCaptcha configuration
-                    if (typeof ___grecaptcha_cfg !== 'undefined' && ___grecaptcha_cfg.clients) {
-                        const clients = Object.entries(___grecaptcha_cfg.clients);
-                        if (clients.length > 0) {
-                            return {
-                                found: true,
-                                count: clients.length,
-                                clients: clients.map(([id, client]) => ({
-                                    id: id,
-                                    version: id >= 10000 ? 'V3' : 'V2'
-                                }))
-                            };
-                        }
-                    }
-                    
-                    // Fallback: check for DOM elements
-                    const iframes = document.querySelectorAll('iframe[src*="recaptcha"]');
-                    const textareas = document.querySelectorAll('textarea[name="g-recaptcha-response"]');
-                    const divs = document.querySelectorAll('div[data-site-key]');
-                    
-                    if (iframes.length > 0 || textareas.length > 0 || divs.length > 0) {
-                        return {
-                            found: true,
-                            count: iframes.length + textareas.length + divs.length,
-                            dom_elements: {
-                                iframes: iframes.length,
-                                textareas: textareas.length,
-                                divs: divs.length
-                            }
-                        };
-                    }
-                    
-                    return { found: false };
-                }
-            """)
-            
-            if recaptcha_detected['found']:
-                log_warning(f'[YT RECAPTCHA] reCaptcha detected via JavaScript: {recaptcha_detected}')
-            else:
-                log_info('[YT RECAPTCHA] No reCaptcha detected via JavaScript, continuing...')
-                return
-                
-        except Exception as e:
-            log_warning(f'[YT RECAPTCHA] JavaScript check failed: {e}, falling back to DOM check...')
-            
-            # FALLBACK: DOM-based check if JavaScript fails
-            quick_indicators = [
-                '//iframe[contains(@src, "recaptcha")]',
-                '//textarea[@name="g-recaptcha-response"]',
-                '//div[@data-site-key]'
-            ]
-            
-            recaptcha_found = False
-            for indicator in quick_indicators:
-                try:
-                    element = page.locator(indicator).first
-                    if await element.is_visible():
-                        log_warning(f'[YT RECAPTCHA] reCaptcha detected with DOM check: {indicator}')
-                        recaptcha_found = True
-                        break
-                except Exception:
-                    continue
-            
-            # If no reCaptcha found in fallback check, exit early
-            if not recaptcha_found:
-                log_info('[YT RECAPTCHA] No reCaptcha detected in DOM check, continuing...')
-                return
+        # Attempt to solve captcha
+        result = await solver.solve_captcha(page, proxy, user_agent)
         
-        # DETAILED CHECK: Only if quick check found something, do detailed verification
-        log_info('[YT RECAPTCHA] Quick check found potential reCaptcha, doing detailed verification...')
-        
-        # Check for various reCaptcha indicators - Based on real HTML structure
-        recaptcha_indicators = [
-            # Main reCaptcha container with data-site-key
-            '//div[@data-site-key]',
-            '//div[@data-sitekey]',
-            # reCaptcha iframe
-            '//iframe[contains(@src, "recaptcha")]',
-            '//iframe[contains(@src, "google.com/recaptcha")]',
-            '//iframe[contains(@src, "gstatic.com/recaptcha")]',
-            '//iframe[@title="reCAPTCHA"]',
-            # reCaptcha response textarea
-            '//textarea[@name="g-recaptcha-response"]',
-            # reCaptcha container with specific classes from real HTML
-            '//div[@class="njnYzb"]',
-            '//div[@class="YqLCIe"]',
-            '//div[@class="xRXYb"]',
-            # Generic reCaptcha indicators
-            '//div[contains(@class, "g-recaptcha")]',
-            '//div[contains(@data-callback, "recaptcha")]',
-            '//div[contains(@class, "recaptcha")]',
-            '//div[contains(@id, "recaptcha")]',
-            # Text indicators
-            '//div[contains(text(), "Demuestra que no eres un robot")]',
-            '//div[contains(text(), "robot")]',
-            '//div[contains(text(), "captcha")]'
-        ]
-        
-        recaptcha_found = False
-        for indicator in recaptcha_indicators:
-            try:
-                log_info(f"[YT RECAPTCHA] Checking indicator: {indicator}")
-                element = page.locator(indicator).first
-                if await element.is_visible():
-                    log_warning(f'[YT RECAPTCHA] reCaptcha detected with selector: {indicator}')
-                    recaptcha_found = True
-                    break
-            except Exception as e:
-                log_warning(f'[YT RECAPTCHA] Error checking selector {indicator}: {e}')
-                continue
-        
-        if not recaptcha_found:
-            log_info('[YT RECAPTCHA] No reCaptcha detected, continuing...')
-            return
-        
-        # PRIMARY METHOD: Try audio challenge first (free and reliable)
-        log_info('[YT RECAPTCHA] Starting with audio challenge (primary method)...')
-        try:
-            audio_success = await solve_recaptcha_with_audio(page)
-            if audio_success:
-                log_info('[YT RECAPTCHA] Audio challenge solved successfully!')
-                # Wait for page to process the solution
-                await human_like_delay(5000, 9000)
-                
-                # Check if we're still on the same page (reCAPTCHA might have auto-submitted)
-                current_url = page.url
-                log_info(f'[YT RECAPTCHA] Current URL after audio success: {current_url}')
-                
-                # Only try to click if we're still on the reCAPTCHA page
-                if 'recaptcha' in current_url.lower():
-                    log_info('[YT RECAPTCHA] Still on reCAPTCHA page, attempting to proceed...')
-                    await _click_google_next_universal(page)
-                else:
-                    log_info('[YT RECAPTCHA] Page has already progressed, no need to click button')
-                
-                return
-            else:
-                log_warning('[YT RECAPTCHA] Audio challenge failed, trying RuCaptcha API...')
-        except Exception as audio_e:
-            log_warning(f'[YT RECAPTCHA] Audio challenge error: {audio_e}, trying RuCaptcha API...')
-        
-        # FALLBACK METHOD: RuCaptcha API when audio challenge fails
-        log_info('[YT RECAPTCHA] Falling back to RuCaptcha API...')
-        site_key = await _extract_recaptcha_site_key(page)
-        if not site_key:
-            log_error('[YT RECAPTCHA] Could not extract site key for RuCaptcha fallback')
-            return
-        
-        log_info(f'[YT RECAPTCHA] Site key extracted: {site_key}')
-        
-        # Solve reCaptcha using RuCaptcha
-        # If proxy is present, use RecaptchaV2Task (proxy-based) to match browser IP
-        if proxy:
-            log_info('[YT RECAPTCHA] Proxy detected; using proxy-based solving via RuCaptcha')
-            log_info(f"[YT RECAPTCHA] Proxy details for solver: {proxy.get('type','http')} {proxy.get('host')}:{proxy.get('port')}")
-        else:
-            log_info('[YT RECAPTCHA] No proxy provided; using proxyless solving via RuCaptcha')
-        solution = await _solve_recaptcha_with_rucaptcha(page.url, site_key, proxy=proxy, user_agent=user_agent)
-        if solution:
-            log_info('[YT RECAPTCHA] RuCaptcha API solved successfully')
-            await _submit_recaptcha_solution(page, solution)
+        if result.success:
+            log_info(f'[YT RECAPTCHA] Captcha solved successfully using {result.method_used.value if result.method_used else "unknown method"} in {result.processing_time:.1f}s')
             
             # Wait for page to process the solution
-            await human_like_delay(5000, 9000)
-            # Try to proceed by clicking primary action if present
-            await _click_google_next_universal(page)
+            await human_like_delay(3000, 5000)
+            
+            # Check if we need to click a next button
+            current_url = page.url
+            if 'recaptcha' in current_url.lower() or 'challenge' in current_url.lower():
+                log_info('[YT RECAPTCHA] Still on challenge page, attempting to proceed...')
+                await _click_google_next_universal(page)
+            else:
+                log_info('[YT RECAPTCHA] Page has progressed automatically')
+                
         else:
-            log_error('[YT RECAPTCHA] Both audio challenge and RuCaptcha API failed')
+            log_error(f'[YT RECAPTCHA] Captcha solving failed: {result.error_message}')
+            if result.retry_recommended:
+                log_info('[YT RECAPTCHA] Retry recommended for this captcha')
+            else:
+                log_warning('[YT RECAPTCHA] No retry recommended, may need manual intervention')
             
     except Exception as e:
-        log_warning(f'[YT RECAPTCHA] Error handling reCaptcha: {e}')
+        log_error(f'[YT RECAPTCHA] Critical error in enhanced captcha handling: {e}')
 
 
 async def _extract_recaptcha_site_key(page: Page) -> str:

@@ -8,6 +8,7 @@ from .auth_service import IGAuthService
 from .session_store import DjangoDeviceSessionStore
 from .device_service import ensure_persistent_device
 import logging
+from instagrapi import Client  # type: ignore
 from instagrapi.exceptions import ChallengeRequired, PleaseWaitFewMinutes, LoginRequired, PhotoNotUpload  # type: ignore
 
 log = logging.getLogger('insta.avatar')
@@ -316,7 +317,7 @@ class AvatarService:
     def _restore_session_and_login(self, cl: Client, username: str, password: str, on_log: Optional[Callable[[str], None]] = None) -> bool:
         """Restore session and login using existing logic from bulk upload"""
         from instgrapi_func.services.session_store import SessionStore
-        from instgrapi_func.services.auth_service import CompositeProvider, TOTPProvider, AutoIMAPEmailProvider
+        from instgrapi_func.services.code_providers import CompositeProvider, TOTPProvider, AutoIMAPEmailProvider
         
         # Get session settings from database
         session_store = SessionStore()
@@ -365,14 +366,46 @@ class AvatarService:
         
         # Auth: use restored session or fallback to login with TOTP/email
         if not session_restored:
-            provider = CompositeProvider([
-                TOTPProvider(None),  # Will be set by auth service
-                AutoIMAPEmailProvider(None, None, on_log=on_log),  # Will be set by auth service
-            ])
-            auth = IGAuthService(provider)
-            if not auth.ensure_logged_in(cl, username, password, on_log=on_log):
+            # Retry authentication with exponential backoff
+            max_auth_retries = 3
+            auth_success = False
+            
+            for auth_attempt in range(max_auth_retries):
+                provider = CompositeProvider([
+                    TOTPProvider(None),  # Will be set by auth service
+                    AutoIMAPEmailProvider(None, None, on_log=on_log),  # Will be set by auth service
+                ])
+                auth = IGAuthService(provider)
+                
+                log.info(f"[AUTH] Authentication attempt {auth_attempt + 1}/{max_auth_retries} for {username}")
                 if on_log:
-                    on_log("Authentication failed")
+                    on_log(f"Authentication attempt {auth_attempt + 1}/{max_auth_retries}")
+                
+                if auth.ensure_logged_in(cl, username, password, on_log=on_log):
+                    log.info(f"[AUTH] Authentication successful for {username}")
+                    if on_log:
+                        on_log("Authentication successful")
+                    auth_success = True
+                    break
+                else:
+                    log.warning(f"[AUTH] Authentication failed for {username} (attempt {auth_attempt + 1}/{max_auth_retries})")
+                    if on_log:
+                        on_log(f"Authentication failed (attempt {auth_attempt + 1}/{max_auth_retries})")
+                    
+                    # If not the last attempt, wait before retry
+                    if auth_attempt < max_auth_retries - 1:
+                        import time
+                        import random
+                        delay = random.uniform(5, 10) * (auth_attempt + 1)  # Exponential backoff: 5-10s, 10-20s, 15-30s
+                        log.info(f"[AUTH] Waiting {delay:.1f}s before retry for {username}")
+                        if on_log:
+                            on_log(f"Waiting {delay:.1f}s before retry...")
+                        time.sleep(delay)
+            
+            if not auth_success:
+                log.error(f"[AUTH] All {max_auth_retries} authentication attempts failed for {username}")
+                if on_log:
+                    on_log(f"All {max_auth_retries} authentication attempts failed")
                 return False
         else:
             # Verify restored session is valid
@@ -386,29 +419,91 @@ class AvatarService:
                     log.warning(f"[SESSION] Session verification failed for {username}")
                     if on_log:
                         on_log("Session verification failed, falling back to login")
-                    # Fallback to login
-                    provider = CompositeProvider([
-                        TOTPProvider(None),
-                        AutoIMAPEmailProvider(None, None, on_log=on_log),
-                    ])
-                    auth = IGAuthService(provider)
-                    if not auth.ensure_logged_in(cl, username, password, on_log=on_log):
+                    # Fallback to login with retry logic
+                    max_auth_retries = 3
+                    auth_success = False
+                    
+                    for auth_attempt in range(max_auth_retries):
+                        provider = CompositeProvider([
+                            TOTPProvider(None),
+                            AutoIMAPEmailProvider(None, None, on_log=on_log),
+                        ])
+                        auth = IGAuthService(provider)
+                        
+                        log.info(f"[AUTH] Fallback authentication attempt {auth_attempt + 1}/{max_auth_retries} for {username}")
                         if on_log:
-                            on_log("Authentication failed")
+                            on_log(f"Fallback authentication attempt {auth_attempt + 1}/{max_auth_retries}")
+                        
+                        if auth.ensure_logged_in(cl, username, password, on_log=on_log):
+                            log.info(f"[AUTH] Fallback authentication successful for {username}")
+                            if on_log:
+                                on_log("Fallback authentication successful")
+                            auth_success = True
+                            break
+                        else:
+                            log.warning(f"[AUTH] Fallback authentication failed for {username} (attempt {auth_attempt + 1}/{max_auth_retries})")
+                            if on_log:
+                                on_log(f"Fallback authentication failed (attempt {auth_attempt + 1}/{max_auth_retries})")
+                            
+                            # If not the last attempt, wait before retry
+                            if auth_attempt < max_auth_retries - 1:
+                                import time
+                                import random
+                                delay = random.uniform(5, 10) * (auth_attempt + 1)  # Exponential backoff
+                                log.info(f"[AUTH] Waiting {delay:.1f}s before retry for {username}")
+                                if on_log:
+                                    on_log(f"Waiting {delay:.1f}s before retry...")
+                                time.sleep(delay)
+                    
+                    if not auth_success:
+                        log.error(f"[AUTH] All {max_auth_retries} fallback authentication attempts failed for {username}")
+                        if on_log:
+                            on_log(f"All {max_auth_retries} fallback authentication attempts failed")
                         return False
             except Exception as e:
                 log.warning(f"[SESSION] Session verification error for {username}: {e}")
                 if on_log:
                     on_log(f"Session verification error: {e}")
-                # Fallback to login
-                provider = CompositeProvider([
-                    TOTPProvider(None),
-                    AutoIMAPEmailProvider(None, None, on_log=on_log),
-                ])
-                auth = IGAuthService(provider)
-                if not auth.ensure_logged_in(cl, username, password, on_log=on_log):
+                # Fallback to login with retry logic
+                max_auth_retries = 3
+                auth_success = False
+                
+                for auth_attempt in range(max_auth_retries):
+                    provider = CompositeProvider([
+                        TOTPProvider(None),
+                        AutoIMAPEmailProvider(None, None, on_log=on_log),
+                    ])
+                    auth = IGAuthService(provider)
+                    
+                    log.info(f"[AUTH] Exception fallback authentication attempt {auth_attempt + 1}/{max_auth_retries} for {username}")
                     if on_log:
-                        on_log("Authentication failed")
+                        on_log(f"Exception fallback authentication attempt {auth_attempt + 1}/{max_auth_retries}")
+                    
+                    if auth.ensure_logged_in(cl, username, password, on_log=on_log):
+                        log.info(f"[AUTH] Exception fallback authentication successful for {username}")
+                        if on_log:
+                            on_log("Exception fallback authentication successful")
+                        auth_success = True
+                        break
+                    else:
+                        log.warning(f"[AUTH] Exception fallback authentication failed for {username} (attempt {auth_attempt + 1}/{max_auth_retries})")
+                        if on_log:
+                            on_log(f"Exception fallback authentication failed (attempt {auth_attempt + 1}/{max_auth_retries})")
+                        
+                        # If not the last attempt, wait before retry
+                        if auth_attempt < max_auth_retries - 1:
+                            import time
+                            import random
+                            delay = random.uniform(5, 10) * (auth_attempt + 1)  # Exponential backoff
+                            log.info(f"[AUTH] Waiting {delay:.1f}s before retry for {username}")
+                            if on_log:
+                                on_log(f"Waiting {delay:.1f}s before retry...")
+                            time.sleep(delay)
+                
+                if not auth_success:
+                    log.error(f"[AUTH] All {max_auth_retries} exception fallback authentication attempts failed for {username}")
+                    if on_log:
+                        on_log(f"All {max_auth_retries} exception fallback authentication attempts failed")
                     return False
         
         return True 

@@ -229,21 +229,56 @@ class HashtagAnalysisService:
         # Keep legacy DB save for compatibility
         self._save_session_db(account_username, cl, on_log)
 
-        # Hashtag info
-        self._human_delay()
-        try:
-            if on_log:
-                on_log(f"hashtag: fetching info for #{hashtag}")
-            hi = cl.hashtag_info(hashtag)
-            total_reported = int(getattr(hi, "media_count", 0) or 0)
-            # Save raw JSON for inspection
-            self._last_info_json = getattr(cl, "last_json", {}) or {}
-            if on_log:
-                on_log(f"hashtag: info ok, media_count={total_reported}")
-        except Exception as e:
-            if on_log:
-                on_log(f"hashtag: info failed: {e}")
-            raise
+        # Hashtag info with retry logic for login_required
+        session_restore_attempts = 0
+        max_session_restore_attempts = 3
+        total_reported = 0
+        
+        while session_restore_attempts <= max_session_restore_attempts:
+            try:
+                self._human_delay()
+                if on_log:
+                    on_log(f"hashtag: fetching info for #{hashtag}")
+                hi = cl.hashtag_info(hashtag)
+                total_reported = int(getattr(hi, "media_count", 0) or 0)
+                # Save raw JSON for inspection
+                self._last_info_json = getattr(cl, "last_json", {}) or {}
+                if on_log:
+                    on_log(f"hashtag: info ok, media_count={total_reported}")
+                break  # Success, exit retry loop
+            except LoginRequired as e:
+                session_restore_attempts += 1
+                if session_restore_attempts > max_session_restore_attempts:
+                    if on_log:
+                        on_log(f"hashtag: max session restore attempts ({max_session_restore_attempts}) exceeded for hashtag info")
+                    raise
+                
+                if on_log:
+                    on_log(f"hashtag: session expired during info fetch, attempting to restore (attempt {session_restore_attempts}/{max_session_restore_attempts})...")
+                try:
+                    # Attempt to restore session
+                    if not self.auth.ensure_logged_in(cl, account_username, account_password, on_log=on_log):
+                        if on_log:
+                            on_log(f"hashtag: session restoration failed for hashtag info: {e}")
+                        raise
+                    if on_log:
+                        on_log(f"hashtag: session restored successfully for hashtag info, retrying...")
+                    # Save refreshed session
+                    try:
+                        settings = cl.get_settings()  # type: ignore[attr-defined]
+                        session_store.save(account_username, settings)
+                    except Exception:
+                        pass
+                    # Continue retry loop
+                    continue
+                except Exception as restore_e:
+                    if on_log:
+                        on_log(f"hashtag: session restoration error for hashtag info: {restore_e}")
+                    raise
+            except Exception as e:
+                if on_log:
+                    on_log(f"hashtag: info failed: {e}")
+                raise
 
         # Iterate recent medias via chunked pagination (Private API)
         fetched_total: int = 0
@@ -255,6 +290,7 @@ class HashtagAnalysisService:
         max_id: Optional[str] = None
 
         consecutive_empty_pages = 0
+        # Reset session restore attempts for pagination (separate from hashtag info)
         session_restore_attempts = 0
         max_session_restore_attempts = 3  # Limit session restoration attempts
         for loop_index in range(max_pages):
@@ -339,6 +375,12 @@ class HashtagAnalysisService:
             else:
                 consecutive_empty_pages = 0  # Reset counter when we get medias
 
+            # Stop if we've reached or exceeded the total reported media count
+            if total_reported > 0 and fetched_total >= total_reported:
+                if on_log:
+                    on_log(f"page {pages_loaded}: reached total reported media count ({total_reported}) — stop")
+                break
+            
             # Stop only if no medias AND no next cursor (truly done)
             if not medias and not max_id:
                 if on_log:

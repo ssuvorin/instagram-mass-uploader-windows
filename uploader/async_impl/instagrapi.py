@@ -457,14 +457,8 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 	
 	# Auth: use restored session or fallback to login with TOTP/email
 	if not session_restored:
-		provider = CompositeProvider([
-			TOTPProvider(tfa_secret or None),
-			AutoIMAPEmailProvider(email_login, email_password, on_log=on_log),
-		])
-		auth = IGAuthService(provider)
-		if not auth.ensure_logged_in(cl, username, password, on_log=on_log):
-			if on_log:
-				on_log("Authentication failed")
+		auth_success, auth = perform_authentication_with_retry(cl, username, password, tfa_secret, email_login, email_password, on_log, 'authentication')
+		if not auth_success:
 			return ("failed", 0, 1)
 	else:
 		# Verify restored session is valid
@@ -484,29 +478,17 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 				log_warning(f"[SESSION] Session verification failed for {username}")
 				if on_log:
 					on_log("Session verification failed, falling back to login")
-				# Fallback to login
-				provider = CompositeProvider([
-					TOTPProvider(tfa_secret or None),
-					AutoIMAPEmailProvider(email_login, email_password, on_log=on_log),
-				])
-				auth = IGAuthService(provider)
-				if not auth.ensure_logged_in(cl, username, password, on_log=on_log):
-					if on_log:
-						on_log("Authentication failed")
+				# Fallback to login with retry logic
+				auth_success, auth = perform_authentication_with_retry(cl, username, password, tfa_secret, email_login, email_password, on_log, 'fallback_authentication')
+				if not auth_success:
 					return ("failed", 0, 1)
 		except Exception as e:
 			log_warning(f"[SESSION] Session verification error for {username}: {e}")
 			if on_log:
 				on_log(f"Session verification error: {e}")
-			# Fallback to login
-			provider = CompositeProvider([
-				TOTPProvider(tfa_secret or None),
-				AutoIMAPEmailProvider(email_login, email_password, on_log=on_log),
-			])
-			auth = IGAuthService(provider)
-			if not auth.ensure_logged_in(cl, username, password, on_log=on_log):
-				if on_log:
-					on_log("Authentication failed")
+			# Fallback to login with retry logic
+			auth_success, auth = perform_authentication_with_retry(cl, username, password, tfa_secret, email_login, email_password, on_log, 'exception_fallback_authentication')
+			if not auth_success:
 				return ("failed", 0, 1)
 	
 	# Ensure we're logged in before any API calls (mentions, locations, uploads)
@@ -934,16 +916,105 @@ async def run_instagrapi_upload_async(account_details: Dict, videos: List, video
 
 
 # =========================
+# Authentication Helper Functions
+# =========================
+
+def perform_authentication_with_retry(cl, username: str, password: str, tfa_secret: Optional[str], email_login: Optional[str], email_password: Optional[str], on_log: Optional[Callable[[str], None]] = None, config_type: str = 'authentication') -> Tuple[bool, Optional[IGAuthService]]:
+	"""
+	Perform authentication with retry logic using configuration.
+	
+	Args:
+		cl: Instagram client
+		username: Username
+		password: Password
+		tfa_secret: TOTP secret
+		email_login: Email login
+		email_password: Email password
+		on_log: Logging callback
+		config_type: Configuration type for retry settings
+		
+	Returns:
+		Tuple of (success, auth_service)
+	"""
+	# Import configuration
+	try:
+		from instgrapi_func.services.auth_retry_config import auth_retry_config
+		config = auth_retry_config.get_authentication_config()
+		if config_type == 'fallback_authentication':
+			config = auth_retry_config.get_fallback_authentication_config()
+		elif config_type == 'exception_fallback_authentication':
+			config = auth_retry_config.get_exception_fallback_authentication_config()
+		max_retries = config['max_retries']
+	except ImportError:
+		max_retries = 3
+	
+	auth_success = False
+	auth_service = None
+	
+	for auth_attempt in range(max_retries):
+		provider = CompositeProvider([
+			TOTPProvider(tfa_secret or None),
+			AutoIMAPEmailProvider(email_login, email_password, on_log=on_log),
+		])
+		auth_service = IGAuthService(provider)
+		
+		log_info(f"[AUTH] {config_type} attempt {auth_attempt + 1}/{max_retries} for {username}")
+		if on_log:
+			on_log(f"{config_type} attempt {auth_attempt + 1}/{max_retries}")
+		
+		if auth_service.ensure_logged_in(cl, username, password, on_log=on_log):
+			log_info(f"[AUTH] {config_type} successful for {username}")
+			if on_log:
+				on_log(f"{config_type} successful")
+			auth_success = True
+			break
+		else:
+			log_warning(f"[AUTH] {config_type} failed for {username} (attempt {auth_attempt + 1}/{max_retries})")
+			if on_log:
+				on_log(f"{config_type} failed (attempt {auth_attempt + 1}/{max_retries})")
+			
+			# If not the last attempt, wait before retry
+			if auth_attempt < max_retries - 1:
+				import time
+				import random
+				try:
+					delay = auth_retry_config.calculate_delay(auth_attempt, config_type)
+				except:
+					delay = random.uniform(5, 10) * (auth_attempt + 1)  # Fallback
+				log_info(f"[AUTH] Waiting {delay:.1f}s before retry for {username}")
+				if on_log:
+					on_log(f"Waiting {delay:.1f}s before retry...")
+				time.sleep(delay)
+	
+	if not auth_success:
+		log_error(f"[AUTH] All {max_retries} {config_type} attempts failed for {username}")
+		if on_log:
+			on_log(f"All {max_retries} {config_type} attempts failed")
+	
+	return auth_success, auth_service
+
+
+# =========================
 # Smart Session Restoration with Auto-Save
 # =========================
 
-def smart_session_restoration_with_save(cl, username: str, persisted_settings: Optional[Dict], session_store, on_log: Optional[Callable[[str], None]] = None) -> bool:
+def smart_session_restoration_with_save(cl, username: str, persisted_settings: Optional[Dict], session_store, on_log: Optional[Callable[[str], None]] = None, max_retries: int = None) -> bool:
 	"""
 	Smart session restoration that:
-	1. Attempts to restore from bundle if valid
+	1. Attempts to restore from bundle if valid (single attempt - if invalid, retries won't help)
 	2. Automatically saves refreshed session after successful restoration
 	3. Returns True if session was successfully restored, False otherwise
 	"""
+	# Import configuration
+	try:
+		from instgrapi_func.services.auth_retry_config import auth_retry_config
+		session_config = auth_retry_config.get_session_restoration_config()
+		if max_retries is None:
+			max_retries = session_config['max_retries']
+	except ImportError:
+		if max_retries is None:
+			max_retries = 1  # Single attempt by default
+	
 	session_restored = False
 	
 	# Check if we have a valid session bundle
@@ -975,9 +1046,9 @@ def smart_session_restoration_with_save(cl, username: str, persisted_settings: O
 					except Exception as e:
 						log_warning(f"[SESSION] Failed to save restored session: {e}")
 				else:
-					log_warning(f"[SESSION] Failed to restore session for {username}")
+					log_warning(f"[SESSION] Failed to restore session for {username} - session is invalid")
 					if on_log:
-						on_log("Session restoration failed")
+						on_log("Session restoration failed - session is invalid")
 			except Exception as e:
 				log_warning(f"[SESSION] Session restoration error for {username}: {e}")
 				if on_log:
@@ -1115,14 +1186,8 @@ def _sync_photo_upload_impl(account_details: Dict, photo_files_to_upload: List[s
 	
 	# Auth: use restored session or fallback to login with TOTP/email
 	if not session_restored:
-		provider = CompositeProvider([
-			TOTPProvider(tfa_secret or None),
-			AutoIMAPEmailProvider(email_login, email_password, on_log=on_log),
-		])
-		auth = IGAuthService(provider)
-		if not auth.ensure_logged_in(cl, username, password, on_log=on_log):
-			if on_log:
-				on_log("Authentication failed")
+		auth_success, auth = perform_authentication_with_retry(cl, username, password, tfa_secret, email_login, email_password, on_log, 'authentication')
+		if not auth_success:
 			return ("failed", 0, 1)
 	else:
 		# Verify restored session is valid
@@ -1142,29 +1207,17 @@ def _sync_photo_upload_impl(account_details: Dict, photo_files_to_upload: List[s
 				log_warning(f"[SESSION] Session verification failed for {username}")
 				if on_log:
 					on_log("Session verification failed, falling back to login")
-				# Fallback to login
-				provider = CompositeProvider([
-					TOTPProvider(tfa_secret or None),
-					AutoIMAPEmailProvider(email_login, email_password, on_log=on_log),
-				])
-				auth = IGAuthService(provider)
-				if not auth.ensure_logged_in(cl, username, password, on_log=on_log):
-					if on_log:
-						on_log("Authentication failed")
+				# Fallback to login with retry logic
+				auth_success, auth = perform_authentication_with_retry(cl, username, password, tfa_secret, email_login, email_password, on_log, 'fallback_authentication')
+				if not auth_success:
 					return ("failed", 0, 1)
 		except Exception as e:
 			log_warning(f"[SESSION] Session verification error for {username}: {e}")
 			if on_log:
 				on_log(f"Session verification error: {e}")
-			# Fallback to login
-			provider = CompositeProvider([
-				TOTPProvider(tfa_secret or None),
-				AutoIMAPEmailProvider(email_login, email_password, on_log=on_log),
-			])
-			auth = IGAuthService(provider)
-			if not auth.ensure_logged_in(cl, username, password, on_log=on_log):
-				if on_log:
-					on_log("Authentication failed")
+			# Fallback to login with retry logic
+			auth_success, auth = perform_authentication_with_retry(cl, username, password, tfa_secret, email_login, email_password, on_log, 'exception_fallback_authentication')
+			if not auth_success:
 				return ("failed", 0, 1)
 	
 	# Ensure we're logged in before any API calls (mentions, locations, uploads)
