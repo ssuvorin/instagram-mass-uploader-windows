@@ -233,20 +233,20 @@ def test_proxy(request, proxy_id):
 
 
 def import_proxies(request):
-    """Import proxies from a text file"""
+    """Import proxies from a text file with batch validation"""
     from django.db import close_old_connections, OperationalError
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
     
     if request.method == 'POST' and request.FILES.get('proxies_file'):
         proxies_file = request.FILES['proxies_file']
         
-        # Counters for status messages
-        created_count = 0
-        updated_count = 0
-        error_count = 0
-        invalid_count = 0
-        
         # Read file content
         content = proxies_file.read().decode('utf-8')
+        
+        # Parse all proxies first
+        parsed_proxies = []
+        error_count = 0
         
         for line_num, line in enumerate(content.splitlines(), 1):
             if not line.strip():
@@ -284,104 +284,36 @@ def import_proxies(request):
                 username = parts[2] if len(parts) > 2 else None
                 password = parts[3] if len(parts) > 3 else None
                 
-                # Validate the proxy before importing (normalizing host)
-                is_valid, validation_message, geo_info = validate_proxy(
-                    host=host,
-                    port=port,
-                    username=username,
-                    password=password,
-                    timeout=10,
-                    proxy_type='HTTP'  # Default to HTTP for imported proxies
-                )
-                
-                if not is_valid:
-                    logger.warning(f"Line {line_num}: Proxy validation failed - {validation_message}")
-                    messages.warning(request, f'Line {line_num}: Proxy validation failed - {validation_message}')
-                    invalid_count += 1
-                    continue
-                
-                # Check if an identical proxy already exists (same host, port, username, password)
-                identical_proxy = Proxy.objects.filter(
-                    host=host,
-                    port=port,
-                    username=username,
-                    password=password
-                ).first()
-                
-                if identical_proxy:
-                    # Update existing proxy
-                    identical_proxy.status = 'active' if is_valid else 'inactive'
-                    identical_proxy.is_active = is_valid
-                    identical_proxy.last_verified = timezone.now()
-                    identical_proxy.last_checked = timezone.now()
-                    
-                    # Update IP change URL if provided
-                    if ip_change_url:
-                        identical_proxy.ip_change_url = ip_change_url
-                    
-                    # Update country, city, and external IP information if available
-                    if geo_info:
-                        if geo_info.get('country'):
-                            identical_proxy.country = geo_info.get('country')
-                        if geo_info.get('city'):
-                            identical_proxy.city = geo_info.get('city')
-                        if geo_info.get('external_ip'):
-                            identical_proxy.external_ip = geo_info.get('external_ip')
-                    
-                    # Save with retry logic for DB connection issues
-                    try:
-                        identical_proxy.save()
-                    except OperationalError:
-                        # Close old connections and retry
-                        close_old_connections()
-                        identical_proxy.save()
-                    updated_count += 1
-                else:
-                    # Create new proxy
-                    new_proxy = Proxy(
-                        host=host,
-                        port=port,
-                        username=username,
-                        password=password,
-                        status='active' if is_valid else 'inactive',
-                        is_active=is_valid,
-                        last_verified=timezone.now(),
-                        last_checked=timezone.now(),
-                        ip_change_url=ip_change_url
-                    )
-                    
-                    # Add country, city, and external IP information if available
-                    if geo_info:
-                        if geo_info.get('country'):
-                            new_proxy.country = geo_info.get('country')
-                        if geo_info.get('city'):
-                            new_proxy.city = geo_info.get('city')
-                        if geo_info.get('external_ip'):
-                            new_proxy.external_ip = geo_info.get('external_ip')
-                    
-                    # Save with retry logic for DB connection issues
-                    try:
-                        new_proxy.save()
-                    except OperationalError:
-                        # Close old connections and retry
-                        close_old_connections()
-                        new_proxy.save()
-                    created_count += 1
+                parsed_proxies.append({
+                    'line_num': line_num,
+                    'host': host,
+                    'port': port,
+                    'username': username,
+                    'password': password,
+                    'ip_change_url': ip_change_url
+                })
                 
             except Exception as e:
-                logger.error(f"Error importing proxy at line {line_num}: {str(e)}")
-                messages.error(request, f'Line {line_num}: Error importing proxy - {str(e)}')
+                logger.error(f"Error parsing proxy at line {line_num}: {str(e)}")
+                messages.error(request, f'Line {line_num}: Error parsing proxy - {str(e)}')
                 error_count += 1
         
-        # Show summary message
-        if created_count > 0 or updated_count > 0:
-            messages.success(
-                request, 
-                f'Import completed! Created: {created_count}, Updated: {updated_count}, Invalid: {invalid_count}, Errors: {error_count}'
-            )
-        else:
-            messages.warning(request, f'No valid proxies were imported. Invalid: {invalid_count}, Errors: {error_count}')
-            
+        if not parsed_proxies:
+            messages.warning(request, f'No valid proxy entries found. Errors: {error_count}')
+            return redirect('proxy_list')
+        
+        # Start batch validation in background
+        thread = threading.Thread(
+            target=_import_proxies_background,
+            args=(parsed_proxies, request.user.id, error_count)
+        )
+        thread.daemon = True
+        thread.start()
+        
+        messages.info(
+            request, 
+            f'Import of {len(parsed_proxies)} proxies started in background. Please check back in a moment.'
+        )
         return redirect('proxy_list')
         
     context = {
@@ -416,6 +348,183 @@ def validate_all_proxies(request):
         f'Validation of {proxies.count()} proxies has been started in the background. Please check back in a moment.'
     )
     return redirect('proxy_list')
+
+
+def _import_proxies_background(parsed_proxies, user_id, error_count):
+    """Background task to import proxies with batch validation"""
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import AnonymousUser
+    from django.contrib.messages import constants as message_constants
+    from django.contrib.messages.storage.fallback import FallbackStorage
+    from django.contrib.sessions.backends.db import SessionStore
+    from django.http import HttpRequest
+    from django.db import connections, close_old_connections, OperationalError
+    from concurrent.futures import ThreadPoolExecutor
+    import random
+    import time
+    
+    # Reset DB connection state for this background thread
+    close_old_connections()
+    
+    # Create a fake request to use for messaging
+    request = HttpRequest()
+    try:
+        if user_id is not None:
+            UserModel = get_user_model()
+            request.user = UserModel.objects.get(id=user_id)
+        else:
+            request.user = AnonymousUser()
+    except Exception:
+        # Fall back to anonymous if user not found
+        request.user = AnonymousUser()
+    request.session = SessionStore()
+    request.session.create()
+    request._messages = FallbackStorage(request)
+    
+    created_count = 0
+    updated_count = 0
+    invalid_count = 0
+    
+    # Configure thread count for validation (similar to existing validation)
+    thread_count = min(20, max(1, len(parsed_proxies)))
+    
+    def validate_and_save_proxy(proxy_data):
+        """Worker function to validate and save a single proxy"""
+        try:
+            # Ensure fresh DB connection for this thread
+            close_old_connections()
+            
+            # Add small random delay to simulate human behavior
+            delay = random.uniform(0.1, 0.3)  # 100-300ms delay
+            time.sleep(delay)
+            
+            # Validate the proxy
+            is_valid, validation_message, geo_info = validate_proxy(
+                host=proxy_data['host'],
+                port=proxy_data['port'],
+                username=proxy_data['username'],
+                password=proxy_data['password'],
+                timeout=8,  # Shorter timeout for batch processing
+                proxy_type='HTTP'
+            )
+            
+            if not is_valid:
+                return {'status': 'invalid', 'line_num': proxy_data['line_num'], 'message': validation_message}
+            
+            # Check if an identical proxy already exists
+            identical_proxy = Proxy.objects.filter(
+                host=proxy_data['host'],
+                port=proxy_data['port'],
+                username=proxy_data['username'],
+                password=proxy_data['password']
+            ).first()
+            
+            if identical_proxy:
+                # Update existing proxy
+                identical_proxy.status = 'active'
+                identical_proxy.is_active = True
+                identical_proxy.last_verified = timezone.now()
+                identical_proxy.last_checked = timezone.now()
+                
+                # Update IP change URL if provided
+                if proxy_data['ip_change_url']:
+                    identical_proxy.ip_change_url = proxy_data['ip_change_url']
+                
+                # Update country, city, and external IP information if available
+                if geo_info:
+                    if geo_info.get('country'):
+                        identical_proxy.country = geo_info.get('country')
+                    if geo_info.get('city'):
+                        identical_proxy.city = geo_info.get('city')
+                    if geo_info.get('external_ip'):
+                        identical_proxy.external_ip = geo_info.get('external_ip')
+                
+                # Save with retry logic for DB connection issues
+                try:
+                    identical_proxy.save()
+                except OperationalError:
+                    close_old_connections()
+                    identical_proxy.save()
+                
+                return {'status': 'updated', 'line_num': proxy_data['line_num']}
+            else:
+                # Create new proxy
+                new_proxy = Proxy(
+                    host=proxy_data['host'],
+                    port=proxy_data['port'],
+                    username=proxy_data['username'],
+                    password=proxy_data['password'],
+                    status='active',
+                    is_active=True,
+                    last_verified=timezone.now(),
+                    last_checked=timezone.now(),
+                    ip_change_url=proxy_data['ip_change_url']
+                )
+                
+                # Add country, city, and external IP information if available
+                if geo_info:
+                    if geo_info.get('country'):
+                        new_proxy.country = geo_info.get('country')
+                    if geo_info.get('city'):
+                        new_proxy.city = geo_info.get('city')
+                    if geo_info.get('external_ip'):
+                        new_proxy.external_ip = geo_info.get('external_ip')
+                
+                # Save with retry logic for DB connection issues
+                try:
+                    new_proxy.save()
+                except OperationalError:
+                    close_old_connections()
+                    new_proxy.save()
+                
+                return {'status': 'created', 'line_num': proxy_data['line_num']}
+                
+        except Exception as e:
+            logger.error(f"Error processing proxy at line {proxy_data['line_num']}: {str(e)}")
+            return {'status': 'error', 'line_num': proxy_data['line_num'], 'message': str(e)}
+    
+    # Execute validation and saving in parallel
+    try:
+        with ThreadPoolExecutor(max_workers=thread_count) as executor:
+            results = list(executor.map(validate_and_save_proxy, parsed_proxies))
+        
+        # Count results
+        for result in results:
+            if result['status'] == 'created':
+                created_count += 1
+            elif result['status'] == 'updated':
+                updated_count += 1
+            elif result['status'] == 'invalid':
+                invalid_count += 1
+        
+    except Exception as e:
+        logger.error(f"Error in proxy import background task: {str(e)}")
+        try:
+            request._messages.add(
+                message_constants.ERROR,
+                f'Proxy import failed: {str(e)}'
+            )
+        except Exception:
+            pass
+        return
+    
+    # Add success message
+    try:
+        request._messages.add(
+            message_constants.SUCCESS,
+            f'Import completed! Created: {created_count}, Updated: {updated_count}, Invalid: {invalid_count}, Errors: {error_count}'
+        )
+    except Exception:
+        pass
+    
+    # Close DB connections
+    try:
+        for conn in connections.all():
+            if conn.connection is not None:
+                conn.close_if_unusable_or_obsolete()
+                conn.close()
+    except Exception:
+        pass
 
 
 def _validate_proxies_background(proxies, user_id):
