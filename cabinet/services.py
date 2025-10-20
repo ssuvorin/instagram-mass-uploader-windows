@@ -360,16 +360,11 @@ class AnalyticsService:
             youtube_watch_time=Sum('youtube_watch_time'),
             tiktok_video_views=Sum('tiktok_video_views'),
             tiktok_profile_views=Sum('tiktok_profile_views'),
-            # Advanced metrics - average for avg fields, max for max fields
-            avg_videos_per_account=Avg('avg_videos_per_account'),
+            # For advanced metrics, we'll calculate them from raw data instead of using pre-calculated fields
             max_videos_per_account=Max('max_videos_per_account'),
-            avg_views_per_video=Avg('avg_views_per_video'),
             max_views_per_video=Max('max_views_per_video'),
-            avg_views_per_account=Avg('avg_views_per_account'),
             max_views_per_account=Max('max_views_per_account'),
-            avg_likes_per_video=Avg('avg_likes_per_video'),
             max_likes_per_video=Max('max_likes_per_video'),
-            avg_likes_per_account=Avg('avg_likes_per_account'),
             max_likes_per_account=Max('max_likes_per_account'),
         )
         
@@ -409,6 +404,13 @@ class AnalyticsService:
             total_followers = latest_record.total_followers if latest_record else 0
             growth_rate = latest_record.growth_rate if latest_record else 0.0
             
+            # Calculate advanced metrics from raw data
+            avg_videos_per_account = (total_posts / total_accounts) if total_accounts > 0 else 0.0
+            avg_views_per_video = avg_views  # Already calculated above
+            avg_views_per_account = (total_views / total_accounts) if total_accounts > 0 else 0.0
+            avg_likes_per_video = ((network_data['total_likes'] or 0) / total_posts) if total_posts > 0 else 0.0
+            avg_likes_per_account = ((network_data['total_likes'] or 0) / total_accounts) if total_accounts > 0 else 0.0
+            
             networks[network_key] = SocialNetworkAnalytics(
                 network=network_key,
                 total_posts=total_posts,
@@ -426,17 +428,17 @@ class AnalyticsService:
                 youtube_watch_time=network_data['youtube_watch_time'] or 0,
                 tiktok_video_views=network_data['tiktok_video_views'] or 0,
                 tiktok_profile_views=network_data['tiktok_profile_views'] or 0,
-                # Advanced metrics - snapshot from latest record
+                # Advanced metrics - calculated from raw data
                 total_accounts=total_accounts,
-                avg_videos_per_account=network_data['avg_videos_per_account'] or 0.0,
+                avg_videos_per_account=avg_videos_per_account,
                 max_videos_per_account=network_data['max_videos_per_account'] or 0,
-                avg_views_per_video=network_data['avg_views_per_video'] or 0.0,
+                avg_views_per_video=avg_views_per_video,
                 max_views_per_video=network_data['max_views_per_video'] or 0,
-                avg_views_per_account=network_data['avg_views_per_account'] or 0.0,
+                avg_views_per_account=avg_views_per_account,
                 max_views_per_account=network_data['max_views_per_account'] or 0,
-                avg_likes_per_video=network_data['avg_likes_per_video'] or 0.0,
+                avg_likes_per_video=avg_likes_per_video,
                 max_likes_per_video=network_data['max_likes_per_video'] or 0,
-                avg_likes_per_account=network_data['avg_likes_per_account'] or 0.0,
+                avg_likes_per_account=avg_likes_per_account,
                 max_likes_per_account=network_data['max_likes_per_account'] or 0,
             )
         
