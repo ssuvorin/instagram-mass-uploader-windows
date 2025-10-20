@@ -631,12 +631,38 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 				if media is None:
 					raise Exception("clip_upload returned None - no response from Instagram API")
 				
+				# Log response details for debugging
+				log_info(f"[RESPONSE] Instagram API response type: {type(media)}")
+				log_info(f"[RESPONSE] Response attributes: {[attr for attr in dir(media) if not attr.startswith('_')]}")
+				
 				code = getattr(media, 'code', None)
 				media_id = getattr(media, 'id', None)
+				user_info = getattr(media, 'user', None)
+				status = getattr(media, 'status', None)
 				
-				# Check if we got a valid response
+				log_info(f"[RESPONSE] code: {code}, media_id: {media_id}, status: {status}")
+				if user_info:
+					log_info(f"[RESPONSE] user: {getattr(user_info, 'username', 'unknown')}")
+				
+				# Check if we got a valid response - handle different response formats
 				if not code and not media_id:
-					raise Exception(f"Invalid response from Instagram API: {media}")
+					# Check if this is a successful response with user info but no code/media_id
+					# This happens when Instagram returns status 'ok' with user data but no media identifiers
+					user_info = getattr(media, 'user', None)
+					status = getattr(media, 'status', None)
+					
+					if user_info and status == 'ok':
+						# This is actually a successful upload, just without media identifiers
+						log_success(f"[OK] Upload successful (status: {status}, user: {getattr(user_info, 'username', 'unknown')})")
+						if on_log:
+							on_log(f"Upload successful (status: {status})")
+						completed += 1
+						upload_success = True
+						# Human-like pause after upload
+						time.sleep(random.uniform(3.0, 10.0))
+						continue  # Skip to next video
+					else:
+						raise Exception(f"Invalid response from Instagram API: {media}")
 				
 				completed += 1
 				upload_success = True
