@@ -208,9 +208,12 @@ LOGOUT_REDIRECT_URL = '/login/'
 
 # Session settings to prevent database connection issues
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
-SESSION_COOKIE_AGE = 3600  # 1 hour
-SESSION_SAVE_EVERY_REQUEST = False
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_AGE = 86400  # 24 hours (24 * 60 * 60)
+SESSION_SAVE_EVERY_REQUEST = True  # Update session on every request
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Keep session after browser close
+SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
+SESSION_COOKIE_HTTPONLY = True  # Prevent XSS attacks
+SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
 
 # File upload settings
 DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100 MB
