@@ -13,7 +13,7 @@ from uploader.models import InstagramAccount
 try:
 	from instagrapi import Client  # type: ignore
 	from instagrapi.types import Usertag, Location  # type: ignore
-	from instagrapi.exceptions import LoginRequired, RateLimitError, ChallengeError  # type: ignore
+	from instagrapi.exceptions import LoginRequired, RateLimitError, ChallengeError, ClipConfigureError  # type: ignore
 except Exception:
 	Client = None  # type: ignore
 	Usertag = None  # type: ignore
@@ -21,6 +21,7 @@ except Exception:
 	LoginRequired = Exception  # type: ignore
 	RateLimitError = Exception  # type: ignore
 	ChallengeError = Exception  # type: ignore
+	ClipConfigureError = Exception  # type: ignore
 
 # typing-time aliases to satisfy Pylance
 if TYPE_CHECKING:
@@ -692,8 +693,41 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 				error_type = type(e).__name__
 				log_error(f"[ERROR_DETAILS] Error type: {error_type}, Message: {str(e)}")
 				
+				# Check for ClipConfigureError with successful response (status 'ok')
+				if isinstance(e, ClipConfigureError):
+					# Check if this is actually a successful upload that Instagram returned as an error
+					# This happens when Instagram returns status 'ok' with user data but no media identifiers
+					try:
+						# Extract data directly from exception attributes (set via **self.last_json)
+						status = getattr(e, 'status', None)
+						user_info = getattr(e, 'user', None)
+						
+						# Log all available attributes for debugging
+						exception_attrs = {attr: getattr(e, attr, None) for attr in dir(e) if not attr.startswith('_')}
+						log_info(f"[CLIP_CONFIG_ERROR] Exception attributes: {exception_attrs}")
+						log_info(f"[CLIP_CONFIG_ERROR] Checking exception data: status={status}, user={user_info}")
+						
+						if status == 'ok' and user_info:
+							# This is actually a successful upload, just without media identifiers
+							username = getattr(user_info, 'username', 'unknown') if hasattr(user_info, 'username') else user_info.get('username', 'unknown') if isinstance(user_info, dict) else 'unknown'
+							log_success(f"[OK] Upload successful (status: {status}, user: {username})")
+							if on_log:
+								on_log(f"Upload successful (status: {status})")
+							completed += 1
+							upload_success = True
+							# Human-like pause after upload
+							time.sleep(random.uniform(3.0, 10.0))
+							continue  # Skip to next video
+					except Exception as parse_error:
+						log_warning(f"[CLIP_CONFIG_ERROR] Failed to parse ClipConfigureError response: {parse_error}")
+					
+					# If we couldn't parse it as success, treat as regular error
+					log_error(f"[CLIP_CONFIG_ERROR] Clip configuration failed: {e}")
+					if on_log:
+						on_log(f"Clip configuration failed: {e}")
+				
 				# Check for authentication errors first (using proper exception types)
-				if isinstance(e, LoginRequired) or "login_required" in error_msg or "403" in error_msg or "unauthorized" in error_msg:
+				elif isinstance(e, LoginRequired) or "login_required" in error_msg or "403" in error_msg or "unauthorized" in error_msg:
 					log_error(f"[AUTH_ERROR] Authentication error detected: {e}")
 					if on_log:
 						on_log(f"Authentication error: {e}")
