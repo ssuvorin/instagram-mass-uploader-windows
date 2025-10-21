@@ -694,8 +694,8 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 				error_type = type(e).__name__
 				log_error(f"[ERROR_DETAILS] Error type: {error_type}, Message: {str(e)}")
 				
-				# Check for ClipNotUpload/ClipConfigureError with successful response (status 'ok')
-				if isinstance(e, (ClipNotUpload, ClipConfigureError)):
+				# Check for ClipConfigureError or ClipNotUpload with successful response (status 'ok')
+				if isinstance(e, (ClipConfigureError, ClipNotUpload)):
 					# Check if this is actually a successful upload that Instagram returned as an error
 					# This happens when Instagram returns status 'ok' with user data but no media identifiers
 					try:
@@ -705,8 +705,8 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 						
 						# Log all available attributes for debugging
 						exception_attrs = {attr: getattr(e, attr, None) for attr in dir(e) if not attr.startswith('_')}
-						log_info(f"[CLIP_UPLOAD_ERROR] Exception attributes: {exception_attrs}")
-						log_info(f"[CLIP_UPLOAD_ERROR] Checking exception data: status={status}, user={user_info}")
+						log_info(f"[CLIP_ERROR] Exception attributes: {exception_attrs}")
+						log_info(f"[CLIP_ERROR] Checking exception data: status={status}, user={user_info}")
 						
 						if status == 'ok' and user_info:
 							# This is actually a successful upload, just without media identifiers
@@ -720,12 +720,12 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 							time.sleep(random.uniform(3.0, 10.0))
 							continue  # Skip to next video
 					except Exception as parse_error:
-						log_warning(f"[CLIP_UPLOAD_ERROR] Failed to parse ClipNotUpload/ClipConfigureError response: {parse_error}")
+						log_warning(f"[CLIP_ERROR] Failed to parse Clip error response: {parse_error}")
 					
 					# If we couldn't parse it as success, treat as regular error
-					log_error(f"[CLIP_UPLOAD_ERROR] Clip upload/configuration failed: {e}")
+					log_error(f"[CLIP_ERROR] Clip upload failed: {e}")
 					if on_log:
-						on_log(f"Clip upload/configuration failed: {e}")
+						on_log(f"Clip upload failed: {e}")
 				
 				# Check for authentication errors first (using proper exception types)
 				elif isinstance(e, LoginRequired) or "login_required" in error_msg or "403" in error_msg or "unauthorized" in error_msg:
