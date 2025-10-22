@@ -68,6 +68,13 @@
         // Force sync with backend session on page load
         if (window.API_BASE) {
             persistServerToBackend(window.API_BASE);
+            
+            // Trigger system status update after a short delay to ensure everything is ready
+            setTimeout(() => {
+                if (typeof window.updateSystemStatus === 'function') {
+                    window.updateSystemStatus();
+                }
+            }, 300);
         }
     }
 

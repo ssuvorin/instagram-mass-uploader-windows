@@ -491,6 +491,12 @@ async function checkApiStatus() {
 document.addEventListener('DOMContentLoaded', function() {
     checkApiStatus();
     updateProxyValidationButtons();
+    // Delay system status update to ensure tiktok-server-selector.js has initialized
+    setTimeout(() => {
+        if (typeof updateSystemStatus === 'function') {
+            updateSystemStatus();
+        }
+    }, 200);
 });
 
 // Function to update proxy validation buttons state based on client selection

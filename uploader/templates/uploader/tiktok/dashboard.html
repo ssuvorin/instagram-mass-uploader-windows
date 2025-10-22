@@ -420,7 +420,10 @@ window.addEventListener('tiktok-server-changed', function(event) {
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
     checkApiStatus();
-    updateSystemStatus();
+    // Delay system status update to ensure tiktok-server-selector.js has initialized
+    setTimeout(() => {
+        updateSystemStatus();
+    }, 200);
     checkAllServersStatus();
 });
 
@@ -450,6 +453,7 @@ async function updateSystemStatus() {
     try {
         // Use current server from tiktok-server-selector.js
         const currentServer = window.API_BASE || '{{ api_base|default:"http://94.141.161.231:8000" }}';
+        console.log('updateSystemStatus using server:', currentServer);
         
         const res = await fetch('{% url "api_tiktok_stats" %}', { 
             method: 'POST',

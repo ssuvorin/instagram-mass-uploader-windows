@@ -339,7 +339,10 @@
     // Initialize page
     document.addEventListener('DOMContentLoaded', function() {
         checkApiStatus();
-        updateSystemStatus();
+        // Delay system status update to ensure tiktok-server-selector.js has initialized
+        setTimeout(() => {
+            updateSystemStatus();
+        }, 200);
     });
 
     // API Status Check
