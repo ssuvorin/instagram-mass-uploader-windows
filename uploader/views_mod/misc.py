@@ -1876,6 +1876,10 @@ def _get_tiktok_api_base(request=None, persist: bool = True) -> str:
         if env_server:
             return env_server
         return default_server_url
+    except Exception as e:
+        print(f"DEBUG: Error in _get_tiktok_api_base: {e}")
+        # Fallback to default server
+        return 'http://94.141.161.231:8000'
 
 
 def _json_response(data, status: int = 200):
