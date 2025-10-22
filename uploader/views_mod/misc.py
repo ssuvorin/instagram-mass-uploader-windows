@@ -2740,6 +2740,7 @@ def tiktok_videos_proxy_upload(request):
     if request.method != 'POST':
         return _json_response({'detail': 'Method not allowed'}, status=405)
     api_base = _get_tiktok_api_base(request)
+    print(f"DEBUG: tiktok_videos_proxy_upload using API base: {api_base}")
     try:
         files = request.FILES.getlist('files')
         if not files:
@@ -3476,6 +3477,7 @@ def tiktok_videos_proxy_prepare_accounts(request):
     if request.method != 'POST':
         return _json_response({'detail': 'Method not allowed'}, status=405)
     api_base = _get_tiktok_api_base(request)
+    print(f"DEBUG: tiktok_videos_proxy_prepare_accounts using API base: {api_base}")
     try:
         # Parse payload from JSON body or form and forward to upstream with client/order
         try:

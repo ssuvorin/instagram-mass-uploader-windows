@@ -550,6 +550,10 @@ document.getElementById('video-upload-form').addEventListener('submit', async fu
     resultsDiv.innerHTML = '';
     
     try {
+        // Add current server URL to the form data
+        const currentServer = window.API_BASE || '{{ api_base|default:"http://94.141.161.231:8000" }}';
+        formData.append('server_url', currentServer);
+        
         const response = await fetch('{% url "api_tiktok_videos_upload" %}', {
             method: 'POST',
             body: formData
@@ -601,7 +605,8 @@ document.getElementById('prepare-accounts-form').addEventListener('submit', asyn
             const requestBody = {
                 count: parseInt(count || 0),
                 client_id: document.getElementById('client_id').value || undefined,
-                order: document.getElementById('order').value || 'newest'
+                order: document.getElementById('order').value || 'newest',
+                server_url: window.API_BASE || '{{ api_base|default:"http://94.141.161.231:8000" }}'
             };
             const tagSelect = document.getElementById('tags');
             const tagName = tagSelect.selectedIndex > 0 ? tagSelect.options[tagSelect.selectedIndex].text : null;
