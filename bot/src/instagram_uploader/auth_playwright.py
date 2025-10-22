@@ -7,14 +7,13 @@ import re
 
 from playwright.sync_api import expect
 
-from bot.src import logger
 from bot.src.instagram_uploader import config
 from bot.src.instagram_uploader.browser_dolphin import get_browser, get_page, close_browser
 from bot.src.instagram_uploader.email_client import Email
 from .tfa_api import TFAAPI
 from bot.src.instagram_uploader.util import random_delay, realistic_type, human_action
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('bot.instagram_uploader.auth')
 
 def verify_ip_address(page):
     """

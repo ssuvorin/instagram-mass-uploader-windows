@@ -64,6 +64,11 @@
 
         // Attach change event listener
         serverSelect.addEventListener('change', handleServerChange);
+        
+        // Force sync with backend session on page load
+        if (window.API_BASE) {
+            persistServerToBackend(window.API_BASE);
+        }
     }
 
     /**

@@ -129,8 +129,8 @@ class SafeLogger:
         safe_message = safe_log_message(str(message))
         self._logger.debug(safe_message, *args, **kwargs)
 
-# Create safe logger wrapper
-logger = SafeLogger(logging.getLogger(__name__))
+# Create safe logger wrapper using centralized logging
+logger = SafeLogger(logging.getLogger('bot.instagram_uploader.dolphin_anty'))
 
 class DolphinAntyAPIError(Exception):
     """Exception for Dolphin{anty} API errors"""

@@ -1729,7 +1729,7 @@ def _tiktok_api_context(request=None) -> dict:
     # Determine selected API base with precedence: session -> env -> first server
     selected_api_base = None
 
-    # 1) Try to get from session if request is provided
+    # 1) Try to get from session if request is provided (for both GET and POST)
     if request is not None:
         try:
             session_url = request.session.get('selected_tiktok_api_base')
@@ -1853,22 +1853,29 @@ def _get_tiktok_api_base(request=None, persist: bool = True) -> str:
                 if persist:
                     try:
                         request.session['selected_tiktok_api_base'] = server_url
-                    except Exception:
+                        request.session.save()
+                        print(f"DEBUG: Saved TikTok API server to session: {server_url}")
+                    except Exception as e:
+                        print(f"DEBUG: Failed to save TikTok API server to session: {e}")
                         pass
                 return server_url
-            # 2) From session
+            # 2) From session (for both GET and POST requests)
             try:
                 session_url = request.session.get('selected_tiktok_api_base')
                 if session_url:
+                    print(f"DEBUG: Retrieved TikTok API server from session in _get_tiktok_api_base: {session_url}")
                     return session_url
-            except Exception:
+                else:
+                    print(f"DEBUG: No TikTok API server found in session in _get_tiktok_api_base")
+            except Exception as e:
+                print(f"DEBUG: Failed to read TikTok API server from session in _get_tiktok_api_base: {e}")
                 pass
         # 3) Fallback to env/defaults
-        ctx = _tiktok_api_context(request)
-        return ctx.get('api_base')
-    except Exception:
-        ctx = _tiktok_api_context(request)
-        return ctx.get('api_base')
+        default_server_url = 'http://94.141.161.231:8000'
+        env_server = os.environ.get('TIKTOK_API_BASE')
+        if env_server:
+            return env_server
+        return default_server_url
 
 
 def _json_response(data, status: int = 200):

@@ -19,7 +19,7 @@ from playwright.sync_api import sync_playwright, Browser, Page
 
 from bot.src.instagram_uploader.dolphin_anty import DolphinAnty
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('bot.instagram_uploader.browser_dolphin')
 
 class DolphinBrowser:
     """

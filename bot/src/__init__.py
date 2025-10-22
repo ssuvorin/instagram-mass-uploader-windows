@@ -1,4 +1,3 @@
-from bot.src.logger import logger
-
-# Make logger available for import from bot.src
+# Bot package initialization
+# All modules now use centralized Django logging via logging.getLogger()
 __all__ = ['logger'] 

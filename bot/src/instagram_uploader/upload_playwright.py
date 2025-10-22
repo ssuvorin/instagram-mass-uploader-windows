@@ -3,10 +3,12 @@ import random
 import os
 from playwright.sync_api import Page, expect
 
-from bot.src import logger
+import logging
 from bot.src.instagram_uploader import config
 from bot.src.instagram_uploader.browser_dolphin import close_browser
 from bot.src.instagram_uploader.util import random_delay, realistic_type, human_action
+
+logger = logging.getLogger('bot.instagram_uploader.upload')
 
 
 class Upload:

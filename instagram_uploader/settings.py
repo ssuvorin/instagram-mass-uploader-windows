@@ -342,7 +342,39 @@ LOGGING = {
             'level': 'INFO',
             'propagate': True,
         },
-        'bot.src.instagram_uploader.dolphin_anty': {
+        'bot.run_bot_playwright': {
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'bot.instagram_uploader': {
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'bot.instagram_uploader.auth': {
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'bot.instagram_uploader.upload': {
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'bot.instagram_uploader.dolphin_anty': {
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'bot.instagram_uploader.browser_dolphin': {
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'bot.instagram_uploader.util': {
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'bot.instagram_uploader.tfa_api': {
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'bot.videos': {
             'level': 'INFO',
             'propagate': True,
         },

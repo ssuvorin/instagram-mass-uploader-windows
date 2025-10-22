@@ -2,7 +2,7 @@ import requests
 import time
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('bot.instagram_uploader.tfa_api')
 
 class TFAAPI:
     def __init__(self):

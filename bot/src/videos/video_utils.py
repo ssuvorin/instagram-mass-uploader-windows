@@ -1,7 +1,9 @@
 import os
 import glob
 from pathlib import Path
-from bot.src.logger import logger
+import logging
+
+logger = logging.getLogger('bot.videos.video_utils')
 
 def get_videos_list(video_dir):
     """

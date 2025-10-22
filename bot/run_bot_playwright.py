@@ -39,24 +39,11 @@ from bot.src.instagram_uploader.browser_dolphin import get_browser, get_page, cl
 from bot.src.instagram_uploader.dolphin_anty import DolphinAnty
 from bot.src.instagram_uploader.auth_playwright import Auth, verify_ip_address
 from bot.src.instagram_uploader.upload_playwright import Upload
-from bot.src import logger
 from bot.src.videos import get_videos_list, get_videos_by_folders
 from bot.src.instagram_uploader.util import random_delay, realistic_type, human_action
 
-# Настройка логирования
-# Get the project root directory for django.log
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-django_log_path = os.path.join(project_root, 'django.log')
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),  # Вывод в консоль
-        logging.FileHandler(django_log_path, encoding='utf-8')  # Вывод в django.log
-    ]
-)
-logger = logging.getLogger(__name__)
+# Use centralized Django logging
+logger = logging.getLogger('bot.run_bot_playwright')
 
 def check_proxy_config(proxy_data):
     """
