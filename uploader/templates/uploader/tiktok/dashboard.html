@@ -448,7 +448,17 @@ async function checkApiStatus() {
 // System Status Update
 async function updateSystemStatus() {
     try {
-        const res = await fetch('{% url "api_tiktok_stats" %}', { method: 'POST' });
+        // Use current server from tiktok-server-selector.js
+        const currentServer = window.API_BASE || '{{ api_base|default:"http://94.141.161.231:8000" }}';
+        
+        const res = await fetch('{% url "api_tiktok_stats" %}', { 
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: `server_url=${encodeURIComponent(currentServer)}`
+        });
         const j = await res.json();
         if (res.ok && j.ok) {
             document.getElementById('profiles-count').textContent = j.profiles_count ?? 'N/A';
@@ -457,6 +467,8 @@ async function updateSystemStatus() {
             
             // Update server status with detailed info
             updateServerStatusDisplay(j.is_alive);
+            
+            console.log('System status updated for server:', j.server_url);
         } else {
             document.getElementById('profiles-count').textContent = 'N/A';
             document.getElementById('accounts-count').textContent = 'N/A';
@@ -465,6 +477,7 @@ async function updateSystemStatus() {
             document.getElementById('servers-status-list').style.display = 'none';
         }
     } catch (err) {
+        console.error('Failed to update system status:', err);
         document.getElementById('profiles-count').textContent = 'N/A';
         document.getElementById('accounts-count').textContent = 'N/A';
         document.getElementById('videos-count').textContent = 'N/A';

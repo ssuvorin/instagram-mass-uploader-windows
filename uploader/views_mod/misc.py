@@ -3316,12 +3316,19 @@ def tiktok_proxy_replace_with_uploaded(request):
 def tiktok_stats_proxy(request):
     """Aggregate stats from upstream: dolphin profiles, accounts in DB, remaining videos, and server liveness."""
     import requests
-    api_base = _get_tiktok_api_base(request)
+    
+    # Get API base with explicit server URL from POST if provided
+    api_base = _get_tiktok_api_base(request, persist=False)
+    
+    # Debug logging
+    print(f"DEBUG: tiktok_stats_proxy using API base: {api_base}")
+    
     result = {
         'profiles_count': None,
         'accounts_count': None,
         'remaining_videos': None,
         'is_alive': False,
+        'server_url': api_base  # Include server URL in response for debugging
     }
     try:
         # Health (use /logs or /docs as probe)

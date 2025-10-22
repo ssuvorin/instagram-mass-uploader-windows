@@ -650,9 +650,18 @@
     async function updateSystemStatus(data = null) {
         try {
             if (!data) {
-                // Try to fetch stats from backend proxy
+                // Try to fetch stats from backend proxy with current server
                 try {
-                    const res = await fetch('{% url "api_tiktok_stats" %}', { method: 'POST' });
+                    const currentServer = window.API_BASE || '{{ api_base|default:"http://94.141.161.231:8000" }}';
+                    
+                    const res = await fetch('{% url "api_tiktok_stats" %}', { 
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        },
+                        body: `server_url=${encodeURIComponent(currentServer)}`
+                    });
                     const j = await res.json();
                     if (res.ok && j.ok) {
                         data = {
@@ -661,10 +670,12 @@
                             videos_count: j.remaining_videos ?? 'N/A',
                             proxies_count: 'N/A'
                         };
+                        console.log('System status updated for server:', j.server_url);
                     } else {
                         data = { profiles_count: 'N/A', accounts_count: 'N/A', videos_count: 'N/A', proxies_count: 'N/A' };
                     }
                 } catch (err) {
+                    console.error('Failed to fetch system status:', err);
                     data = { profiles_count: 'N/A', accounts_count: 'N/A', videos_count: 'N/A', proxies_count: 'N/A' };
                 }
             }
