@@ -7,8 +7,6 @@ import logging.handlers
 from django.core.cache import cache
 from django.utils import timezone
 
-__all__ = ['WebLogHandler', 'SafeFileHandler']
-
 
 class WebLogHandler(logging.Handler):
     """

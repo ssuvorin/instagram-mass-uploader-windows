@@ -322,8 +322,16 @@
 
 {% block extra_js %}
 <script>
-    // Global API_BASE variable - will be updated dynamically
-    let API_BASE = '{{ api_base|default:"http://94.141.161.231:8000" }}';
+    // Note: Server selection logic is now handled by tiktok-server-selector.js
+    // API_BASE global variable is managed there
+
+    // Listen for server change events from tiktok-server-selector.js
+    window.addEventListener('tiktok-server-changed', function(event) {
+        console.log('Server changed event received:', event.detail.serverUrl);
+        
+        // Re-check API status with new server
+        checkApiStatus();
+    });
 
     // Initialize page
     document.addEventListener('DOMContentLoaded', function() {
@@ -362,29 +370,5 @@
         document.getElementById('pending-count').textContent = '0';
         document.getElementById('failed-count').textContent = '0';
     }
-
-    // Server selection handler
-    document.getElementById('api-server-select').addEventListener('change', function(e) {
-        const selectedUrl = e.target.value;
-        API_BASE = selectedUrl;
-
-        // Update current server display and link
-        const linkElement = document.getElementById('current-server-link');
-        linkElement.href = `${API_BASE}/docs`;
-        linkElement.lastChild.textContent = API_BASE;
-
-        // Update session via AJAX
-        fetch('{% url "api_tiktok_set_active_server" %}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            },
-            body: `server_url=${encodeURIComponent(selectedUrl)}`
-        });
-
-        // Re-check API status with new server
-        checkApiStatus();
-    });
 </script>
 {% endblock %}

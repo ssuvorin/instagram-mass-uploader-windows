@@ -570,51 +570,18 @@
 
 {% block extra_js %}
 <script>
-    // Global API_BASE variable - will be updated dynamically
-    let API_BASE = '{{ api_base|default:"http://94.141.161.231:8000" }}';
+    // Note: Server selection logic is now handled by tiktok-server-selector.js
+    // API_BASE global variable is managed there
 
-    // available servers are read from <select> options data attributes
+    // Global state
+    let logs = [];
+    let isUploading = false;
+    let isBoosting = false;
 
-    // Server selection handler
-    document.getElementById('api-server-select').addEventListener('change', function(e) {
-        const selectedUrl = e.target.value;
-        const selectedOption = e.target.options[e.target.selectedIndex];
-
-        // Update global API_BASE
-        API_BASE = selectedUrl;
-
-        // Update current server display and link
-        const linkElement = document.getElementById('current-server-link');
-        linkElement.href = `${API_BASE}/docs`;
-        linkElement.lastChild.textContent = API_BASE;
-
-        // Update description (find the correct small element)
-        const statusContainer = e.target.closest('.api-status');
-        const descElement = statusContainer.querySelector('small:last-child');
-        if (descElement) {
-            const desc = selectedOption ? (selectedOption.dataset.desc || 'Custom server') : 'Custom server';
-            descElement.textContent = desc;
-        }
-
-        // Persist selected server in localStorage (client-side) and session (server-side)
-        localStorage.setItem('selected_tiktok_server', selectedUrl);
-
-        // Update hidden input for server-side processing
-        const hiddenInput = document.getElementById('selected-server-input');
-        if (hiddenInput) {
-            hiddenInput.value = selectedUrl;
-        }
-
-        // Also update backend session as backup
-        fetch('{% url "api_tiktok_set_active_server" %}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            },
-            body: `server_url=${encodeURIComponent(selectedUrl)}`
-        });
-
+    // Listen for server change events from tiktok-server-selector.js
+    window.addEventListener('tiktok-server-changed', function(event) {
+        console.log('Server changed event received:', event.detail.serverUrl);
+        
         // Re-check API status with new server
         checkApiStatus();
         checkAllServersStatus();
@@ -626,53 +593,11 @@
         lastApiLogTimestamp = null;
 
         // Add log entry
-        addLog(`Switched to API server: ${selectedUrl}`, 'info');
+        addLog(`Switched to API server: ${event.detail.serverUrl}`, 'info');
     });
-
-    // Global state
-    let logs = [];
-    let isUploading = false;
-    let isBoosting = false;
 
     // Initialize page
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize API_BASE from localStorage or currently selected server in dropdown
-        const serverSelect = document.getElementById('api-server-select');
-        let selectedServerUrl = null;
-
-        if (serverSelect) {
-            // First try to get from localStorage
-            const storedServer = localStorage.getItem('selected_tiktok_server');
-            if (storedServer) {
-                selectedServerUrl = storedServer;
-                console.log('Loaded server from localStorage:', selectedServerUrl);
-
-                // Update dropdown to match stored server
-                for (let i = 0; i < serverSelect.options.length; i++) {
-                    if (serverSelect.options[i].value === selectedServerUrl) {
-                        serverSelect.selectedIndex = i;
-                        break;
-                    }
-                }
-            } else {
-                // Fallback to currently selected server in dropdown
-                const selectedOption = serverSelect.options[serverSelect.selectedIndex];
-                if (selectedOption) {
-                    selectedServerUrl = selectedOption.value;
-                }
-            }
-
-            if (selectedServerUrl) {
-                API_BASE = selectedServerUrl;
-                // Update the server link display
-                const linkElement = document.getElementById('current-server-link');
-                if (linkElement) {
-                    linkElement.href = `${API_BASE}/docs`;
-                    linkElement.lastChild.textContent = API_BASE;
-                }
-            }
-        }
-
         checkApiStatus();
         updateSystemStatus();
         checkAllServersStatus();
@@ -689,6 +614,9 @@
         const statusText = document.getElementById('api-status-text');
         
         try {
+            // Use API_BASE from window (managed by tiktok-server-selector.js)
+            const currentServer = window.API_BASE || '{{ api_base|default:"http://94.141.161.231:8000" }}';
+            
             // Check server connectivity via Django backend (server-side check)
             const response = await fetch(`{% url 'api_tiktok_api_ping' %}`, { method: 'POST' });
             const data = await response.json();
@@ -856,7 +784,9 @@
 
     async function fetchApiServerLogs() {
         try {
-            const response = await fetch(`{% url 'get_api_server_logs' %}?server_url=${encodeURIComponent(API_BASE)}`);
+            // Use API_BASE from window (managed by tiktok-server-selector.js)
+            const currentServer = window.API_BASE || '{{ api_base|default:"http://94.141.161.231:8000" }}';
+            const response = await fetch(`{% url 'get_api_server_logs' %}?server_url=${encodeURIComponent(currentServer)}`);
             const data = await response.json();
 
             if (data.status === 'success' && data.logs && data.logs.length > 0) {

@@ -445,31 +445,21 @@
 
 {% block extra_js %}
 <script>
-let API_BASE = '{{ api_base }}';
+// Note: Server selection logic is now handled by tiktok-server-selector.js
+// API_BASE global variable is managed there
 
-// Update server selection
-document.getElementById('api-server-select').addEventListener('change', function(e) {
-    const selectedUrl = e.target.value;
-    API_BASE = selectedUrl;
-    document.getElementById('server-url-input').value = selectedUrl;
+// Listen for server change events from tiktok-server-selector.js
+window.addEventListener('tiktok-server-changed', function(event) {
+    console.log('Server changed event received:', event.detail.serverUrl);
+    
+    // Update hidden inputs with new server URL
+    const serverInput = document.getElementById('server-url-input');
+    if (serverInput) serverInput.value = event.detail.serverUrl;
+    
     const step0Hidden = document.getElementById('server-url-input-step0');
-    if (step0Hidden) step0Hidden.value = selectedUrl;
-    const linkElement = document.getElementById('current-server-link');
-    linkElement.href = `${API_BASE}/docs`;
-    linkElement.lastChild.textContent = API_BASE;
-    const descEl = document.getElementById('api-server-desc');
-    const option = e.target.options[e.target.selectedIndex];
-    if (option && option.dataset.desc) descEl.textContent = option.dataset.desc;
-    // Persist in session
-    fetch('{% url "api_tiktok_set_active_server" %}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-        },
-        body: `server_url=${encodeURIComponent(selectedUrl)}`
-    });
-    // Re-check status
+    if (step0Hidden) step0Hidden.value = event.detail.serverUrl;
+    
+    // Re-check API status
     checkApiStatus();
 });
 
