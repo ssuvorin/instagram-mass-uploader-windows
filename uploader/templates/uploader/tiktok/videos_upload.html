@@ -270,16 +270,6 @@
                     </a>
                     <div class="api-status">
                         {% csrf_token %}
-                        <div class="d-flex align-items-center gap-2 mb-2">
-                            <label for="api-server-select" class="form-label text-white mb-0 small">API Server:</label>
-                            <select class="form-select form-select-sm" id="api-server-select" style="min-width: 200px;">
-                                {% for server in available_servers %}
-                                <option value="{{ server.url }}" data-desc="{{ server.description }}" {% if server.url == api_base %}selected{% endif %}>
-                                    {{ server.name }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
                         <div class="d-flex align-items-center gap-2">
                             <span class="status-indicator" id="api-status"></span>
                             <span id="api-status-text" class="small">Checking...</span>

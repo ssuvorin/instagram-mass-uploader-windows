@@ -100,6 +100,9 @@
 
         // Update server link display
         updateServerLinkDisplay();
+        
+        // Update navbar server info
+        updateNavbarServerInfo();
 
         // Update description if present
         const statusContainer = e.target.closest('.api-status');
@@ -161,6 +164,26 @@
                 if (icon) {
                     linkElement.prepend(icon);
                 }
+            }
+        }
+        
+        // Update navbar server info
+        updateNavbarServerInfo();
+    }
+    
+    /**
+     * Update navbar server info (name and IP)
+     */
+    function updateNavbarServerInfo() {
+        const serverSelect = document.getElementById('api-server-select');
+        const serverNameElement = document.getElementById('server-name');
+        const serverIpElement = document.getElementById('server-ip');
+        
+        if (serverSelect && serverNameElement && serverIpElement && window.API_BASE) {
+            const selectedOption = serverSelect.options[serverSelect.selectedIndex];
+            if (selectedOption) {
+                serverNameElement.textContent = selectedOption.textContent;
+                serverIpElement.textContent = window.API_BASE;
             }
         }
     }
