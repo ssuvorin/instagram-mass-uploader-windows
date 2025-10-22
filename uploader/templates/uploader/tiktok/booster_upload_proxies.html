@@ -197,6 +197,34 @@
   maybeWarn();
 })();
 </script>
+
+<script>
+// Update server display in banner
+function updateServerDisplay(serverUrl) {
+    // Update server link
+    const serverLink = document.getElementById('current-server-link');
+    if (serverLink) {
+        serverLink.href = `${serverUrl}/docs`;
+        serverLink.textContent = serverUrl;
+    }
+}
+
+// Listen for server change events from tiktok-server-selector.js
+window.addEventListener('tiktok-server-changed', function(event) {
+    console.log('Server changed event received:', event.detail.serverUrl);
+    updateServerDisplay(event.detail.serverUrl);
+});
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    // Update server display with current server
+    setTimeout(() => {
+        if (window.API_BASE) {
+            updateServerDisplay(window.API_BASE);
+        }
+    }, 200);
+});
+</script>
 {% endblock %}
 
 

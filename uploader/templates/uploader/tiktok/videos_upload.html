@@ -449,6 +449,9 @@ window.addEventListener('tiktok-server-changed', function(event) {
     const step0Hidden = document.getElementById('server-url-input-step0');
     if (step0Hidden) step0Hidden.value = event.detail.serverUrl;
     
+    // Update server display in banner
+    updateServerDisplay(event.detail.serverUrl);
+    
     // Re-check API status
     checkApiStatus();
     
@@ -457,6 +460,34 @@ window.addEventListener('tiktok-server-changed', function(event) {
         updateSystemStatus();
     }
 });
+
+// Update server display in banner
+function updateServerDisplay(serverUrl) {
+    // Update server link
+    const serverLink = document.getElementById('current-server-link');
+    if (serverLink) {
+        serverLink.href = `${serverUrl}/docs`;
+        // Update text content (preserve icon)
+        const icon = serverLink.querySelector('i');
+        serverLink.textContent = serverUrl;
+        if (icon) {
+            serverLink.prepend(icon);
+        }
+    }
+    
+    // Update server description
+    const serverDesc = document.getElementById('api-server-desc');
+    if (serverDesc) {
+        // Find server description from navbar selector
+        const serverSelect = document.getElementById('api-server-select');
+        if (serverSelect) {
+            const selectedOption = serverSelect.options[serverSelect.selectedIndex];
+            if (selectedOption) {
+                serverDesc.textContent = selectedOption.dataset.desc || 'Custom server';
+            }
+        }
+    }
+}
 
 // API Status Check via backend
 async function checkApiStatus() {
@@ -481,6 +512,14 @@ async function checkApiStatus() {
 document.addEventListener('DOMContentLoaded', function() {
     checkApiStatus();
     updateProxyValidationButtons();
+    
+    // Update server display with current server
+    setTimeout(() => {
+        if (window.API_BASE) {
+            updateServerDisplay(window.API_BASE);
+        }
+    }, 200);
+    
     // Delay system status update to ensure tiktok-server-selector.js has initialized
     setTimeout(() => {
         if (typeof updateSystemStatus === 'function') {

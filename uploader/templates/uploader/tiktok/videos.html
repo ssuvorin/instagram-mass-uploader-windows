@@ -319,6 +319,9 @@
     window.addEventListener('tiktok-server-changed', function(event) {
         console.log('Server changed event received:', event.detail.serverUrl);
         
+        // Update server display in banner
+        updateServerDisplay(event.detail.serverUrl);
+        
         // Re-check API status with new server
         checkApiStatus();
         
@@ -326,9 +329,32 @@
         updateSystemStatus();
     });
 
+    // Update server display in banner
+    function updateServerDisplay(serverUrl) {
+        // Update server link
+        const serverLink = document.getElementById('current-server-link');
+        if (serverLink) {
+            serverLink.href = `${serverUrl}/docs`;
+            // Update text content (preserve icon)
+            const icon = serverLink.querySelector('i');
+            serverLink.textContent = serverUrl;
+            if (icon) {
+                serverLink.prepend(icon);
+            }
+        }
+    }
+
     // Initialize page
     document.addEventListener('DOMContentLoaded', function() {
         checkApiStatus();
+        
+        // Update server display with current server
+        setTimeout(() => {
+            if (window.API_BASE) {
+                updateServerDisplay(window.API_BASE);
+            }
+        }, 200);
+        
         // Delay system status update to ensure tiktok-server-selector.js has initialized
         setTimeout(() => {
             updateSystemStatus();
