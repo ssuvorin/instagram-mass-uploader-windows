@@ -62,14 +62,8 @@
 
 {% block extra_js %}
 <script>
-document.getElementById('api-server-select').addEventListener('change', async function(e){
-  const base = e.target.value;
-  const link = document.getElementById('current-server-link');
-  link.href = `${base}/docs`;
-  link.textContent = base;
-  document.getElementById('server-url-input').value = base;
-  try { await fetch('{% url "api_tiktok_set_active_server" %}', { method: 'POST', headers: {'X-Requested-With':'fetch'}, body: new URLSearchParams({server_url: base}) }); } catch (err) {}
-});
+// Server selection is now handled by tiktok-server-selector.js
+// This page will automatically sync with the centralized server selection
 </script>
 {% endblock %}
 

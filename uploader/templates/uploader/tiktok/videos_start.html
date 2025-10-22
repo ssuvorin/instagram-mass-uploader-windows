@@ -52,7 +52,15 @@ document.getElementById('start-btn').addEventListener('click', async () => {
     bar.style.width = '10%';
     resEl.innerHTML = '';
     try {
-        const res = await fetch('{% url "api_tiktok_videos_start_upload" %}', { method: 'POST' });
+        const currentServer = window.API_BASE || '{{ api_base|default:"http://94.141.161.231:8000" }}';
+        const res = await fetch('{% url "api_tiktok_videos_start_upload" %}', { 
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: `server_url=${encodeURIComponent(currentServer)}`
+        });
         const data = await res.json();
         if (res.ok) {
             bar.style.width = '100%';
@@ -87,7 +95,15 @@ document.getElementById('release-btn').addEventListener('click', async () => {
     btn.disabled = true;
     resEl.innerHTML = '';
     try {
-        const res = await fetch('{% url "api_tiktok_videos_release_accounts" %}', { method: 'POST' });
+        const currentServer = window.API_BASE || '{{ api_base|default:"http://94.141.161.231:8000" }}';
+        const res = await fetch('{% url "api_tiktok_videos_release_accounts" %}', { 
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: `server_url=${encodeURIComponent(currentServer)}`
+        });
         const data = await res.json();
         if (res.ok) {
             resEl.innerHTML = '<div class="alert alert-success">Release request sent</div>';

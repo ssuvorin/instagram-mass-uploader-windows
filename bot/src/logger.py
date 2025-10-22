@@ -1,37 +1,39 @@
 import logging
-import sys
 import os
+import sys
 
-# Determine stream based on environment to avoid polluting stdout in isolated subprocesses
-# If FORCE_LOG_TO_STDERR or COOKIE_ROBOT_ISOLATED is set, redirect stream logs to stderr
-_stream = sys.stderr if os.environ.get('FORCE_LOG_TO_STDERR') == '1' or os.environ.get('COOKIE_ROBOT_ISOLATED') == '1' else sys.stdout
-
-# Get the project root directory for django.log
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-django_log_path = os.path.join(project_root, 'django.log')
-
-# Configure root logger
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(_stream),
-        logging.FileHandler(django_log_path, encoding='utf-8')
-    ]
-)
-
-# Create logger to be imported by other modules
-logger = logging.getLogger('bot')
-logger.setLevel(logging.INFO)
-
-# Make sure we don't duplicate log messages
-if not logger.handlers:
-    # Add stream handler (to selected stream)
-    console_handler = logging.StreamHandler(_stream)
-    console_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-    logger.addHandler(console_handler)
+def setup_django_logging():
+    """
+    Setup Django logging configuration for bot modules.
+    This ensures bot modules use the centralized Django logging system.
+    """
+    # Add project root to Python path for Django imports
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
     
-    # Add file handler - write to django.log instead of bot/log.txt
-    file_handler = logging.FileHandler(django_log_path, encoding='utf-8')
-    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-    logger.addHandler(file_handler) 
+    # Setup Django if not already configured
+    try:
+        import django
+        from django.conf import settings
+        
+        if not settings.configured:
+            os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'instagram_uploader.settings')
+            django.setup()
+            
+    except ImportError:
+        # Fallback if Django is not available - use basic logging
+        logging.basicConfig(
+            level=logging.INFO,
+            format='[%(asctime)s] %(levelname)s %(name)s %(message)s',
+            handlers=[
+                logging.StreamHandler(),
+                logging.FileHandler(os.path.join(project_root, 'django.log'), encoding='utf-8')
+            ]
+        )
+
+# Initialize Django logging
+setup_django_logging()
+
+# Create logger using Django's centralized configuration
+logger = logging.getLogger('bot') 

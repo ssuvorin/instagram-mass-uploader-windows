@@ -73,6 +73,9 @@ document.getElementById('prepare-config-form').addEventListener('submit', async 
         mentions: (formData.get('mentions') || '').split(',').map(s => s.trim()).filter(Boolean)
     };
     try {
+        // Add current server URL to the payload
+        payload.server_url = window.API_BASE || '{{ api_base|default:"http://94.141.161.231:8000" }}';
+        
         const res = await fetch('{% url "api_tiktok_videos_prepare_config" %}', {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
         });

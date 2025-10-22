@@ -2845,6 +2845,7 @@ def tiktok_videos_proxy_upload_titles(request):
     if request.method != 'POST':
         return _json_response({'detail': 'Method not allowed'}, status=405)
     api_base = _get_tiktok_api_base(request)
+    print(f"DEBUG: tiktok_videos_proxy_upload_titles using API base: {api_base}")
     try:
         file = request.FILES.get('file')
         if not file:
@@ -2943,6 +2944,7 @@ def tiktok_videos_proxy_prepare_config(request):
     if request.method != 'POST':
         return _json_response({'detail': 'Method not allowed'}, status=405)
     api_base = _get_tiktok_api_base(request)
+    print(f"DEBUG: tiktok_videos_proxy_prepare_config using API base: {api_base}")
     try:
         try:
             payload = json.loads(request.body.decode('utf-8')) if request.body else {}
@@ -3051,6 +3053,7 @@ def tiktok_videos_proxy_start_upload(request):
     if request.method != 'POST':
         return _json_response({'detail': 'Method not allowed'}, status=405)
     api_base = _get_tiktok_api_base(request)
+    print(f"DEBUG: tiktok_videos_proxy_start_upload using API base: {api_base}")
     try:
         resp = requests.post(f"{api_base}/upload/start_upload", timeout=120)
         try:
@@ -3141,6 +3144,7 @@ def tiktok_videos_proxy_release_accounts(request):
     if request.method != 'POST':
         return _json_response({'detail': 'Method not allowed'}, status=405)
     api_base = _get_tiktok_api_base(request)
+    print(f"DEBUG: tiktok_videos_proxy_release_accounts using API base: {api_base}")
     try:
         # Upstream utils endpoint path (no prefix)
         resp = requests.post(f"{api_base}/release_accounts", timeout=60)

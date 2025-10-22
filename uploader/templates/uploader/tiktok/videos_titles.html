@@ -48,6 +48,10 @@ document.getElementById('titles-upload-form').addEventListener('submit', async (
     const resultEl = document.getElementById('result');
     resultEl.innerHTML = '';
     try {
+        // Add current server URL to the form data
+        const currentServer = window.API_BASE || '{{ api_base|default:"http://94.141.161.231:8000" }}';
+        formData.append('server_url', currentServer);
+        
         const res = await fetch('{% url "api_tiktok_videos_upload_titles" %}', { method: 'POST', body: formData });
         const data = await res.json();
         if (res.ok) {
