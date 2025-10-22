@@ -66,9 +66,12 @@ document.getElementById('start-btn').addEventListener('click', async () => {
             },
             body: `server_url=${encodeURIComponent(currentServer)}`
         });
+        console.log('Start Upload - Response status:', res.status);
         const data = await res.json();
+        console.log('Start Upload - Response data:', data);
         if (res.ok) {
             bar.style.width = '100%';
+            bar.className = 'progress-bar bg-success';
             resEl.innerHTML = '<div class="alert alert-success">Upload started successfully</div>';
         } else {
             bar.style.width = '100%';
