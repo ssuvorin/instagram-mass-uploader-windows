@@ -24,21 +24,29 @@
         if (storedServer) {
             console.log('Restoring server from localStorage:', storedServer);
             
-            // Update global API_BASE
-            window.API_BASE = storedServer;
-            
-            // Update dropdown to match stored server
+            // Update dropdown to match stored server FIRST
             let foundServer = false;
             for (let i = 0; i < serverSelect.options.length; i++) {
                 if (serverSelect.options[i].value === storedServer) {
                     serverSelect.selectedIndex = i;
                     foundServer = true;
+                    console.log('Updated dropdown to match stored server:', storedServer);
                     break;
                 }
             }
             
             if (!foundServer) {
                 console.warn('Stored server not found in options:', storedServer);
+                // Fallback to currently selected server
+                const selectedOption = serverSelect.options[serverSelect.selectedIndex];
+                if (selectedOption) {
+                    window.API_BASE = selectedOption.value;
+                    localStorage.setItem('selected_tiktok_server', window.API_BASE);
+                    console.log('Fallback to dropdown server:', window.API_BASE);
+                }
+            } else {
+                // Update global API_BASE after dropdown is set
+                window.API_BASE = storedServer;
             }
         } else {
             // Use currently selected server from dropdown
@@ -47,6 +55,7 @@
                 window.API_BASE = selectedOption.value;
                 // Save to localStorage for next time
                 localStorage.setItem('selected_tiktok_server', window.API_BASE);
+                console.log('No stored server, using dropdown:', window.API_BASE);
             }
         }
 
@@ -183,9 +192,11 @@
         
         const serverSelect = document.getElementById('api-server-select');
         if (serverSelect) {
+            // Update dropdown to match the new server
             for (let i = 0; i < serverSelect.options.length; i++) {
                 if (serverSelect.options[i].value === serverUrl) {
                     serverSelect.selectedIndex = i;
+                    console.log('Programmatically set server:', serverUrl);
                     break;
                 }
             }
@@ -193,14 +204,22 @@
         
         updateServerLinkDisplay();
         persistServerToBackend(serverUrl);
+        
+        // Trigger change event
+        window.dispatchEvent(new CustomEvent('tiktok-server-changed', {
+            detail: { serverUrl: serverUrl }
+        }));
     };
 
     // Initialize on DOM ready
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initializeServerSelector);
+        document.addEventListener('DOMContentLoaded', function() {
+            // Small delay to ensure all elements are rendered
+            setTimeout(initializeServerSelector, 100);
+        });
     } else {
-        // DOM already loaded
-        initializeServerSelector();
+        // DOM already loaded, but add small delay to ensure elements are ready
+        setTimeout(initializeServerSelector, 100);
     }
 
 })();
