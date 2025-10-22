@@ -244,7 +244,7 @@ if not RUCAPTCHA_API_KEY and not CAPTCHA_API_KEY:
 # Dolphin Anty settings
 DOLPHIN_API_TOKEN = os.environ.get('DOLPHIN_API_TOKEN', '')
 
-# Logging Configuration
+# Centralized Logging Configuration
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -262,14 +262,22 @@ LOGGING = {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
-            'level': 'INFO',
+            'level': os.getenv('CONSOLE_LOG_LEVEL', 'INFO'),
             'filters': ['mask_secrets', 'truncate_long', 'deduplicate'],
         },
         'file': {
-            'class': 'logging.FileHandler',
+            'class': 'logging.handlers.RotatingFileHandler',
             'filename': os.path.join(BASE_DIR, 'django.log'),
             'formatter': 'verbose',
             'level': 'DEBUG',
+            'maxBytes': int(os.getenv('LOG_MAX_BYTES', '50000000')),  # 50MB default
+            'backupCount': int(os.getenv('LOG_BACKUP_COUNT', '5')),
+            'filters': ['mask_secrets', 'truncate_long'],
+        },
+        'web': {
+            'class': 'uploader.logging_handlers.WebLogHandler',
+            'formatter': 'verbose',
+            'level': os.getenv('WEB_LOG_LEVEL', 'INFO'),
             'filters': ['mask_secrets', 'truncate_long'],
         },
         'null': {
@@ -287,31 +295,23 @@ LOGGING = {
             '()': 'uploader.logging_filters.DeduplicateFilter'
         },
     },
+    'root': {
+        'handlers': ['console', 'file', 'web'],
+        'level': 'DEBUG',
+    },
     'loggers': {
+        # Django core loggers
         'django': {
-            'handlers': ['console', 'file'],
             'level': 'INFO',
-            'propagate': False,
-        },
-        'uploader': {
-            'handlers': ['console', 'file'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-        'bot.src.instagram_uploader.dolphin_anty': {
-            'handlers': ['console', 'file'],
-            'level': 'INFO',
-            'propagate': False,
+            'propagate': True,
         },
         'django.db.backends': {
-            'handlers': ['console'],
             'level': 'WARNING',
-            'propagate': False,
+            'propagate': True,
         },
         'django.request': {
-            'handlers': ['console', 'file'],
             'level': 'ERROR',
-            'propagate': False,
+            'propagate': True,
         },
         'django.server': {
             'handlers': ['null'],
@@ -319,66 +319,78 @@ LOGGING = {
             'propagate': False,
         },
         'django.template': {
-            'handlers': ['console'],
             'level': 'WARNING',
-            'propagate': False,
+            'propagate': True,
+        },
+        
+        # Application loggers
+        'uploader': {
+            'level': 'DEBUG',
+            'propagate': True,
         },
         'uploader.middleware': {
-            'handlers': ['console', 'file'],
             'level': os.getenv('REQUEST_LOG_LEVEL', 'INFO'),
-            'propagate': False,
+            'propagate': True,
         },
         'uploader.bulk_tasks': {
-            'handlers': ['console', 'file'],
             'level': os.getenv('BULK_LOG_LEVEL', 'INFO'),
-            'propagate': False,
+            'propagate': True,
         },
-        # Instagrapi and HTTP request loggers - reduced verbosity to avoid huge JSON dumps
+        
+        # Bot loggers
+        'bot': {
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'bot.src.instagram_uploader.dolphin_anty': {
+            'level': 'INFO',
+            'propagate': True,
+        },
+        
+        # YouTube loggers
+        'youtube': {
+            'level': 'INFO',
+            'propagate': True,
+        },
+        
+        # Instagram API loggers
         'instagrapi': {
-            'handlers': ['console', 'file'],
             'level': os.getenv('INSTAGRAPI_LOG_LEVEL', 'DEBUG'),
-            'propagate': False,
+            'propagate': True,
         },
         'public_request': {
-            'handlers': ['console', 'file'],
             'level': os.getenv('IG_HTTP_LOG_LEVEL', 'DEBUG'),
-            'propagate': False,
+            'propagate': True,
         },
         'private_request': {
-            'handlers': ['console', 'file'],
             'level': os.getenv('IG_HTTP_LOG_LEVEL', 'DEBUG'),
-            'propagate': False,
+            'propagate': True,
         },
-        # Our auth/avatar services
+        
+        # Instagram service loggers
         'insta.auth': {
-            'handlers': ['console', 'file'],
             'level': 'DEBUG',
-            'propagate': False,
+            'propagate': True,
         },
         'insta.avatar': {
-            'handlers': ['console', 'file'],
             'level': 'DEBUG',
-            'propagate': False,
+            'propagate': True,
         },
         'insta.follow': {
-            'handlers': ['console', 'file'],
             'level': 'DEBUG',
-            'propagate': False,
+            'propagate': True,
         },
         'insta.hashtag': {
-            'handlers': ['console', 'file'],
             'level': 'DEBUG',
-            'propagate': False,
+            'propagate': True,
         },
         'insta.bio': {
-            'handlers': ['console', 'file'],
             'level': 'DEBUG',
-            'propagate': False,
+            'propagate': True,
         },
         'insta.account.analytics': {
-            'handlers': ['console', 'file'],
             'level': 'DEBUG',
-            'propagate': False,
+            'propagate': True,
         },
     },
 }

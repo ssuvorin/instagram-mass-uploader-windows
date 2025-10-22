@@ -25,6 +25,8 @@ tomli==2.0.1
 
 # System utilities
 psutil==6.1.1
+instagrapi==2.2.1
+psycopg2
 
 # Additional dependencies for Windows/Docker deployment
 asyncio-throttle==1.0.2

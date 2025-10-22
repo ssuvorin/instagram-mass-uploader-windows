@@ -1740,6 +1740,13 @@ def _tiktok_api_context(request=None) -> dict:
                 print(f"DEBUG: Retrieved TikTok API server from session: {session_url}")  # Debug logging
             else:
                 print(f"DEBUG: No TikTok API server found in session")  # Debug logging
+
+                # 1.5) Try to get from POST data (for AJAX requests or form submissions)
+                if getattr(request, 'method', '').upper() == 'POST':
+                    post_url = (request.POST.get('selected_server') or '').strip()
+                    if post_url:
+                        selected_api_base = post_url
+                        print(f"DEBUG: Retrieved TikTok API server from POST data: {post_url}")  # Debug logging
         except Exception as e:
             print(f"DEBUG: Failed to read TikTok API server from session: {e}")  # Debug logging
             pass
@@ -2462,7 +2469,19 @@ def tiktok_set_active_server(request):
     try:
         request.session['selected_tiktok_api_base'] = server_url
         request.session.save()  # Explicitly save session to ensure persistence
-        print(f"DEBUG: Set TikTok API server in session: {server_url}")  # Debug logging
+
+        # Verify that session was actually saved
+        saved_value = request.session.get('selected_tiktok_api_base')
+        print(f"DEBUG: Set TikTok API server in session: {server_url}, verified: {saved_value}")  # Debug logging
+
+        # Force commit to database if using transaction
+        from django.db import transaction
+        if transaction.get_autocommit():
+            print(f"DEBUG: Autocommit is enabled")
+        else:
+            print(f"DEBUG: Autocommit is disabled, forcing commit")
+            transaction.commit()
+
     except Exception as e:
         print(f"DEBUG: Failed to set TikTok API server in session: {e}")  # Debug logging
         pass

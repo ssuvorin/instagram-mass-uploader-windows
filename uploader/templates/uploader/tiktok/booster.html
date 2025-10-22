@@ -381,6 +381,7 @@
                 </div>
                 <div class="api-status">
                     {% csrf_token %}
+                    <input type="hidden" id="selected-server-input" name="selected_server" value="{{ selected_server.url }}">
                     <div class="d-flex align-items-center gap-2 mb-2">
                         <label for="api-server-select" class="form-label text-white mb-0 small">API Server:</label>
                         <select class="form-select form-select-sm" id="api-server-select" style="min-width: 200px;">
@@ -595,7 +596,16 @@
             descElement.textContent = desc;
         }
 
-        // Persist selected server in session (backend uses this)
+        // Persist selected server in localStorage (client-side) and session (server-side)
+        localStorage.setItem('selected_tiktok_server', selectedUrl);
+
+        // Update hidden input for server-side processing
+        const hiddenInput = document.getElementById('selected-server-input');
+        if (hiddenInput) {
+            hiddenInput.value = selectedUrl;
+        }
+
+        // Also update backend session as backup
         fetch('{% url "api_tiktok_set_active_server" %}', {
             method: 'POST',
             headers: {
@@ -626,12 +636,34 @@
 
     // Initialize page
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize API_BASE from currently selected server in dropdown
+        // Initialize API_BASE from localStorage or currently selected server in dropdown
         const serverSelect = document.getElementById('api-server-select');
+        let selectedServerUrl = null;
+
         if (serverSelect) {
-            const selectedOption = serverSelect.options[serverSelect.selectedIndex];
-            if (selectedOption) {
-                API_BASE = selectedOption.value;
+            // First try to get from localStorage
+            const storedServer = localStorage.getItem('selected_tiktok_server');
+            if (storedServer) {
+                selectedServerUrl = storedServer;
+                console.log('Loaded server from localStorage:', selectedServerUrl);
+
+                // Update dropdown to match stored server
+                for (let i = 0; i < serverSelect.options.length; i++) {
+                    if (serverSelect.options[i].value === selectedServerUrl) {
+                        serverSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            } else {
+                // Fallback to currently selected server in dropdown
+                const selectedOption = serverSelect.options[serverSelect.selectedIndex];
+                if (selectedOption) {
+                    selectedServerUrl = selectedOption.value;
+                }
+            }
+
+            if (selectedServerUrl) {
+                API_BASE = selectedServerUrl;
                 // Update the server link display
                 const linkElement = document.getElementById('current-server-link');
                 if (linkElement) {
