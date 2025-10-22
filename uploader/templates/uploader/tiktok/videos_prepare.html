@@ -89,6 +89,24 @@ document.getElementById('prepare-config-form').addEventListener('submit', async 
         resultEl.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
     }
 });
+
+// Listen for server change events from tiktok-server-selector.js
+window.addEventListener('tiktok-server-changed', function(event) {
+    console.log('Server changed event received:', event.detail.serverUrl);
+    // Update window.API_BASE for this page
+    window.API_BASE = event.detail.serverUrl;
+});
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    // Ensure API_BASE is set
+    setTimeout(() => {
+        if (!window.API_BASE) {
+            // Fallback to default if not set
+            window.API_BASE = '{{ api_base|default:"http://94.141.161.231:8000" }}';
+        }
+    }, 200);
+});
 </script>
 {% endblock %}
 
