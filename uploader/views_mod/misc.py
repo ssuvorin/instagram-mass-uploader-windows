@@ -2480,6 +2480,13 @@ def tiktok_set_active_server(request):
     server_url = (request.POST.get('server_url') or '').strip()
     if not server_url:
         return JsonResponse({'detail': 'server_url required'}, status=400)
+    
+    # Check if the server is already set in session
+    current_session_server = request.session.get('selected_tiktok_api_base')
+    if current_session_server == server_url:
+        print(f"DEBUG: Server already set in session: {server_url}, skipping update")
+        return JsonResponse({'ok': True, 'server_url': server_url, 'message': 'Server already set'})
+    
     try:
         request.session['selected_tiktok_api_base'] = server_url
         request.session.save()  # Explicitly save session to ensure persistence

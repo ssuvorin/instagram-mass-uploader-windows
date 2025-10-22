@@ -6,6 +6,7 @@ Test script for enhanced captcha solving system
 import asyncio
 import os
 import sys
+import logging
 from playwright.async_api import async_playwright
 
 # Add uploader to path
@@ -13,6 +14,9 @@ sys.path.insert(0, 'uploader')
 
 from enhanced_captcha_solver import EnhancedCaptchaSolver, CaptchaConfig
 from captcha_detection import EnhancedCaptchaDetector
+
+# Use centralized logging - all logs go to django.log
+logger = logging.getLogger('scripts.test_captcha_enhancement')
 
 
 async def test_captcha_detection():

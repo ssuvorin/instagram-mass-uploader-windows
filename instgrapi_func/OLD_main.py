@@ -22,16 +22,8 @@ from datetime import datetime
 from pathlib import Path
 from email_client import Email
 
-# Настройка логирования
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('instagram_upload.log', encoding='utf-8'),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
+# Use centralized logging - all logs go to django.log
+logger = logging.getLogger('instgrapi_func.main')
 
 class DeviceRandomizer:
     """Генератор случайных отпечатков устройств разных производителей"""

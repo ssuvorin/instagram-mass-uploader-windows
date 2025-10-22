@@ -15,18 +15,8 @@ load_dotenv()
 
 # Setup logging
 # Get the project root directory for django.log
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-django_log_path = os.path.join(project_root, 'django.log')
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler(django_log_path, encoding='utf-8')
-    ]
-)
-logger = logging.getLogger(__name__)
+# Use centralized logging - all logs go to django.log
+logger = logging.getLogger('uploader.tasks_playwright')
 
 def run_bot_with_playwright(account, video_files, task_id):
     """

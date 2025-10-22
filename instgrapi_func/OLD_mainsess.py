@@ -19,16 +19,8 @@ import base64
 from datetime import datetime
 from email_client import Email
 
-# Настройка максимального логирования
-logging.basicConfig(
-    level=logging.DEBUG,  # МАКСИМАЛЬНЫЙ уровень логирования
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('instagram_upload.log', encoding='utf-8'),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
+# Use centralized logging - all logs go to django.log
+logger = logging.getLogger('instgrapi_func.mainsess')
 
 class AccountParser:
     """Автоматический парсер строки аккаунта"""

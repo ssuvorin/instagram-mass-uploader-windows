@@ -12,9 +12,8 @@ import aiofiles
 from typing import Optional, List
 from playwright.async_api import Page
 
-# Настройка логирования
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+# Use centralized logging - all logs go to django.log
+logger = logging.getLogger('uploader.audio_recaptcha_solver')
 
 
 class PlaywrightRecaptchaSolver:

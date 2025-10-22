@@ -1,6 +1,6 @@
 """
-Logging utilities for Instagram uploader
-Centralized logging functions to avoid circular imports
+Centralized logging utilities for Instagram uploader
+All logging now goes through Django's centralized logging system
 """
 
 import logging
@@ -9,14 +9,14 @@ import os
 from typing import Optional
 import asyncio
 
-# Setup logger
+# Setup centralized logger
 logger = logging.getLogger('uploader.bulk_tasks')
 
 # Async logger bridge (used in async mode)
 _async_logger = None  # type: ignore
 _async_loop = None  # type: ignore
 
-# Console silence flag
+# Console silence flag (for backward compatibility)
 SILENT_CONSOLE = os.getenv('SILENT_CONSOLE_LOGS') == '1'
 RAW_LOG_OUTPUT = os.getenv('RAW_LOG_OUTPUT') == '1'
 
@@ -90,7 +90,7 @@ def _mirror_to_async_logger(level: str, message: str, category: Optional[str] = 
 
 
 def log_info(message: str, category: Optional[str] = None):
-    """Log message to both logger, console, and WebLogger/AsyncLogger (if available)."""
+    """Log info message through centralized logging system."""
     safe_message = safe_encode_message(message)
     try:
         web_logger = _get_web_logger_safe()
@@ -99,16 +99,12 @@ def log_info(message: str, category: Optional[str] = None):
     except Exception:
         pass
     _mirror_to_async_logger('INFO', safe_message, category)
+    # Primary logging through centralized system
     logger.info(safe_message)
-    if not SILENT_CONSOLE:
-        if RAW_LOG_OUTPUT:
-            print(message)
-        else:
-            print(f"[BULK TASK] {safe_message}")
 
 
 def log_success(message: str, category: Optional[str] = None):
-    """Log success message to both logger, console, and WebLogger/AsyncLogger (if available)."""
+    """Log success message through centralized logging system."""
     safe_message = safe_encode_message(message)
     try:
         web_logger = _get_web_logger_safe()
@@ -117,16 +113,12 @@ def log_success(message: str, category: Optional[str] = None):
     except Exception:
         pass
     _mirror_to_async_logger('SUCCESS', safe_message, category)
-    logger.info(safe_message)
-    if not SILENT_CONSOLE:
-        if RAW_LOG_OUTPUT:
-            print(message)
-        else:
-            print(f"[BULK TASK SUCCESS] {safe_message}")
+    # Primary logging through centralized system
+    logger.info(f"SUCCESS: {safe_message}")
 
 
 def log_error(message: str, category: Optional[str] = None):
-    """Log error to both logger, console, and WebLogger/AsyncLogger (if available)."""
+    """Log error through centralized logging system."""
     safe_message = safe_encode_message(message)
     try:
         web_logger = _get_web_logger_safe()
@@ -135,16 +127,12 @@ def log_error(message: str, category: Optional[str] = None):
     except Exception:
         pass
     _mirror_to_async_logger('ERROR', safe_message, category)
+    # Primary logging through centralized system
     logger.error(safe_message)
-    if not SILENT_CONSOLE:
-        if RAW_LOG_OUTPUT:
-            print(message)
-        else:
-            print(f"[BULK TASK ERROR] {safe_message}")
 
 
 def log_debug(message: str, category: Optional[str] = None):
-    """Log debug message to both logger, console, and WebLogger/AsyncLogger (if available)."""
+    """Log debug message through centralized logging system."""
     safe_message = safe_encode_message(message)
     try:
         web_logger = _get_web_logger_safe()
@@ -153,16 +141,12 @@ def log_debug(message: str, category: Optional[str] = None):
     except Exception:
         pass
     _mirror_to_async_logger('DEBUG', safe_message, category)
+    # Primary logging through centralized system
     logger.debug(safe_message)
-    if not SILENT_CONSOLE:
-        if RAW_LOG_OUTPUT:
-            print(message)
-        else:
-            print(f"[BULK TASK DEBUG] {safe_message}")
 
 
 def log_warning(message: str, category: Optional[str] = None):
-    """Log warning to both logger, console, and WebLogger/AsyncLogger (if available)."""
+    """Log warning through centralized logging system."""
     safe_message = safe_encode_message(message)
     try:
         web_logger = _get_web_logger_safe()
@@ -171,12 +155,8 @@ def log_warning(message: str, category: Optional[str] = None):
     except Exception:
         pass
     _mirror_to_async_logger('WARNING', safe_message, category)
+    # Primary logging through centralized system
     logger.warning(safe_message)
-    if not SILENT_CONSOLE:
-        if RAW_LOG_OUTPUT:
-            print(message)
-        else:
-            print(f"[BULK TASK WARNING] {safe_message}")
 
 
 # ---- Instagrapi → Web UI bridge ----
@@ -213,6 +193,55 @@ class _WebUIForwardHandler(logging.Handler):
             _mirror_to_async_logger(record.levelname or 'INFO', f"[{record.name}] {safe_message}", 'API')
         except Exception:
             pass
+
+
+def get_centralized_logger(name: str) -> logging.Logger:
+    """Get centralized logger for any module - all logs go to django.log"""
+    return logging.getLogger(name)
+
+
+def setup_module_logging(module_name: str, level: str = None) -> logging.Logger:
+    """Setup centralized logging for a module"""
+    logger = logging.getLogger(module_name)
+    if level:
+        logger.setLevel(getattr(logging, level.upper(), logging.INFO))
+    return logger
+
+
+def cleanup_legacy_logs():
+    """Clean up old log files - centralized logging makes them obsolete"""
+    try:
+        from django.conf import settings
+        legacy_files = [
+            'server.log',
+            'instagram_upload.log', 
+            'bio_manager.log',
+            'dolphin_api.log',
+            'bot.log',
+            'youtube.log',
+        ]
+        
+        for filename in legacy_files:
+            filepath = os.path.join(settings.BASE_DIR, filename)
+            if os.path.exists(filepath):
+                try:
+                    os.remove(filepath)
+                    logger.info(f"Removed legacy log file: {filename}")
+                except Exception as e:
+                    logger.warning(f"Could not remove {filename}: {e}")
+        
+        # Clean up yt_logs directory
+        yt_logs_dir = os.path.join(settings.BASE_DIR, 'uploader', 'yt_logs')
+        if os.path.exists(yt_logs_dir):
+            try:
+                import shutil
+                shutil.rmtree(yt_logs_dir)
+                logger.info("Removed yt_logs directory")
+            except Exception as e:
+                logger.warning(f"Could not remove yt_logs directory: {e}")
+                
+    except Exception as e:
+        logger.warning(f"Error during legacy log cleanup: {e}")
 
 
 def attach_instagrapi_web_bridge() -> None:

@@ -11,6 +11,10 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'instagram_uploader.settings')
 django.setup()
 
 from django.contrib.auth import get_user_model
+import logging
+
+# Use centralized logging - all logs go to django.log
+logger = logging.getLogger('scripts.create_superuser')
 
 def create_superuser():
     User = get_user_model()

@@ -20,9 +20,8 @@ from uploader.models import BulkUploadTask, BulkUploadAccount
 from django.utils import timezone
 import logging
 
-# Setup logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Use centralized logging - all logs go to django.log
+logger = logging.getLogger('scripts.fix_bulk_upload_issues')
 
 def check_bulk_upload_issues():
     """Проверяет и исправляет проблемы с bulk upload"""

@@ -65,9 +65,13 @@
         // Attach change event listener
         serverSelect.addEventListener('change', handleServerChange);
         
-        // Force sync with backend session on page load
+        // Force sync with backend session on page load only if needed
         if (window.API_BASE) {
-            persistServerToBackend(window.API_BASE);
+            // Only persist if the server is different from what's in the dropdown
+            const currentDropdownServer = serverSelect.options[serverSelect.selectedIndex].value;
+            if (window.API_BASE !== currentDropdownServer) {
+                persistServerToBackend(window.API_BASE);
+            }
             
             // Trigger system status update after a short delay to ensure everything is ready
             setTimeout(() => {

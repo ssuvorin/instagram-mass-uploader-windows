@@ -3,7 +3,11 @@
 Скрипт для проверки настроек окружения для Windows без Docker
 """
 import os
+import logging
 from dotenv import load_dotenv
+
+# Use centralized logging - all logs go to django.log
+logger = logging.getLogger('scripts.check_env')
 
 # Загружаем .env файл
 load_dotenv()

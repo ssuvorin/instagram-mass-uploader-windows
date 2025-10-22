@@ -13,6 +13,10 @@ django.setup()
 
 from uploader.models import BulkUploadTask, BulkUploadAccount
 from django.core.cache import cache
+import logging
+
+# Use centralized logging - all logs go to django.log
+logger = logging.getLogger('scripts.show_bulk_accounts')
 
 def show_task_accounts(task_id):
     """Показать все аккаунты в задаче"""

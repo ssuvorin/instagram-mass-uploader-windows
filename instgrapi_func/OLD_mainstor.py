@@ -19,16 +19,8 @@ import base64
 from datetime import datetime
 from pathlib import Path
 
-# Настройка логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('instagram_upload.log', encoding='utf-8'),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
+# Use centralized logging - all logs go to django.log
+logger = logging.getLogger('instgrapi_func.mainstor')
 
 class AccountParser:
     """Парсер строки аккаунта из файла"""

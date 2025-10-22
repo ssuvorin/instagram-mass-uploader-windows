@@ -5,8 +5,11 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 
-from bot.src import logger
+import logging
 from bot.src.instagram_uploader import config
+
+# Use centralized logging - all logs go to django.log
+logger = logging.getLogger('scripts.upload_selenium_old')
 
 
 def upload_video(driver: WebDriver, video: str, title, location=None, mentions=None):

@@ -225,16 +225,8 @@ def setup_windows_logging():
     
     import logging
     
-    # Настраиваем логирование для Windows - пишем в django.log
-    django_log_path = os.path.join(get_project_root(), 'django.log')
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(),
-            logging.FileHandler(django_log_path, encoding='utf-8')
-        ]
-    )
+    # Use centralized logging - all logs go to django.log through Django configuration
+    # No need for basicConfig - Django handles all logging configuration
 
 
 # Автоматическая настройка при импорте модуля

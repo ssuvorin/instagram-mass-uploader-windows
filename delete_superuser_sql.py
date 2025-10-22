@@ -13,6 +13,10 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'instagram_uploader.settings')
 django.setup()
 
 from django.db import connection
+import logging
+
+# Use centralized logging - all logs go to django.log
+logger = logging.getLogger('scripts.delete_superuser_sql')
 
 def delete_superuser_sql(username):
     """Удаляет суперпользователя напрямую через SQL"""

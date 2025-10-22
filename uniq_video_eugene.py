@@ -4,10 +4,14 @@ import os
 import subprocess
 import random
 import numpy as np
+import logging
 from datetime import datetime, timedelta
 from moviepy.editor import VideoFileClip, CompositeVideoClip
 import glob
 from PIL import Image
+
+# Use centralized logging - all logs go to django.log
+logger = logging.getLogger('scripts.uniq_video_eugene')
 
 class VideoUniquelizerApp:
     def __init__(self, root):

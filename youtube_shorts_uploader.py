@@ -9,9 +9,8 @@ from typing import List, Dict, Tuple
 import logging
 import os
 
-# Настройка логирования
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+# Use centralized logging - all logs go to django.log
+logger = logging.getLogger('scripts.youtube_shorts_uploader')
 
 class YouTubeUploader:
     """Класс для автоматической загрузки YouTube Shorts через Playwright и Dolphin Anty"""

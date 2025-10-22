@@ -12,6 +12,10 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'instagram_uploader.settings')
 django.setup()
 
 from uploader.models import InstagramAccount
+import logging
+
+# Use centralized logging - all logs go to django.log
+logger = logging.getLogger('scripts.assign_accounts_to_client')
 
 def assign_accounts_to_client():
     """Назначить несколько аккаунтов клиенту для тестирования"""

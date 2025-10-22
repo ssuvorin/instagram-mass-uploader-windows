@@ -24,6 +24,10 @@ from uploader.async_bulk_tasks import (
     monitor_async_task_health, AsyncConfig
 )
 from django.utils import timezone
+import logging
+
+# Use centralized logging - all logs go to django.log
+logger = logging.getLogger('scripts.run_async_bulk_upload')
 
 # Load environment variables
 load_dotenv()

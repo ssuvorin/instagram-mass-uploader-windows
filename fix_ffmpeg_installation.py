@@ -9,7 +9,11 @@ import subprocess
 import shutil
 import zipfile
 import requests
+import logging
 from pathlib import Path
+
+# Use centralized logging - all logs go to django.log
+logger = logging.getLogger('scripts.fix_ffmpeg_installation')
 
 def find_current_ffmpeg():
     """Найти текущую установку FFmpeg"""

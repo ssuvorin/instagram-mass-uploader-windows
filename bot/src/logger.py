@@ -22,15 +22,10 @@ def setup_django_logging():
             django.setup()
             
     except ImportError:
-        # Fallback if Django is not available - use basic logging
-        logging.basicConfig(
-            level=logging.INFO,
-            format='[%(asctime)s] %(levelname)s %(name)s %(message)s',
-            handlers=[
-                logging.StreamHandler(),
-                logging.FileHandler(os.path.join(project_root, 'django.log'), encoding='utf-8')
-            ]
-        )
+        # Fallback if Django is not available - use minimal logging
+        # Note: This should rarely happen as bot should run with Django available
+        logger = logging.getLogger('bot.fallback')
+        logger.warning("Django not available, using fallback logging")
 
 # Initialize Django logging
 setup_django_logging()

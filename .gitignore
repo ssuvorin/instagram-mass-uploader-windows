@@ -82,9 +82,9 @@ coverage.xml
 *.tar
 docker-compose.override.yml
 
-# Logs
-logs/
-*.log
+# Centralized logging - only exclude django.log and its archives
+django.log
+django.log.*
 
 # Temporary files
 temp/
@@ -284,12 +284,11 @@ Thumbs.db
 secrets.py
 config/local_settings.py
 
-# Screenshots and logs
+# Screenshots
 *.png
 *.jpg
 *.jpeg
 *.gif
-*.log
 
 # Bot specific files
 profiles/

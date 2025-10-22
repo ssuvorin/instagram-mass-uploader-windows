@@ -18,16 +18,8 @@ import base64
 from datetime import datetime
 from pathlib import Path
 
-# Настройка логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('bio_manager.log', encoding='utf-8'),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
+# Use centralized logging - all logs go to django.log
+logger = logging.getLogger('instgrapi_func.bio_manager')
 
 class AccountParser:
     """Парсер строки аккаунта (используем существующий)"""

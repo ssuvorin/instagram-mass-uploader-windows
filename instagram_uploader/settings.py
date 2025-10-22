@@ -432,6 +432,14 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': True,
         },
+        'insta.warmup': {
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'insta.password_reset': {
+            'level': 'DEBUG',
+            'propagate': True,
+        },
     },
 }
 

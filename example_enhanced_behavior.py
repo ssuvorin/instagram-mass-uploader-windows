@@ -9,9 +9,13 @@ import os
 # Добавляем корневую директорию в путь
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+import logging
 from uploader.human_behavior_config import get_behavior_config
 from uploader.human_behavior import get_behavior_monitor
 from uploader.constants import TimeConstants
+
+# Use centralized logging - all logs go to django.log
+logger = logging.getLogger('scripts.example_enhanced_behavior')
 
 def demo_enhanced_behavior():
     """Демонстрация улучшенного человеческого поведения"""

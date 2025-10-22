@@ -17,6 +17,10 @@ django.setup()
 from uploader.models import BulkUploadTask, BulkVideo
 from django.utils import timezone
 from datetime import timedelta
+import logging
+
+# Use centralized logging - all logs go to django.log
+logger = logging.getLogger('scripts.cleanup_media_files')
 
 def cleanup_orphaned_files():
     """Очистить orphaned файлы (файлы без связанных объектов в БД)"""

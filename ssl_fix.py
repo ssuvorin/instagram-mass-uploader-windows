@@ -8,6 +8,10 @@ import os
 import ssl
 import urllib3
 import warnings
+import logging
+
+# Use centralized logging - all logs go to django.log
+logger = logging.getLogger('scripts.ssl_fix')
 
 def apply_ssl_fix():
     """Apply SSL fixes for proxy compatibility"""

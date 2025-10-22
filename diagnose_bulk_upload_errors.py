@@ -23,9 +23,8 @@ from uploader.models import BulkUploadTask, BulkUploadAccount
 from instagram_uploader.settings import ALLOWED_HOSTS, PROBLEMATIC_HOSTS
 import logging
 
-# Setup logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Use centralized logging - all logs go to django.log
+logger = logging.getLogger('scripts.diagnose_bulk_upload_errors')
 
 def check_ffmpeg_installation():
     """Проверяет установку FFmpeg"""
