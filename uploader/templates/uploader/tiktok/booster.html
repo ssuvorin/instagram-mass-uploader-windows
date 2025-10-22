@@ -868,7 +868,12 @@
         try {
             const box = document.getElementById('maintenance-response');
             box.classList.add('d-none');
-            const res = await fetch('{% url "api_tiktok_maintenance" %}', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: `action=${encodeURIComponent(action)}` });
+            const currentServer = window.API_BASE || '{{ api_base|default:"http://94.141.161.231:8000" }}';
+            const res = await fetch('{% url "api_tiktok_maintenance" %}', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, 
+                body: `action=${encodeURIComponent(action)}&server_url=${encodeURIComponent(currentServer)}`
+            });
             const data = await res.json();
             if (res.ok) {
                 box.innerHTML = `<pre class="text-success">${JSON.stringify(data, null, 2)}</pre>`;
@@ -891,7 +896,15 @@
         }
         
         try {
-            const res = await fetch('{% url "api_tiktok_booster_release_accounts" %}', { method: 'POST' });
+            const currentServer = window.API_BASE || '{{ api_base|default:"http://94.141.161.231:8000" }}';
+            const res = await fetch('{% url "api_tiktok_booster_release_accounts" %}', { 
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: `server_url=${encodeURIComponent(currentServer)}`
+            });
             const data = await res.json();
             if (res.ok) {
                 addLog('Release warmed accounts: OK', 'info');

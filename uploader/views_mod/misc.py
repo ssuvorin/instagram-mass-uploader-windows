@@ -2975,7 +2975,8 @@ def tiktok_videos_proxy_prepare_config(request):
                 'location': payload.get('location') or '',
                 'mentions': payload.get('mentions') or [],
                 'upload_cycles': int(payload.get('upload_cycles') or 5),
-                'cycle_timeout_minutes': int(payload.get('cycle_timeout_minutes') or 0)
+                'cycle_timeout_minutes': int(payload.get('cycle_timeout_minutes') or 0),
+                'server_url': payload.get('server_url') or api_base
             },
             timeout=60
         )
