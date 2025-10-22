@@ -401,7 +401,7 @@ class AsyncYTFileManager:
 
 # Асинхронный логгер
 class AsyncYTLogger:
-    """Асинхронный логгер для задач"""
+    """Асинхронный логгер для задач, использующий централизованную систему Django"""
     
     def __init__(self, task_id: int, account_id: Optional[int] = None, cache_ns: str = "task_logs", persist_db: bool = True):
         self.task_id = task_id
@@ -410,26 +410,28 @@ class AsyncYTLogger:
         self.account_repo = AsyncYTAccountRepository()
         self.cache_ns = cache_ns
         self.persist_db = persist_db
+        # Используем централизованный Django логгер для YouTube
+        self.django_logger = logging.getLogger('youtube')
     
     async def log(self, level: str, message: str, category: Optional[str] = None) -> None:
-        """Логировать сообщение"""
-        timestamp = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
+        """Логировать сообщение через централизованную систему Django"""
         formatted_message = self._format_message(message, level, category)
         
-        # Выводим в консоль
-        console_prefix = self._get_console_prefix(level, category)
-        print(f"{console_prefix} {formatted_message}")
+        # Логируем через Django централизованную систему
+        log_level = getattr(logging, level.upper(), logging.INFO)
+        self.django_logger.log(log_level, formatted_message)
         
         # Сохраняем в Django cache для веб-интерфейса
         try:
             from django.core.cache import cache
+            timestamp = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
             
             # Создаем структурированную запись лога
             log_entry = {
                 'timestamp': timestamp,
                 'level': level.upper(),
                 'message': formatted_message,
-                'category': category or 'GENERAL',
+                'category': category or 'YOUTUBE',
                 'is_critical': self._is_critical_event(level, message, category)
             }
             
@@ -459,12 +461,14 @@ class AsyncYTLogger:
             cache.set(f"{self.cache_ns.replace('logs','last_update')}_{self.task_id}", timestamp, timeout=3600)
             
         except Exception as e:
-            print(f"[FAIL] [ASYNC_LOGGER] Error saving to cache: {str(e)}")
+            # Fallback to Django logger if cache fails
+            self.django_logger.error(f"[ASYNC_LOGGER] Error saving to cache: {str(e)}")
         
         # Сохраняем в базу данных для критических событий (опционально)
         if self.persist_db and self._is_critical_event(level, message, category):
             try:
                 task = await self.task_repo.get_task(self.task_id)
+                timestamp = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
                 await self.task_repo.update_task_log(task, f"[{timestamp}] {formatted_message}\n")
             except Exception as e:
                 # Attempt a one-shot connection reset and retry (non-blocking)
@@ -474,9 +478,10 @@ class AsyncYTLogger:
                         if conn.connection is not None:
                             conn.close_if_unusable_or_obsolete()
                     task = await self.task_repo.get_task(self.task_id)
+                    timestamp = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
                     await self.task_repo.update_task_log(task, f"[{timestamp}] {formatted_message}\n")
                 except Exception:
-                    print(f"[FAIL] [ASYNC_LOGGER] Error saving to database: {str(e)}")
+                    self.django_logger.error(f"[ASYNC_LOGGER] Error saving to database: {str(e)}")
     
     def _is_critical_event(self, level: str, message: str, category: Optional[str]) -> bool:
         """Проверяет, является ли событие критическим"""
@@ -486,22 +491,12 @@ class AsyncYTLogger:
     
     def _format_message(self, message: str, level: str, category: Optional[str]) -> str:
         """Форматирует сообщение для логирования"""
+        task_prefix = f"[YT_TASK_{self.task_id}]"
+        if self.account_id:
+            task_prefix += f"[ACCOUNT_{self.account_id}]"
         if category:
-            return f"[{category}] {message}"
-        return message
-    
-    def _get_console_prefix(self, level: str, category: Optional[str]) -> str:
-        """Получает префикс для консольного вывода"""
-        level_colors = {
-            'INFO': '\033[94m',      # Blue
-            'SUCCESS': '\033[92m',   # Green
-            'WARNING': '\033[93m',   # Yellow
-            'ERROR': '\033[91m',     # Red
-        }
-        
-        color = level_colors.get(level.upper(), '\033[0m')
-        reset_color = '\033[0m'
-        return f"{color}[{level.upper()}]{reset_color}"
+            return f"{task_prefix}[{category}] {message}"
+        return f"{task_prefix} {message}"
 
 # Асинхронный обработчик аккаунта
 class AsyncYTAccountProcessor:

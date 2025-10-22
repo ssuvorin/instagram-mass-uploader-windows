@@ -14,7 +14,7 @@ from typing import List, Optional, Dict
 
 from playwright.async_api import Page
 
-from .logging_utils import log_info, log_warning, log_error
+import logging
 from .audio_recaptcha_solver import solve_recaptcha_with_audio
 from .enhanced_captcha_solver import EnhancedCaptchaSolver, CaptchaConfig
 

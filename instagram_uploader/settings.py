@@ -381,7 +381,15 @@ LOGGING = {
         
         # YouTube loggers
         'youtube': {
-            'level': 'INFO',
+            'level': os.getenv('YOUTUBE_LOG_LEVEL', 'INFO'),
+            'propagate': True,
+        },
+        'youtube.async_bulk_tasks': {
+            'level': os.getenv('YOUTUBE_LOG_LEVEL', 'INFO'),
+            'propagate': True,
+        },
+        'youtube.automation': {
+            'level': os.getenv('YOUTUBE_LOG_LEVEL', 'INFO'),
             'propagate': True,
         },
         
