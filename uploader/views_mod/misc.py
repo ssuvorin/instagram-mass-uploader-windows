@@ -1889,6 +1889,7 @@ def tiktok_booster_proxy_upload_accounts(request):
     if request.method != 'POST':
         return _json_response({'detail': 'Method not allowed'}, status=405)
     api_base = _get_tiktok_api_base(request)
+    print(f"DEBUG: tiktok_booster_proxy_upload_accounts using API base: {api_base}")
     try:
         file = request.FILES.get('file')
         if not file:
@@ -2203,6 +2204,7 @@ def tiktok_booster_proxy_prepare_accounts(request):
     if request.method != 'POST':
         return _json_response({'detail': 'Method not allowed'}, status=405)
     api_base = _get_tiktok_api_base(request)
+    print(f"DEBUG: tiktok_booster_proxy_prepare_accounts using API base: {api_base}")
     try:
         # Build payload for upstream booster.prepare_accounts
         payload = {}
@@ -2358,6 +2360,7 @@ def tiktok_booster_proxy_start(request):
     if request.method != 'POST':
         return _json_response({'detail': 'Method not allowed'}, status=405)
     api_base = _get_tiktok_api_base(request)
+    print(f"DEBUG: tiktok_booster_proxy_start using API base: {api_base}")
     try:
         resp = requests.post(f"{api_base}/booster/start_booster", timeout=60)
         # Fallback to alternative endpoint names if not found

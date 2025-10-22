@@ -1225,6 +1225,10 @@
         const original = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Uploading...';
         try {
             const fd = new FormData(proxiesForm);
+            // Add current server URL to the request
+            const currentServer = window.API_BASE || '{{ api_base|default:"http://94.141.161.231:8000" }}';
+            fd.append('server_url', currentServer);
+            
             const res = await fetch('{% url "api_tiktok_booster_upload_proxies" %}', { method: 'POST', body: fd });
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || 'Failed to upload proxies');
@@ -1255,6 +1259,10 @@
         const original = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Uploading...';
         try {
             const fd = new FormData(accountsForm);
+            // Add current server URL to the request
+            const currentServer = window.API_BASE || '{{ api_base|default:"http://94.141.161.231:8000" }}';
+            fd.append('server_url', currentServer);
+            
             const res = await fetch('{% url "api_tiktok_booster_upload_accounts" %}', { method: 'POST', body: fd });
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || 'Failed to upload accounts');
@@ -1290,7 +1298,11 @@
             const clientId = document.getElementById('client-select').value || '';
             const tagSelect = document.getElementById('tag-select');
             const tagName = tagSelect.selectedIndex > 0 ? tagSelect.options[tagSelect.selectedIndex].text : null;
-            const requestBody = { use_cookie_robot: useCookieRobot, client_id: clientId };
+            const requestBody = { 
+                use_cookie_robot: useCookieRobot, 
+                client_id: clientId,
+                server_url: window.API_BASE || '{{ api_base|default:"http://94.141.161.231:8000" }}'
+            };
             if (tagName) {
                 requestBody.tag = tagName;
             }
@@ -1313,7 +1325,15 @@
         respBox.classList.add('d-none');
         startBtn.disabled = true; const original = startBtn.innerHTML; startBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Starting...';
         try {
-            const res = await fetch('{% url "api_tiktok_booster_start" %}', { method: 'POST' });
+            const currentServer = window.API_BASE || '{{ api_base|default:"http://94.141.161.231:8000" }}';
+            const res = await fetch('{% url "api_tiktok_booster_start" %}', { 
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: `server_url=${encodeURIComponent(currentServer)}`
+            });
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || 'Start failed');
             addLog('Start booster: OK', 'info');
