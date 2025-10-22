@@ -461,6 +461,11 @@ window.addEventListener('tiktok-server-changed', function(event) {
     
     // Re-check API status
     checkApiStatus();
+    
+    // Update system status if function exists
+    if (typeof updateSystemStatus === 'function') {
+        updateSystemStatus();
+    }
 });
 
 // API Status Check via backend

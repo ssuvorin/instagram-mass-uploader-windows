@@ -107,6 +107,11 @@
         if (typeof window.checkAllServersStatus === 'function') {
             window.checkAllServersStatus();
         }
+        
+        // Update system status if function exists
+        if (typeof window.updateSystemStatus === 'function') {
+            window.updateSystemStatus();
+        }
     }
 
     /**

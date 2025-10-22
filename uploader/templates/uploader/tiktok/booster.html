@@ -585,6 +585,9 @@
         // Re-check API status with new server
         checkApiStatus();
         checkAllServersStatus();
+        
+        // Update system status with new server
+        updateSystemStatus();
 
         // Fetch logs from the new server immediately
         fetchApiServerLogs();
