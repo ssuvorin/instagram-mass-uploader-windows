@@ -119,6 +119,18 @@
                         </li>
 
                         <li class="nav-item">
+                            <div class="d-flex align-items-center gap-2">
+                                <label for="api-server-select" class="form-label text-white mb-0 small">API Server:</label>
+                                <select class="form-select form-select-sm" id="api-server-select" style="min-width: 200px;">
+                                    {% for server in available_servers %}
+                                    <option value="{{ server.url }}" data-desc="{{ server.description }}" {% if server.url == selected_server.url %}selected{% endif %}>
+                                        {{ server.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </li>
+                        <li class="nav-item">
                             {% if user.is_authenticated %}
                             <a class="nav-link btn btn-sm btn-outline-primary px-3" href="{% url 'logout' %}">
                                 <i class="bi bi-box-arrow-right"></i> Logout

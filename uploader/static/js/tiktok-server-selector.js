@@ -69,8 +69,12 @@
         if (window.API_BASE) {
             // Only persist if the server is different from what's in the dropdown
             const currentDropdownServer = serverSelect.options[serverSelect.selectedIndex].value;
+            console.log('DEBUG: Page load - API_BASE:', window.API_BASE, 'Dropdown:', currentDropdownServer);
             if (window.API_BASE !== currentDropdownServer) {
+                console.log('DEBUG: Persisting server to backend because API_BASE differs from dropdown');
                 persistServerToBackend(window.API_BASE);
+            } else {
+                console.log('DEBUG: Skipping persist - API_BASE matches dropdown');
             }
             
             // Trigger system status update after a short delay to ensure everything is ready
@@ -165,6 +169,7 @@
      * Persist selected server to backend session
      */
     function persistServerToBackend(serverUrl) {
+        console.log('DEBUG: persistServerToBackend called with:', serverUrl);
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
         if (!csrfToken) {
             console.warn('CSRF token not found, cannot persist to backend');
@@ -182,7 +187,7 @@
         .then(response => response.json())
         .then(data => {
             if (data.ok) {
-                console.log('Server persisted to backend session:', serverUrl);
+                console.log('DEBUG: Server persisted to backend session:', serverUrl);
             } else {
                 console.error('Failed to persist server to backend:', data);
             }
