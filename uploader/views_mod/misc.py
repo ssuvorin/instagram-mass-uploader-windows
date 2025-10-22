@@ -1735,12 +1735,21 @@ def _tiktok_api_context(request=None) -> dict:
             session_url = request.session.get('selected_tiktok_api_base')
             if session_url:
                 selected_api_base = session_url
-        except Exception:
+                # Ensure session is saved with current value
+                request.session.save()
+                print(f"DEBUG: Retrieved TikTok API server from session: {session_url}")  # Debug logging
+            else:
+                print(f"DEBUG: No TikTok API server found in session")  # Debug logging
+        except Exception as e:
+            print(f"DEBUG: Failed to read TikTok API server from session: {e}")  # Debug logging
             pass
 
     # 2) Fallback to environment variable TIKTOK_API_BASE
     if not selected_api_base:
-        selected_api_base = os.environ.get('TIKTOK_API_BASE', servers[0]['url'] if servers else 'http://94.141.161.231:8000')
+        default_server_url = 'http://94.141.161.231:8000'
+        if servers and len(servers) > 0 and isinstance(servers[0], dict) and servers[0].get('url'):
+            default_server_url = servers[0]['url']
+        selected_api_base = os.environ.get('TIKTOK_API_BASE', default_server_url)
 
     # Find the selected server object
     selected_server = None
@@ -2452,7 +2461,10 @@ def tiktok_set_active_server(request):
         return JsonResponse({'detail': 'server_url required'}, status=400)
     try:
         request.session['selected_tiktok_api_base'] = server_url
-    except Exception:
+        request.session.save()  # Explicitly save session to ensure persistence
+        print(f"DEBUG: Set TikTok API server in session: {server_url}")  # Debug logging
+    except Exception as e:
+        print(f"DEBUG: Failed to set TikTok API server in session: {e}")  # Debug logging
         pass
     return JsonResponse({'ok': True, 'server_url': server_url})
 

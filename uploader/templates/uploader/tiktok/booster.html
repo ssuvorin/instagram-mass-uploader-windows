@@ -626,6 +626,21 @@
 
     // Initialize page
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialize API_BASE from currently selected server in dropdown
+        const serverSelect = document.getElementById('api-server-select');
+        if (serverSelect) {
+            const selectedOption = serverSelect.options[serverSelect.selectedIndex];
+            if (selectedOption) {
+                API_BASE = selectedOption.value;
+                // Update the server link display
+                const linkElement = document.getElementById('current-server-link');
+                if (linkElement) {
+                    linkElement.href = `${API_BASE}/docs`;
+                    linkElement.lastChild.textContent = API_BASE;
+                }
+            }
+        }
+
         checkApiStatus();
         updateSystemStatus();
         checkAllServersStatus();
