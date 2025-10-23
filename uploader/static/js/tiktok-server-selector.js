@@ -67,15 +67,11 @@
         
         // Force sync with backend session on page load only if needed
         if (window.API_BASE) {
-            // Only persist if the server is different from what's in the dropdown
+            // Always persist server to backend on page load to ensure session sync
             const currentDropdownServer = serverSelect.options[serverSelect.selectedIndex].value;
             console.log('DEBUG: Page load - API_BASE:', window.API_BASE, 'Dropdown:', currentDropdownServer);
-            if (window.API_BASE !== currentDropdownServer) {
-                console.log('DEBUG: Persisting server to backend because API_BASE differs from dropdown');
-                persistServerToBackend(window.API_BASE);
-            } else {
-                console.log('DEBUG: Skipping persist - API_BASE matches dropdown');
-            }
+            console.log('DEBUG: Always persisting server to backend on page load for session sync');
+            persistServerToBackend(window.API_BASE);
             
             // Trigger system status update after a short delay to ensure everything is ready
             setTimeout(() => {
