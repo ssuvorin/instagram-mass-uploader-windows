@@ -1862,6 +1862,8 @@ def _get_tiktok_api_base(request=None, persist: bool = True) -> str:
             # 2) From session (for both GET and POST requests)
             try:
                 session_url = request.session.get('selected_tiktok_api_base')
+                print(f"DEBUG: Session keys: {list(request.session.keys())}")
+                print(f"DEBUG: Session data: {dict(request.session)}")
                 if session_url:
                     print(f"DEBUG: Retrieved TikTok API server from session in _get_tiktok_api_base: {session_url}")
                     return session_url
@@ -2488,11 +2490,16 @@ def tiktok_set_active_server(request):
         return JsonResponse({'ok': True, 'server_url': server_url, 'message': 'Server already set'})
     
     try:
+        print(f"DEBUG: Before setting session - keys: {list(request.session.keys())}")
+        print(f"DEBUG: Before setting session - data: {dict(request.session)}")
+        
         request.session['selected_tiktok_api_base'] = server_url
         request.session.save()  # Explicitly save session to ensure persistence
 
         # Verify that session was actually saved
         saved_value = request.session.get('selected_tiktok_api_base')
+        print(f"DEBUG: After setting session - keys: {list(request.session.keys())}")
+        print(f"DEBUG: After setting session - data: {dict(request.session)}")
         print(f"DEBUG: Set TikTok API server in session: {server_url}, verified: {saved_value}")  # Debug logging
 
         # Force commit to database if using transaction
