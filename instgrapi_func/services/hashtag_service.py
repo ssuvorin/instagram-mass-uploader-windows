@@ -298,7 +298,28 @@ class HashtagAnalysisService:
                 self._human_delay()
                 if on_log:
                     on_log(f"hashtag: fetching info for #{hashtag}")
-                hi = cl.hashtag_info(hashtag)
+
+                try:
+                    hi = cl.hashtag_info(hashtag)
+                except Exception as hashtag_error:
+                    # Handle Pydantic validation errors from incomplete Instagram API responses
+                    if "validation error" in str(hashtag_error).lower() or "Field required" in str(hashtag_error):
+                        log.warning(f"[VALIDATION_WORKAROUND] Hashtag info validation failed: {hashtag_error}")
+                        log.warning("[VALIDATION_WORKAROUND] Creating mock Hashtag object")
+
+                        # Create mock Hashtag object with minimal required fields
+                        class MockHashtag:
+                            def __init__(self, name, media_count=0):
+                                self.name = name
+                                self.media_count = media_count
+                                self.id = None  # Optional field that caused the error
+
+                        hi = MockHashtag(hashtag, 0)  # Assume 0 if we can't get real count
+                        log.warning("[VALIDATION_WORKAROUND] Created mock Hashtag object - proceeding with analysis")
+                    else:
+                        # Re-raise non-validation errors
+                        raise hashtag_error
+
                 total_reported = int(getattr(hi, "media_count", 0) or 0)
                 # Save raw JSON for inspection
                 self._last_info_json = getattr(cl, "last_json", {}) or {}
