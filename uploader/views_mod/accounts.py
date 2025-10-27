@@ -1564,8 +1564,11 @@ def import_accounts_ua_cookies(request):
 					# CRITICAL: Also save device_settings if we have UA to derive device info
 					if ua_string:
 						try:
+							# Generate base device settings for this account
+							from instgrapi_func.services.device_service import generate_random_device_settings
+							device_settings = generate_random_device_settings(username)
+
 							# Extract device settings from UA for ensure_persistent_device
-							device_settings = {}
 							import re as _re
 							
 							# Extract app_version from UA
@@ -2378,18 +2381,22 @@ def import_accounts_bundle(request):
 							ua_replaced = None
 					except Exception:
 						ua_replaced = None
+					# Generate complete device settings based on username for consistency
+					from instgrapi_func.services.device_service import generate_random_device_settings
+					device_settings = generate_random_device_settings(username)
+
 					# Backfill UUIDs if present from legacy device_info_raw
 					if device_info_raw:
 						try:
 							di_parts = [p for p in device_info_raw.split(';') if p]
 							if di_parts:
-								device_settings.setdefault('android_device_id', di_parts[0])
+								device_settings['android_device_id'] = di_parts[0]
 							if len(di_parts) >= 2:
-								device_settings.setdefault('phone_id', di_parts[1])
+								device_settings['phone_id'] = di_parts[1]
 							if len(di_parts) >= 3:
-								device_settings.setdefault('uuid', di_parts[2])
+								device_settings['uuid'] = di_parts[2]
 							if len(di_parts) >= 4:
-								device_settings.setdefault('client_session_id', di_parts[3])
+								device_settings['client_session_id'] = di_parts[3]
 						except Exception:
 							pass
 					# Save device and session snapshot (minimal in new format)

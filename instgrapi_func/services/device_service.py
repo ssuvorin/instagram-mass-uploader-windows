@@ -43,15 +43,24 @@ def get_version_for_account(username: str) -> Tuple[str, str]:
 
 def generate_random_device_settings(username: Optional[str] = None) -> Dict:
 	"""Return a realistic random device_settings dict with stable identifiers."""
-	base = random.choice(_DEVICE_POOL).copy()
-	
+	# Use deterministic selection based on username for consistency
+	if username:
+		# Use hash of username to deterministically select device
+		import hashlib
+		hash_obj = hashlib.md5(username.encode())
+		hash_int = int(hash_obj.hexdigest(), 16)
+		device_index = hash_int % len(_DEVICE_POOL)
+		base = _DEVICE_POOL[device_index].copy()
+	else:
+		base = random.choice(_DEVICE_POOL).copy()
+
 	# Get version for this account (deterministic based on username)
 	app_version, version_code = get_version_for_account(username) if username else get_random_instagram_version()
-	
+
 	# Default locale and country (can be overridden later)
 	default_locale = "ru_BY"
 	default_country = "BY"
-	
+
 	settings: Dict = {
 		"cpu": base["cpu"],
 		"dpi": base["dpi"],
@@ -90,11 +99,26 @@ def generate_user_agent_from_device_settings(device_settings: Dict, username: Op
 	Generate Instagram User Agent string from device settings.
 
 	This creates a realistic UA that matches the device fingerprint.
+	If device_settings lacks device info (manufacturer, model, etc.), uses a random device
+	but keeps the original UUIDs for consistency.
 	"""
 	if not device_settings:
 		# Fallback to random device UA
 		random_device = generate_random_device_settings(username)
 		return generate_user_agent_from_device_settings(random_device, username)
+
+	# Check if we have complete device info
+	has_device_info = any(device_settings.get(key) for key in ["manufacturer", "model", "device", "cpu", "dpi", "resolution"])
+
+	if not has_device_info:
+		# Generate a random device but preserve original UUIDs
+		random_device = generate_random_device_settings(username)
+		# Merge UUIDs from original device_settings
+		random_device.update({
+			k: v for k, v in device_settings.items()
+			if k in ("uuid", "android_device_id", "phone_id", "client_session_id") and v
+		})
+		device_settings = random_device
 
 	# Get version info
 	app_version, version_code = get_version_for_account(username) if username else get_random_instagram_version()
@@ -254,7 +278,7 @@ def ensure_persistent_device(username: str, persisted_settings: Optional[Dict] =
 	# Generate UA from device_settings if we have them but no UA
 	if device_settings and not user_agent:
 		user_agent = generate_user_agent_from_device_settings(device_settings, username)
-		print(f"[DEBUG] Generated UA from device_settings for {username}: {user_agent[:100]}...")
+		print(f"[DEBUG] Generated UA from device_settings for {username}: {user_agent[:120]}...")
 
 	# Fallback to random
 	if not device_settings:
