@@ -1771,7 +1771,7 @@ def import_accounts_bundle(request):
 		proxy_source = request.POST.get('proxy_source', 'bundle')
 		
 		# Validate locale
-		valid_locales = ['ru_BY', 'en_IN', 'es_CL', 'es_MX', 'pt_BR', 'el_GR', 'de_DE']
+		valid_locales = ['ru_BY', 'en_IN', 'en_US', 'es_CL', 'es_MX', 'pt_BR', 'el_GR', 'de_DE']
 		if selected_locale not in valid_locales:
 			selected_locale = 'ru_BY'
 		
