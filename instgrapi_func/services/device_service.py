@@ -109,6 +109,7 @@ def get_version_for_account(username: str) -> Tuple[str, str]:
 
 
 _DEVICE_POOL = [
+	# Samsung Galaxy Series (Premium)
 	{
 		"manufacturer": "samsung",
 		"brand": "samsung",
@@ -121,15 +122,129 @@ _DEVICE_POOL = [
 		"android_version": 29,
 	},
 	{
-		"manufacturer": "OnePlus",
-		"brand": "OnePlus",
-		"model": "ONEPLUS A6013",       # OnePlus 6T
-		"device": "OnePlus6T",
-		"cpu": "qcom",
-		"dpi": "420dpi",
-		"resolution": "1080x2340",
+		"manufacturer": "samsung",
+		"brand": "samsung",
+		"model": "SM-G975F",            # Galaxy S10+
+		"device": "beyond2",
+		"cpu": "exynos9820",
+		"dpi": "640dpi",
+		"resolution": "1440x3040",
 		"android_release": "10",
 		"android_version": 29,
+	},
+	{
+		"manufacturer": "samsung",
+		"brand": "samsung",
+		"model": "SM-G980F",            # Galaxy S20
+		"device": "beyond3",
+		"cpu": "exynos990",
+		"dpi": "640dpi",
+		"resolution": "1440x3200",
+		"android_release": "11",
+		"android_version": 30,
+	},
+	{
+		"manufacturer": "samsung",
+		"brand": "samsung",
+		"model": "SM-G998B",            # Galaxy S21 Ultra
+		"device": "o1s",
+		"cpu": "exynos2100",
+		"dpi": "640dpi",
+		"resolution": "1440x3200",
+		"android_release": "12",
+		"android_version": 31,
+	},
+	{
+		"manufacturer": "samsung",
+		"brand": "samsung",
+		"model": "SM-S901B",            # Galaxy S22
+		"device": "b0q",
+		"cpu": "exynos2200",
+		"dpi": "640dpi",
+		"resolution": "1080x2340",
+		"android_release": "12",
+		"android_version": 31,
+	},
+	{
+		"manufacturer": "samsung",
+		"brand": "samsung",
+		"model": "SM-S918B",            # Galaxy S23 Ultra
+		"device": "e1s",
+		"cpu": "qcom",
+		"dpi": "640dpi",
+		"resolution": "1440x3088",
+		"android_release": "13",
+		"android_version": 33,
+	},
+
+	# Samsung Galaxy A Series (Mid-range)
+	{
+		"manufacturer": "samsung",
+		"brand": "samsung",
+		"model": "SM-A515F",            # Galaxy A51
+		"device": "a51",
+		"cpu": "exynos9611",
+		"dpi": "420dpi",
+		"resolution": "1080x2400",
+		"android_release": "11",
+		"android_version": 30,
+	},
+	{
+		"manufacturer": "samsung",
+		"brand": "samsung",
+		"model": "SM-A525F",            # Galaxy A52
+		"device": "a52q",
+		"cpu": "qcom",
+		"dpi": "420dpi",
+		"resolution": "1080x2400",
+		"android_release": "11",
+		"android_version": 30,
+	},
+	{
+		"manufacturer": "samsung",
+		"brand": "samsung",
+		"model": "SM-A536B",            # Galaxy A53
+		"device": "a53x",
+		"cpu": "exynos1280",
+		"dpi": "420dpi",
+		"resolution": "1080x2400",
+		"android_release": "12",
+		"android_version": 31,
+	},
+	{
+		"manufacturer": "samsung",
+		"brand": "samsung",
+		"model": "SM-A546B",            # Galaxy A54
+		"device": "a54x",
+		"cpu": "exynos1380",
+		"dpi": "420dpi",
+		"resolution": "1080x2340",
+		"android_release": "13",
+		"android_version": 33,
+	},
+
+	# Google Pixel Series
+	{
+		"manufacturer": "Google",
+		"brand": "google",
+		"model": "Pixel 4",
+		"device": "flame",
+		"cpu": "qcom",
+		"dpi": "440dpi",
+		"resolution": "1080x2280",
+		"android_release": "11",
+		"android_version": 30,
+	},
+	{
+		"manufacturer": "Google",
+		"brand": "google",
+		"model": "Pixel 4a",
+		"device": "sunfish",
+		"cpu": "qcom",
+		"dpi": "440dpi",
+		"resolution": "1080x2340",
+		"android_release": "11",
+		"android_version": 30,
 	},
 	{
 		"manufacturer": "Google",
@@ -143,6 +258,41 @@ _DEVICE_POOL = [
 		"android_version": 30,
 	},
 	{
+		"manufacturer": "Google",
+		"brand": "google",
+		"model": "Pixel 6",
+		"device": "oriole",
+		"cpu": "google",
+		"dpi": "420dpi",
+		"resolution": "1080x2400",
+		"android_release": "12",
+		"android_version": 31,
+	},
+	{
+		"manufacturer": "Google",
+		"brand": "google",
+		"model": "Pixel 7",
+		"device": "panther",
+		"cpu": "google",
+		"dpi": "420dpi",
+		"resolution": "1080x2400",
+		"android_release": "13",
+		"android_version": 33,
+	},
+	{
+		"manufacturer": "Google",
+		"brand": "google",
+		"model": "Pixel 8",
+		"device": "shiba",
+		"cpu": "google",
+		"dpi": "420dpi",
+		"resolution": "1080x2400",
+		"android_release": "14",
+		"android_version": 34,
+	},
+
+	# Xiaomi Series
+	{
 		"manufacturer": "Xiaomi",
 		"brand": "Xiaomi",
 		"model": "Redmi Note 8 Pro",
@@ -154,9 +304,178 @@ _DEVICE_POOL = [
 		"android_version": 29,
 	},
 	{
+		"manufacturer": "Xiaomi",
+		"brand": "Xiaomi",
+		"model": "Redmi Note 9",
+		"device": "merlin",
+		"cpu": "mtk",
+		"dpi": "440dpi",
+		"resolution": "1080x2340",
+		"android_release": "10",
+		"android_version": 29,
+	},
+	{
+		"manufacturer": "Xiaomi",
+		"brand": "Xiaomi",
+		"model": "Redmi Note 10",
+		"device": "mojito",
+		"cpu": "qcom",
+		"dpi": "440dpi",
+		"resolution": "1080x2400",
+		"android_release": "11",
+		"android_version": 30,
+	},
+	{
+		"manufacturer": "Xiaomi",
+		"brand": "Xiaomi",
+		"model": "Redmi Note 11",
+		"device": "spes",
+		"cpu": "qcom",
+		"dpi": "440dpi",
+		"resolution": "1080x2400",
+		"android_release": "11",
+		"android_version": 30,
+	},
+	{
+		"manufacturer": "Xiaomi",
+		"brand": "Xiaomi",
+		"model": "M2010J19SG",         # Xiaomi Mi 10
+		"device": "umi",
+		"cpu": "qcom",
+		"dpi": "440dpi",
+		"resolution": "1080x2340",
+		"android_release": "11",
+		"android_version": 30,
+	},
+	{
+		"manufacturer": "Xiaomi",
+		"brand": "Xiaomi",
+		"model": "2109119DG",          # Xiaomi Mi 11
+		"device": "venus",
+		"cpu": "qcom",
+		"dpi": "440dpi",
+		"resolution": "1080x2400",
+		"android_release": "11",
+		"android_version": 30,
+	},
+	{
+		"manufacturer": "Xiaomi",
+		"brand": "Xiaomi",
+		"model": "2201123G",           # Xiaomi 12
+		"device": "psyche",
+		"cpu": "qcom",
+		"dpi": "440dpi",
+		"resolution": "1080x2400",
+		"android_release": "12",
+		"android_version": 31,
+	},
+	{
+		"manufacturer": "Xiaomi",
+		"brand": "Xiaomi",
+		"model": "2203129G",           # Xiaomi 12 Pro
+		"device": "zeus",
+		"cpu": "qcom",
+		"dpi": "440dpi",
+		"resolution": "1440x3200",
+		"android_release": "12",
+		"android_version": 31,
+	},
+	{
+		"manufacturer": "Xiaomi",
+		"brand": "Xiaomi",
+		"model": "2211133G",           # Xiaomi 13
+		"device": "fuxi",
+		"cpu": "qcom",
+		"dpi": "440dpi",
+		"resolution": "1080x2400",
+		"android_release": "13",
+		"android_version": 33,
+	},
+	{
+		"manufacturer": "Xiaomi",
+		"brand": "Xiaomi",
+		"model": "2304FPN6DC",         # Xiaomi 13 Pro
+		"device": "nuwa",
+		"cpu": "qcom",
+		"dpi": "440dpi",
+		"resolution": "1440x3200",
+		"android_release": "13",
+		"android_version": 33,
+	},
+	{
+		"manufacturer": "Xiaomi",
+		"brand": "Xiaomi",
+		"model": "23116PN5BC",         # Xiaomi 14
+		"device": "houji",
+		"cpu": "qcom",
+		"dpi": "460dpi",
+		"resolution": "1080x2670",
+		"android_release": "14",
+		"android_version": 34,
+	},
+
+	# OnePlus Series
+	{
+		"manufacturer": "OnePlus",
+		"brand": "OnePlus",
+		"model": "ONEPLUS A6013",      # OnePlus 6T
+		"device": "OnePlus6T",
+		"cpu": "qcom",
+		"dpi": "420dpi",
+		"resolution": "1080x2340",
+		"android_release": "10",
+		"android_version": 29,
+	},
+	{
+		"manufacturer": "OnePlus",
+		"brand": "OnePlus",
+		"model": "HD1913",             # OnePlus 7T
+		"device": "OnePlus7T",
+		"cpu": "qcom",
+		"dpi": "420dpi",
+		"resolution": "1080x2400",
+		"android_release": "11",
+		"android_version": 30,
+	},
+	{
+		"manufacturer": "OnePlus",
+		"brand": "OnePlus",
+		"model": "LE2113",             # OnePlus 9
+		"device": "OnePlus9",
+		"cpu": "qcom",
+		"dpi": "420dpi",
+		"resolution": "1080x2400",
+		"android_release": "11",
+		"android_version": 30,
+	},
+	{
+		"manufacturer": "OnePlus",
+		"brand": "OnePlus",
+		"model": "NE2213",             # OnePlus 10T
+		"device": "OnePlus10T",
+		"cpu": "qcom",
+		"dpi": "420dpi",
+		"resolution": "1080x2400",
+		"android_release": "12",
+		"android_version": 31,
+	},
+	{
+		"manufacturer": "OnePlus",
+		"brand": "OnePlus",
+		"model": "CPH2423",            # OnePlus 12
+		"device": "OP594DL",
+		"cpu": "qcom",
+		"dpi": "450dpi",
+		"resolution": "1240x2772",
+		"android_release": "14",
+		"android_version": 34,
+	},
+
+	# Huawei Series
+	{
 		"manufacturer": "Huawei",
 		"brand": "HUAWEI",
-		"model": "P30",
+		"model": "ELE-L29",            # Huawei P30
 		"device": "ELE-L29",
 		"cpu": "kirin980",
 		"dpi": "480dpi",
@@ -165,27 +484,258 @@ _DEVICE_POOL = [
 		"android_version": 29,
 	},
 	{
-		"manufacturer": "samsung",
-		"brand": "samsung",
-		"model": "SM-A515F",           # Galaxy A51
-		"device": "a51",
-		"cpu": "exynos9611",
-		"dpi": "420dpi",
-		"resolution": "1080x2400",
+		"manufacturer": "Huawei",
+		"brand": "HUAWEI",
+		"model": "ELS-NX9",            # Huawei P40
+		"device": "ELS-NX9",
+		"cpu": "kirin990",
+		"dpi": "480dpi",
+		"resolution": "1080x2340",
+		"android_release": "10",
+		"android_version": 29,
+	},
+	{
+		"manufacturer": "Huawei",
+		"brand": "HUAWEI",
+		"model": "LIO-L29",            # Huawei Mate 30 Pro
+		"device": "LIO-L29",
+		"cpu": "kirin990",
+		"dpi": "480dpi",
+		"resolution": "1176x2400",
+		"android_release": "10",
+		"android_version": 29,
+	},
+
+	# Sony Xperia Series
+	{
+		"manufacturer": "Sony",
+		"brand": "Sony",
+		"model": "XQ-BQ52",            # Xperia 5 II
+		"device": "XQ-BQ52",
+		"cpu": "qcom",
+		"dpi": "640dpi",
+		"resolution": "1080x2520",
 		"android_release": "11",
 		"android_version": 30,
 	},
 	{
-		"manufacturer": "samsung",
-		"brand": "samsung",
-		"model": "SM-A715F",           # Galaxy A71
-		"device": "a71",
+		"manufacturer": "Sony",
+		"brand": "Sony",
+		"model": "XQ-BQ62",            # Xperia 5 III
+		"device": "XQ-BQ62",
+		"cpu": "qcom",
+		"dpi": "640dpi",
+		"resolution": "1080x2520",
+		"android_release": "11",
+		"android_version": 30,
+	},
+	{
+		"manufacturer": "Sony",
+		"brand": "Sony",
+		"model": "XQ-CQ62",            # Xperia 5 IV
+		"device": "XQ-CQ62",
+		"cpu": "qcom",
+		"dpi": "640dpi",
+		"resolution": "1080x2520",
+		"android_release": "12",
+		"android_version": 31,
+	},
+
+	# LG Series
+	{
+		"manufacturer": "LGE",
+		"brand": "lge",
+		"model": "LM-G900",            # LG G9
+		"device": "judypn",
+		"cpu": "qcom",
+		"dpi": "640dpi",
+		"resolution": "1440x3120",
+		"android_release": "10",
+		"android_version": 29,
+	},
+	{
+		"manufacturer": "LGE",
+		"brand": "lge",
+		"model": "LM-V405",            # LG Velvet
+		"device": "velvet",
+		"cpu": "qcom",
+		"dpi": "420dpi",
+		"resolution": "1080x2460",
+		"android_release": "10",
+		"android_version": 29,
+	},
+
+	# Motorola Series
+	{
+		"manufacturer": "motorola",
+		"brand": "motorola",
+		"model": "XT2013-3",           # Motorola Edge 20
+		"device": "berlin",
 		"cpu": "qcom",
 		"dpi": "420dpi",
 		"resolution": "1080x2400",
 		"android_release": "11",
 		"android_version": 30,
 	},
+	{
+		"manufacturer": "motorola",
+		"brand": "motorola",
+		"model": "XT2201-2",           # Motorola Edge 30
+		"device": "dubai",
+		"cpu": "qcom",
+		"dpi": "420dpi",
+		"resolution": "1080x2400",
+		"android_release": "12",
+		"android_version": 31,
+	},
+
+	# Oppo Series
+	{
+		"manufacturer": "OPPO",
+		"brand": "OPPO",
+		"model": "PEEM00",             # OPPO Reno 10x Zoom
+		"device": "PEEM00",
+		"cpu": "qcom",
+		"dpi": "480dpi",
+		"resolution": "1080x2340",
+		"android_release": "10",
+		"android_version": 29,
+	},
+	{
+		"manufacturer": "OPPO",
+		"brand": "OPPO",
+		"model": "PEGM00",             # OPPO Find X2
+		"device": "PEGM00",
+		"cpu": "qcom",
+		"dpi": "480dpi",
+		"resolution": "1440x3168",
+		"android_release": "11",
+		"android_version": 30,
+	},
+
+	# Vivo Series
+	{
+		"manufacturer": "vivo",
+		"brand": "vivo",
+		"model": "V2031A",             # Vivo X60 Pro
+		"device": "V2031A",
+		"cpu": "qcom",
+		"dpi": "440dpi",
+		"resolution": "1080x2376",
+		"android_release": "11",
+		"android_version": 30,
+	},
+	{
+		"manufacturer": "vivo",
+		"brand": "vivo",
+		"model": "V2056A",             # Vivo X70 Pro
+		"device": "V2056A",
+		"cpu": "qcom",
+		"dpi": "440dpi",
+		"resolution": "1080x2376",
+		"android_release": "11",
+		"android_version": 30,
+	},
+
+	# Realme Series
+	{
+		"manufacturer": "realme",
+		"brand": "realme",
+		"model": "RMX2170",            # Realme 9
+		"device": "RMX2170",
+		"cpu": "qcom",
+		"dpi": "420dpi",
+		"resolution": "1080x2400",
+		"android_release": "11",
+		"android_version": 30,
+	},
+	{
+		"manufacturer": "realme",
+		"brand": "realme",
+		"model": "RMX3360",            # Realme 10
+		"device": "RMX3360",
+		"cpu": "qcom",
+		"dpi": "420dpi",
+		"resolution": "1080x2400",
+		"android_release": "12",
+		"android_version": 31,
+	},
+
+	# Nokia Series
+	{
+		"manufacturer": "Nokia",
+		"brand": "Nokia",
+		"model": "TA-1174",            # Nokia 5.3
+		"device": "TE1",
+		"cpu": "qcom",
+		"dpi": "400dpi",
+		"resolution": "720x1600",
+		"android_release": "11",
+		"android_version": 30,
+	},
+	{
+		"manufacturer": "Nokia",
+		"brand": "Nokia",
+		"model": "TA-1296",            # Nokia X20
+		"device": "TE2",
+		"cpu": "qcom",
+		"dpi": "420dpi",
+		"resolution": "1080x2400",
+		"android_release": "11",
+		"android_version": 30,
+	},
+
+	# Asus Zenfone Series
+	{
+		"manufacturer": "asus",
+		"brand": "asus",
+		"model": "ZS661KS",            # Asus Zenfone 8
+		"device": "ZS661KS",
+		"cpu": "qcom",
+		"dpi": "440dpi",
+		"resolution": "1080x2400",
+		"android_release": "11",
+		"android_version": 30,
+	},
+	{
+		"manufacturer": "asus",
+		"brand": "asus",
+		"model": "AI2201",             # Asus Zenfone 9
+		"device": "AI2201",
+		"cpu": "qcom",
+		"dpi": "440dpi",
+		"resolution": "1080x2400",
+		"android_release": "12",
+		"android_version": 31,
+	},
+
+	# Lenovo Series
+	{
+		"manufacturer": "LENOVO",
+		"brand": "LENOVO",
+		"model": "L78032",             # Lenovo Legion Phone Duel
+		"device": "L78032",
+		"cpu": "qcom",
+		"dpi": "440dpi",
+		"resolution": "1080x2340",
+		"android_release": "10",
+		"android_version": 29,
+	},
+
+	# Honor Series
+	{
+		"manufacturer": "HONOR",
+		"brand": "HONOR",
+		"model": "HLK-AL00",           # Honor 30 Pro
+		"device": "HLK-AL00",
+		"cpu": "kirin985",
+		"dpi": "480dpi",
+		"resolution": "1080x2340",
+		"android_release": "10",
+		"android_version": 29,
+	},
+
+	# Redmi Series
 	{
 		"manufacturer": "Xiaomi",
 		"brand": "Redmi",
@@ -199,7 +749,7 @@ _DEVICE_POOL = [
 	},
 	{
 		"manufacturer": "Xiaomi",
-		"brand": "POCO",
+		"brand": "Redmi",
 		"model": "M2010J19CG",         # POCO M3
 		"device": "citrus",
 		"cpu": "qcom",
@@ -208,60 +758,29 @@ _DEVICE_POOL = [
 		"android_release": "10",
 		"android_version": 29,
 	},
+
+	# Additional Samsung models
 	{
-		"manufacturer": "HUAWEI",
-		"brand": "HUAWEI",
-		"model": "P20 Pro",
-		"device": "CLT-L29",
-		"cpu": "kirin970",
-		"dpi": "480dpi",
-		"resolution": "1080x2240",
-		"android_release": "10",
-		"android_version": 29,
-	},
-	{
-		"manufacturer": "OPPO",
-		"brand": "OPPO",
-		"model": "CPH2211",            # OPPO A74
-		"device": "ocean",
+		"manufacturer": "samsung",
+		"brand": "samsung",
+		"model": "SM-A715F",           # Galaxy A71
+		"device": "a71",
 		"cpu": "qcom",
-		"dpi": "480dpi",
+		"dpi": "420dpi",
 		"resolution": "1080x2400",
 		"android_release": "11",
 		"android_version": 30,
 	},
 	{
-		"manufacturer": "Vivo",
-		"brand": "vivo",
-		"model": "V2027",
-		"device": "PD2020F",
+		"manufacturer": "samsung",
+		"brand": "samsung",
+		"model": "SM-M526B",           # Galaxy M52
+		"device": "m52xq",
 		"cpu": "qcom",
-		"dpi": "480dpi",
+		"dpi": "420dpi",
 		"resolution": "1080x2400",
 		"android_release": "11",
 		"android_version": 30,
-	},
-	{
-		"manufacturer": "Realme",
-		"brand": "realme",
-		"model": "RMX2020",            # realme C3
-		"device": "RMX2020",
-		"cpu": "mtk",
-		"dpi": "440dpi",
-		"resolution": "720x1600",
-		"android_release": "10",
-		"android_version": 29,
-	},
-	{
-		"manufacturer": "Motorola",
-		"brand": "motorola",
-		"model": "moto g(8) power",
-		"device": "sofia",
-		"cpu": "qcom",
-		"dpi": "400dpi",
-		"resolution": "1080x2300",
-		"android_release": "10",
-		"android_version": 29,
 	},
 ]
 
