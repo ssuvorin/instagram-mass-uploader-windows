@@ -10,6 +10,86 @@
   </div>
 </div>
 
+<!-- Photo Upload Statistics -->
+{% if photo_stats %}
+<div class="card mb-4">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <h5 class="mb-0"><i class="bi bi-bar-chart-line"></i> Photo Upload Statistics</h5>
+    <span class="badge bg-success">{{ photo_stats.success_rate|floatformat:1 }}% Success Rate</span>
+  </div>
+  <div class="card-body">
+    <div class="row g-4">
+      <!-- Overall Statistics -->
+      <div class="col-md-3">
+        <div class="text-center">
+          <div class="h4 text-primary mb-1">{{ photo_stats.total_accounts }}</div>
+          <div class="text-muted small">Total Accounts</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="text-center">
+          <div class="h4 text-success mb-1">{{ photo_stats.successful_uploads }}</div>
+          <div class="text-muted small">Successful</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="text-center">
+          <div class="h4 text-danger mb-1">{{ photo_stats.failed_uploads }}</div>
+          <div class="text-muted small">Failed</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="text-center">
+          <div class="h4 text-info mb-1">{{ photo_stats.success_rate|floatformat:1 }}%</div>
+          <div class="text-muted small">Success Rate</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Account Breakdown -->
+    {% if photo_stats.account_breakdown %}
+    <hr>
+    <h6 class="mb-3"><i class="bi bi-people"></i> Account Breakdown</h6>
+    <div class="table-responsive">
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Account</th>
+            <th class="text-center">Successful</th>
+            <th class="text-center">Total</th>
+            <th class="text-center">Success Rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for account in photo_stats.account_breakdown %}
+          <tr>
+            <td><strong>{{ account.username }}</strong></td>
+            <td class="text-center">
+              <span class="badge bg-success">{{ account.successful }}</span>
+            </td>
+            <td class="text-center">
+              <span class="badge bg-secondary">{{ account.total }}</span>
+            </td>
+            <td class="text-center">
+              <span class="badge {% if account.success_rate == 100 %}bg-success{% elif account.success_rate >= 50 %}bg-warning{% else %}bg-danger{% endif %}">
+                {{ account.success_rate|floatformat:1 }}%
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    <div class="text-muted small mt-2">
+      <i class="bi bi-clock"></i> Last updated: {{ photo_stats.timestamp|date:"M d, Y H:i:s" }}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Recent Logs -->
 <div class="card">
   <div class="card-header d-flex align-items-center justify-content-between">
     <h5 class="mb-0"><i class="bi bi-activity"></i> Recent Logs</h5>

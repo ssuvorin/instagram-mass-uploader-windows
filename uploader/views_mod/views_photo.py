@@ -13,6 +13,7 @@ from ..models import InstagramAccount
 from ..forms import PhotoPostForm
 from ..logging_utils import log_info
 from ..async_impl.instagrapi import run_instagrapi_photo_upload_async
+from django.core.cache import cache
 
 
 @login_required
@@ -196,14 +197,45 @@ def create_photo_post(request):
                                 on_log(f"[FAIL] Upload failed: {str(e)}")
                             finally:
                                 loop.close()
-                
+
+                    # Save final statistics to cache for web display
+                    try:
+                        # Calculate success rate
+                        success_rate = (stats['successful_uploads'] / stats['total_accounts'] * 100) if stats['total_accounts'] > 0 else 0
+
+                        # Prepare account breakdown for cache
+                        account_breakdown = []
+                        for username, account_stat in stats['account_stats'].items():
+                            acc_success_rate = (account_stat['successful'] / account_stat['photos_processed'] * 100) if account_stat['photos_processed'] > 0 else 0
+                            account_breakdown.append({
+                                'username': username,
+                                'successful': account_stat['successful'],
+                                'total': account_stat['photos_processed'],
+                                'success_rate': acc_success_rate
+                            })
+
+                        # Save to cache with 1 hour timeout
+                        photo_stats = {
+                            'total_accounts': stats['total_accounts'],
+                            'successful_uploads': stats['successful_uploads'],
+                            'failed_uploads': stats['failed_uploads'],
+                            'success_rate': success_rate,
+                            'account_breakdown': account_breakdown,
+                            'timestamp': timezone.now().isoformat(),
+                            'completed': True
+                        }
+                        cache.set('photo_upload_stats', photo_stats, 3600)  # 1 hour
+
+                    except Exception as cache_error:
+                        log_info(f"[WARN] Failed to save photo upload stats to cache: {cache_error}")
+
                     # Log final statistics
                     log_info(f"[STATS] [PHOTO_UPLOAD] Final Statistics:")
                     log_info(f"   📊 Total accounts: {stats['total_accounts']}")
                     log_info(f"   ✅ Successful uploads: {stats['successful_uploads']}")
                     log_info(f"   ❌ Failed uploads: {stats['failed_uploads']}")
                     log_info(f"   📈 Success rate: {(stats['successful_uploads'] / stats['total_accounts'] * 100):.1f}%" if stats['total_accounts'] > 0 else "   📈 Success rate: 0%")
-                    
+
                     # Log per-account statistics
                     log_info(f"[STATS] [ACCOUNT_BREAKDOWN]:")
                     for username, account_stat in stats['account_stats'].items():
@@ -236,8 +268,10 @@ def create_photo_post(request):
 
 @login_required
 def photo_post_status(request):
-    """Simple status page showing recent log lines for photo posting activity."""
+    """Status page showing recent log lines and upload statistics for photo posting activity."""
     log_lines = []
+    photo_stats = None
+
     try:
         # Tail last 300 lines from bot/log.txt if exists
         log_path = default_storage.path('bot/log.txt') if hasattr(default_storage, 'path') else os.path.join(os.getcwd(), 'bot', 'log.txt')
@@ -248,8 +282,15 @@ def photo_post_status(request):
     except Exception:
         log_lines = []
 
+    # Get photo upload statistics from cache
+    try:
+        photo_stats = cache.get('photo_upload_stats')
+    except Exception:
+        photo_stats = None
+
     return render(request, 'uploader/photos/status.html', {
         'log_lines': log_lines,
+        'photo_stats': photo_stats,
         'active_tab': 'avatars',
     })
 
