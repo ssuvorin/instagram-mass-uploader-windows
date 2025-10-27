@@ -1610,6 +1610,11 @@ def import_accounts_ua_cookies(request):
 							
 							if device_settings:
 								settings_snapshot['device_settings'] = device_settings
+								# Generate UA from device_settings if not provided in bundle
+								if not ua_string:
+									from instgrapi_func.services.device_service import generate_user_agent_from_device_settings
+									ua_string = generate_user_agent_from_device_settings(device_settings, username)
+									logger.info(f"[UA+COOKIES] Generated UA from device_settings for {username}: {ua_string[:100]}...")
 								settings_snapshot['user_agent'] = ua_string
 						except Exception:
 							pass
@@ -2396,14 +2401,20 @@ def import_accounts_bundle(request):
 						dev_obj.device_settings = device_settings
 						logger.info(f"[BUNDLE] Saved device_settings for {username}: {list(device_settings.keys())}")
 						logger.info(f"[BUNDLE] Device details: manufacturer={device_settings.get('manufacturer')}, model={device_settings.get('model')}, resolution={device_settings.get('resolution')}")
+					# Generate UA from device_settings if not provided in bundle
+					if not ua_string and device_settings:
+						from instgrapi_func.services.device_service import generate_user_agent_from_device_settings
+						ua_string = generate_user_agent_from_device_settings(device_settings, username)
+						logger.info(f"[BUNDLE] Generated UA from device_settings for {username}: {ua_string[:100]}...")
+
 					# Minimal session_settings to carry UA for API-only flows
 					sess = dict(getattr(dev_obj, 'session_settings', {}) or {})
 					if ua_string:
 						# keep both original and effective UA
-						sess['user_agent'] = (ua_replaced or ua_string)
+						sess['user_agent'] = ua_string
 						if ua_replaced:
 							sess['original_user_agent'] = ua_string
-					
+
 					# CRITICAL: Save device_settings in session_settings for ensure_persistent_device
 					if device_settings:
 						sess['device_settings'] = device_settings

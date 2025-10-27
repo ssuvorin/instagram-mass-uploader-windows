@@ -310,6 +310,37 @@ def _merge_uuids(target: Dict, uuids: Dict) -> Dict:
 	return target
 
 
+def generate_user_agent_from_device_settings(device_settings: Dict, username: Optional[str] = None) -> str:
+	"""
+	Generate Instagram User Agent string from device settings.
+
+	This creates a realistic UA that matches the device fingerprint.
+	"""
+	if not device_settings:
+		# Fallback to random device UA
+		random_device = generate_random_device_settings(username)
+		return generate_user_agent_from_device_settings(random_device, username)
+
+	# Get version info
+	app_version, version_code = get_version_for_account(username) if username else get_random_instagram_version()
+
+	# Build UA components - use device_settings values with fallbacks
+	android_version = device_settings.get("android_version", 29)
+	android_release = device_settings.get("android_release", "10")
+	dpi = device_settings.get("dpi", "640dpi")
+	resolution = device_settings.get("resolution", "1440x3040")
+	manufacturer = device_settings.get("manufacturer", "samsung")
+	model = device_settings.get("model", "SM-G973F")
+	device = device_settings.get("device", "beyond1")
+	cpu = device_settings.get("cpu", "exynos9820")
+	locale = device_settings.get("locale", "ru_BY")
+
+	# Format: Instagram {app_version} Android ({android_version}/{android_release}; {dpi}; {resolution}; {manufacturer}; {model}; {device}; {cpu}; {locale}; {version_code})
+	ua = f"Instagram {app_version} Android ({android_version}/{android_release}; {dpi}; {resolution}; {manufacturer}; {model}; {device}; {cpu}; {locale}; {version_code})"
+
+	return ua
+
+
 def _is_iphone_user_agent(user_agent: str) -> bool:
 	"""Check if user agent is from iPhone/iOS device."""
 	if not user_agent:
@@ -411,11 +442,11 @@ def ensure_persistent_device(username: str, persisted_settings: Optional[Dict] =
 				user_agent = (dev_obj.user_agent or None)
 				print(f"[DEBUG] ensure_persistent_device: Found device_settings for {username}: {list(device_settings.keys())}")
 				print(f"[DEBUG] ensure_persistent_device: User agent: {user_agent}")
-				
+
 				# NOTE: iPhone devices are now supported by instagrapi, no conversion needed
 				# if _is_iphone_user_agent(user_agent):
 				#     device_settings, user_agent = _convert_iphone_to_android_device_settings(device_settings, user_agent, username)
-				
+
 				# CRITICAL: Merge UUIDs from session settings if available (bundle data takes priority)
 				if persisted_settings and persisted_settings.get('uuids'):
 					session_uuids = persisted_settings['uuids']
@@ -425,7 +456,7 @@ def ensure_persistent_device(username: str, persisted_settings: Optional[Dict] =
 						if session_value and device_settings.get(key) != session_value:
 							device_settings[key] = session_value
 							uuids_updated = True
-					
+
 					# Update database if UUIDs were merged from session
 					if uuids_updated:
 						try:
@@ -433,7 +464,7 @@ def ensure_persistent_device(username: str, persisted_settings: Optional[Dict] =
 							dev_obj.save(update_fields=['device_settings'])
 						except Exception:
 							pass  # Continue even if DB update fails
-				
+
 				return device_settings, user_agent
 	except Exception:
 		# DB not available or other error; continue with session/random
@@ -445,9 +476,16 @@ def ensure_persistent_device(username: str, persisted_settings: Optional[Dict] =
 		device_settings = adopted
 		user_agent = ua or user_agent
 
+	# Generate UA from device_settings if we have them but no UA
+	if device_settings and not user_agent:
+		user_agent = generate_user_agent_from_device_settings(device_settings, username)
+		print(f"[DEBUG] Generated UA from device_settings for {username}: {user_agent[:100]}...")
+
 	# Fallback to random
 	if not device_settings:
 		device_settings = generate_random_device_settings(username)
+		if not user_agent:
+			user_agent = generate_user_agent_from_device_settings(device_settings, username)
 
 	# Persist into DB if possible
 	try:
