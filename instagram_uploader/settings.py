@@ -266,12 +266,13 @@ LOGGING = {
             'filters': ['mask_secrets', 'truncate_long', 'deduplicate'],
         },
         'file': {
-            'class': 'logging.handlers.RotatingFileHandler',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
             'filename': os.path.join(BASE_DIR, 'django.log'),
             'formatter': 'verbose',
             'level': 'DEBUG',
-            'maxBytes': int(os.getenv('LOG_MAX_BYTES', '50000000')),  # 50MB default
-            'backupCount': int(os.getenv('LOG_BACKUP_COUNT', '5')),
+            'when': 'midnight',  # Rotate at midnight
+            'interval': 1,  # Every 1 interval (day)
+            'backupCount': int(os.getenv('LOG_BACKUP_COUNT', '30')),  # Keep 30 days of logs
             'filters': ['mask_secrets', 'truncate_long'],
         },
         'web': {
