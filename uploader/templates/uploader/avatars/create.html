@@ -4,9 +4,13 @@
 
 {% block extra_css %}
 <style>
-  .accounts-controls { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem; border-radius: 12px 12px 0 0; }
+  .accounts-controls { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.25rem; border-radius: 12px 12px 0 0; border-bottom: none; }
   .search-wrapper { position: relative; }
   .search-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.7); }
+  .client-filter-wrapper { position: relative; }
+  .client-filter-wrapper select { border-radius: 25px; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; padding: 0.5rem 1rem; width: 100%; }
+  .client-filter-wrapper select:focus { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.6); box-shadow: 0 0 0 0.2rem rgba(255,255,255,0.25); color: white; }
+  .client-filter-wrapper select option { background: #667eea; color: white; }
   .accounts-controls .form-control { border-radius: 25px; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; padding-left: 2.5rem; }
   .accounts-grid { padding: 1rem; max-height: 600px; overflow-y: auto; background: #f8f9fb; border-radius: 0 0 12px 12px; position: relative; }
   .account-item { margin-bottom: 0.75rem; }
@@ -32,6 +36,32 @@
   .compact-mode .badge-custom { padding: 0.15rem 0.5rem; border-radius: 8px; font-size: 0.65rem; }
   .list-mode .account-item { margin-bottom: 0.25rem; }
   .list-mode .account-card { padding: 0.75rem 1rem; border-radius: 6px; border-width: 1px; }
+
+  /* Pagination */
+  .pagination-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: white;
+    border-top: 1px solid #e9ecef;
+    border-radius: 0 0 12px 12px;
+    font-size: 0.875rem;
+    color: #718096;
+  }
+
+  .page-size-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .page-size-selector select {
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+  }
 </style>
 {% endblock %}
 
@@ -51,41 +81,76 @@
   </div>
   {% endif %}
 
-  <div class="summary-bar" id="accountsSummary">
-    <div class="d-flex align-items-center gap-3">
-      <div>
-        <div class="fw-bold" id="selectedCount">0</div>
-        <div class="text-muted small" id="totalCount">of {{ form.selected_accounts.field.queryset.count }} accounts selected</div>
-      </div>
-      <div class="d-flex gap-3 text-muted small" id="summaryStats">
-        <div><i class="bi bi-check-circle text-success"></i> <span id="activeCount">{{ form.selected_accounts.field.queryset|length }}</span> active</div>
-        <div><i class="bi bi-shield-check"></i> <span id="proxyCount">0</span> with proxy</div>
-        <div><i class="bi bi-exclamation-triangle text-warning"></i> <span id="problemsCount">0</span> issues</div>
-      </div>
-    </div>
-    <div style="min-width:240px">
-      <div class="search-wrapper">
-        <i class="bi bi-search search-icon"></i>
-        <input type="text" id="accountSearch" class="form-control" placeholder="Search accounts by username...">
-      </div>
-    </div>
-  </div>
-
   <div class="card mb-3 border-0 shadow-sm" id="accountsWidget">
     <div class="accounts-controls">
-      <div class="row align-items-center">
-        <div class="col-md-6">
+      <div class="row align-items-center mb-2">
+        <div class="col-md-3">
+          <div class="search-wrapper">
+            <i class="bi bi-search search-icon"></i>
+            <input type="text" id="accountSearch" class="form-control" placeholder="Search accounts by username...">
+          </div>
+        </div>
+        <div class="col-md-2">
           <div class="view-toggle">
             <button type="button" class="view-toggle-btn active" data-view="card"><i class="bi bi-grid-3x3-gap"></i> Cards</button>
             <button type="button" class="view-toggle-btn" data-view="compact"><i class="bi bi-list"></i> Compact</button>
             <button type="button" class="view-toggle-btn" data-view="list"><i class="bi bi-list-ul"></i> List</button>
           </div>
         </div>
+        <div class="col-md-3">
+          <div class="bulk-actions">
+            <div class="bulk-action-btn" id="selectAll">
+              <i class="bi bi-check-all"></i> Select All
+            </div>
+            <div class="bulk-action-btn" id="selectNone">
+              <i class="bi bi-x"></i> Clear
+            </div>
+            <div class="bulk-action-btn" id="selectRandom">
+              <i class="bi bi-shuffle"></i> Random 10
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="d-flex justify-content-end">
+            <div class="summary-bar" id="accountsSummary" style="margin: 0; border-radius: 0;">
+              <div class="d-flex align-items-center gap-3">
+                <div>
+                  <div class="fw-bold" id="selectedCount">0</div>
+                  <div class="text-muted small" id="totalCount">of {{ form.selected_accounts.field.queryset.count }} accounts selected</div>
+                </div>
+                <div class="d-flex gap-3 text-muted small" id="summaryStats">
+                  <div><i class="bi bi-check-circle text-success"></i> <span id="activeCount">{{ form.selected_accounts.field.queryset|length }}</span> active</div>
+                  <div><i class="bi bi-shield-check"></i> <span id="proxyCount">0</span> with proxy</div>
+                  <div><i class="bi bi-exclamation-triangle text-warning"></i> <span id="problemsCount">0</span> issues</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row align-items-center">
         <div class="col-md-6">
-          <div class="d-flex justify-content-end gap-2">
-            <button type="button" class="btn btn-light btn-sm" id="selectAll"><i class="bi bi-check-all"></i> Select All</button>
-            <button type="button" class="btn btn-light btn-sm" id="selectNone"><i class="bi bi-x"></i> Clear</button>
-            <button type="button" class="btn btn-light btn-sm" id="selectRandom"><i class="bi bi-shuffle"></i> Random 10</button>
+          <div class="pagination-info" id="paginationInfo" style="border-radius: 0; border-top: none; margin: 0;">
+            <div class="page-size-selector">
+              <label>Show:</label>
+              <select id="pageSize">
+                <option value="20">20</option>
+                <option value="50" selected>50</option>
+                <option value="100">100</option>
+                <option value="all">All</option>
+              </select>
+            </div>
+            <span id="paginationText">Showing 1-50 of {{ form.selected_accounts.field.queryset.count }} accounts</span>
+            <div id="paginationControls" style="display: none;">
+              <button type="button" class="btn btn-sm btn-outline-secondary" id="prevPage" disabled>
+                <i class="bi bi-chevron-left"></i> Previous
+              </button>
+              <span class="mx-2" id="pageInfo">Page 1 of 1</span>
+              <button type="button" class="btn btn-sm btn-outline-secondary" id="nextPage" disabled>
+                Next <i class="bi bi-chevron-right"></i>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -98,7 +163,9 @@
              data-username="{{ account.username|lower }}"
              data-has-proxy="{{ account.proxy|yesno:'true,false' }}"
              data-proxy-active="{% if account.proxy %}{{ account.proxy.is_active|yesno:'true,false' }}{% else %}false{% endif %}"
-             data-status="{{ account.status|lower }}">
+             data-status="{{ account.status|lower }}"
+             data-client-id="{% if account.client %}{{ account.client.id }}{% endif %}"
+             data-tag-id="{% if account.tag %}{{ account.tag.id }}{% endif %}">
           <input class="account-checkbox" type="checkbox" name="selected_accounts" value="{{ account.id }}" id="account_{{ account.id }}">
           <label class="account-card" for="account_{{ account.id }}">
             <div class="custom-checkbox"><i class="bi bi-check"></i></div>
@@ -150,6 +217,7 @@
         <div class="col-12 text-center text-muted py-4">No accounts found</div>
         {% endfor %}
       </div>
+
     </div>
   </div>
 

@@ -612,40 +612,60 @@
                             <br><small class="mt-1 d-block"><strong>Note:</strong> Each account will use its assigned proxy from Dolphin Anty profiles</small>
                             <br><small class="mt-1 d-block"><strong>Shortcuts:</strong> Ctrl+A (select all), Ctrl+D (deselect all), / (focus search)</small>
                         </div>
-                        
-                        <div class="accounts-summary" id="accountsSummary">
-                            <div class="summary-left">
-                                <div>
-                                    <div class="selected-count" id="selectedCount">0</div>
-                                    <div class="total-count" id="totalCount">of {{ form.selected_accounts.field.queryset.count }} accounts selected</div>
-                                </div>
-                                <div class="summary-stats" id="summaryStats">
-                                    <div class="stat-item">
-                                        <i class="bi bi-check-circle text-success"></i>
-                                        <span id="activeCount">{{ form.selected_accounts.field.queryset|length }}</span> active
+
+                        <div class="row align-items-center mb-3">
+                            <div class="col-md-6">
+                                <div class="pagination-info" id="paginationInfo" style="border-radius: 0; border-top: none; margin: 0;">
+                                    <div class="page-size-selector">
+                                        <label>Show:</label>
+                                        <select id="pageSize">
+                                            <option value="20">20</option>
+                                            <option value="50" selected>50</option>
+                                            <option value="100">100</option>
+                                            <option value="all">All</option>
+                                        </select>
                                     </div>
-                                    <div class="stat-item">
-                                        <i class="bi bi-shield-check"></i>
-                                        <span id="proxyCount">0</span> with proxy
-                                    </div>
-                                    <div class="stat-item">
-                                        <i class="bi bi-laptop"></i>
-                                        <span id="dolphinCount">0</span> dolphin
-                                    </div>
-                                    <div class="stat-item">
-                                        <i class="bi bi-exclamation-triangle text-warning"></i>
-                                        <span id="problemsCount">0</span> issues
+                                    <span id="paginationText">Showing 1-50 of {{ form.selected_accounts.field.queryset.count }} accounts</span>
+                                    <div id="paginationControls" style="display: none;">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="prevPage" disabled>
+                                            <i class="bi bi-chevron-left"></i> Previous
+                                        </button>
+                                        <span class="mx-2" id="pageInfo">Page 1 of 1</span>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="nextPage" disabled>
+                                            Next <i class="bi bi-chevron-right"></i>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
-                            <div class="page-size-selector">
-                                <label>Show:</label>
-                                <select id="pageSize">
-                                    <option value="20">20</option>
-                                    <option value="50" selected>50</option>
-                                    <option value="100">100</option>
-                                    <option value="all">All</option>
-                                </select>
+                            <div class="col-md-6">
+                                <div class="d-flex justify-content-end">
+                                    <div class="accounts-summary" id="accountsSummary" style="margin: 0; border-radius: 0;">
+                                        <div class="summary-left">
+                                            <div>
+                                                <div class="selected-count" id="selectedCount">0</div>
+                                                <div class="total-count" id="totalCount">of {{ form.selected_accounts.field.queryset.count }} accounts selected</div>
+                                            </div>
+                                            <div class="summary-stats" id="summaryStats">
+                                                <div class="stat-item">
+                                                    <i class="bi bi-check-circle text-success"></i>
+                                                    <span id="activeCount">{{ form.selected_accounts.field.queryset|length }}</span> active
+                                                </div>
+                                                <div class="stat-item">
+                                                    <i class="bi bi-shield-check"></i>
+                                                    <span id="proxyCount">0</span> with proxy
+                                                </div>
+                                                <div class="stat-item">
+                                                    <i class="bi bi-laptop"></i>
+                                                    <span id="dolphinCount">0</span> dolphin
+                                                </div>
+                                                <div class="stat-item">
+                                                    <i class="bi bi-exclamation-triangle text-warning"></i>
+                                                    <span id="problemsCount">0</span> issues
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         
@@ -929,18 +949,6 @@
                                 </div>
                             </div>
                             
-                            <div class="pagination-info" id="paginationInfo">
-                                <span id="paginationText">Showing 1-50 of {{ form.selected_accounts.field.queryset.count }} accounts</span>
-                                <div id="paginationControls" style="display: none;">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="prevPage" disabled>
-                                        <i class="bi bi-chevron-left"></i> Previous
-                                    </button>
-                                    <span class="mx-2" id="pageInfo">Page 1 of 1</span>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="nextPage" disabled>
-                                        Next <i class="bi bi-chevron-right"></i>
-                                    </button>
-                                </div>
-                            </div>
                         </div>
                         
                         {% if form.selected_accounts.errors %}

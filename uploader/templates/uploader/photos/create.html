@@ -17,6 +17,32 @@
   .bulk-action-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 0.4rem 0.8rem; border-radius: 15px; font-size: 0.8rem; cursor: pointer; transition: all 0.3s ease; user-select: none; display: flex; align-items: center; gap: 0.25rem; }
   .bulk-action-btn:hover { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.5); }
   .search-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.7); }
+
+  /* Pagination */
+  .pagination-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: white;
+    border-top: 1px solid #e9ecef;
+    border-radius: 0 0 12px 12px;
+    font-size: 0.875rem;
+    color: #718096;
+  }
+
+  .page-size-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .page-size-selector select {
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+  }
   .accounts-controls .form-control { border-radius: 25px; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; padding-left: 2.5rem; }
   .accounts-grid { padding: 1rem; max-height: 600px; overflow-y: auto; background: #f8f9fb; border-radius: 0 0 12px 12px; position: relative; }
   .account-item { margin-bottom: 0.75rem; }
@@ -151,7 +177,7 @@
 
   <div class="card mb-3 border-0 shadow-sm" id="accountsWidget">
     <div class="accounts-controls">
-      <div class="row align-items-center">
+      <div class="row align-items-center mb-2">
         <div class="col-md-3">
           <div class="search-wrapper">
             <i class="bi bi-search search-icon"></i>
@@ -191,6 +217,49 @@
               <button type="button" class="view-toggle-btn active" data-view="card"><i class="bi bi-grid-3x3-gap"></i> Cards</button>
               <button type="button" class="view-toggle-btn" data-view="compact"><i class="bi bi-list"></i> Compact</button>
               <button type="button" class="view-toggle-btn" data-view="list"><i class="bi bi-list-ul"></i> List</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <div class="pagination-info" id="paginationInfo" style="border-radius: 0; border-top: none; margin: 0;">
+            <div class="page-size-selector">
+              <label>Show:</label>
+              <select id="pageSize">
+                <option value="20">20</option>
+                <option value="50" selected>50</option>
+                <option value="100">100</option>
+                <option value="all">All</option>
+              </select>
+            </div>
+            <span id="paginationText">Showing 1-50 of {{ form.selected_accounts.field.queryset.count }} accounts</span>
+            <div id="paginationControls" style="display: none;">
+              <button type="button" class="btn btn-sm btn-outline-secondary" id="prevPage" disabled>
+                <i class="bi bi-chevron-left"></i> Previous
+              </button>
+              <span class="mx-2" id="pageInfo">Page 1 of 1</span>
+              <button type="button" class="btn btn-sm btn-outline-secondary" id="nextPage" disabled>
+                Next <i class="bi bi-chevron-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="d-flex justify-content-end">
+            <div class="summary-bar" id="accountsSummary" style="margin: 0; border-radius: 0;">
+              <div class="d-flex align-items-center gap-3">
+                <div>
+                  <div class="fw-bold" id="selectedCount">0</div>
+                  <div class="text-muted small" id="totalCount">of {{ form.selected_accounts.field.queryset.count }} accounts selected</div>
+                </div>
+                <div class="d-flex gap-3 text-muted small" id="summaryStats">
+                  <div><i class="bi bi-check-circle text-success"></i> <span id="activeCount">{{ form.selected_accounts.field.queryset|length }}</span> active</div>
+                  <div><i class="bi bi-shield-check"></i> <span id="proxyCount">0</span> with proxy</div>
+                  <div><i class="bi bi-exclamation-triangle text-warning"></i> <span id="problemsCount">0</span> issues</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -373,29 +442,73 @@ document.addEventListener('DOMContentLoaded', function(){
   const accountsWidget = document.getElementById('accountsWidget');
   const clientFilter = document.getElementById('client-filter');
   const tagFilter = document.getElementById('tag-filter');
+  const pageSizeSelect = document.getElementById('pageSize');
+  const paginationInfo = document.getElementById('paginationInfo');
+  const paginationText = document.getElementById('paginationText');
+  const paginationControls = document.getElementById('paginationControls');
+  const prevPageBtn = document.getElementById('prevPage');
+  const nextPageBtn = document.getElementById('nextPage');
+  const pageInfo = document.getElementById('pageInfo');
   let currentView = 'card';
+  let currentPage = 1;
+  let pageSize = 50;
+  let totalAccounts = accountItems.length;
+  let filteredAccounts = [...accountItems];
+  let visibleAccounts = [];
 
   document.querySelectorAll('.view-toggle-btn').forEach(btn => { btn.addEventListener('click', function(){ document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active')); this.classList.add('active'); currentView = this.dataset.view; updateViewMode(); }); });
 
   // Client filter functionality
   if (clientFilter) {
     clientFilter.addEventListener('change', function() {
-      filterList();
+      filterAndPaginate();
     });
   }
 
   // Tag filter functionality
   if (tagFilter) {
     tagFilter.addEventListener('change', function() {
-      filterList();
+      filterAndPaginate();
+    });
+  }
+
+  // Page size selector
+  if (pageSizeSelect) {
+    pageSizeSelect.addEventListener('change', function() {
+      pageSize = this.value === 'all' ? 9999 : parseInt(this.value);
+      currentPage = 1;
+      filterAndPaginate();
+    });
+  }
+
+  // Pagination controls
+  if (prevPageBtn) {
+    prevPageBtn.addEventListener('click', function() {
+      if (currentPage > 1) {
+        currentPage--;
+        filterAndPaginate();
+      }
+    });
+  }
+
+  if (nextPageBtn) {
+    nextPageBtn.addEventListener('click', function() {
+      const totalPages = Math.ceil(filteredAccounts.length / pageSize);
+      if (currentPage < totalPages) {
+        currentPage++;
+        filterAndPaginate();
+      }
     });
   }
 
   function updateViewMode(){ accountsWidget.className = accountsWidget.className.replace(/\b(compact-mode|list-mode)\b/g, '').trim(); if(currentView === 'compact'){ accountsWidget.classList.add('compact-mode'); updateColumnClasses('col-lg-4 col-md-6'); } else if(currentView === 'list'){ accountsWidget.classList.add('list-mode'); updateColumnClasses('col-12'); } else { updateColumnClasses('col-lg-6 col-md-12'); } }
   function updateColumnClasses(newClasses){ accountItems.forEach(item => { item.className = 'account-item ' + newClasses; }); }
-  function filterList(){
+
+  function filterAndPaginate(){
     const q = (searchInput.value || '').toLowerCase().trim();
-    accountItems.forEach(item => {
+
+    // Apply filters
+    filteredAccounts = Array.from(accountItems).filter(item => {
       const username = item.dataset.username || '';
       const clientId = item.dataset.clientId || '';
       const tagId = item.dataset.tagId || '';
@@ -433,15 +546,59 @@ document.addEventListener('DOMContentLoaded', function(){
         }
       }
 
-      item.style.display = match ? '' : 'none';
+      return match;
     });
+
+    // Calculate pagination
+    const totalFiltered = filteredAccounts.length;
+    const totalPages = pageSize === 9999 ? 1 : Math.ceil(totalFiltered / pageSize);
+
+    // Adjust current page if necessary
+    if (currentPage > totalPages) {
+      currentPage = Math.max(1, totalPages);
+    }
+
+    const startIndex = pageSize === 9999 ? 0 : (currentPage - 1) * pageSize;
+    const endIndex = pageSize === 9999 ? totalFiltered : Math.min(startIndex + pageSize, totalFiltered);
+
+    visibleAccounts = filteredAccounts.slice(startIndex, endIndex);
+
+    // Hide all accounts first
+    accountItems.forEach(item => {
+      item.style.display = 'none';
+    });
+
+    // Show visible accounts
+    visibleAccounts.forEach(item => {
+      item.style.display = '';
+    });
+
+    // Update pagination info
+    updatePaginationInfo(startIndex + 1, endIndex, totalFiltered, totalPages);
+    updateCounter();
   }
-  searchInput.addEventListener('input', debounce(filterList, 200));
+
+  function updatePaginationInfo(start, end, total, totalPages) {
+    if (total === 0) {
+      paginationText.textContent = 'No accounts found';
+      paginationControls.style.display = 'none';
+    } else if (pageSize === 9999) {
+      paginationText.textContent = `Showing all ${total} accounts`;
+      paginationControls.style.display = 'none';
+    } else {
+      paginationText.textContent = `Showing ${start}-${end} of ${total} accounts`;
+      paginationControls.style.display = totalPages > 1 ? 'flex' : 'none';
+      pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+      prevPageBtn.disabled = currentPage <= 1;
+      nextPageBtn.disabled = currentPage >= totalPages;
+    }
+  }
+
+  searchInput.addEventListener('input', debounce(filterAndPaginate, 200));
 
   // Bulk selection actions
   document.getElementById('selectAll').addEventListener('click', function(){
-    const visibleItems = Array.from(accountItems).filter(item => item.style.display !== 'none');
-    visibleItems.forEach(item => {
+    visibleAccounts.forEach(item => {
       const cb = item.querySelector('.account-checkbox');
       cb.checked = true;
       updateCardSelection(cb);
@@ -465,8 +622,7 @@ document.addEventListener('DOMContentLoaded', function(){
     });
 
     // Then select 10 random visible accounts
-    const visibleItems = Array.from(accountItems).filter(item => item.style.display !== 'none');
-    const randomTen = visibleItems.sort(() => 0.5 - Math.random()).slice(0, Math.min(10, visibleItems.length));
+    const randomTen = visibleAccounts.sort(() => 0.5 - Math.random()).slice(0, Math.min(10, visibleAccounts.length));
 
     randomTen.forEach(item => {
       const cb = item.querySelector('.account-checkbox');
@@ -476,6 +632,9 @@ document.addEventListener('DOMContentLoaded', function(){
 
     updateCounter();
   });
+
+  // Initialize pagination
+  filterAndPaginate();
   accountCheckboxes.forEach(cb => { cb.addEventListener('change', function(){ updateCardSelection(cb); updateCounter(); }); });
 
   // Photo upload functionality

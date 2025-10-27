@@ -1,5 +1,6 @@
 """Views module: accounts (split from monolith)."""
 from .common import *
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import models
 from django.db.models import Q
 from cabinet.models import Client as CabinetClient
@@ -13,7 +14,18 @@ def account_list(request):
     client_id = request.GET.get('client_id')
     client_name = request.GET.get('client_name')
     agency_id = request.GET.get('agency_id')
-    
+    page = request.GET.get('page', 1)
+    per_page = request.GET.get('per_page', 50)  # Default 50 per page
+
+    try:
+        per_page = int(per_page)
+        if per_page < 10:
+            per_page = 10
+        elif per_page > 200:
+            per_page = 200
+    except (ValueError, TypeError):
+        per_page = 50
+
     # Sort by creation date descending (newest first) for consistency
     accounts = (
         InstagramAccount.objects.order_by('-created_at')
@@ -69,13 +81,22 @@ def account_list(request):
                     accounts = accounts.none()
         except Exception:
             accounts = accounts.none()
-    
+
+    # Apply pagination
+    paginator = Paginator(accounts, per_page)
+    try:
+        accounts_page = paginator.page(page)
+    except PageNotAnInteger:
+        accounts_page = paginator.page(1)
+    except EmptyPage:
+        accounts_page = paginator.page(paginator.num_pages)
+
     # Get tags for filter dropdown
     from uploader.models import Tag
     tags = Tag.objects.all().order_by('name')
-    
+
     context = {
-        'accounts': accounts,
+        'accounts': accounts_page,
         'status_filter': status_filter,
         'search_query': search_query,
         'tag_filter': tag_filter,
@@ -83,7 +104,10 @@ def account_list(request):
         'client_id': client_id or '',
         'client_name': client_name or '',
         'agency_id': agency_id or '',
-        'active_tab': 'accounts'
+        'active_tab': 'accounts',
+        'per_page': per_page,
+        'page_obj': accounts_page,
+        'paginator': paginator
     }
     return render(request, 'uploader/account_list.html', context)
 

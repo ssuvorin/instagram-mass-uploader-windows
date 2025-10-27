@@ -235,8 +235,12 @@ class BulkUploadTaskForm(forms.ModelForm):
         
         # Set queryset dynamically to get fresh data from database
         # Sort by creation date descending (newest first) for better UX
+        # Use select_related for foreign keys to reduce queries
         self.fields['selected_accounts'].queryset = (
-            InstagramAccount.objects.all()
+            InstagramAccount.objects
+            .select_related('proxy', 'client', 'tag', 'device')
+            .prefetch_related('bulk_uploads')
+            .all()
             .order_by('-created_at')
             .annotate(
                 uploaded_success_total=Coalesce(Sum('bulk_uploads__uploaded_success_count'), Value(0)),
@@ -513,8 +517,12 @@ class PhotoPostForm(forms.Form):
 
         # Set queryset dynamically to get fresh data from database
         # Sort by creation date descending (newest first) for better UX
+        # Use select_related for foreign keys to reduce queries
         self.fields['selected_accounts'].queryset = (
-            InstagramAccount.objects.all()
+            InstagramAccount.objects
+            .select_related('proxy', 'client', 'tag', 'device')
+            .prefetch_related('bulk_uploads')
+            .all()
             .order_by('-created_at')
             .annotate(
                 uploaded_success_total=Coalesce(Sum('bulk_uploads__uploaded_success_count'), Value(0)),
