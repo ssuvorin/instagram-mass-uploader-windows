@@ -12,6 +12,19 @@ import aiofiles
 from typing import Optional, List
 from playwright.async_api import Page
 
+# Import centralized constants
+from .recaptcha_constants import (
+    AUDIO_CHALLENGE_SELECTORS,
+    IMAGE_CHALLENGE_SELECTORS,
+    BOT_DETECTION_SELECTORS,
+    LOGIN_PAGE_SELECTORS,
+    CAPTCHA_SOLUTION_SELECTORS,
+    SUPPORTED_LANGUAGES,
+    TIMEOUTS,
+    AUDIO_SETTINGS,
+    RETRY_SETTINGS
+)
+
 # Use centralized logging - all logs go to django.log
 logger = logging.getLogger('uploader.audio_recaptcha_solver')
 
@@ -19,22 +32,44 @@ logger = logging.getLogger('uploader.audio_recaptcha_solver')
 class PlaywrightRecaptchaSolver:
     """Enhanced reCAPTCHA audio challenge solver with improved reliability"""
 
-    # Constants
-    TEMP_DIR = os.getenv("TEMP") if os.name == "nt" else "/tmp"
-    TIMEOUT_STANDARD = 20  # Increased for better reliability
-    TIMEOUT_SHORT = 5      # Increased for stability
-    TIMEOUT_DETECTION = 2  # Increased for detection
-    MAX_RETRIES = 3        # Maximum retry attempts
-    SUPPORTED_LANGUAGES = ['en-US', 'en', 'es', 'fr', 'de', 'it']  # Language fallbacks
+    # Use centralized constants
+    TEMP_DIR = AUDIO_SETTINGS['temp_dir'] or (os.getenv("TEMP") if os.name == "nt" else "/tmp")
+    TIMEOUT_STANDARD = TIMEOUTS['standard']
+    TIMEOUT_SHORT = TIMEOUTS['short']
+    TIMEOUT_DETECTION = TIMEOUTS['detection']
+    MAX_RETRIES = RETRY_SETTINGS['max_retries']
 
-    def __init__(self, page: Page) -> None:
+    def __init__(self, page: Page, task_id: int = None, log_callback: callable = None) -> None:
         """Initialize the enhanced solver with a Playwright Page.
 
         Args:
             page: Playwright Page instance for browser interaction
+            task_id: Task ID for web logging (optional)
+            log_callback: Callback function for web logging (optional)
         """
         self.page = page
         self.temp_files = []  # Track temp files for cleanup
+        self.task_id = task_id
+        self.log_callback = log_callback
+
+    async def _web_log(self, message: str) -> None:
+        """Log message to web interface if callback provided"""
+        try:
+            if self.log_callback:
+                await self.log_callback(message)
+            elif self.task_id:
+                # Fallback: try to update task log directly
+                from django.utils import timezone
+                from .models import YouTubeShortsBulkUploadTask
+
+                try:
+                    task = await YouTubeShortsBulkUploadTask.objects.aget(id=self.task_id)
+                    timestamp = timezone.now().strftime("%Y-%m-%d %H:%M:%S")
+                    await task.aupdate(log=f"{task.log}[{timestamp}] {message}\n")
+                except Exception as e:
+                    logger.debug(f"Could not log to web: {e}")
+        except Exception as e:
+            logger.debug(f"Web logging error: {e}")
     
     async def solve_captcha(self) -> bool:
         """Enhanced reCAPTCHA challenge solving with retry logic and better error handling.
@@ -84,13 +119,46 @@ class PlaywrightRecaptchaSolver:
                 checkbox_clicked = False
                 for checkbox_selector in checkbox_selectors:
                     try:
+                        # Try to find the checkbox element
                         checkbox = recaptcha_frame.locator(checkbox_selector)
-                        await checkbox.wait_for(timeout=self.TIMEOUT_STANDARD * 1000)
-                        logger.info(f"[RECAPTCHA_SOLVER] Checkbox found with selector: {checkbox_selector}")
-                        await checkbox.click()
-                        logger.info("[RECAPTCHA_SOLVER] Checkbox clicked successfully")
-                        checkbox_clicked = True
-                        break
+
+                        # For problematic selectors that have overlapping elements,
+                        # try to click on a more specific child element or use evaluate
+                        try:
+                            await checkbox.wait_for(timeout=self.TIMEOUT_STANDARD * 1000)
+                            logger.info(f"[RECAPTCHA_SOLVER] Checkbox found with selector: {checkbox_selector}")
+
+                            # Add pre-click delay to simulate human hesitation
+                            await asyncio.sleep(random.uniform(1.0, 2.5))
+
+                            # Try normal click first
+                            try:
+                                await checkbox.click(timeout=10000)
+                                logger.info("[RECAPTCHA_SOLVER] Checkbox clicked successfully (normal)")
+                            except Exception as click_error:
+                                # If normal click fails due to overlapping elements, try evaluate
+                                logger.warning(f"[RECAPTCHA_SOLVER] Normal click failed, trying evaluate: {click_error}")
+                                await recaptcha_frame.evaluate("""
+                                    (selector) => {
+                                        const element = document.querySelector(selector);
+                                        if (element) {
+                                            element.click();
+                                            return true;
+                                        }
+                                        return false;
+                                    }
+                                """, checkbox_selector)
+                                logger.info("[RECAPTCHA_SOLVER] Checkbox clicked successfully (evaluate)")
+
+                            # Add longer human-like delay after clicking checkbox
+                            await asyncio.sleep(random.uniform(3.0, 6.0))
+                            checkbox_clicked = True
+                            break
+
+                        except Exception as wait_error:
+                            logger.warning(f"[RECAPTCHA_SOLVER] Checkbox wait failed: {wait_error}")
+                            continue
+
                     except Exception as e:
                         logger.warning(f"[RECAPTCHA_SOLVER] Checkbox selector {checkbox_selector} failed: {e}")
                         continue
@@ -101,8 +169,6 @@ class PlaywrightRecaptchaSolver:
                         await asyncio.sleep(5)
                         continue
                     return False
-
-                await asyncio.sleep(2)  # Wait for processing
 
                 # Check if solved by just clicking
                 logger.info("[RECAPTCHA_SOLVER] Checking if captcha solved by simple click...")
@@ -138,14 +204,13 @@ class PlaywrightRecaptchaSolver:
         try:
             logger.info("[RECAPTCHA_SOLVER] Looking for audio challenge iframe...")
             await asyncio.sleep(2)  # Wait for challenge iframe to appear
+
+            # First, check if we have an image challenge that we need to switch to audio
+            await self._handle_image_to_audio_transition()
             
-            # Find challenge iframe
-            challenge_frame_selectors = [
-                'iframe[title*="recaptcha challenge"]',
-                'iframe[src*="recaptcha"][src*="bframe"]',
-                'iframe[name*="c-"]'
-            ]
-            
+            # Find challenge iframe - more comprehensive search
+            challenge_frame_selectors = AUDIO_CHALLENGE_SELECTORS['iframe_selectors']
+
             challenge_frame = None
             for selector in challenge_frame_selectors:
                 try:
@@ -155,29 +220,73 @@ class PlaywrightRecaptchaSolver:
                         for frame_element in frames:
                             frame = await frame_element.content_frame()
                             if frame:
-                                # Check if this frame has audio button
-                                audio_button = frame.locator('#recaptcha-audio-button')
+                                # Check if this frame has audio challenge elements
                                 try:
-                                    await audio_button.wait_for(timeout=3000)
-                                    challenge_frame = frame
-                                    logger.info(f"[RECAPTCHA_SOLVER] Challenge iframe found with selector: {selector}")
-                                    break
+                                    # Look for audio challenge specific elements using multiple selectors
+                                    audio_selectors = AUDIO_CHALLENGE_SELECTORS['play_button_selectors']
+
+                                    for audio_selector in audio_selectors:
+                                        try:
+                                            audio_play_button = frame.locator(audio_selector)
+                                            await audio_play_button.wait_for(timeout=TIMEOUTS['element_wait'] * 1000)
+                                            challenge_frame = frame
+                                            logger.info(f"[RECAPTCHA_SOLVER] Audio challenge iframe found with selector: {selector}, button: {audio_selector}")
+                                            break
+                                        except:
+                                            continue
+
+                                    if challenge_frame:
+                                        break
+
                                 except:
                                     continue
                         if challenge_frame:
                             break
                 except Exception:
                     continue
-            
+
             if not challenge_frame:
                 logger.error("[RECAPTCHA_SOLVER] ❌ Audio challenge iframe not found")
                 return False
-            
-            # Click audio button
-            logger.info("[RECAPTCHA_SOLVER] Clicking audio button...")
-            audio_button = challenge_frame.locator('#recaptcha-audio-button')
-            await audio_button.click()
-            logger.info("[RECAPTCHA_SOLVER] Audio button clicked")
+
+            # Click play button with multiple fallback selectors
+            logger.info("[RECAPTCHA_SOLVER] Clicking play button...")
+            play_button_selectors = AUDIO_CHALLENGE_SELECTORS['play_button_selectors']
+
+            play_clicked = False
+            for play_selector in play_button_selectors:
+                try:
+                    play_button = challenge_frame.locator(play_selector)
+                    # Simulate human hesitation before clicking play button
+                    await asyncio.sleep(random.uniform(1.5, 3.0))
+
+                    # Simulate mouse movement to play button
+                    try:
+                        box = await play_button.bounding_box()
+                        if box:
+                            await self.page.mouse.move(
+                                box['x'] + box['width'] / 2 + random.uniform(-8, 8),
+                                box['y'] + box['height'] / 2 + random.uniform(-4, 4)
+                            )
+                            await asyncio.sleep(random.uniform(0.2, 0.6))
+                    except Exception:
+                        pass  # Ignore mouse movement errors
+
+                    await play_button.click(timeout=TIMEOUTS['click_timeout'] * 1000)
+                    logger.info(f"[RECAPTCHA_SOLVER] Play button clicked with selector: {play_selector}")
+
+                    # Longer delay after clicking play button
+                    await asyncio.sleep(random.uniform(2.0, 4.0))
+                    play_clicked = True
+                    break
+                except Exception as e:
+                    logger.debug(f"[RECAPTCHA_SOLVER] Play button selector {play_selector} failed: {e}")
+                    continue
+
+            if not play_clicked:
+                logger.error("[RECAPTCHA_SOLVER] ❌ Failed to click play button with any selector")
+                return False
+
             await asyncio.sleep(3)  # Wait for audio to load
 
             # Check for bot detection
@@ -189,57 +298,316 @@ class PlaywrightRecaptchaSolver:
 
             # Get audio source and process
             logger.info("[RECAPTCHA_SOLVER] Waiting for audio source...")
-            await asyncio.sleep(2)  # Wait for audio source to appear
-            
-            audio_source = challenge_frame.locator('#audio-source')
-            await audio_source.wait_for(timeout=self.TIMEOUT_STANDARD * 1000)
-            audio_src = await audio_source.get_attribute('src')
-            logger.info(f"[RECAPTCHA_SOLVER] Audio source URL: {audio_src[:50]}...")
+            await asyncio.sleep(random.uniform(1.5, 3.0))  # Longer random wait
 
-            # Process audio
-            logger.info("[RECAPTCHA_SOLVER] Starting enhanced audio processing...")
-            text_response = await self._process_audio_challenge(audio_src)
-            
-            if not text_response:
-                logger.error("[RECAPTCHA_SOLVER] ❌ Audio processing failed")
-                return False
-                
-            logger.info(f"[RECAPTCHA_SOLVER] Audio recognized as: '{text_response}'")
-            
-            # Enter response
-            logger.info("[RECAPTCHA_SOLVER] Entering recognized text...")
-            audio_response_input = challenge_frame.locator('#audio-response')
-            await audio_response_input.fill(text_response.lower())
-            logger.info("[RECAPTCHA_SOLVER] Text entered successfully")
-            
-            # Click verify button
-            logger.info("[RECAPTCHA_SOLVER] Clicking verify button...")
-            verify_button = challenge_frame.locator('#recaptcha-verify-button')
-            await verify_button.click()
-            logger.info("[RECAPTCHA_SOLVER] Verify button clicked")
-            await asyncio.sleep(4)  # Wait for processing
+            # First try the simple approach like in GitHub code - direct #audio-source lookup
+            try:
+                logger.info("[RECAPTCHA_SOLVER] Trying direct #audio-source lookup...")
+                audio_element = challenge_frame.locator("#audio-source")
 
-            # Check final result
-            logger.info("[RECAPTCHA_SOLVER] Checking final result...")
-            if await self.is_solved():
-                logger.info("[RECAPTCHA_SOLVER] ✅ Audio challenge completed successfully!")
-                return True
-            else:
-                logger.error("[RECAPTCHA_SOLVER] ❌ Audio challenge failed - captcha not solved")
-                return False
+                # Audio elements are always hidden, so don't wait for visibility
+                # Just check if element exists and has src attribute
+                count = await audio_element.count()
+                if count > 0:
+                    audio_src = await audio_element.get_attribute('src')
+                    logger.info(f"[RECAPTCHA_SOLVER] Direct lookup found audio src: {audio_src}")
+
+                    if audio_src and audio_src.strip():
+                        logger.info(f"[RECAPTCHA_SOLVER] ✅ Audio source found via direct lookup: {audio_src[:100]}...")
+                        # Process audio
+                        logger.info("[RECAPTCHA_SOLVER] Starting enhanced audio processing...")
+                        text_response = await self._process_audio_challenge(audio_src)
+                        return await self._submit_audio_response(challenge_frame, text_response)
+
+            except Exception as e:
+                logger.warning(f"[RECAPTCHA_SOLVER] Direct #audio-source lookup failed: {e}")
+
+            # Fallback: Try multiple selectors for audio element
+            audio_selectors = AUDIO_CHALLENGE_SELECTORS['audio_element_selectors']
+            logger.info(f"[RECAPTCHA_SOLVER] Trying fallback selectors ({len(audio_selectors)} total)...")
+
+            audio_src = None
+            for audio_selector in audio_selectors:
+                try:
+                    audio_source = challenge_frame.locator(audio_selector)
+                    logger.info(f"[RECAPTCHA_SOLVER] Trying fallback selector: {audio_selector}")
+
+                    # Audio elements are always hidden, just check if they exist
+                    count = await audio_source.count()
+                    if count > 0:
+                        # Check if it has src attribute
+                        audio_src = await audio_source.get_attribute('src')
+                        audio_id = await audio_source.get_attribute('id')
+
+                        logger.info(f"[RECAPTCHA_SOLVER] Fallback found: selector='{audio_selector}', id='{audio_id}', src='{audio_src}'")
+
+                        # Accept any non-empty src
+                        if audio_src and audio_src.strip():
+                            logger.info(f"[RECAPTCHA_SOLVER] ✅ Audio source found via fallback: {audio_src[:100]}...")
+                            # Process audio
+                            logger.info("[RECAPTCHA_SOLVER] Starting enhanced audio processing...")
+                            text_response = await self._process_audio_challenge(audio_src)
+                            return await self._submit_audio_response(challenge_frame, text_response)
+
+                except Exception as e:
+                    logger.debug(f"[RECAPTCHA_SOLVER] Fallback selector {audio_selector} failed: {e}")
+                    continue
+
+            logger.error("[RECAPTCHA_SOLVER] ❌ Audio source not found with any method")
+            return False
 
         except Exception as e:
             logger.error(f"[RECAPTCHA_SOLVER] ❌ Audio challenge error: {str(e)}")
             return False
+
+    async def _submit_audio_response(self, challenge_frame, text_response: str) -> bool:
+        """Submit the audio response and verify the solution."""
+        try:
+            # Input the response
+            input_selectors = AUDIO_CHALLENGE_SELECTORS['input_field_selectors']
+            input_found = False
+
+            for input_selector in input_selectors:
+                try:
+                    input_field = challenge_frame.locator(input_selector)
+                    await input_field.wait_for(timeout=2000)
+                    # Simulate mouse movement to input field
+                    try:
+                        box = await input_field.bounding_box()
+                        if box:
+                            await challenge_frame.page.mouse.move(
+                                box['x'] + random.uniform(10, box['width'] - 10),
+                                box['y'] + box['height'] / 2 + random.uniform(-3, 3)
+                            )
+                            await asyncio.sleep(random.uniform(0.3, 0.7))
+                    except Exception:
+                        pass
+
+                    # Clear field first and type like a human
+                    await input_field.clear()
+                    await asyncio.sleep(random.uniform(0.2, 0.5))
+
+                    # Type the response character by character with small delays
+                    for char in text_response.lower():
+                        await input_field.type(char, delay=random.uniform(50, 150))  # Human typing speed
+
+                    # Log what we entered
+                    entered_text = text_response.lower()
+                    log_message = f"🎯 ENTERED TEXT INTO FIELD: '{entered_text}'"
+                    logger.info(f"[RECAPTCHA_SOLVER] {log_message}")
+                    await self._web_log(log_message)
+                    logger.info(f"[RECAPTCHA_SOLVER] Response entered using selector: {input_selector}")
+
+                    # Human-like delay after typing (simulate thinking)
+                    await asyncio.sleep(random.uniform(1.0, 2.5))
+                    input_found = True
+                    break
+                except Exception as e:
+                    logger.debug(f"[RECAPTCHA_SOLVER] Input selector {input_selector} failed: {e}")
+                    continue
+
+            if not input_found:
+                logger.error("[RECAPTCHA_SOLVER] ❌ Could not find input field")
+                return False
+
+            # Click verify button
+            verify_selectors = AUDIO_CHALLENGE_SELECTORS['verify_button_selectors']
+            verify_found = False
+
+            for verify_selector in verify_selectors:
+                try:
+                    verify_button = challenge_frame.locator(verify_selector)
+                    await verify_button.wait_for(timeout=2000)
+                    # Simulate mouse movement to verify button
+                    try:
+                        box = await verify_button.bounding_box()
+                        if box:
+                            await challenge_frame.page.mouse.move(
+                                box['x'] + box['width'] / 2 + random.uniform(-8, 8),
+                                box['y'] + box['height'] / 2 + random.uniform(-4, 4)
+                            )
+                            await asyncio.sleep(random.uniform(0.4, 0.9))
+                    except Exception:
+                        pass
+
+                    await verify_button.click(timeout=TIMEOUTS['click_timeout'] * 1000)
+                    logger.info(f"[RECAPTCHA_SOLVER] Verify button clicked using selector: {verify_selector}")
+
+                    # Human-like delay before checking result
+                    await asyncio.sleep(random.uniform(2.0, 4.0))
+                    verify_found = True
+                    break
+                except Exception as e:
+                    logger.debug(f"[RECAPTCHA_SOLVER] Verify selector {verify_selector} failed: {e}")
+                    continue
+
+            if not verify_found:
+                logger.error("[RECAPTCHA_SOLVER] ❌ Could not find verify button")
+                return False
+
+            # Wait for verification result (2-4 seconds) then always click Next
+            logger.info("[RECAPTCHA_SOLVER] ⏳ Waiting 2-4 seconds for verification, then clicking Next...")
+            await asyncio.sleep(random.uniform(2.0, 4.0))  # Random wait for verification
+
+            # Always click Next button - let the next step determine if captcha was solved
+            try:
+                log_message = "🎯 Clicking 'Siguiente' button to proceed to next step..."
+                logger.info(f"[RECAPTCHA_SOLVER] {log_message}")
+                await self._web_log(log_message)
+
+                # Try multiple selectors for the "Siguiente" button
+                next_button_selectors = LOGIN_PAGE_SELECTORS['next_button_selectors']
+
+                next_clicked = False
+                for next_selector in next_button_selectors:
+                    try:
+                        next_button = self.page.locator(next_selector)
+                        if await next_button.is_visible():
+                            # Simulate mouse movement
+                            try:
+                                box = await next_button.bounding_box()
+                                if box:
+                                    await self.page.mouse.move(
+                                        box['x'] + box['width'] / 2 + random.uniform(-5, 5),
+                                        box['y'] + box['height'] / 2 + random.uniform(-3, 3)
+                                    )
+                                    await asyncio.sleep(random.uniform(0.3, 0.7))
+                            except Exception:
+                                pass
+
+                            await next_button.click(timeout=10000)
+                            success_message = "✅ 'Siguiente' button clicked - proceeding to password field check"
+                            logger.info(f"[RECAPTCHA_SOLVER] {success_message}")
+                            await self._web_log(success_message)
+                            next_clicked = True
+                            break
+                    except Exception as e:
+                        logger.debug(f"[RECAPTCHA_SOLVER] Next button selector {next_selector} failed: {e}")
+                        continue
+
+                if next_clicked:
+                    return True
+                else:
+                    error_message = "❌ Could not find or click 'Siguiente' button"
+                    logger.error(f"[RECAPTCHA_SOLVER] {error_message}")
+                    await self._web_log(error_message)
+                    return False
+
+            except Exception as e:
+                error_message = f"❌ Error during Next button interaction: {e}"
+                logger.error(f"[RECAPTCHA_SOLVER] {error_message}")
+                await self._web_log(error_message)
+                return False
+
+        except Exception as e:
+            logger.error(f"[RECAPTCHA_SOLVER] ❌ Error submitting audio response: {e}")
+            return False
     
+    async def _handle_image_to_audio_transition(self) -> None:
+        """Handle transition from image challenge to audio challenge"""
+        try:
+            logger.info("[RECAPTCHA_SOLVER] Checking for image challenge to switch to audio...")
+
+            # Wait for image challenge to fully load (it may take time to appear after checkbox click)
+            await asyncio.sleep(random.uniform(4.0, 7.0))  # Longer random delay
+
+            # First, find the challenge iframe (same as in _handle_audio_challenge)
+            challenge_frame_selectors = AUDIO_CHALLENGE_SELECTORS['iframe_selectors']
+            logger.info(f"[RECAPTCHA_SOLVER] Looking for challenge iframes with {len(challenge_frame_selectors)} selectors")
+
+            for selector in challenge_frame_selectors:
+                try:
+                    frames = await self.page.query_selector_all(selector)
+                    logger.info(f"[RECAPTCHA_SOLVER] Selector '{selector}' found {len(frames)} iframes")
+                    if frames:
+                        for frame_element in frames:
+                            frame = await frame_element.content_frame()
+                            if frame:
+                                # Check if this frame has image challenge elements
+                                try:
+                                    image_challenge_selectors = IMAGE_CHALLENGE_SELECTORS['container_selectors']
+
+                                    for img_selector in image_challenge_selectors:
+                                        try:
+                                            image_container = frame.locator(img_selector)
+                                            if await image_container.is_visible():
+                                                logger.info(f"[RECAPTCHA_SOLVER] ✅ Image challenge found in iframe with selector: {selector}")
+
+                                                # Look for audio button in the image challenge within the frame
+                                                audio_button_selectors = IMAGE_CHALLENGE_SELECTORS['audio_button_selectors']
+
+                                                for audio_selector in audio_button_selectors:
+                                                    try:
+                                                        audio_button = frame.locator(audio_selector)
+                                                        if await audio_button.is_visible():
+                                                            # Simulate human hesitation before clicking audio button
+                                                            await asyncio.sleep(random.uniform(2.0, 4.0))
+
+                                                            # Simulate mouse movement to button
+                                                            try:
+                                                                box = await audio_button.bounding_box()
+                                                                if box:
+                                                                    # Move mouse to random point near the button
+                                                                    await self.page.mouse.move(
+                                                                        box['x'] + box['width'] / 2 + random.uniform(-10, 10),
+                                                                        box['y'] + box['height'] / 2 + random.uniform(-5, 5)
+                                                                    )
+                                                                    await asyncio.sleep(random.uniform(0.3, 0.8))
+                                                            except Exception:
+                                                                pass  # Ignore mouse movement errors
+
+                                                            await audio_button.click(timeout=TIMEOUTS['click_timeout'] * 1000)
+                                                            logger.info(f"[RECAPTCHA_SOLVER] ✅ Clicked audio button in image challenge: {audio_selector}")
+
+                                                            # Longer delay after clicking audio button
+                                                            await asyncio.sleep(random.uniform(3.0, 5.0))
+
+                                                            # Check for bot detection after clicking audio button
+                                                            if await self._is_detected_in_frame(frame):
+                                                                logger.warning("[RECAPTCHA_SOLVER] ❌ Bot detected after clicking audio button, reloading page...")
+
+                                                                # Reload page to reset captcha state
+                                                                try:
+                                                                    await self.page.reload(wait_until="domcontentloaded")
+                                                                    logger.info("[RECAPTCHA_SOLVER] Page reloaded after bot detection, waiting before retry...")
+
+                                                                    # Much longer delay before retrying (simulate human giving up and trying later)
+                                                                    await asyncio.sleep(random.uniform(15.0, 25.0))
+
+                                                                    # Reset attempt counter and retry the entire login process
+                                                                    logger.info("[RECAPTCHA_SOLVER] 🔄 Retrying captcha solving after page reload...")
+                                                                    return await self.solve_captcha()  # Recursive retry
+
+                                                                except Exception as e:
+                                                                    logger.error(f"[RECAPTCHA_SOLVER] Page reload failed: {e}")
+                                                                    return False
+
+                                                            return
+                                                    except Exception as e:
+                                                        logger.debug(f"[RECAPTCHA_SOLVER] Audio button selector {audio_selector} failed: {e}")
+                                                        continue
+
+                                        except Exception as e:
+                                            logger.debug(f"[RECAPTCHA_SOLVER] Image challenge selector {img_selector} failed: {e}")
+                                            continue
+
+                                except Exception as e:
+                                    logger.debug(f"[RECAPTCHA_SOLVER] Frame check failed: {e}")
+                                    continue
+
+                except Exception as e:
+                    logger.debug(f"[RECAPTCHA_SOLVER] Frame selector {selector} failed: {e}")
+                    continue
+
+            logger.info("[RECAPTCHA_SOLVER] No image challenge found or already in audio mode")
+
+        except Exception as e:
+            logger.warning(f"[RECAPTCHA_SOLVER] Error handling image to audio transition: {e}")
+
     async def _is_detected_in_frame(self, frame) -> bool:
         """Check if bot detection occurred in the challenge frame"""
         try:
-            detection_selectors = [
-                'text="Try again later"',
-                'text="Your computer or network may be sending automated queries"',
-                '.rc-doscaptcha-body-text'
-            ]
+            detection_selectors = BOT_DETECTION_SELECTORS
             
             for selector in detection_selectors:
                 try:
@@ -291,9 +659,22 @@ class PlaywrightRecaptchaSolver:
                 logger.error("[RECAPTCHA_SOLVER] ❌ Failed to process audio")
                 return None
 
-            # Try speech recognition with multiple methods
+                # Try speech recognition with multiple methods
             logger.info("[RECAPTCHA_SOLVER] Starting enhanced speech recognition...")
             recognized_text = await self._recognize_speech_enhanced(enhanced_audio)
+
+            # If we got here, speech recognition worked, so we can clean up audio files immediately
+            # This prevents issues with retries trying to re-download the same URL
+            try:
+                if os.path.exists(mp3_path):
+                    os.remove(mp3_path)
+                if os.path.exists(wav_path):
+                    os.remove(wav_path)
+                if os.path.exists(enhanced_wav_path):
+                    os.remove(enhanced_wav_path)
+                logger.info("[RECAPTCHA_SOLVER] ✅ Cleaned up audio files after successful recognition")
+            except Exception as e:
+                logger.debug(f"[RECAPTCHA_SOLVER] Could not clean up audio files: {e}")
             
             if recognized_text:
                 logger.info(f"[RECAPTCHA_SOLVER] ✅ Speech recognition successful: '{recognized_text}'")
@@ -357,13 +738,13 @@ class PlaywrightRecaptchaSolver:
                 enhanced_sound = sound
             
             # Ensure proper sample rate for speech recognition
-            if enhanced_sound.frame_rate != 16000:
-                enhanced_sound = enhanced_sound.set_frame_rate(16000)
-                logger.info("[RECAPTCHA_SOLVER] Sample rate set to 16kHz")
-            
+            if enhanced_sound.frame_rate != AUDIO_SETTINGS['sample_rate']:
+                enhanced_sound = enhanced_sound.set_frame_rate(AUDIO_SETTINGS['sample_rate'])
+                logger.info(f"[RECAPTCHA_SOLVER] Sample rate set to {AUDIO_SETTINGS['sample_rate']}Hz")
+
             # Convert to mono if stereo
-            if enhanced_sound.channels > 1:
-                enhanced_sound = enhanced_sound.set_channels(1)
+            if enhanced_sound.channels > AUDIO_SETTINGS['channels']:
+                enhanced_sound = enhanced_sound.set_channels(AUDIO_SETTINGS['channels'])
                 logger.info("[RECAPTCHA_SOLVER] Converted to mono")
             
             # Export enhanced audio
@@ -393,13 +774,13 @@ class PlaywrightRecaptchaSolver:
         recognizer = speech_recognition.Recognizer()
         
         # Adjust recognizer settings for better accuracy
-        recognizer.energy_threshold = 300
-        recognizer.dynamic_energy_threshold = True
-        recognizer.pause_threshold = 0.8
-        recognizer.operation_timeout = 10
+        recognizer.energy_threshold = AUDIO_SETTINGS['energy_threshold']
+        recognizer.dynamic_energy_threshold = AUDIO_SETTINGS['dynamic_energy']
+        recognizer.pause_threshold = AUDIO_SETTINGS['pause_threshold']
+        recognizer.operation_timeout = AUDIO_SETTINGS['operation_timeout']
         
         # Try recognition with different languages
-        for language in self.SUPPORTED_LANGUAGES:
+        for language in SUPPORTED_LANGUAGES:
             try:
                 logger.info(f"[RECAPTCHA_SOLVER] Trying speech recognition with language: {language}")
                 
@@ -456,12 +837,37 @@ class PlaywrightRecaptchaSolver:
     async def is_solved(self) -> bool:
         """Check if the captcha has been solved successfully."""
         try:
-            checkmark = self.page.locator('.recaptcha-checkbox-checkmark')
-            if await checkmark.count() > 0:
-                style = await checkmark.get_attribute('style')
-                return style and 'display' not in style
+            # Check solved indicators (checkbox states)
+            for indicator in CAPTCHA_SOLUTION_SELECTORS['solved_indicators']:
+                try:
+                    element = self.page.locator(indicator)
+                    if await element.count() > 0:
+                        # For checkmark, check if it's visible
+                        if 'checkmark' in indicator:
+                            style = await element.get_attribute('style')
+                            if style and 'display' not in style:
+                                logger.info(f"[RECAPTCHA_SOLVER] ✅ Captcha solved: {indicator} visible")
+                                return True
+                        else:
+                            # For other indicators, just presence is enough
+                            logger.info(f"[RECAPTCHA_SOLVER] ✅ Captcha solved: {indicator} detected")
+                            return True
+                except Exception:
+                    continue
+
+            # Check success messages in multiple languages
+            for message_selector in CAPTCHA_SOLUTION_SELECTORS['success_messages']:
+                try:
+                    message_element = self.page.locator(message_selector)
+                    if await message_element.is_visible():
+                        logger.info(f"[RECAPTCHA_SOLVER] ✅ Captcha solved: success message '{message_selector}' visible")
+                        return True
+                except Exception:
+                    continue
+
             return False
-        except Exception:
+        except Exception as e:
+            logger.debug(f"[RECAPTCHA_SOLVER] Error checking if solved: {e}")
             return False
 
     async def is_detected(self) -> bool:
@@ -483,15 +889,15 @@ class PlaywrightRecaptchaSolver:
             return None
 
 
-async def solve_recaptcha_with_audio(page: Page) -> bool:
+async def solve_recaptcha_with_audio(page: Page, task_id: int = None, log_callback: callable = None) -> bool:
     """Solve reCAPTCHA through audio challenge with full logging"""
     logger.info("[AUDIO_CAPTCHA] Starting audio challenge solve...")
-    solver = PlaywrightRecaptchaSolver(page)
+    solver = PlaywrightRecaptchaSolver(page, task_id=task_id, log_callback=log_callback)
     result = await solver.solve_captcha()
-    
+
     if result:
         logger.info("[AUDIO_CAPTCHA] ✅ Audio challenge completed successfully!")
     else:
         logger.error("[AUDIO_CAPTCHA] ❌ Audio challenge failed!")
-    
+
     return result

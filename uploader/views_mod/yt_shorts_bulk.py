@@ -324,7 +324,23 @@ def delete_yt_shorts_bulk_upload(request, task_id):
 @login_required
 def start_yt_shorts_bulk_upload(request, task_id):
     """Start a YouTube Shorts bulk upload task asynchronously using Dolphin + Playwright."""
+    import logging
+    logger = logging.getLogger(__name__)
+
+    logger.info("=" * 80)
+    logger.info(f"[YT_START_DEBUG] FUNCTION CALLED: start_yt_shorts_bulk_upload")
+    logger.info(f"[YT_START_DEBUG] Request method: {request.method}")
+    logger.info(f"[YT_START_DEBUG] Task ID: {task_id}")
+    logger.info(f"[YT_START_DEBUG] User: {request.user.username if request.user.is_authenticated else 'Anonymous'}")
+    logger.info("=" * 80)
+
+    # Simple print for immediate debugging
+    print(f"DEBUG: start_yt_shorts_bulk_upload called for task {task_id}")
+
+    logger.info(f"[YT_START] Starting YouTube Shorts task {task_id} for user {request.user.username}")
+
     task = get_object_or_404(YouTubeShortsBulkUploadTask, id=task_id)
+    logger.info(f"[YT_START] Task {task_id} status: {task.status}, videos: {task.videos.count}")
 
     # Already running?
     if task.status == TaskStatus.RUNNING:
@@ -332,34 +348,43 @@ def start_yt_shorts_bulk_upload(request, task_id):
         return redirect('yt_shorts_bulk_upload_detail', task_id=task.id)
 
     # Update task status to RUNNING immediately
+    logger.info(f"[YT_START] Setting task {task_id} status to RUNNING")
     task.status = TaskStatus.RUNNING
     task.save()
-    
+
     # Start async runner in background thread
     try:
+        logger.info(f"[YT_START] Importing run_async_yt_shorts_task_sync for task {task_id}")
         from uploader.yt_async_bulk_tasks import run_async_yt_shorts_task_sync
         import threading
+
+        logger.info(f"[YT_START] Creating background thread for task {task_id}")
 
         # Create a proper background thread that won't interfere with Django
         def run_task():
             try:
+                logger.info(f"[YT_START_THREAD] Starting async task {task.id} in background thread")
                 run_async_yt_shorts_task_sync(task.id)
+                logger.info(f"[YT_START_THREAD] Async task {task.id} completed")
             except Exception as e:
-                print(f"[YT] Background task error: {e}")
+                logger.error(f"[YT_START_THREAD] Background task error for {task.id}: {e}")
                 import traceback
-                traceback.print_exc()
+                logger.error(f"[YT_START_THREAD] Traceback: {traceback.format_exc()}")
 
         thread = threading.Thread(target=run_task)
         thread.daemon = True
         thread.start()
 
+        logger.info(f"[YT_START] Background thread started for task {task_id}")
         messages.success(request, f'YouTube Shorts task "{task.name}" started successfully!')
     except Exception as e:
         # If starting failed, revert status to PENDING
+        logger.error(f"[YT_START] Failed to start task {task_id}: {e}")
         task.status = TaskStatus.PENDING
         task.save()
         messages.error(request, f'Failed to start task: {str(e)}')
 
+    logger.info(f"[YT_START] Redirecting to task detail page for {task_id}")
     return redirect('yt_shorts_bulk_upload_detail', task_id=task.id)
 
 
@@ -374,8 +399,24 @@ def get_yt_shorts_bulk_task_logs(request, task_id):
     if account_id:
         try:
             account_task = task.accounts.get(id=account_id)
+
+            # Get account-specific logs from cache
+            from django.core.cache import cache
+            account_cache_key = f"task_logs_{task_id}_account_{account_id}"
+            cached_account_logs = cache.get(account_cache_key, [])
+
+            # Format cached logs as text
+            if cached_account_logs:
+                account_log_text = "\n".join([
+                    f"[{entry['timestamp']}] {entry['level']} {entry['message']}"
+                    for entry in cached_account_logs[-100:]  # Last 100 entries
+                ])
+            else:
+                # Fallback to database log
+                account_log_text = account_task.log or ""
+
             return JsonResponse({
-                'log': account_task.log,
+                'log': account_log_text,
                 'status': account_task.status,
                 'uploaded_success_count': account_task.uploaded_success_count,
                 'uploaded_failed_count': account_task.uploaded_failed_count,
@@ -383,9 +424,23 @@ def get_yt_shorts_bulk_task_logs(request, task_id):
         except YouTubeShortsBulkUploadAccount.DoesNotExist:
             return JsonResponse({'error': 'Account not found'}, status=404)
     
-    # Return main task logs
+    # Get logs from cache first, fallback to database
+    from django.core.cache import cache
+    cache_key = f"task_logs_{task_id}"
+    cached_logs = cache.get(cache_key, [])
+
+    # Format cached logs as text
+    if cached_logs:
+        log_text = "\n".join([
+            f"[{entry['timestamp']}] {entry['level']} {entry['message']}"
+            for entry in cached_logs[-100:]  # Last 100 entries
+        ])
+    else:
+        # Fallback to database log
+        log_text = task.log or ""
+
     return JsonResponse({
-        'log': task.log,
+        'log': log_text,
         'status': task.status,
         'completion_percentage': task.get_completion_percentage(),
         'completed_count': task.get_completed_count(),

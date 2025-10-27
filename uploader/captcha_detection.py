@@ -104,14 +104,114 @@ class EnhancedCaptchaDetector:
             
         logger.info("[CAPTCHA_DETECT] Timeout waiting for captcha")
         return False
-    
+
+    async def wait_for_captcha_full_load(self, page: Page, timeout: int = 15) -> bool:
+        """
+        Wait for captcha to fully load with all required elements
+
+        Args:
+            page: Playwright page instance
+            timeout: Maximum time to wait in seconds
+
+        Returns:
+            True if captcha fully loaded, False if timeout
+        """
+        logger.info(f"[CAPTCHA_DETECT] Waiting for captcha to fully load (timeout: {timeout}s)...")
+
+        start_time = asyncio.get_event_loop().time()
+
+        while (asyncio.get_event_loop().time() - start_time) < timeout:
+            if await self.is_captcha_fully_loaded(page):
+                logger.info("[CAPTCHA_DETECT] Captcha fully loaded successfully")
+                return True
+
+            await asyncio.sleep(1)
+
+        logger.warning("[CAPTCHA_DETECT] Timeout waiting for captcha to fully load")
+        return False
+
+    async def is_captcha_fully_loaded(self, page: Page) -> bool:
+        """
+        Check if captcha has fully loaded with all required elements
+
+        Args:
+            page: Playwright page instance
+
+        Returns:
+            True if captcha is fully loaded, False otherwise
+        """
+        try:
+            # Check for standard captcha elements
+            captcha_img = page.locator('#captchaimg')
+            captcha_input = page.locator('#captcha')
+            captcha_reload = page.locator('#captcha_reload')
+
+            img_visible = await captcha_img.is_visible()
+            input_visible = await captcha_input.is_visible()
+
+            if img_visible and input_visible:
+                logger.info("[CAPTCHA_DETECT] Standard captcha fully loaded (image + input)")
+                return True
+
+            # Check for reCAPTCHA elements - more thorough check
+            try:
+                # Find reCAPTCHA iframe
+                recaptcha_frames = await page.locator('iframe[src*="recaptcha"]').all()
+                if recaptcha_frames:
+                    for frame_element in recaptcha_frames:
+                        try:
+                            # Get frame content
+                            frame = await frame_element.content_frame()
+                            if frame:
+                                # Check for checkbox or audio button in the frame
+                                checkbox = frame.locator('.recaptcha-checkbox-border, .rc-anchor-center-item')
+                                audio_button = frame.locator('#recaptcha-audio-button, button[id=":2"]')
+
+                                checkbox_visible = await checkbox.is_visible()
+                                audio_button_visible = await audio_button.is_visible()
+
+                                if checkbox_visible or audio_button_visible:
+                                    logger.info("[CAPTCHA_DETECT] reCAPTCHA fully loaded (iframe with interactive elements)")
+                                    return True
+                        except Exception:
+                            continue
+
+                # Alternative: check for checkbox on main page
+                recaptcha_checkbox = page.locator('.recaptcha-checkbox')
+                if await recaptcha_checkbox.is_visible():
+                    logger.info("[CAPTCHA_DETECT] reCAPTCHA fully loaded (main page checkbox)")
+                    return True
+
+                # Check for JavaScript configuration (indicates loaded reCAPTCHA)
+                js_loaded = await page.evaluate("""
+                    () => {
+                        return typeof ___grecaptcha_cfg !== 'undefined' &&
+                               ___grecaptcha_cfg.clients &&
+                               Object.keys(___grecaptcha_cfg.clients).length > 0;
+                    }
+                """)
+
+                if js_loaded:
+                    logger.info("[CAPTCHA_DETECT] reCAPTCHA fully loaded (JavaScript config detected)")
+                    return True
+
+            except Exception as e:
+                logger.debug(f"[CAPTCHA_DETECT] Error checking reCAPTCHA: {e}")
+
+            logger.debug("[CAPTCHA_DETECT] Captcha not fully loaded yet")
+            return False
+
+        except Exception as e:
+            logger.debug(f"[CAPTCHA_DETECT] Error checking captcha load state: {e}")
+            return False
+
     async def is_captcha_solved(self, page: Page) -> bool:
         """
         Check if captcha has been solved successfully
-        
+
         Args:
             page: Playwright page instance
-            
+
         Returns:
             True if captcha is solved, False otherwise
         """

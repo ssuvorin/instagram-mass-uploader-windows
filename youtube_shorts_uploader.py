@@ -207,7 +207,7 @@ class YouTubeUploader:
             logger.info(f"Начало входа в аккаунт {email}")
 
             # Переход на страницу входа
-            await self.page.goto('https://studio.youtube.com/', wait_until='networkidle')
+            await self.page.goto('https://studio.youtube.com/', wait_until='domcontentloaded', timeout=45000)
             await self.human_like_delay(2000, 4000)
 
             # Ввод email
@@ -253,7 +253,7 @@ class YouTubeUploader:
                 return True
             except:
                 # Альтернативная проверка - переход на YouTube
-                await self.page.goto('https://www.youtube.com', wait_until='networkidle')
+                await self.page.goto('https://www.youtube.com', wait_until='domcontentloaded', timeout=45000)
 
                 # Проверка на наличие аватара пользователя
                 user_avatar = self.page.locator('button[aria-label*="Account menu"]')
@@ -317,7 +317,7 @@ class YouTubeUploader:
         try:
             logger.info("📺 Переход в YouTube Studio")
 
-            await self.page.goto('https://studio.youtube.com', wait_until='networkidle')
+            await self.page.goto('https://studio.youtube.com', wait_until='domcontentloaded', timeout=45000)
             await self.human_like_delay(3000, 6000)
 
             # Проверка на необходимость создания канала
@@ -382,7 +382,7 @@ class YouTubeUploader:
             logger.info(f"📤 Начало загрузки видео: {video_path}")
 
             # Переход к странице загрузки
-            await self.page.goto('https://studio.youtube.com/channel/UC/videos/upload', wait_until='networkidle')
+            await self.page.goto('https://studio.youtube.com/channel/UC/videos/upload', wait_until='domcontentloaded', timeout=45000)
             await self.human_like_delay(3000, 6000)
 
             # Поиск и использование input file

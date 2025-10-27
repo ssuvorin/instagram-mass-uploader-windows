@@ -447,8 +447,13 @@ class AsyncDolphinBrowser:
             ws_url = f"ws://{host}:{port}{ws_endpoint}"
             log_info(f"🔗 [ASYNC_BROWSER] WebSocket URL: {ws_url}")
                             
-            # Initialize Playwright
+            # Initialize Playwright with reduced logging
             log_info(f"[RETRY] [ASYNC_BROWSER] [Step 2/5] Initializing Playwright...")
+
+            # Disable verbose Playwright logs
+            os.environ['DEBUG'] = ''  # Disable debug logs
+            os.environ['PWDEBUG'] = '0'  # Disable Playwright debug
+
             self.playwright = await async_playwright().start()
                             
             # Connect to browser

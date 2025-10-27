@@ -165,7 +165,7 @@ async def human_like_type(page: Page, element_or_selector, text: str) -> None:
         else:
             element = element_or_selector
 
-        await element.click()
+        await element.click(timeout=10000)
         await human_like_delay(200, 600)
         try:
             await element.select_text()
@@ -185,11 +185,24 @@ async def human_like_type(page: Page, element_or_selector, text: str) -> None:
         raise
 
 
-async def login_to_google(page: Page, email: str, password: str, proxy: Optional[Dict] = None, user_agent: Optional[str] = None) -> bool:
+async def login_to_google(page: Page, email: str, password: str, proxy: Optional[Dict] = None, user_agent: Optional[str] = None, task_id: int = None) -> bool:
     try:
         logger.info(f"[YT LOGIN] Starting login for {email}")
         # Start from YouTube Studio - Google will redirect to login if needed
-        await page.goto('https://studio.youtube.com', wait_until='networkidle')
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                logger.info(f"[YT LOGIN] Navigation attempt {attempt + 1}/{max_retries} to YouTube Studio")
+                await page.goto('https://studio.youtube.com', wait_until='domcontentloaded', timeout=45000)
+                break  # Success, exit retry loop
+            except Exception as nav_error:
+                if attempt == max_retries - 1:  # Last attempt
+                    logger.error(f"[YT LOGIN] Failed to navigate to YouTube Studio after {max_retries} attempts: {nav_error}")
+                    raise nav_error
+                else:
+                    logger.warning(f"[YT LOGIN] Navigation attempt {attempt + 1} failed, retrying: {nav_error}")
+                    await human_like_delay(2000, 4000)  # Wait before retry
+
         await human_like_delay(3000, 5000)
         
         # Check if we're already logged in by looking for YouTube Studio elements
@@ -222,37 +235,112 @@ async def login_to_google(page: Page, email: str, password: str, proxy: Optional
         next_btn = await find_element_by_selectors(page, YOUTUBE_SELECTORS['email_next'])
         if not next_btn:
             raise RuntimeError('Next button (email) not found')
-        await next_btn.click()
+        await next_btn.click(timeout=10000)
         await human_like_delay(10000, 20000)  # REDUCED from 3-5s to 1-2s for faster processingслуф
 
         # Check for reCaptcha after email submission
         logger.info('[YT LOGIN] Checking for reCaptcha after email submission...')
-        await _handle_recaptcha_check(page, proxy=proxy, user_agent=user_agent)
-        await human_like_delay(4000, 6000)  # REDUCED from 2-3.5s to 1-2s for faster processing
-        logger.info('[YT LOGIN] reCaptcha check completed, looking for password field...')
+        await _handle_recaptcha_check(page, proxy=proxy, user_agent=user_agent, task_id=task_id)
+        await human_like_delay(3000, 6000)  # Wait longer for page transition
 
-        pwd_input = await find_element_by_selectors(page, YOUTUBE_SELECTORS['password_input'], timeout=40000)
+        # Check if we reached password field (captcha solved successfully)
+        logger.info('[YT LOGIN] 🔍 Checking if password field appeared after captcha...')
+        pwd_input = await find_element_by_selectors(page, YOUTUBE_SELECTORS['password_input'], timeout=15000)
+
         if not pwd_input:
-            raise RuntimeError('Password input not found')
+            logger.warning('[YT LOGIN] ❌ Password field not found after captcha attempt - captcha may not be solved')
+            logger.info('[YT LOGIN] 📄 Current page content check...')
+            try:
+                # Log current page URL and title for debugging
+                current_url = page.url
+                title = await page.title()
+                logger.info(f'[YT LOGIN] Current URL: {current_url}')
+                logger.info(f'[YT LOGIN] Page title: {title}')
+
+                # Check if we're still on captcha page
+                captcha_indicators = [
+                    'iframe[src*="recaptcha"]',
+                    '.recaptcha-checkbox',
+                    'text="No soy un robot"'
+                ]
+                captcha_still_present = False
+                for indicator in captcha_indicators:
+                    try:
+                        element = page.locator(indicator)
+                        if await element.is_visible(timeout=3000):
+                            logger.warning(f'[YT LOGIN] ⚠️ Captcha still present: {indicator}')
+                            captcha_still_present = True
+                            break
+                    except:
+                        continue
+
+                if captcha_still_present:
+                    logger.info('[YT LOGIN] 🔄 Captcha still present, retrying captcha solving...')
+                    await _handle_recaptcha_check(page, proxy=proxy, user_agent=user_agent, task_id=task_id)
+                    await human_like_delay(3000, 6000)
+
+                    # Check again for password field
+                    pwd_input = await find_element_by_selectors(page, YOUTUBE_SELECTORS['password_input'], timeout=15000)
+                    if not pwd_input:
+                        logger.error('[YT LOGIN] ❌ Password field still not found after retry - login failed')
+                        return False
+                else:
+                    logger.info('[YT LOGIN] ✅ Captcha seems solved, but password field not visible yet - waiting longer...')
+                    await human_like_delay(5000, 8000)
+                    pwd_input = await find_element_by_selectors(page, YOUTUBE_SELECTORS['password_input'], timeout=15000)
+                    if not pwd_input:
+                        logger.error('[YT LOGIN] ❌ Password field not found even after longer wait - login failed')
+                        return False
+            except Exception as e:
+                logger.error(f'[YT LOGIN] Error during page analysis: {e}')
+                return False
+
+        logger.info('[YT LOGIN] ✅ Password field found - captcha solved successfully!')
         await human_like_type(page, pwd_input, password)
         await human_like_delay(1500, 2500)
 
         pwd_next = await find_element_by_selectors(page, YOUTUBE_SELECTORS['password_next'])
         if not pwd_next:
             raise RuntimeError('Next button (password) not found')
-        await pwd_next.click()
+        await pwd_next.click(timeout=10000)
         await human_like_delay(4000, 7000)
 
         # Check for reCaptcha after password submission
-        await _handle_recaptcha_check(page, proxy=proxy, user_agent=user_agent)
-        await human_like_delay(3000, 5000)
+        await _handle_recaptcha_check(page, proxy=proxy, user_agent=user_agent, task_id=task_id)
+        await human_like_delay(2000, 4000)
+
+        # Check if login was successful (look for Studio elements or account menu)
+        logger.info('[YT LOGIN] Checking if login was successful...')
+        studio_elements = [
+            '//ytcp-button[@id="select-files-button"]',
+            '//ytcp-uploads-dialog',
+            '//div[contains(@class, "ytcp-uploads-dialog")]',
+            '//button[contains(@aria-label, "Create")]',
+            '//a[contains(@href, "studio.youtube.com")]',
+            '//div[contains(@class, "ytcp-uploads-file-picker")]'
+        ]
+
+        login_successful = False
+        for selector in studio_elements:
+            try:
+                element = page.locator(selector)
+                if await element.is_visible(timeout=5000):
+                    logger.info(f'[YT LOGIN] Login successful - found Studio element: {selector}')
+                    login_successful = True
+                    break
+            except Exception:
+                continue
+
+        if not login_successful:
+            logger.warning('[YT LOGIN] Login may not be successful - Studio elements not found')
+            # Could add additional retry logic here if needed
 
         # Basic verification handling (best-effort)
         await _handle_basic_verification(page, password, proxy=proxy, user_agent=user_agent)
 
         # Confirm logged in by checking YouTube Studio elements
         try:
-            await page.goto('https://studio.youtube.com', wait_until='networkidle')
+            await page.goto('https://studio.youtube.com', wait_until='domcontentloaded', timeout=45000)
             await human_like_delay(4000, 6000)
             
             # Look for YouTube Studio specific elements to confirm login
@@ -282,7 +370,7 @@ async def login_to_google(page: Page, email: str, password: str, proxy: Optional
         return False
 
 
-async def _handle_recaptcha_check(page: Page, proxy: Optional[Dict] = None, user_agent: Optional[str] = None) -> None:
+async def _handle_recaptcha_check(page: Page, proxy: Optional[Dict] = None, user_agent: Optional[str] = None, task_id: int = None) -> None:
     """Enhanced reCaptcha detection and solving using new captcha solver"""
     try:
         logger.info('[YT RECAPTCHA] Starting enhanced reCaptcha detection and solving...')
@@ -298,11 +386,25 @@ async def _handle_recaptcha_check(page: Page, proxy: Optional[Dict] = None, user
             submission_delay=3
         )
         
-        solver = EnhancedCaptchaSolver(config)
+        solver = EnhancedCaptchaSolver(config, task_id=task_id)
         
-        # Attempt to solve captcha
-        result = await solver.solve_captcha(page, proxy, user_agent)
-        
+        # Attempt to solve captcha with retry logic
+        max_captcha_retries = 2
+        for captcha_attempt in range(max_captcha_retries):
+            logger.info(f'[YT RECAPTCHA] Captcha solving attempt {captcha_attempt + 1}/{max_captcha_retries}')
+
+            result = await solver.solve_captcha(page, proxy, user_agent)
+
+            if result.success:
+                break  # Success, exit retry loop
+            elif result.retry_recommended and captcha_attempt < max_captcha_retries - 1:
+                logger.warning(f'[YT RECAPTCHA] Captcha attempt {captcha_attempt + 1} failed, retrying after delay...')
+                await human_like_delay(5000, 10000)  # Wait before retry
+                continue
+            else:
+                # Last attempt or no retry recommended
+                break
+
         if result.success:
             logger.info(f'[YT RECAPTCHA] Captcha solved successfully using {result.method_used.value if result.method_used else "unknown method"} in {result.processing_time:.1f}s')
             
@@ -765,7 +867,7 @@ async def _click_google_recaptcha_button_fixed(page: Page) -> bool:
                             any(word in text.lower() for word in ['siguiente', 'next', 'continue', 'submit', 'далее'])):
                             
                             logger.info(f'[YT RECAPTCHA] CLICKING button: {selector} with text: {text}')
-                            await element.click()
+                            await element.click(timeout=10000)
                             await asyncio.sleep(2)
                             return True
                             
@@ -785,7 +887,7 @@ async def _click_google_recaptcha_button_fixed(page: Page) -> bool:
                 if await button.is_visible():
                     text = await button.inner_text()
                     logger.info(f'[YT RECAPTCHA] Found visible button: "{text}"')
-                    await button.click()
+                    await button.click(timeout=10000)
                     await asyncio.sleep(2)
                     return True
         except Exception as e:
@@ -808,7 +910,7 @@ async def _handle_basic_verification(page: Page, password: str, proxy: Optional[
             try_another = page.locator(YOUTUBE_SELECTORS['try_another_way'][0])
             for _ in range(2):
                 if await try_another.is_visible():
-                    await try_another.click()
+                    await try_another.click(timeout=10000)
                     await human_like_delay(1000, 2000)
         # CAPTCHA placeholder wait - now with RuCaptcha support
         captcha_img = page.locator(YOUTUBE_SELECTORS['captcha_img'][0])
@@ -826,7 +928,7 @@ async def _handle_basic_verification(page: Page, password: str, proxy: Optional[
             await human_like_type(page, rec_pwd, password)
             next_btn = page.locator('//button[contains(text(), "Next")]')
             if await next_btn.is_visible():
-                await next_btn.click()
+                await next_btn.click(timeout=10000)
                 await human_like_delay(1500, 3000)
     except Exception as e:
         logger.warning(f"[YT VERIFY] Warning while handling verification: {e}")
@@ -834,7 +936,20 @@ async def _handle_basic_verification(page: Page, password: str, proxy: Optional[
 
 async def navigate_to_studio(page: Page) -> None:
     logger.info('[YT NAV] Navigating to YouTube Studio')
-    await page.goto('https://studio.youtube.com', wait_until='networkidle')
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            logger.info(f'[YT NAV] Navigation attempt {attempt + 1}/{max_retries} to YouTube Studio')
+            await page.goto('https://studio.youtube.com', wait_until='domcontentloaded', timeout=45000)
+            break  # Success, exit retry loop
+        except Exception as nav_error:
+            if attempt == max_retries - 1:  # Last attempt
+                logger.error(f'[YT NAV] Failed to navigate to YouTube Studio after {max_retries} attempts: {nav_error}')
+                raise nav_error
+            else:
+                logger.warning(f'[YT NAV] Navigation attempt {attempt + 1} failed, retrying: {nav_error}')
+                await human_like_delay(2000, 4000)  # Wait before retry
+
     await human_like_delay(1200, 2600)
     # Attempt to close any popups
     await _close_popups(page)
@@ -885,7 +1000,7 @@ async def _click_google_next_universal(page: Page) -> None:
                 btn = page.locator(sel).first
                 if await btn.is_visible():
                     logger.info(f"[YT RECAPTCHA] Clicking primary action button via selector: {sel}")
-                    await btn.click()
+                    await btn.click(timeout=10000)
                     await human_like_delay(2500, 5000)
                     return
             except Exception as e:
@@ -909,7 +1024,7 @@ async def _click_google_next_universal(page: Page) -> None:
                     fallback_btn = page.locator(selector).first
                     if await fallback_btn.is_visible():
                         logger.info(f"[YT RECAPTCHA] Clicked fallback button: {selector}")
-                        await fallback_btn.click()
+                        await fallback_btn.click(timeout=10000)
                         await human_like_delay(2500, 5000)
                         return
                 except Exception:
@@ -936,7 +1051,7 @@ async def _click_google_next_universal(page: Page) -> None:
                 try:
                     btn = page.locator(selector).first
                     if await btn.is_visible():
-                        await btn.click()
+                        await btn.click(timeout=10000)
                         logger.info(f"[YT RECAPTCHA] Clicked last resort button: {selector}")
                         await human_like_delay(2500, 5000)
                         return
@@ -961,7 +1076,7 @@ async def _close_popups(page: Page) -> None:
             try:
                 btn = page.locator(selector)
                 if await btn.is_visible():
-                    await btn.click()
+                    await btn.click(timeout=10000)
                     await human_like_delay(400, 900)
                     logger.info(f"[YT NAV] Closed popup: {selector}")
             except Exception:
@@ -973,7 +1088,7 @@ async def _close_popups(page: Page) -> None:
 async def upload_and_publish_short(page: Page, video_path: str, title: Optional[str], description: Optional[str]) -> bool:
     try:
         logger.info(f"[YT UPLOAD] Uploading file: {video_path}")
-        await page.goto('https://studio.youtube.com/channel/UC/videos/upload', wait_until='networkidle')
+        await page.goto('https://studio.youtube.com/channel/UC/videos/upload', wait_until='domcontentloaded', timeout=45000)
         await human_like_delay(1200, 2500)
 
         file_input = page.locator(YOUTUBE_SELECTORS['file_input'][0])
@@ -984,7 +1099,7 @@ async def upload_and_publish_short(page: Page, video_path: str, title: Optional[
             except Exception:
                 pass
             if await select_btn.is_visible():
-                await select_btn.click()
+                await select_btn.click(timeout=10000)
         else:
             await file_input.set_input_files(video_path)
 
@@ -1017,7 +1132,7 @@ async def upload_and_publish_short(page: Page, video_path: str, title: Optional[
             await human_like_delay(700, 1500)
             next_btn = page.locator(YOUTUBE_SELECTORS['next_button'][0])
             if await next_btn.is_visible():
-                await next_btn.click()
+                await next_btn.click(timeout=10000)
                 await human_like_delay(1200, 2200)
             else:
                 break
@@ -1027,7 +1142,7 @@ async def upload_and_publish_short(page: Page, video_path: str, title: Optional[
         for selector in YOUTUBE_SELECTORS['publish_button']:
             btn = page.locator(selector)
             if await btn.is_visible():
-                await btn.click()
+                await btn.click(timeout=10000)
                 logger.info('[YT UPLOAD] Publish clicked')
                 published = True
                 await human_like_delay(1500, 2800)
@@ -1041,7 +1156,7 @@ async def upload_and_publish_short(page: Page, video_path: str, title: Optional[
         return False
 
 
-async def perform_youtube_operations_async(page: Page, account_details: Dict, videos: List[Dict], video_files: List[str]) -> int:
+async def perform_youtube_operations_async(page: Page, account_details: Dict, videos: List[Dict], video_files: List[str], task_id: int = None) -> int:
     """
     Performs YouTube operations: login, navigate to Studio, upload each video.
     Returns number of successfully uploaded videos.
@@ -1063,7 +1178,7 @@ async def perform_youtube_operations_async(page: Page, account_details: Dict, vi
     logger.info(f"[YT RECAPTCHA] Passing to solver -> proxy: {'yes' if proxy else 'no'}, userAgent: {'yes' if user_agent else 'no'}")
 
     # Login
-    if not await login_to_google(page, email, password, proxy=proxy, user_agent=user_agent):
+    if not await login_to_google(page, email, password, proxy=proxy, user_agent=user_agent, task_id=task_id):
         return 0
 
     await navigate_to_studio(page)

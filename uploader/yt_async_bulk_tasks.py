@@ -827,10 +827,11 @@ class AsyncYTAccountProcessor:
                     # Perform YouTube operations
                     await self.logger.log('INFO', f"[YT_OPERATIONS] Starting YouTube operations for {len(videos)} videos")
                     result = await perform_youtube_operations_async(
-                        page, 
-                        account_details, 
+                        page,
+                        account_details,
                         [{'title': v.title, 'description': v.description} for v in videos],
-                        video_files_to_upload
+                        video_files_to_upload,
+                        self.task_data.id
                     )
                     
                     # Return result

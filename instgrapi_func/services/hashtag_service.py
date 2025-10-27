@@ -1,3 +1,17 @@
+"""
+Enhanced Hashtag Analysis Service with advanced anti-detection measures.
+
+Environment variables for anti-detection tuning:
+- IG_DELAY_MIN_S: Minimum delay between requests (default: 1.5s)
+- IG_DELAY_MAX_S: Maximum delay between requests (default: 4.5s)
+- IG_DELAY_LONG_EVERY_N: Frequency of long pauses (every N pages, default: 3)
+- IG_DELAY_LONG_MIN_S: Minimum long pause duration (default: 8.0s)
+- IG_DELAY_LONG_MAX_S: Maximum long pause duration (default: 18.0s)
+- IG_RANDOM_PAUSE_PROB: Probability of random micro-pauses (default: 0.15 = 15%)
+- IG_CONTENT_READ_MIN: Minimum content reading simulation delay (default: 2.0s)
+- IG_CONTENT_READ_MAX: Maximum content reading simulation delay (default: 5.0s)
+"""
+
 from __future__ import annotations
 import logging
 import random
@@ -58,28 +72,44 @@ class HashtagAnalysisResult:
 class HashtagAnalysisService:
     def __init__(self, provider: Optional[TwoFactorProvider] = None) -> None:
         self.auth = IGAuthService(provider=provider)
-        # Delay configuration via environment variables (falls back to sane defaults)
+        # Enhanced delay configuration for better anti-detection
         try:
-            self.delay_min_s = float(os.getenv("IG_DELAY_MIN_S", "0.8"))
+            self.delay_min_s = float(os.getenv("IG_DELAY_MIN_S", "1.5"))
         except Exception:
-            self.delay_min_s = 0.8
+            self.delay_min_s = 1.5
         try:
-            self.delay_max_s = float(os.getenv("IG_DELAY_MAX_S", "2.2"))
+            self.delay_max_s = float(os.getenv("IG_DELAY_MAX_S", "4.5"))
         except Exception:
-            self.delay_max_s = 2.2
+            self.delay_max_s = 4.5
         # Occasional long think pause configuration
         try:
-            self.delay_long_every_n = int(os.getenv("IG_DELAY_LONG_EVERY_N", "4"))  # every ~N pages
+            self.delay_long_every_n = int(os.getenv("IG_DELAY_LONG_EVERY_N", "3"))  # every ~N pages
         except Exception:
-            self.delay_long_every_n = 4
+            self.delay_long_every_n = 3
         try:
-            self.delay_long_min_s = float(os.getenv("IG_DELAY_LONG_MIN_S", "6.0"))
+            self.delay_long_min_s = float(os.getenv("IG_DELAY_LONG_MIN_S", "8.0"))
         except Exception:
-            self.delay_long_min_s = 6.0
+            self.delay_long_min_s = 8.0
         try:
-            self.delay_long_max_s = float(os.getenv("IG_DELAY_LONG_MAX_S", "14.0"))
+            self.delay_long_max_s = float(os.getenv("IG_DELAY_LONG_MAX_S", "18.0"))
         except Exception:
-            self.delay_long_max_s = 14.0
+            self.delay_long_max_s = 18.0
+
+        # Additional anti-detection parameters
+        try:
+            self.random_pause_probability = float(os.getenv("IG_RANDOM_PAUSE_PROB", "0.15"))  # 15% chance
+        except Exception:
+            self.random_pause_probability = 0.15
+
+        try:
+            self.content_reading_delay_min = float(os.getenv("IG_CONTENT_READ_MIN", "2.0"))
+        except Exception:
+            self.content_reading_delay_min = 2.0
+
+        try:
+            self.content_reading_delay_max = float(os.getenv("IG_CONTENT_READ_MAX", "5.0"))
+        except Exception:
+            self.content_reading_delay_max = 5.0
 
     def _human_delay(self, min_s: Optional[float] = None, max_s: Optional[float] = None) -> None:
         # Randomized delay to mimic human behavior
@@ -91,6 +121,31 @@ class HashtagAnalysisService:
 
     def _human_long_think(self) -> None:
         time.sleep(random.uniform(self.delay_long_min_s, self.delay_long_max_s))
+
+    def _content_reading_pause(self) -> None:
+        """Simulate time spent reading/viewing content like a human"""
+        time.sleep(random.uniform(self.content_reading_delay_min, self.content_reading_delay_max))
+
+    def _random_micro_pause(self) -> None:
+        """Small random pauses to break request patterns"""
+        if random.random() < self.random_pause_probability:
+            pause_time = random.uniform(0.5, 2.0)
+            time.sleep(pause_time)
+
+    def _simulate_content_interaction(self, media_count: int) -> None:
+        """Simulate human-like interaction with content"""
+        # Occasionally simulate "reading" some content
+        if random.random() < 0.3:  # 30% chance to simulate reading
+            items_to_read = random.randint(1, min(3, media_count))
+            for _ in range(items_to_read):
+                self._content_reading_pause()
+                # Small pause between items
+                time.sleep(random.uniform(0.3, 1.0))
+
+    def _variable_page_size(self, base_size: int = 27) -> int:
+        """Return variable page size to avoid patterns"""
+        variation = random.randint(-3, 3)  # ±3 items variation
+        return max(20, min(35, base_size + variation))  # Keep within reasonable bounds
 
     def _sum_media_views(self, cl: Client, medias: List) -> Tuple[int, int, int, int]:
         total_views = 0
@@ -217,6 +272,8 @@ class HashtagAnalysisService:
             on_log(f"hashtag: authenticated as {account_username}")
         # Small post-login pause like a human reading the screen
         self._human_delay()
+        # Additional random micro-pause for anti-detection
+        self._random_micro_pause()
 
         # Save refreshed session to store and DB after auth
         try:
@@ -228,6 +285,8 @@ class HashtagAnalysisService:
             pass
         # Keep legacy DB save for compatibility
         self._save_session_db(account_username, cl, on_log)
+        # Simulate user taking time to navigate to hashtag search
+        self._content_reading_pause()
 
         # Hashtag info with retry logic for login_required
         session_restore_attempts = 0
@@ -297,14 +356,97 @@ class HashtagAnalysisService:
             try:
                 if on_log:
                     on_log(f"page {pages_loaded+1}: request recent chunk (max_id={'set' if max_id else 'none'})")
-                # Short pre-request delay to avoid tight loops
+                # Enhanced pre-request delays for better anti-detection
                 self._human_delay()
-                medias, max_id = cl.hashtag_medias_v1_chunk(
-                    hashtag,
-                    max_amount=page_size,
-                    tab_key="recent",
-                    max_id=max_id,
+                self._random_micro_pause()
+                # Get raw response first for debugging
+                import json
+                import base64
+                if on_log:
+                    on_log(f"DEBUG: Making API call to tags/{hashtag}/sections/")
+
+                # Use variable page size for better anti-detection
+                current_page_size = self._variable_page_size(page_size)
+
+                # Make the API call manually to get raw data
+                from instagrapi.mixins.hashtag import HashtagMixin
+                data = {
+                    "media_recency_filter": "top_recent_posts",
+                    "_uuid": cl.uuid,
+                    "include_persistent": "false",
+                    "rank_token": cl.rank_token,
+                }
+                if max_id:
+                    try:
+                        [page_id, nm_ids] = json.loads(base64.b64decode(max_id))
+                        data["max_id"] = page_id
+                        data["next_media_ids"] = json.dumps(nm_ids)
+                    except Exception:
+                        pass
+
+                raw_result = cl.private_request(
+                    f"tags/{hashtag}/sections/",
+                    data=data,
+                    with_signature=False,
                 )
+
+                if on_log:
+                    on_log(f"DEBUG: Raw API response sections count: {len(raw_result.get('sections', []))}")
+                    # Log full raw response for debugging
+                    on_log(f"DEBUG: Full raw API response (first 2000 chars): {json.dumps(raw_result, indent=2)[:2000]}...")
+
+                # Parse manually with error handling
+                medias = []
+                try:
+                    next_max_id = None
+                    if raw_result.get("next_max_id"):
+                        np = raw_result.get("next_max_id")
+                        ids = raw_result.get("next_media_ids")
+                        next_max_id = base64.b64encode(json.dumps([np, ids]).encode()).decode()
+
+                    for section in raw_result["sections"]:
+                        layout_content = section.get("layout_content") or {}
+                        nodes = layout_content.get("medias") or []
+                        for node in nodes:
+                            if current_page_size and len(medias) >= current_page_size:
+                                break
+                            raw_media_data = node["media"]
+
+                            # Log raw media data that contains clips_metadata
+                            if raw_media_data.get("clips_metadata") and on_log:
+                                clips_meta = raw_media_data["clips_metadata"]
+                                if clips_meta.get("original_sound_info"):
+                                    orig_sound = clips_meta["original_sound_info"]
+                                    if orig_sound.get("ig_artist"):
+                                        ig_artist = orig_sound["ig_artist"]
+                                        if "profile_pic_id" not in ig_artist:
+                                            on_log(f"DEBUG: Found media without profile_pic_id in ig_artist: {json.dumps(ig_artist, indent=2)}")
+
+                            # Try to extract media, but catch validation errors
+                            try:
+                                from instagrapi.extractors import extract_media_v1
+                                media = extract_media_v1(raw_media_data)
+                                medias.append(media)
+                            except Exception as extract_e:
+                                if on_log:
+                                    on_log(f"DEBUG: Media extraction failed: {extract_e}")
+                                    on_log(f"DEBUG: Raw media data keys: {list(raw_media_data.keys())}")
+                                    if "clips_metadata" in raw_media_data:
+                                        on_log(f"DEBUG: Has clips_metadata: {bool(raw_media_data.get('clips_metadata'))}")
+                                    # Log the full problematic media data
+                                    on_log(f"DEBUG: Problematic media data: {json.dumps(raw_media_data, indent=2)[:2000]}...")
+                                continue
+
+                    if not raw_result.get("more_available", False):
+                        next_max_id = None
+
+                except Exception as parse_e:
+                    if on_log:
+                        on_log(f"DEBUG: Manual parsing failed: {parse_e}")
+                        on_log(f"DEBUG: Raw result keys: {list(raw_result.keys())}")
+                    raise
+
+                max_id = next_max_id
                 # No file save: we store only aggregated analytics in DB
             except PleaseWaitFewMinutes as e:
                 if on_log:
@@ -365,6 +507,10 @@ class HashtagAnalysisService:
                     f"page {pages_loaded}: got {len(medias)} medias, analyzed={analyzed}, views+={views}, total_views={total_views}, next_max_id={'set' if max_id else 'none'}"
                 )
 
+            # Simulate human-like content interaction after processing a page
+            if medias:
+                self._simulate_content_interaction(len(medias))
+
             # Track consecutive empty pages to avoid infinite loops
             if not medias:
                 consecutive_empty_pages += 1
@@ -380,16 +526,18 @@ class HashtagAnalysisService:
                 if on_log:
                     on_log(f"page {pages_loaded}: reached total reported media count ({total_reported}) — stop")
                 break
-            
+
             # Stop only if no medias AND no next cursor (truly done)
             if not medias and not max_id:
                 if on_log:
                     on_log(f"page {pages_loaded}: no medias and no next cursor — stop")
                 break
 
-            # Human-like delay between pages
+            # Enhanced human-like delays between pages for better anti-detection
             self._human_delay()
-            # Occasionally add a longer "think" pause
+            self._random_micro_pause()
+
+            # Occasionally add a longer "think" pause (more frequently for anti-detection)
             if self.delay_long_every_n > 0 and ((loop_index + 1) % self.delay_long_every_n == 0):
                 self._human_long_think()
 
