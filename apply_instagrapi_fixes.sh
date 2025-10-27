@@ -1,5 +1,6 @@
 #!/bin/bash
 # Apply instagrapi fixes to virtual environment
-cp instgrapi_func/instagrapi-master_SOURCE/instagrapi/types.py .venv/lib/python3.12/site-packages/instagrapi/types.py
-echo "Applied instagrapi fixes"
+# Note: All Pydantic validation errors are now handled in our application code
+# No need to modify the instagrapi library itself
+echo "All validation error fixes are handled in application code - no library modifications needed"
 

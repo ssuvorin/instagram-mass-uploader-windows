@@ -470,12 +470,58 @@ class BioLinkChangeTaskForm(forms.ModelForm):
 
 # New: Photo post form
 class PhotoPostForm(forms.Form):
+    client_filter = forms.ChoiceField(
+        choices=[],  # Will be set in __init__
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'client-filter'}),
+        label="Filter by client"
+    )
+
+    tag_filter = forms.ChoiceField(
+        choices=[],  # Will be set in __init__
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'tag-filter'}),
+        label="Filter by tag"
+    )
+
     selected_accounts = forms.ModelMultipleChoiceField(
         queryset=InstagramAccount.objects.all().order_by('-created_at'),
         widget=forms.CheckboxSelectMultiple,
         required=True,
         label="Select accounts"
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Set client filter choices
+        try:
+            from cabinet.models import Client
+            clients = Client.objects.all().order_by('name')
+            choices = [('', 'All clients'), ('no_client', 'Without client')]
+            choices.extend([(str(client.id), client.name) for client in clients])
+            self.fields['client_filter'].choices = choices
+        except ImportError:
+            # If cabinet app is not available, set empty choices but keep visible for debugging
+            self.fields['client_filter'].choices = [('', 'All clients (cabinet app not available)')]
+
+        # Set tag filter choices
+        tags = Tag.objects.all().order_by('name')
+        tag_choices = [('', 'All tags'), ('no_tag', 'Without tag')]
+        tag_choices.extend([(str(tag.id), tag.name) for tag in tags])
+        self.fields['tag_filter'].choices = tag_choices
+
+        # Set queryset dynamically to get fresh data from database
+        # Sort by creation date descending (newest first) for better UX
+        self.fields['selected_accounts'].queryset = (
+            InstagramAccount.objects.all()
+            .order_by('-created_at')
+            .annotate(
+                uploaded_success_total=Coalesce(Sum('bulk_uploads__uploaded_success_count'), Value(0)),
+                uploaded_failed_total=Coalesce(Sum('bulk_uploads__uploaded_failed_count'), Value(0)),
+            )
+        )
+
     photos = MultipleFileField(
         validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png'])],
         required=True,

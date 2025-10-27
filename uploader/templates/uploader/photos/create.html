@@ -4,8 +4,18 @@
 
 {% block extra_css %}
 <style>
-  .accounts-controls { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem; border-radius: 12px 12px 0 0; }
+  .accounts-controls { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.25rem; border-radius: 12px 12px 0 0; border-bottom: none; }
+  .accounts-controls .form-control { border-radius: 25px; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; padding-left: 2.5rem; }
+  .accounts-controls .form-control::placeholder { color: rgba(255,255,255,0.7); }
+  .accounts-controls .form-control:focus { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.6); box-shadow: 0 0 0 0.2rem rgba(255,255,255,0.25); color: white; }
+  .client-filter-wrapper { position: relative; }
+  .client-filter-wrapper select { border-radius: 25px; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; padding: 0.5rem 1rem; width: 100%; }
+  .client-filter-wrapper select:focus { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.6); box-shadow: 0 0 0 0.2rem rgba(255,255,255,0.25); color: white; }
+  .client-filter-wrapper select option { background: #667eea; color: white; }
   .search-wrapper { position: relative; }
+  .bulk-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+  .bulk-action-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 0.4rem 0.8rem; border-radius: 15px; font-size: 0.8rem; cursor: pointer; transition: all 0.3s ease; user-select: none; display: flex; align-items: center; gap: 0.25rem; }
+  .bulk-action-btn:hover { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.5); }
   .search-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.7); }
   .accounts-controls .form-control { border-radius: 25px; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; padding-left: 2.5rem; }
   .accounts-grid { padding: 1rem; max-height: 600px; overflow-y: auto; background: #f8f9fb; border-radius: 0 0 12px 12px; position: relative; }
@@ -142,18 +152,46 @@
   <div class="card mb-3 border-0 shadow-sm" id="accountsWidget">
     <div class="accounts-controls">
       <div class="row align-items-center">
-        <div class="col-md-6">
-          <div class="view-toggle">
-            <button type="button" class="view-toggle-btn active" data-view="card"><i class="bi bi-grid-3x3-gap"></i> Cards</button>
-            <button type="button" class="view-toggle-btn" data-view="compact"><i class="bi bi-list"></i> Compact</button>
-            <button type="button" class="view-toggle-btn" data-view="list"><i class="bi bi-list-ul"></i> List</button>
+        <div class="col-md-3">
+          <div class="search-wrapper">
+            <i class="bi bi-search search-icon"></i>
+            <input type="text" id="accountSearch" class="form-control" placeholder="Search accounts by username...">
           </div>
         </div>
-        <div class="col-md-6">
-          <div class="d-flex justify-content-end gap-2">
-            <button type="button" class="btn btn-light btn-sm" id="selectAll"><i class="bi bi-check-all"></i> Select All</button>
-            <button type="button" class="btn btn-light btn-sm" id="selectNone"><i class="bi bi-x"></i> Clear</button>
-            <button type="button" class="btn btn-light btn-sm" id="selectRandom"><i class="bi bi-shuffle"></i> Random 10</button>
+        <div class="col-md-2">
+          {% if form.client_filter.field.choices %}
+          <div class="client-filter-wrapper">
+            {{ form.client_filter }}
+          </div>
+          {% endif %}
+        </div>
+        <div class="col-md-2">
+          {% if form.tag_filter.field.choices %}
+          <div class="client-filter-wrapper">
+            {{ form.tag_filter }}
+          </div>
+          {% endif %}
+        </div>
+        <div class="col-md-3">
+          <div class="bulk-actions">
+            <div class="bulk-action-btn" id="selectAll">
+              <i class="bi bi-check-all"></i> Select All
+            </div>
+            <div class="bulk-action-btn" id="selectNone">
+              <i class="bi bi-x"></i> Clear
+            </div>
+            <div class="bulk-action-btn" id="selectRandom">
+              <i class="bi bi-shuffle"></i> Random 10
+            </div>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <div class="d-flex justify-content-end">
+            <div class="view-toggle">
+              <button type="button" class="view-toggle-btn active" data-view="card"><i class="bi bi-grid-3x3-gap"></i> Cards</button>
+              <button type="button" class="view-toggle-btn" data-view="compact"><i class="bi bi-list"></i> Compact</button>
+              <button type="button" class="view-toggle-btn" data-view="list"><i class="bi bi-list-ul"></i> List</button>
+            </div>
           </div>
         </div>
       </div>
@@ -166,7 +204,9 @@
              data-username="{{ account.username|lower }}"
              data-has-proxy="{{ account.proxy|yesno:'true,false' }}"
              data-proxy-active="{% if account.proxy %}{{ account.proxy.is_active|yesno:'true,false' }}{% else %}false{% endif %}"
-             data-status="{{ account.status|lower }}">
+             data-status="{{ account.status|lower }}"
+             data-client-id="{% if account.client %}{{ account.client.id }}{% endif %}"
+             data-tag-id="{% if account.tag %}{{ account.tag.id }}{% endif %}">
           <input class="account-checkbox" type="checkbox" name="selected_accounts" value="{{ account.id }}" id="account_{{ account.id }}">
           <label class="account-card" for="account_{{ account.id }}">
             <div class="custom-checkbox"><i class="bi bi-check"></i></div>
@@ -331,16 +371,111 @@ document.addEventListener('DOMContentLoaded', function(){
   const accountItems = document.querySelectorAll('.account-item');
   const accountCheckboxes = document.querySelectorAll('.account-checkbox');
   const accountsWidget = document.getElementById('accountsWidget');
+  const clientFilter = document.getElementById('client-filter');
+  const tagFilter = document.getElementById('tag-filter');
   let currentView = 'card';
 
   document.querySelectorAll('.view-toggle-btn').forEach(btn => { btn.addEventListener('click', function(){ document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active')); this.classList.add('active'); currentView = this.dataset.view; updateViewMode(); }); });
+
+  // Client filter functionality
+  if (clientFilter) {
+    clientFilter.addEventListener('change', function() {
+      filterList();
+    });
+  }
+
+  // Tag filter functionality
+  if (tagFilter) {
+    tagFilter.addEventListener('change', function() {
+      filterList();
+    });
+  }
+
   function updateViewMode(){ accountsWidget.className = accountsWidget.className.replace(/\b(compact-mode|list-mode)\b/g, '').trim(); if(currentView === 'compact'){ accountsWidget.classList.add('compact-mode'); updateColumnClasses('col-lg-4 col-md-6'); } else if(currentView === 'list'){ accountsWidget.classList.add('list-mode'); updateColumnClasses('col-12'); } else { updateColumnClasses('col-lg-6 col-md-12'); } }
   function updateColumnClasses(newClasses){ accountItems.forEach(item => { item.className = 'account-item ' + newClasses; }); }
-  function filterList(){ const q = (searchInput.value || '').toLowerCase().trim(); accountItems.forEach(item => { const match = (item.dataset.username || '').includes(q); item.style.display = match ? '' : 'none'; }); }
+  function filterList(){
+    const q = (searchInput.value || '').toLowerCase().trim();
+    accountItems.forEach(item => {
+      const username = item.dataset.username || '';
+      const clientId = item.dataset.clientId || '';
+      const tagId = item.dataset.tagId || '';
+
+      // Search filter
+      let match = username.includes(q);
+
+      // Client filter
+      if (match && clientFilter && clientFilter.value) {
+        if (clientFilter.value === 'no_client') {
+          // Show only accounts without client
+          if (clientId !== '') {
+            match = false;
+          }
+        } else {
+          // Show only accounts with selected client
+          if (clientId !== clientFilter.value) {
+            match = false;
+          }
+        }
+      }
+
+      // Tag filter
+      if (match && tagFilter && tagFilter.value) {
+        if (tagFilter.value === 'no_tag') {
+          // Show only accounts without tag
+          if (tagId !== '') {
+            match = false;
+          }
+        } else {
+          // Show only accounts with selected tag
+          if (tagId !== tagFilter.value) {
+            match = false;
+          }
+        }
+      }
+
+      item.style.display = match ? '' : 'none';
+    });
+  }
   searchInput.addEventListener('input', debounce(filterList, 200));
-  document.getElementById('selectAll').addEventListener('click', function(){ accountItems.forEach(item => { if(item.style.display !== 'none'){ const cb = item.querySelector('.account-checkbox'); cb.checked = true; updateCardSelection(cb); } }); updateCounter(); });
-  document.getElementById('selectNone').addEventListener('click', function(){ accountCheckboxes.forEach(cb => { cb.checked = false; updateCardSelection(cb); }); updateCounter(); });
-  document.getElementById('selectRandom').addEventListener('click', function(){ const visible = Array.from(accountItems).filter(i => i.style.display !== 'none'); const randomTen = visible.sort(() => .5 - Math.random()).slice(0, 10); accountCheckboxes.forEach(cb => { cb.checked = false; updateCardSelection(cb); }); randomTen.forEach(item => { const cb = item.querySelector('.account-checkbox'); cb.checked = true; updateCardSelection(cb); }); updateCounter(); });
+
+  // Bulk selection actions
+  document.getElementById('selectAll').addEventListener('click', function(){
+    const visibleItems = Array.from(accountItems).filter(item => item.style.display !== 'none');
+    visibleItems.forEach(item => {
+      const cb = item.querySelector('.account-checkbox');
+      cb.checked = true;
+      updateCardSelection(cb);
+    });
+    updateCounter();
+  });
+
+  document.getElementById('selectNone').addEventListener('click', function(){
+    accountCheckboxes.forEach(cb => {
+      cb.checked = false;
+      updateCardSelection(cb);
+    });
+    updateCounter();
+  });
+
+  document.getElementById('selectRandom').addEventListener('click', function(){
+    // First clear all
+    accountCheckboxes.forEach(cb => {
+      cb.checked = false;
+      updateCardSelection(cb);
+    });
+
+    // Then select 10 random visible accounts
+    const visibleItems = Array.from(accountItems).filter(item => item.style.display !== 'none');
+    const randomTen = visibleItems.sort(() => 0.5 - Math.random()).slice(0, Math.min(10, visibleItems.length));
+
+    randomTen.forEach(item => {
+      const cb = item.querySelector('.account-checkbox');
+      cb.checked = true;
+      updateCardSelection(cb);
+    });
+
+    updateCounter();
+  });
   accountCheckboxes.forEach(cb => { cb.addEventListener('change', function(){ updateCardSelection(cb); updateCounter(); }); });
 
   // Photo upload functionality
