@@ -108,3 +108,82 @@ class SafeFileHandler(logging.handlers.RotatingFileHandler):
         except Exception:
             # Handle any other errors gracefully
             self.handleError(record)
+
+
+class SafeRotatingFileHandler(logging.handlers.RotatingFileHandler):
+    """
+    Safe rotating file handler that handles Windows permission errors during log rotation.
+
+    On Windows, file rotation can fail if another process has the log file open.
+    This handler catches such errors and creates a timestamped backup instead.
+    """
+
+    def doRollover(self):
+        """
+        Perform log file rotation with error handling for Windows permission issues.
+        """
+        try:
+            # Try the normal rotation first
+            super().doRollover()
+        except (OSError, PermissionError) as e:
+            # On Windows, rotation can fail if file is locked by another process
+            # Create a timestamped backup as fallback
+            import time
+            import os
+
+            try:
+                # Create timestamped backup filename
+                timestamp = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
+                backup_name = f"{self.baseFilename}.{timestamp}"
+
+                # Copy current log to backup
+                with open(self.baseFilename, 'rb') as src, open(backup_name, 'wb') as dst:
+                    dst.write(src.read())
+
+                # Truncate the original log file
+                with open(self.baseFilename, 'w') as f:
+                    f.truncate(0)
+
+                # Clean up old backups (keep only the most recent ones)
+                self._cleanup_old_backups()
+
+            except Exception as backup_error:
+                # If backup also fails, log to console and continue
+                console = logging.StreamHandler()
+                console.setLevel(logging.ERROR)
+                console.emit(logging.LogRecord(
+                    name='logging.error',
+                    level=logging.ERROR,
+                    pathname='',
+                    lineno=0,
+                    msg=f"Log rotation failed: {e}. Backup creation failed: {backup_error}",
+                    args=(),
+                    exc_info=None
+                ))
+
+    def _cleanup_old_backups(self):
+        """
+        Clean up old backup files, keeping only the most recent ones.
+        """
+        import glob
+        import os
+
+        try:
+            # Find all backup files
+            backup_pattern = f"{self.baseFilename}.*"
+            backup_files = glob.glob(backup_pattern)
+
+            # Sort by modification time (newest first)
+            backup_files.sort(key=os.path.getmtime, reverse=True)
+
+            # Keep only the most recent backups (backupCount - 1, since current log is active)
+            max_backups = max(1, self.backupCount - 1)
+            if len(backup_files) > max_backups:
+                for old_backup in backup_files[max_backups:]:
+                    try:
+                        os.remove(old_backup)
+                    except OSError:
+                        pass  # Ignore cleanup errors
+        except Exception:
+            # Ignore cleanup errors to prevent breaking logging
+            pass
