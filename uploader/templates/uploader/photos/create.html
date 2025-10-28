@@ -18,6 +18,41 @@
   .bulk-action-btn:hover { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.5); }
   .search-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.7); }
 
+  /* Pagination summary in header */
+  .pagination-summary {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.9);
+  }
+
+  .pagination-summary .page-size-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .pagination-summary .page-size-selector select {
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 6px;
+    padding: 0.25rem 0.5rem;
+    background: rgba(255,255,255,0.1);
+    color: white;
+    font-size: 0.8rem;
+  }
+
+  .pagination-summary .page-size-selector select:focus {
+    background: rgba(255,255,255,0.2);
+    border-color: rgba(255,255,255,0.6);
+    outline: none;
+  }
+
+  .pagination-summary .page-size-selector select option {
+    background: #667eea;
+    color: white;
+  }
+
   /* Pagination */
   .pagination-info {
     display: flex;
@@ -177,7 +212,7 @@
 
   <div class="card mb-3 border-0 shadow-sm" id="accountsWidget">
     <div class="accounts-controls">
-      <div class="row align-items-center mb-2">
+      <div class="row align-items-center">
         <div class="col-md-3">
           <div class="search-wrapper">
             <i class="bi bi-search search-icon"></i>
@@ -198,68 +233,53 @@
           </div>
           {% endif %}
         </div>
-        <div class="col-md-3">
-          <div class="bulk-actions">
-            <div class="bulk-action-btn" id="selectAll">
-              <i class="bi bi-check-all"></i> Select All
+        <div class="col-md-5">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="bulk-actions">
+              <div class="bulk-action-btn" id="selectAll">
+                <i class="bi bi-check-all"></i> Select All
+              </div>
+              <div class="bulk-action-btn" id="selectNone">
+                <i class="bi bi-x"></i> Clear
+              </div>
+              <div class="bulk-action-btn" id="selectRandom">
+                <i class="bi bi-shuffle"></i> Random 10
+              </div>
             </div>
-            <div class="bulk-action-btn" id="selectNone">
-              <i class="bi bi-x"></i> Clear
-            </div>
-            <div class="bulk-action-btn" id="selectRandom">
-              <i class="bi bi-shuffle"></i> Random 10
-            </div>
-          </div>
-        </div>
-        <div class="col-md-2">
-          <div class="d-flex justify-content-end">
-            <div class="view-toggle">
-              <button type="button" class="view-toggle-btn active" data-view="card"><i class="bi bi-grid-3x3-gap"></i> Cards</button>
-              <button type="button" class="view-toggle-btn" data-view="compact"><i class="bi bi-list"></i> Compact</button>
-              <button type="button" class="view-toggle-btn" data-view="list"><i class="bi bi-list-ul"></i> List</button>
+            <div class="pagination-summary" id="paginationSummary">
+              <div class="page-size-selector">
+                <label>Show:</label>
+                <select id="pageSize">
+                  <option value="20">20</option>
+                  <option value="50" selected>50</option>
+                  <option value="100">100</option>
+                  <option value="all">All</option>
+                </select>
+              </div>
+              <span id="paginationText">Showing 1-50 of {{ form.selected_accounts.field.queryset.count }} accounts</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="row align-items-center">
+      <div class="row align-items-center mt-2">
         <div class="col-md-6">
-          <div class="pagination-info" id="paginationInfo" style="border-radius: 0; border-top: none; margin: 0;">
-            <div class="page-size-selector">
-              <label>Show:</label>
-              <select id="pageSize">
-                <option value="20">20</option>
-                <option value="50" selected>50</option>
-                <option value="100">100</option>
-                <option value="all">All</option>
-              </select>
-            </div>
-            <span id="paginationText">Showing 1-50 of {{ form.selected_accounts.field.queryset.count }} accounts</span>
-            <div id="paginationControls" style="display: none;">
-              <button type="button" class="btn btn-sm btn-outline-secondary" id="prevPage" disabled>
-                <i class="bi bi-chevron-left"></i> Previous
-              </button>
-              <span class="mx-2" id="pageInfo">Page 1 of 1</span>
-              <button type="button" class="btn btn-sm btn-outline-secondary" id="nextPage" disabled>
-                Next <i class="bi bi-chevron-right"></i>
-              </button>
-            </div>
+          <div class="view-toggle">
+            <button type="button" class="view-toggle-btn active" data-view="card"><i class="bi bi-grid-3x3-gap"></i> Cards</button>
+            <button type="button" class="view-toggle-btn" data-view="compact"><i class="bi bi-list"></i> Compact</button>
+            <button type="button" class="view-toggle-btn" data-view="list"><i class="bi bi-list-ul"></i> List</button>
           </div>
         </div>
         <div class="col-md-6">
           <div class="d-flex justify-content-end">
-            <div class="summary-bar" id="accountsSummary" style="margin: 0; border-radius: 0;">
-              <div class="d-flex align-items-center gap-3">
-                <div>
-                  <div class="fw-bold" id="selectedCount">0</div>
-                  <div class="text-muted small" id="totalCount">of {{ form.selected_accounts.field.queryset.count }} accounts selected</div>
-                </div>
-                <div class="d-flex gap-3 text-muted small" id="summaryStats">
-                  <div><i class="bi bi-check-circle text-success"></i> <span id="activeCount">{{ form.selected_accounts.field.queryset|length }}</span> active</div>
-                  <div><i class="bi bi-shield-check"></i> <span id="proxyCount">0</span> with proxy</div>
-                  <div><i class="bi bi-exclamation-triangle text-warning"></i> <span id="problemsCount">0</span> issues</div>
-                </div>
-              </div>
+            <div id="paginationControls" style="display: none;">
+              <button type="button" class="btn btn-sm btn-outline-light me-2" id="prevPage" disabled>
+                <i class="bi bi-chevron-left"></i> Previous
+              </button>
+              <span class="text-white me-2" id="pageInfo">Page 1 of 1</span>
+              <button type="button" class="btn btn-sm btn-outline-light" id="nextPage" disabled>
+                Next <i class="bi bi-chevron-right"></i>
+              </button>
             </div>
           </div>
         </div>

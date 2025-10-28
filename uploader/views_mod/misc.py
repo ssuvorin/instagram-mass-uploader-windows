@@ -3352,7 +3352,7 @@ def tiktok_stats_proxy(request):
     import requests
     
     # Get API base with explicit server URL from POST if provided
-    api_base = _get_tiktok_api_base(request, persist=False)
+    api_base = _get_tiktok_api_base(request)
     
     # Debug logging
     print(f"DEBUG: tiktok_stats_proxy using API base: {api_base}")

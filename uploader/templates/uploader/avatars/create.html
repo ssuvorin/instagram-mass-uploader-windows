@@ -62,6 +62,46 @@
     padding: 0.25rem 0.5rem;
     font-size: 0.8rem;
   }
+
+  /* Bulk actions */
+  .bulk-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+  .bulk-action-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 0.4rem 0.8rem; border-radius: 15px; font-size: 0.8rem; cursor: pointer; transition: all 0.3s ease; user-select: none; display: flex; align-items: center; gap: 0.25rem; }
+  .bulk-action-btn:hover { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.5); }
+
+  /* Pagination summary in header */
+  .pagination-summary {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.9);
+  }
+
+  .pagination-summary .page-size-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .pagination-summary .page-size-selector select {
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 6px;
+    padding: 0.25rem 0.5rem;
+    background: rgba(255,255,255,0.1);
+    color: white;
+    font-size: 0.8rem;
+  }
+
+  .pagination-summary .page-size-selector select:focus {
+    background: rgba(255,255,255,0.2);
+    border-color: rgba(255,255,255,0.6);
+    outline: none;
+  }
+
+  .pagination-summary .page-size-selector select option {
+    background: #667eea;
+    color: white;
+  }
 </style>
 {% endblock %}
 
@@ -81,73 +121,75 @@
   </div>
   {% endif %}
 
+  <div class="summary-bar" id="accountsSummary">
+    <div class="d-flex align-items-center gap-3">
+      <div>
+        <div class="fw-bold" id="selectedCount">0</div>
+        <div class="text-muted small" id="totalCount">of {{ form.selected_accounts.field.queryset.count }} accounts selected</div>
+      </div>
+      <div class="d-flex gap-3 text-muted small" id="summaryStats">
+        <div><i class="bi bi-check-circle text-success"></i> <span id="activeCount">{{ form.selected_accounts.field.queryset|length }}</span> active</div>
+        <div><i class="bi bi-shield-check"></i> <span id="proxyCount">0</span> with proxy</div>
+        <div><i class="bi bi-exclamation-triangle text-warning"></i> <span id="problemsCount">0</span> issues</div>
+      </div>
+    </div>
+    <div style="min-width:240px">
+      <div class="search-wrapper">
+        <i class="bi bi-search search-icon"></i>
+        <input type="text" id="accountSearch" class="form-control" placeholder="Search accounts by username...">
+      </div>
+    </div>
+  </div>
+
   <div class="card mb-3 border-0 shadow-sm" id="accountsWidget">
     <div class="accounts-controls">
-      <div class="row align-items-center mb-2">
+      <div class="row align-items-center">
         <div class="col-md-3">
           <div class="search-wrapper">
             <i class="bi bi-search search-icon"></i>
             <input type="text" id="accountSearch" class="form-control" placeholder="Search accounts by username...">
           </div>
         </div>
-        <div class="col-md-2">
-          <div class="view-toggle">
-            <button type="button" class="view-toggle-btn active" data-view="card"><i class="bi bi-grid-3x3-gap"></i> Cards</button>
-            <button type="button" class="view-toggle-btn" data-view="compact"><i class="bi bi-list"></i> Compact</button>
-            <button type="button" class="view-toggle-btn" data-view="list"><i class="bi bi-list-ul"></i> List</button>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="bulk-actions">
-            <div class="bulk-action-btn" id="selectAll">
-              <i class="bi bi-check-all"></i> Select All
-            </div>
-            <div class="bulk-action-btn" id="selectNone">
-              <i class="bi bi-x"></i> Clear
-            </div>
-            <div class="bulk-action-btn" id="selectRandom">
-              <i class="bi bi-shuffle"></i> Random 10
-            </div>
-          </div>
-        </div>
         <div class="col-md-4">
-          <div class="d-flex justify-content-end">
-            <div class="summary-bar" id="accountsSummary" style="margin: 0; border-radius: 0;">
-              <div class="d-flex align-items-center gap-3">
-                <div>
-                  <div class="fw-bold" id="selectedCount">0</div>
-                  <div class="text-muted small" id="totalCount">of {{ form.selected_accounts.field.queryset.count }} accounts selected</div>
-                </div>
-                <div class="d-flex gap-3 text-muted small" id="summaryStats">
-                  <div><i class="bi bi-check-circle text-success"></i> <span id="activeCount">{{ form.selected_accounts.field.queryset|length }}</span> active</div>
-                  <div><i class="bi bi-shield-check"></i> <span id="proxyCount">0</span> with proxy</div>
-                  <div><i class="bi bi-exclamation-triangle text-warning"></i> <span id="problemsCount">0</span> issues</div>
-                </div>
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="bulk-actions">
+              <div class="bulk-action-btn" id="selectAll">
+                <i class="bi bi-check-all"></i> Select All
+              </div>
+              <div class="bulk-action-btn" id="selectNone">
+                <i class="bi bi-x"></i> Clear
+              </div>
+              <div class="bulk-action-btn" id="selectRandom">
+                <i class="bi bi-shuffle"></i> Random 10
               </div>
             </div>
+            <div class="pagination-summary" id="paginationSummary">
+              <div class="page-size-selector">
+                <label>Show:</label>
+                <select id="pageSize">
+                  <option value="20">20</option>
+                  <option value="50" selected>50</option>
+                  <option value="100">100</option>
+                  <option value="all">All</option>
+                </select>
+              </div>
+              <span id="paginationText">Showing 1-50 of {{ form.selected_accounts.field.queryset.count }} accounts</span>
+            </div>
           </div>
         </div>
-      </div>
-
-      <div class="row align-items-center">
-        <div class="col-md-6">
-          <div class="pagination-info" id="paginationInfo" style="border-radius: 0; border-top: none; margin: 0;">
-            <div class="page-size-selector">
-              <label>Show:</label>
-              <select id="pageSize">
-                <option value="20">20</option>
-                <option value="50" selected>50</option>
-                <option value="100">100</option>
-                <option value="all">All</option>
-              </select>
+        <div class="col-md-5">
+          <div class="d-flex justify-content-end">
+            <div class="view-toggle">
+              <button type="button" class="view-toggle-btn active" data-view="card"><i class="bi bi-grid-3x3-gap"></i> Cards</button>
+              <button type="button" class="view-toggle-btn" data-view="compact"><i class="bi bi-list"></i> Compact</button>
+              <button type="button" class="view-toggle-btn" data-view="list"><i class="bi bi-list-ul"></i> List</button>
             </div>
-            <span id="paginationText">Showing 1-50 of {{ form.selected_accounts.field.queryset.count }} accounts</span>
-            <div id="paginationControls" style="display: none;">
-              <button type="button" class="btn btn-sm btn-outline-secondary" id="prevPage" disabled>
+            <div id="paginationControls" style="display: none; margin-left: 1rem;">
+              <button type="button" class="btn btn-sm btn-outline-light me-2" id="prevPage" disabled>
                 <i class="bi bi-chevron-left"></i> Previous
               </button>
-              <span class="mx-2" id="pageInfo">Page 1 of 1</span>
-              <button type="button" class="btn btn-sm btn-outline-secondary" id="nextPage" disabled>
+              <span class="text-white me-2" id="pageInfo">Page 1 of 1</span>
+              <button type="button" class="btn btn-sm btn-outline-light" id="nextPage" disabled>
                 Next <i class="bi bi-chevron-right"></i>
               </button>
             </div>
@@ -217,7 +259,6 @@
         <div class="col-12 text-center text-muted py-4">No accounts found</div>
         {% endfor %}
       </div>
-
     </div>
   </div>
 
@@ -313,16 +354,149 @@ document.addEventListener('DOMContentLoaded', function(){
   const accountItems = document.querySelectorAll('.account-item');
   const accountCheckboxes = document.querySelectorAll('.account-checkbox');
   const accountsWidget = document.getElementById('accountsWidget');
+  const pageSizeSelect = document.getElementById('pageSize');
+  const paginationText = document.getElementById('paginationText');
+  const paginationControls = document.getElementById('paginationControls');
+  const prevPageBtn = document.getElementById('prevPage');
+  const nextPageBtn = document.getElementById('nextPage');
+  const pageInfo = document.getElementById('pageInfo');
   let currentView = 'card';
+  let currentPage = 1;
+  let pageSize = 50;
+  let totalAccounts = accountItems.length;
+  let filteredAccounts = [...accountItems];
+  let visibleAccounts = [];
 
   document.querySelectorAll('.view-toggle-btn').forEach(btn => { btn.addEventListener('click', function(){ document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active')); this.classList.add('active'); currentView = this.dataset.view; updateViewMode(); }); });
+
+  // Page size selector
+  if (pageSizeSelect) {
+    pageSizeSelect.addEventListener('change', function() {
+      pageSize = this.value === 'all' ? 9999 : parseInt(this.value);
+      currentPage = 1;
+      filterAndPaginate();
+    });
+  }
+
+  // Pagination controls
+  if (prevPageBtn) {
+    prevPageBtn.addEventListener('click', function() {
+      if (currentPage > 1) {
+        currentPage--;
+        filterAndPaginate();
+      }
+    });
+  }
+
+  if (nextPageBtn) {
+    nextPageBtn.addEventListener('click', function() {
+      const totalPages = Math.ceil(filteredAccounts.length / pageSize);
+      if (currentPage < totalPages) {
+        currentPage++;
+        filterAndPaginate();
+      }
+    });
+  }
+
   function updateViewMode(){ accountsWidget.className = accountsWidget.className.replace(/\b(compact-mode|list-mode)\b/g, '').trim(); if(currentView === 'compact'){ accountsWidget.classList.add('compact-mode'); updateColumnClasses('col-lg-4 col-md-6'); } else if(currentView === 'list'){ accountsWidget.classList.add('list-mode'); updateColumnClasses('col-12'); } else { updateColumnClasses('col-lg-6 col-md-12'); } }
   function updateColumnClasses(newClasses){ accountItems.forEach(item => { item.className = 'account-item ' + newClasses; }); }
-  function filterList(){ const q = (searchInput.value || '').toLowerCase().trim(); accountItems.forEach(item => { const match = (item.dataset.username || '').includes(q); item.style.display = match ? '' : 'none'; }); }
-  searchInput.addEventListener('input', debounce(filterList, 200));
-  document.getElementById('selectAll').addEventListener('click', function(){ accountItems.forEach(item => { if(item.style.display !== 'none'){ const cb = item.querySelector('.account-checkbox'); cb.checked = true; updateCardSelection(cb); } }); updateCounter(); });
-  document.getElementById('selectNone').addEventListener('click', function(){ accountCheckboxes.forEach(cb => { cb.checked = false; updateCardSelection(cb); }); updateCounter(); });
-  document.getElementById('selectRandom').addEventListener('click', function(){ const visible = Array.from(accountItems).filter(i => i.style.display !== 'none'); const randomTen = visible.sort(() => .5 - Math.random()).slice(0, 10); accountCheckboxes.forEach(cb => { cb.checked = false; updateCardSelection(cb); }); randomTen.forEach(item => { const cb = item.querySelector('.account-checkbox'); cb.checked = true; updateCardSelection(cb); }); updateCounter(); });
+
+  function filterAndPaginate(){
+    const q = (searchInput.value || '').toLowerCase().trim();
+
+    // Apply filters
+    filteredAccounts = Array.from(accountItems).filter(item => {
+      const username = item.dataset.username || '';
+      // Add more filters here if needed
+      return username.includes(q);
+    });
+
+    // Calculate pagination
+    const totalFiltered = filteredAccounts.length;
+    const totalPages = pageSize === 9999 ? 1 : Math.ceil(totalFiltered / pageSize);
+
+    // Adjust current page if necessary
+    if (currentPage > totalPages) {
+      currentPage = Math.max(1, totalPages);
+    }
+
+    const startIndex = pageSize === 9999 ? 0 : (currentPage - 1) * pageSize;
+    const endIndex = pageSize === 9999 ? totalFiltered : Math.min(startIndex + pageSize, totalFiltered);
+
+    visibleAccounts = filteredAccounts.slice(startIndex, endIndex);
+
+    // Hide all accounts first
+    accountItems.forEach(item => {
+      item.style.display = 'none';
+    });
+
+    // Show visible accounts
+    visibleAccounts.forEach(item => {
+      item.style.display = '';
+    });
+
+    // Update pagination info
+    updatePaginationInfo(startIndex + 1, endIndex, totalFiltered, totalPages);
+    updateCounter();
+  }
+
+  function updatePaginationInfo(start, end, total, totalPages) {
+    if (total === 0) {
+      paginationText.textContent = 'No accounts found';
+      paginationControls.style.display = 'none';
+    } else if (pageSize === 9999) {
+      paginationText.textContent = `Showing all ${total} accounts`;
+      paginationControls.style.display = 'none';
+    } else {
+      paginationText.textContent = `Showing ${start}-${end} of ${total} accounts`;
+      paginationControls.style.display = totalPages > 1 ? 'flex' : 'none';
+      pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+      prevPageBtn.disabled = currentPage <= 1;
+      nextPageBtn.disabled = currentPage >= totalPages;
+    }
+  }
+
+  searchInput.addEventListener('input', debounce(filterAndPaginate, 200));
+
+  // Bulk selection actions
+  document.getElementById('selectAll').addEventListener('click', function(){
+    visibleAccounts.forEach(item => {
+      const cb = item.querySelector('.account-checkbox');
+      cb.checked = true;
+      updateCardSelection(cb);
+    });
+    updateCounter();
+  });
+
+  document.getElementById('selectNone').addEventListener('click', function(){
+    accountCheckboxes.forEach(cb => {
+      cb.checked = false;
+      updateCardSelection(cb);
+    });
+    updateCounter();
+  });
+
+  document.getElementById('selectRandom').addEventListener('click', function(){
+    // First clear all
+    accountCheckboxes.forEach(cb => {
+      cb.checked = false;
+      updateCardSelection(cb);
+    });
+
+    // Then select 10 random visible accounts
+    const randomTen = visibleAccounts.sort(() => 0.5 - Math.random()).slice(0, Math.min(10, visibleAccounts.length));
+
+    randomTen.forEach(item => {
+      const cb = item.querySelector('.account-checkbox');
+      cb.checked = true;
+      updateCardSelection(cb);
+    });
+
+    updateCounter();
+  });
+
+  // Initialize pagination
+  filterAndPaginate();
   accountCheckboxes.forEach(cb => { cb.addEventListener('change', function(){ updateCardSelection(cb); updateCounter(); }); });
 });
 </script>
