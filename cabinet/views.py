@@ -520,9 +520,9 @@ def agency_dashboard(request):
             "comments": int(row.get("comments") or 0),
         })
 
-    # KPIs
-    kpi_total_views = sum(d.get("total_views", 0) for d in daily_stats)
-    kpi_total_videos = sum(d.get("total_videos", 0) for d in daily_stats)
+    # KPIs - sum from client analytics
+    kpi_total_views = sum(c["total_views"] for c in client_rows)
+    kpi_total_videos = sum(c["total_videos"] for c in client_rows)
     kpi_avg_per_video = (kpi_total_views / kpi_total_videos) if kpi_total_videos > 0 else 0.0
 
     # Hashtag breakdown for last 7 days (top 10 by views)
