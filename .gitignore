@@ -63,7 +63,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-
+ў
 # Testing
 .tox/
 .coverage
