@@ -4,10 +4,18 @@ import random
 import time
 import asyncio
 from typing import Dict, List, Tuple, Optional, Callable
+from datetime import datetime
 
 from uploader.logging_utils import log_info, log_error, log_success, attach_instagrapi_web_bridge
 from uploader.proxy_manager import ProxyManager
 from uploader.models import InstagramAccount
+
+# Django settings import for MEDIA_ROOT
+try:
+	from django.conf import settings
+	MEDIA_ROOT = getattr(settings, 'MEDIA_ROOT', 'media')
+except Exception:
+	MEDIA_ROOT = 'media'
 
 # instagrapi imports (runtime)
 try:
@@ -191,6 +199,38 @@ def _build_usertags(cl: 'IGClient', usernames: List[str], reauth_cb: Optional[Ca
 					break
 	
 	return user_tags
+
+
+def _save_successful_upload_link(task_id: int, link: str, username: str, media_type: str = "video") -> None:
+	"""
+	Сохраняет ссылку на успешную публикацию в файл для bulk upload задачи.
+	
+	Args:
+		task_id: ID bulk upload задачи
+		link: Ссылка на опубликованный контент (например, https://www.instagram.com/p/{code}/)
+		username: Имя пользователя Instagram
+		media_type: Тип медиа (video или photo)
+	"""
+	try:
+		# Создаем директорию для результатов, если она не существует
+		results_dir = os.path.join(MEDIA_ROOT, 'bulk_upload_results')
+		os.makedirs(results_dir, exist_ok=True)
+		
+		# Формируем имя файла
+		file_path = os.path.join(results_dir, f'bulk_upload_success_links_task_{task_id}.txt')
+		
+		# Формируем строку для записи
+		timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+		entry = f"[{timestamp}] {link} | Account: {username} | Type: {media_type}\n"
+		
+		# Добавляем запись в файл (append mode)
+		with open(file_path, 'a', encoding='utf-8') as f:
+			f.write(entry)
+		
+		log_info(f"[SUCCESS_LINK] Saved successful upload link to {file_path}")
+	except Exception as e:
+		# Не прерываем процесс загрузки, если не удалось сохранить ссылку
+		log_warning(f"[SUCCESS_LINK] Failed to save successful upload link: {e}")
 
 
 def _resolve_location(cl: 'IGClient', location_text: Optional[str]) -> Optional['IGLocation']:
@@ -691,11 +731,22 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 					
 					if user_info and status == 'ok':
 						# This is actually a successful upload, just without media identifiers
-						log_success(f"[OK] Upload successful (status: {status}, user: {getattr(user_info, 'username', 'unknown')})")
+						user_username = getattr(user_info, 'username', 'unknown')
+						log_success(f"[OK] Upload successful (status: {status}, user: {user_username})")
 						if on_log:
 							on_log(f"Upload successful (status: {status})")
 						completed += 1
 						upload_success = True
+						# Сохраняем информацию о успешной загрузке (без ссылки, так как нет code)
+						try:
+							# Пытаемся получить ссылку через media_id, если возможно
+							if media_id:
+								link = f"https://www.instagram.com/p/{media_id}/"
+							else:
+								link = f"Upload successful (status: {status}, user: {user_username})"
+							_save_successful_upload_link(task_id, link, username, "video")
+						except Exception:
+							pass
 						# Human-like pause after upload
 						time.sleep(random.uniform(3.0, 10.0))
 						continue  # Skip to next video
@@ -706,9 +757,12 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 				upload_success = True
 				
 				if code:
-					log_success(f"[OK] Published: https://www.instagram.com/p/{code}/")
+					link = f"https://www.instagram.com/p/{code}/"
+					log_success(f"[OK] Published: {link}")
 					if on_log:
-						on_log(f"Upload successful: https://www.instagram.com/p/{code}/")
+						on_log(f"Upload successful: {link}")
+					# Сохраняем ссылку на успешную публикацию в файл
+					_save_successful_upload_link(task_id, link, username, "video")
 				else:
 					log_success(f"[OK] Published a clip (ID: {media_id})")
 					if on_log:
@@ -746,12 +800,18 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 						
 						if status == 'ok' and user_info:
 							# This is actually a successful upload, just without media identifiers
-							username = getattr(user_info, 'username', 'unknown') if hasattr(user_info, 'username') else user_info.get('username', 'unknown') if isinstance(user_info, dict) else 'unknown'
-							log_success(f"[OK] Upload successful (status: {status}, user: {username})")
+							user_username = getattr(user_info, 'username', 'unknown') if hasattr(user_info, 'username') else user_info.get('username', 'unknown') if isinstance(user_info, dict) else 'unknown'
+							log_success(f"[OK] Upload successful (status: {status}, user: {user_username})")
 							if on_log:
 								on_log(f"Upload successful (status: {status})")
 							completed += 1
 							upload_success = True
+							# Сохраняем информацию о успешной загрузке (без ссылки, так как нет code)
+							try:
+								link = f"Upload successful (status: {status}, user: {user_username})"
+								_save_successful_upload_link(task_id, link, username, "video")
+							except Exception:
+								pass
 							# Human-like pause after upload
 							time.sleep(random.uniform(3.0, 10.0))
 							continue  # Skip to next video
@@ -1418,9 +1478,16 @@ def _sync_photo_upload_impl(account_details: Dict, photo_files_to_upload: List[s
 				upload_success = True
 				completed += 1
 				if code:
-					log_success(f"[OK] Published: https://www.instagram.com/p/{code}/")
+					link = f"https://www.instagram.com/p/{code}/"
+					log_success(f"[OK] Published: {link}")
 					if on_log:
-						on_log(f"Upload successful: https://www.instagram.com/p/{code}/")
+						on_log(f"Upload successful: {link}")
+					# Сохраняем ссылку на успешную публикацию в файл
+					# Для фото загрузки task_id может отсутствовать, используем task_id=0 для общего файла
+					try:
+						_save_successful_upload_link(0, link, username, "photo")
+					except Exception:
+						pass
 				else:
 					log_success(f"[OK] Published a photo (ID: {media_id})")
 					if on_log:
