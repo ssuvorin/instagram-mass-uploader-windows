@@ -643,13 +643,13 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 				if on_log:
 					on_log(f"Starting upload {idx+1}/{len(video_files_to_upload)}: {os.path.basename(path)} (attempt {retry_count + 1}/{max_retries})")
 				
-				# Enhanced human-like pause before upload (longer for retries)
-				if retry_count > 0:
-					delay = RateLimitingConfig.get_retry_delay(retry_count, 'upload_attempt')
-				else:
-					delay = RateLimitingConfig.get_delay('upload_attempt')
-				log_info(f"[UPLOAD] Waiting {delay:.1f}s before upload...")
-				time.sleep(delay)
+				# # Enhanced human-like pause before upload (longer for retries)
+				# if retry_count > 0:
+				# 	delay = RateLimitingConfig.get_retry_delay(retry_count, 'upload_attempt')
+				# else:
+				# 	delay = RateLimitingConfig.get_delay('upload_attempt')
+				# log_info(f"[UPLOAD] Waiting {delay:.1f}s before upload...")
+				# time.sleep(delay)
 
 				# Optional thumbnail support: if file '<path>.jpg' exists, pass it
 				thumb_path = None
@@ -1449,9 +1449,9 @@ def _sync_photo_upload_impl(account_details: Dict, photo_files_to_upload: List[s
 					on_log(f"Starting photo upload {idx+1}/{len(photo_files_to_upload)}: {os.path.basename(path)} (attempt {retry_count + 1}/{max_retries})")
 
 				# Human-like pause before upload
-				pre_delay = random.uniform(2.0, 6.0) if retry_count == 0 else min(20.0, 4.0 * (2 ** retry_count))
-				log_info(f"[UPLOAD] Waiting {pre_delay:.1f}s before upload...")
-				time.sleep(pre_delay)
+				# pre_delay = random.uniform(2.0, 6.0) if retry_count == 0 else min(20.0, 4.0 * (2 ** retry_count))
+				# log_info(f"[UPLOAD] Waiting {pre_delay:.1f}s before upload...")
+				# time.sleep(pre_delay)
 
 				# Debug: log only basic info, not full JSON responses
 				try:
