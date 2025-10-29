@@ -685,17 +685,92 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 							# This is a workaround for cases where clip_upload succeeds but returns incomplete data
 							log_warning("[VALIDATION_WORKAROUND] Attempting alternative media info retrieval")
 
-							# For now, we'll create a mock successful response since the upload likely succeeded
-							# but Instagram returned incomplete metadata
-							class MockMedia:
-								def __init__(self, code="success", id=None, user=None, status="ok"):
-									self.code = code
-									self.id = id or f"mock_{int(time.time())}"
-									self.user = user or type('MockUser', (), {'username': account_details.get('username', 'unknown')})()
-									self.status = status
-
-							media = MockMedia()
-							log_warning("[VALIDATION_WORKAROUND] Created mock successful response - upload likely succeeded")
+							# Попытаемся извлечь реальные данные из last_json ответа Instagram
+							# Согласно исходному коду instagrapi (clip.py:195): media = self.last_json.get("media")
+							# Затем используется extract_media_v1(media) (clip.py:197)
+							last_json = None
+							try:
+								last_json = getattr(cl, 'last_json', None)
+								if last_json is None:
+									private = getattr(cl, 'private', None)
+									if private:
+										last_response = getattr(private, 'last_response', None)
+										if last_response:
+											last_json = getattr(last_response, 'json', None)
+							except Exception:
+								pass
+							
+							# Сначала попробуем использовать официальную функцию extract_media_v1 из instagrapi
+							# Это наиболее правильный способ, как в исходном коде (clip.py:197)
+							extracted_code = None
+							extracted_media_id = None
+							extracted_user = None
+							extracted_status = None
+							
+							media = None
+							try:
+								from instagrapi.extractors import extract_media_v1
+								if last_json and isinstance(last_json, dict):
+									media_dict = last_json.get('media')
+									if media_dict:
+										log_info(f"[VALIDATION_WORKAROUND] Attempting to use extract_media_v1 from instagrapi")
+										media = extract_media_v1(media_dict)
+										log_warning(f"[VALIDATION_WORKAROUND] Successfully extracted Media using extract_media_v1")
+										# Проверяем, что мы получили валидный объект Media с code
+										code = getattr(media, 'code', None)
+										if code:
+											log_info(f"[VALIDATION_WORKAROUND] Extracted code: {code}")
+											# Успешно! Используем полученный объект Media напрямую
+											# Пропускаем создание MockMedia
+										else:
+											log_warning(f"[VALIDATION_WORKAROUND] extract_media_v1 returned Media without code, will try fallback")
+											media = None  # Сбрасываем, чтобы использовать fallback
+							except Exception as extractor_error:
+								log_debug(f"[VALIDATION_WORKAROUND] Failed to use extract_media_v1: {extractor_error}")
+								media = None
+							
+							# Fallback: ручное извлечение из last_json или создание MockMedia
+							if media is None:
+								if last_json and isinstance(last_json, dict):
+									try:
+										# Согласно clip.py:195, структура: self.last_json.get("media")
+										media_dict = last_json.get('media', {})
+										if isinstance(media_dict, dict):
+											# Извлекаем code (shortcode) - это основной способ формирования URL
+											extracted_code = media_dict.get('code') or media_dict.get('shortcode')
+											# Извлекаем pk или id
+											extracted_media_id = media_dict.get('pk') or media_dict.get('id')
+											extracted_status = last_json.get('status', 'ok')
+											user_data = media_dict.get('user')
+											if user_data:
+												if isinstance(user_data, dict):
+													extracted_user = type('MockUser', (), {
+														'username': user_data.get('username', username)
+													})()
+												else:
+													extracted_user = user_data
+									except Exception as extract_ex:
+										log_debug(f"[VALIDATION_WORKAROUND] Error extracting from last_json: {extract_ex}")
+							
+								# Создаем MockMedia только с реальными данными, если они есть
+								class MockMedia:
+									def __init__(self, code=None, id=None, user=None, status="ok"):
+										self.code = code  # None если реальный code не найден
+										self.id = id
+										self.user = user or type('MockUser', (), {'username': username})()
+										self.status = status
+								
+								media = MockMedia(
+									code=extracted_code,  # Будет None если не удалось извлечь
+									id=extracted_media_id,
+									user=extracted_user,
+									status=extracted_status or "ok"
+								)
+								
+								if extracted_code:
+									log_warning(f"[VALIDATION_WORKAROUND] Created mock response with extracted code: {extracted_code}")
+								else:
+									log_warning("[VALIDATION_WORKAROUND] Created mock response - upload likely succeeded but no code found in response")
 
 						except Exception as extract_error:
 							log_error(f"[VALIDATION_WORKAROUND] Failed to create alternative response: {extract_error}")
@@ -737,16 +812,8 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 							on_log(f"Upload successful (status: {status})")
 						completed += 1
 						upload_success = True
-						# Сохраняем информацию о успешной загрузке (без ссылки, так как нет code)
-						try:
-							# Пытаемся получить ссылку через media_id, если возможно
-							if media_id:
-								link = f"https://www.instagram.com/p/{media_id}/"
-							else:
-								link = f"Upload successful (status: {status}, user: {user_username})"
-							_save_successful_upload_link(task_id, link, username, "video")
-						except Exception:
-							pass
+						# Не сохраняем ссылку, так как нет code и media_id
+						# Загрузка успешна, но ссылку получить нельзя
 						# Human-like pause after upload
 						time.sleep(random.uniform(3.0, 10.0))
 						continue  # Skip to next video
@@ -756,17 +823,25 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 				completed += 1
 				upload_success = True
 				
-				if code:
+				if code and code != "success":  # Не сохраняем если code="success" (это placeholder)
 					link = f"https://www.instagram.com/p/{code}/"
 					log_success(f"[OK] Published: {link}")
 					if on_log:
 						on_log(f"Upload successful: {link}")
 					# Сохраняем ссылку на успешную публикацию в файл
 					_save_successful_upload_link(task_id, link, username, "video")
-				else:
-					log_success(f"[OK] Published a clip (ID: {media_id})")
+				elif media_id:
+					# Если есть media_id но нет code или code="success", пытаемся использовать media_id
+					# Но ссылка может не работать, так как обычно нужен code (shortcode)
+					log_success(f"[OK] Published (ID: {media_id})")
 					if on_log:
 						on_log(f"Upload successful (ID: {media_id})")
+					# Не сохраняем ссылку с media_id, так как она скорее всего не будет работать
+				else:
+					# Нет ни code, ни media_id - загрузка успешна, но ссылку получить нельзя
+					log_success(f"[OK] Upload successful but no link available (status: {status})")
+					if on_log:
+						on_log(f"Upload successful but no link available")
 				
 				# Human-like pause after upload
 				time.sleep(random.uniform(3.0, 10.0))
@@ -806,12 +881,8 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 								on_log(f"Upload successful (status: {status})")
 							completed += 1
 							upload_success = True
-							# Сохраняем информацию о успешной загрузке (без ссылки, так как нет code)
-							try:
-								link = f"Upload successful (status: {status}, user: {user_username})"
-								_save_successful_upload_link(task_id, link, username, "video")
-							except Exception:
-								pass
+							# Не сохраняем ссылку, так как нет code и media_id
+							# Загрузка успешна, но ссылку получить нельзя
 							# Human-like pause after upload
 							time.sleep(random.uniform(3.0, 10.0))
 							continue  # Skip to next video
