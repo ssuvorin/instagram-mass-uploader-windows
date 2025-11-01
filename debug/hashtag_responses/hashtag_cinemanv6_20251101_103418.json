@@ -1,0 +1,91 @@
+{
+  "hashtag": "cinemanv6",
+  "start_time": "2025-11-01T10:34:18.995781",
+  "pages": [
+    {
+      "page_number": 1,
+      "request_data": {
+        "max_id": null,
+        "decoded_max_id": null,
+        "decoded_next_media_ids": null,
+        "expected_media_ids_from_prev": null
+      },
+      "response": {
+        "sections_count": 0,
+        "more_available": true,
+        "next_max_id": "904fb4b027e941ecb9b802f7f93a0136",
+        "next_media_ids": [
+          3755318896841481872,
+          3755580826118265541,
+          3755478143063616226
+        ],
+        "next_page": 1,
+        "status": "ok"
+      },
+      "received_media_ids": [],
+      "fetched_via_media_info": [],
+      "raw_media_samples": [],
+      "timestamp": "2025-11-01T10:34:25.156852"
+    },
+    {
+      "page_number": 2,
+      "request_data": {
+        "max_id": "WyI5MDRmYjRiMDI3ZTk0MWVjYjliODAyZjdmOTNhMDEzNiIsIFszNzU1MzE4ODk2ODQxNDgxODcyLCAzNzU1NTgwODI2MTE4MjY1NTQxLCAzNzU1NDc4MTQzMDYzNjE2MjI2XV0=",
+        "decoded_max_id": "904fb4b027e941ecb9b802f7f93a0136",
+        "decoded_next_media_ids": [
+          3755318896841481872,
+          3755580826118265541,
+          3755478143063616226
+        ],
+        "expected_media_ids_from_prev": [
+          3755318896841481872,
+          3755580826118265541,
+          3755478143063616226
+        ]
+      },
+      "response": {
+        "sections_count": 1,
+        "more_available": true,
+        "next_max_id": "904fb4b027e941ecb9b802f7f93a0136",
+        "next_media_ids": [
+          3754330683469525806,
+          3755607405900905536
+        ],
+        "next_page": 2,
+        "status": "ok"
+      },
+      "received_media_ids": [
+        "3755318896841481872_77714830141",
+        "3755580826118265541_77910746512",
+        "3755478143063616226_78261073946"
+      ],
+      "fetched_via_media_info": [],
+      "raw_media_samples": [
+        {
+          "media_type": 2,
+          "pk": 3755318896841481872,
+          "id": "3755318896841481872_77714830141",
+          "has_play_count": true,
+          "has_view_count": false,
+          "has_video_view_count": false,
+          "play_count": 2,
+          "view_count": null,
+          "video_view_count": null
+        },
+        {
+          "media_type": 2,
+          "pk": 3755580826118265541,
+          "id": "3755580826118265541_77910746512",
+          "has_play_count": true,
+          "has_view_count": false,
+          "has_video_view_count": false,
+          "play_count": 0,
+          "view_count": null,
+          "video_view_count": null
+        }
+      ],
+      "timestamp": "2025-11-01T10:34:35.977662"
+    }
+  ],
+  "last_update": "2025-11-01T10:34:35.983316"
+}

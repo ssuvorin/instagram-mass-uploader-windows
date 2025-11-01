@@ -18,6 +18,9 @@ import random
 import time
 from typing import Callable, Dict, List, Optional, Tuple
 import os
+import json
+import base64
+from datetime import datetime
 
 from instagrapi import Client  # type: ignore
 from instagrapi.exceptions import ChallengeRequired, PleaseWaitFewMinutes, LoginRequired  # type: ignore
@@ -154,43 +157,17 @@ class HashtagAnalysisService:
         analyzed = 0
         for m in medias:
             try:
-                # Try direct attributes first (prefer play_count for reels)
+                # Get views from media object (play_count/view_count already preserved from sections)
+                # Media from sections already have play_count/view_count, no need for media_info() fallback
                 v = getattr(m, "play_count", None)
                 if v is None:
                     v = getattr(m, "view_count", None)
                 if v is None:
                     v = getattr(m, "video_view_count", None)
-                if v is None:
-                    # As a fallback, call media_info for videos/clips only
-                    media_type = getattr(m, "media_type", None)
-                    if media_type in (2, 13):  # 2=video, 13=clip/reel in some builds
-                        try:
-                            mi = cl.media_info(getattr(m, "id", None) or getattr(m, "pk", None))
-                            v = (
-                                getattr(mi, "play_count", None)
-                                or getattr(mi, "view_count", None)
-                                or getattr(mi, "video_view_count", None)
-                            )
-                        except LoginRequired:
-                            # Session expired during media info fetch - skip this media
-                            continue
-                        except Exception:
-                            v = None
-                # Likes/comments (best-effort)
+                
+                # Get likes/comments from media object (already preserved from sections)
                 likes_val = getattr(m, "like_count", None)
                 comments_val = getattr(m, "comment_count", None)
-                if not isinstance(likes_val, (int, float)) or not isinstance(comments_val, (int, float)):
-                    try:
-                        mi2 = cl.media_info(getattr(m, "id", None) or getattr(m, "pk", None))
-                        if not isinstance(likes_val, (int, float)):
-                            likes_val = getattr(mi2, "like_count", None)
-                        if not isinstance(comments_val, (int, float)):
-                            comments_val = getattr(mi2, "comment_count", None)
-                    except LoginRequired:
-                        # Session expired during media info fetch - skip this media
-                        continue
-                    except Exception:
-                        pass
 
                 if isinstance(v, (int, float)):
                     total_views += int(v)
@@ -360,211 +337,90 @@ class HashtagAnalysisService:
                     on_log(f"hashtag: info failed: {e}")
                 raise
 
-        # Iterate recent medias via chunked pagination (Private API)
-        fetched_total: int = 0
-        total_views: int = 0
-        total_likes: int = 0
-        total_comments: int = 0
-        analyzed_total: int = 0
-        pages_loaded: int = 0
-        max_id: Optional[str] = None
-
-        consecutive_empty_pages = 0
-        # Reset session restore attempts for pagination (separate from hashtag info)
-        session_restore_attempts = 0
-        max_session_restore_attempts = 3  # Limit session restoration attempts
-        for loop_index in range(max_pages):
+        # Use library method hashtag_medias_v1 for each tab_key
+        # It handles pagination internally and processes all medias correctly
+        medias: List = []
+        processed_media_codes: set = set()
+        skipped_duplicates = 0
+        unique_media_links: list = []
+        
+        # Create debug directory for saving links
+        debug_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'debug', 'hashtag_responses')
+        os.makedirs(debug_dir, exist_ok=True)
+        timestamp_str = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        tab_keys_to_try: List[str] = ["clips", "recent", "top"]  # Order: clips, recent, top
+        
+        for tab_key in tab_keys_to_try:
+            if on_log:
+                on_log(f"DEBUG: Fetching medias for tab_key='{tab_key}'")
+            
             try:
-                if on_log:
-                    on_log(f"page {pages_loaded+1}: request recent chunk (max_id={'set' if max_id else 'none'})")
-                # Enhanced pre-request delays for better anti-detection
-                self._human_delay()
-                self._random_micro_pause()
-                # Get raw response first for debugging
-                import json
-                import base64
-                if on_log:
-                    on_log(f"DEBUG: Making API call to tags/{hashtag}/sections/")
-
-                # Use variable page size for better anti-detection
-                current_page_size = self._variable_page_size(page_size)
-
-                # Make the API call manually to get raw data
-                from instagrapi.mixins.hashtag import HashtagMixin
-                data = {
-                    "media_recency_filter": "top_recent_posts",
-                    "_uuid": cl.uuid,
-                    "include_persistent": "false",
-                    "rank_token": cl.rank_token,
-                }
-                if max_id:
-                    try:
-                        [page_id, nm_ids] = json.loads(base64.b64decode(max_id))
-                        data["max_id"] = page_id
-                        data["next_media_ids"] = json.dumps(nm_ids)
-                    except Exception:
-                        pass
-
-                raw_result = cl.private_request(
-                    f"tags/{hashtag}/sections/",
-                    data=data,
-                    with_signature=False,
+                # Use library method - it handles pagination internally
+                # Request more than total_reported to ensure we get all media
+                library_medias = cl.hashtag_medias_v1(
+                    hashtag,
+                    amount=total_reported + 100 if total_reported > 0 else 200,  # Request more to get all
+                    tab_key=tab_key
                 )
-
-                if on_log:
-                    on_log(f"DEBUG: Raw API response sections count: {len(raw_result.get('sections', []))}")
-                    # Log full raw response for debugging
-                    on_log(f"DEBUG: Full raw API response (first 2000 chars): {json.dumps(raw_result, indent=2)[:2000]}...")
-
-                # Parse manually with error handling
-                medias = []
-                try:
-                    next_max_id = None
-                    if raw_result.get("next_max_id"):
-                        np = raw_result.get("next_max_id")
-                        ids = raw_result.get("next_media_ids")
-                        next_max_id = base64.b64encode(json.dumps([np, ids]).encode()).decode()
-
-                    for section in raw_result["sections"]:
-                        layout_content = section.get("layout_content") or {}
-                        nodes = layout_content.get("medias") or []
-                        for node in nodes:
-                            if current_page_size and len(medias) >= current_page_size:
-                                break
-                            raw_media_data = node["media"]
-
-                            # Log raw media data that contains clips_metadata
-                            if raw_media_data.get("clips_metadata") and on_log:
-                                clips_meta = raw_media_data["clips_metadata"]
-                                if clips_meta.get("original_sound_info"):
-                                    orig_sound = clips_meta["original_sound_info"]
-                                    if orig_sound.get("ig_artist"):
-                                        ig_artist = orig_sound["ig_artist"]
-                                        if "profile_pic_id" not in ig_artist:
-                                            on_log(f"DEBUG: Found media without profile_pic_id in ig_artist: {json.dumps(ig_artist, indent=2)}")
-
-                            # Try to extract media, but catch validation errors
-                            try:
-                                from instagrapi.extractors import extract_media_v1
-                                media = extract_media_v1(raw_media_data)
-                                medias.append(media)
-                            except Exception as extract_e:
-                                if on_log:
-                                    on_log(f"DEBUG: Media extraction failed: {extract_e}")
-                                    on_log(f"DEBUG: Raw media data keys: {list(raw_media_data.keys())}")
-                                    if "clips_metadata" in raw_media_data:
-                                        on_log(f"DEBUG: Has clips_metadata: {bool(raw_media_data.get('clips_metadata'))}")
-                                    # Log the full problematic media data
-                                    on_log(f"DEBUG: Problematic media data: {json.dumps(raw_media_data, indent=2)[:2000]}...")
-                                continue
-
-                    if not raw_result.get("more_available", False):
-                        next_max_id = None
-
-                except Exception as parse_e:
-                    if on_log:
-                        on_log(f"DEBUG: Manual parsing failed: {parse_e}")
-                        on_log(f"DEBUG: Raw result keys: {list(raw_result.keys())}")
-                    raise
-
-                max_id = next_max_id
-                # No file save: we store only aggregated analytics in DB
-            except PleaseWaitFewMinutes as e:
-                if on_log:
-                    on_log(f"hashtag: rate limit, backing off: {e}")
-                time.sleep(random.uniform(60, 120))
-                continue
-            except ChallengeRequired as e:
-                if on_log:
-                    on_log(f"hashtag: challenge required: {e}")
-                raise
-            except LoginRequired as e:
-                session_restore_attempts += 1
-                if session_restore_attempts > max_session_restore_attempts:
-                    if on_log:
-                        on_log(f"hashtag: max session restore attempts ({max_session_restore_attempts}) exceeded, stopping")
-                    break
                 
                 if on_log:
-                    on_log(f"hashtag: session expired, attempting to restore (attempt {session_restore_attempts}/{max_session_restore_attempts})...")
-                try:
-                    # Attempt to restore session
-                    if not self.auth.ensure_logged_in(cl, account_username, account_password, on_log=on_log):
-                        if on_log:
-                            on_log(f"hashtag: session restoration failed: {e}")
-                        break
+                    on_log(f"DEBUG: Library method returned {len(library_medias)} medias for tab_key='{tab_key}'")
+                
+                # Process medias from library with deduplication
+                for lib_media in library_medias:
+                    media_code = getattr(lib_media, 'code', None)
+                    if media_code:
+                        if media_code in processed_media_codes:
+                            skipped_duplicates += 1
+                            if on_log:
+                                on_log(f"DEBUG: Skipping duplicate media code: {media_code}")
+                            continue
+                        processed_media_codes.add(media_code)
+                        link = f"https://www.instagram.com/reel/{media_code}/"
+                        unique_media_links.append(link)
+                    
+                    # Add to medias list for analytics
+                    medias.append(lib_media)
+                
+                # Check if we've collected enough
+                if total_reported > 0 and len(medias) >= total_reported:
                     if on_log:
-                        on_log(f"hashtag: session restored successfully, continuing...")
-                    # Save refreshed session
-                    try:
-                        settings = cl.get_settings()  # type: ignore[attr-defined]
-                        session_store.save(account_username, settings)
-                    except Exception:
-                        pass
-                    # Reset counter on successful restoration
-                    session_restore_attempts = 0
-                    # Continue with the same page
-                    continue
-                except Exception as restore_e:
-                    if on_log:
-                        on_log(f"hashtag: session restoration error: {restore_e}")
+                        on_log(f"DEBUG: Collected {len(medias)}/{total_reported} media, stopping")
                     break
-            except Exception as e:
+                    
+            except Exception as lib_error:
                 if on_log:
-                    on_log(f"hashtag: chunk error: {e}")
-                break
-
-            pages_loaded += 1
+                    on_log(f"DEBUG: Library method failed for tab_key='{tab_key}': {lib_error}")
+                continue
             
-            # Process medias even if empty - we might still have more pages
-            views, likes, comments, analyzed = self._sum_media_views(cl, medias)
-            total_views += views
-            total_likes += likes
-            total_comments += comments
-            analyzed_total += analyzed
-            fetched_total += len(medias)
-            if on_log:
-                on_log(
-                    f"page {pages_loaded}: got {len(medias)} medias, analyzed={analyzed}, views+={views}, total_views={total_views}, next_max_id={'set' if max_id else 'none'}"
-                )
-
-            # Simulate human-like content interaction after processing a page
-            if medias:
-                self._simulate_content_interaction(len(medias))
-
-            # Track consecutive empty pages to avoid infinite loops
-            if not medias:
-                consecutive_empty_pages += 1
-                if consecutive_empty_pages >= 3:  # Stop after 3 consecutive empty pages
-                    if on_log:
-                        on_log(f"page {pages_loaded}: {consecutive_empty_pages} consecutive empty pages — stop")
-                    break
-            else:
-                consecutive_empty_pages = 0  # Reset counter when we get medias
-
-            # Stop if we've reached or exceeded the total reported media count
-            if total_reported > 0 and fetched_total >= total_reported:
-                if on_log:
-                    on_log(f"page {pages_loaded}: reached total reported media count ({total_reported}) — stop")
-                break
-
-            # Stop only if no medias AND no next cursor (truly done)
-            if not medias and not max_id:
-                if on_log:
-                    on_log(f"page {pages_loaded}: no medias and no next cursor — stop")
-                break
-
-            # Enhanced human-like delays between pages for better anti-detection
+            # Human-like delay between different tab_keys
             self._human_delay()
-            self._random_micro_pause()
+        
+        # Process all collected medias for analytics
+        pages_loaded = len(tab_keys_to_try)  # Approximate pages count
+        views, likes, comments, analyzed = self._sum_media_views(cl, medias)
+        total_views = views
+        total_likes = likes
+        total_comments = comments
+        analyzed_total = analyzed
+        fetched_total = len(medias)
 
-            # Occasionally add a longer "think" pause (more frequently for anti-detection)
-            if self.delay_long_every_n > 0 and ((loop_index + 1) % self.delay_long_every_n == 0):
-                self._human_long_think()
-
+        # Save unique media links to txt file
+        links_file_path = os.path.join(debug_dir, f"hashtag_{hashtag}_{timestamp_str}_links.txt")
+        try:
+            with open(links_file_path, 'w', encoding='utf-8') as f:
+                for link in unique_media_links:
+                    f.write(link + '\n')
+            if on_log:
+                on_log(f"DEBUG: Saved {len(unique_media_links)} unique media links to: {links_file_path}")
+        except Exception as links_error:
+            if on_log:
+                on_log(f"DEBUG: Failed to save links file: {links_error}")
+        
         if on_log:
             on_log(
-                f"done: fetched={fetched_total}, analyzed={analyzed_total}, pages={pages_loaded}, total_views={total_views}, total_likes={total_likes}, total_comments={total_comments}"
+                f"done: fetched={fetched_total}, analyzed={analyzed_total}, pages={pages_loaded}, total_views={total_views}, total_likes={total_likes}, total_comments={total_comments}, skipped_duplicates={skipped_duplicates}"
             )
 
         result_obj = HashtagAnalysisResult(

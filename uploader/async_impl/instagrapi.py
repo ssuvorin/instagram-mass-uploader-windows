@@ -696,8 +696,20 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 									if private:
 										last_response = getattr(private, 'last_response', None)
 										if last_response:
-											last_json = getattr(last_response, 'json', None)
-							except Exception:
+											# json может быть методом или свойством
+											json_attr = getattr(last_response, 'json', None)
+											if json_attr:
+												if callable(json_attr):
+													# Если это метод, вызываем его
+													try:
+														last_json = json_attr()
+													except Exception:
+														last_json = None
+												else:
+													# Если это свойство/атрибут
+													last_json = json_attr
+							except Exception as json_error:
+								log_debug(f"[VALIDATION_WORKAROUND] Error getting last_json: {json_error}")
 								pass
 							
 							# Сначала попробуем использовать официальную функцию extract_media_v1 из instagrapi
@@ -712,19 +724,23 @@ def _sync_upload_impl(account_details: Dict, videos: List, video_files_to_upload
 								from instagrapi.extractors import extract_media_v1
 								if last_json and isinstance(last_json, dict):
 									media_dict = last_json.get('media')
-									if media_dict:
+									if media_dict and isinstance(media_dict, dict):
 										log_info(f"[VALIDATION_WORKAROUND] Attempting to use extract_media_v1 from instagrapi")
-										media = extract_media_v1(media_dict)
-										log_warning(f"[VALIDATION_WORKAROUND] Successfully extracted Media using extract_media_v1")
-										# Проверяем, что мы получили валидный объект Media с code
-										code = getattr(media, 'code', None)
-										if code:
-											log_info(f"[VALIDATION_WORKAROUND] Extracted code: {code}")
-											# Успешно! Используем полученный объект Media напрямую
-											# Пропускаем создание MockMedia
-										else:
-											log_warning(f"[VALIDATION_WORKAROUND] extract_media_v1 returned Media without code, will try fallback")
-											media = None  # Сбрасываем, чтобы использовать fallback
+										try:
+											media = extract_media_v1(media_dict)
+											log_warning(f"[VALIDATION_WORKAROUND] Successfully extracted Media using extract_media_v1")
+											# Проверяем, что мы получили валидный объект Media с code
+											code = getattr(media, 'code', None)
+											if code:
+												log_info(f"[VALIDATION_WORKAROUND] Extracted code: {code}")
+												# Успешно! Используем полученный объект Media напрямую
+												# Пропускаем создание MockMedia
+											else:
+												log_warning(f"[VALIDATION_WORKAROUND] extract_media_v1 returned Media without code, will try fallback")
+												media = None  # Сбрасываем, чтобы использовать fallback
+										except Exception as extract_media_error:
+											log_debug(f"[VALIDATION_WORKAROUND] extract_media_v1 raised exception: {extract_media_error}")
+											media = None
 							except Exception as extractor_error:
 								log_debug(f"[VALIDATION_WORKAROUND] Failed to use extract_media_v1: {extractor_error}")
 								media = None

@@ -10,6 +10,7 @@ from .views_mod import proxies
 from .views_mod import yt_shorts_bulk
 from .views_mod import analytics
 from .views_mod import analytics_collector
+from .views_mod import reels_collector
 
 urlpatterns = [
     # Dashboard
@@ -142,6 +143,9 @@ urlpatterns = [
 
     # Hashtag Analyzer
     path('tools/hashtag/', hashtag.hashtag_analyzer, name='hashtag_analyzer'),
+    
+    # Reels Collector
+    path('tools/reels-collector/', reels_collector.reels_collector, name='reels_collector'),
     
     # Password Reset Tools (temporarily disabled - views module not present)
 ]
