@@ -120,6 +120,8 @@ if DATABASE_URL:
     app_name = os.environ.get('DB_APPLICATION_NAME', 'instagram_uploader')
     DATABASES['default']['OPTIONS']['application_name'] = app_name
     DATABASES['default']['OPTIONS']['connect_timeout'] = int(os.environ.get('DB_CONN_TIMEOUT', '30'))
+    # ВАЖНО: Отключаем server-side cursors для совместимости с PgBouncer
+    DATABASES['default']['OPTIONS']['DISABLE_SERVER_SIDE_CURSORS'] = True
     DATABASES['default']['CONN_HEALTH_CHECKS'] = True
 
     PGBOUNCER_MODE = os.environ.get('PGBOUNCER_MODE', '').lower()
@@ -449,5 +451,4 @@ WHITENOISE_USE_FINDERS = True
 WHITENOISE_AUTOREFRESH = True
 CONN_MAX_AGE = 0
 CONN_HEALTH_CHECKS = True
-DISABLE_SERVER_SIDE_CURSORS = True
 
